@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invite teammate · PulseNotify</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #667085;
+      --line: #e4e8ef;
+      --soft: #f6f8fb;
+      --panel: #ffffff;
+      --nav: #121a2d;
+      --nav-muted: #95a0b5;
+      --purple: #6d5dfc;
+      --purple-dark: #5948eb;
+      --purple-soft: #f3f1ff;
+      --green: #12a174;
+      --shadow: 0 28px 75px rgba(20, 29, 52, .20), 0 3px 12px rgba(20, 29, 52, .09);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--soft);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    svg { display: block; }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 248px;
+      flex: 0 0 248px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 25px 16px 18px;
+      background: var(--nav);
+      color: #fff;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 10px 25px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 720;
+      letter-spacing: -.35px;
+    }
+    .brand-mark {
+      width: 29px;
+      height: 29px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: linear-gradient(145deg, #7869ff, #5c4cec);
+      box-shadow: 0 6px 16px rgba(109,93,252,.35);
+    }
+    .workspace-switch {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 10px;
+      background: rgba(255,255,255,.055);
+      color: #fff;
+      text-align: left;
+    }
+    .workspace-avatar {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: #f4b95c;
+      color: #362913;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .workspace-text { min-width: 0; flex: 1; }
+    .workspace-text strong,
+    .workspace-text span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .workspace-text strong { font-size: 13px; font-weight: 650; }
+    .workspace-text span { margin-top: 2px; color: var(--nav-muted); font-size: 11px; }
+    .nav-label {
+      padding: 0 11px 8px;
+      color: #68738a;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .nav-list { display: grid; gap: 3px; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 42px;
+      padding: 0 12px;
+      border-radius: 9px;
+      color: #aab3c5;
+      font-size: 13px;
+      font-weight: 520;
+      text-decoration: none;
+    }
+    .nav-item svg { width: 18px; height: 18px; stroke-width: 1.8; }
+    .nav-item:hover { background: rgba(255,255,255,.05); color: #fff; }
+    .nav-item.active {
+      background: rgba(109,93,252,.17);
+      color: #fff;
+    }
+    .nav-item.active svg { color: #9d92ff; }
+    .nav-badge {
+      margin-left: auto;
+      min-width: 20px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.1);
+      color: #c7cedb;
+      font-size: 10px;
+      text-align: center;
+    }
+    .nav-divider { height: 1px; margin: 17px 10px 19px; background: rgba(255,255,255,.08); }
+    .sidebar-spacer { flex: 1; }
+    .upgrade {
+      margin: 12px 2px 14px;
+      padding: 14px;
+      border: 1px solid rgba(150,138,255,.18);
+      border-radius: 11px;
+      background: rgba(109,93,252,.10);
+    }
+    .upgrade-top { display: flex; align-items: center; gap: 8px; color: #dedaff; font-size: 12px; font-weight: 650; }
+    .upgrade p { margin: 8px 0 10px; color: #8f99ad; font-size: 11px; line-height: 1.45; }
+    .upgrade a { color: #b8afff; font-size: 11px; font-weight: 650; text-decoration: none; }
+    .user-panel {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 9px 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .user-avatar {
+      width: 33px;
+      height: 33px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #d7dcff;
+      color: #4338a8;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .user-meta { min-width: 0; flex: 1; }
+    .user-meta strong { display: block; font-size: 12px; font-weight: 620; }
+    .user-meta span { display: block; margin-top: 3px; color: #7e899e; font-size: 10px; }
+
+    .main {
+      min-width: 0;
+      flex: 1;
+      height: 100vh;
+      overflow: auto;
+      background: #f7f8fb;
+    }
+    .topbar {
+      height: 69px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 0 30px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.96);
+    }
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      color: #8b95a7;
+      font-size: 12px;
+    }
+    .breadcrumbs b { color: #334056; font-weight: 600; }
+    .breadcrumbs .slash { padding: 0 9px; color: #c1c7d0; }
+    .top-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .search {
+      width: 225px;
+      height: 37px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 10px;
+      border: 1px solid #e3e7ed;
+      border-radius: 9px;
+      background: #fafbfc;
+      color: #8a94a5;
+      font-size: 12px;
+    }
+    .search svg { width: 16px; height: 16px; }
+    .search kbd {
+      margin-left: auto;
+      padding: 2px 5px;
+      border: 1px solid #dde2e9;
+      border-radius: 4px;
+      background: #fff;
+      color: #9aa3b1;
+      font: 10px inherit;
+    }
+    .icon-button {
+      width: 37px;
+      height: 37px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      border: 1px solid #e3e7ed;
+      border-radius: 9px;
+      background: #fff;
+      color: #667085;
+    }
+    .icon-button svg { width: 17px; height: 17px; }
+    .notify-dot {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 6px;
+      height: 6px;
+      border: 1.5px solid #fff;
+      border-radius: 50%;
+      background: #fa5f75;
+    }
+
+    .content { max-width: 1230px; margin: 0 auto; padding: 34px 38px 80px; }
+    .page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+    .page-heading h1 { margin: 0; color: #182235; font-size: 25px; line-height: 1.25; letter-spacing: -.55px; }
+    .page-heading p { margin: 8px 0 0; color: #737e90; font-size: 13px; }
+    .primary-button {
+      height: 39px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--purple);
+      box-shadow: 0 4px 10px rgba(109,93,252,.18);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .primary-button:hover { background: var(--purple-dark); }
+    .primary-button svg { width: 15px; height: 15px; }
+    .tabs {
+      display: flex;
+      gap: 27px;
+      margin-top: 31px;
+      border-bottom: 1px solid var(--line);
+    }
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 1px 13px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: #748094;
+      font-size: 12px;
+      font-weight: 580;
+    }
+    .tab.active { border-bottom-color: var(--purple); color: #3e4656; }
+    .tab-count {
+      min-width: 20px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #eceff4;
+      color: #697386;
+      font-size: 10px;
+    }
+    .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 23px 0 20px; }
+    .summary-card {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .summary-icon {
+      width: 37px;
+      height: 37px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: var(--purple-soft);
+      color: var(--purple);
+    }
+    .summary-icon.green { background: #ebfaf5; color: var(--green); }
+    .summary-icon.orange { background: #fff6e7; color: #dd8b19; }
+    .summary-icon svg { width: 18px; height: 18px; }
+    .summary-card strong { display: block; color: #283347; font-size: 17px; line-height: 1; }
+    .summary-card span { display: block; margin-top: 5px; color: #8a94a5; font-size: 11px; }
+    .table-card { overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+    .table-tools { display: flex; align-items: center; gap: 10px; padding: 15px 17px; border-bottom: 1px solid var(--line); }
+    .member-search {
+      width: 250px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      border: 1px solid #e1e5eb;
+      border-radius: 8px;
+      color: #98a1af;
+      font-size: 11px;
+    }
+    .member-search svg { width: 15px; height: 15px; }
+    .filter-button {
+      height: 35px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 11px;
+      border: 1px solid #e1e5eb;
+      border-radius: 8px;
+      background: #fff;
+      color: #667085;
+      font-size: 11px;
+    }
+    .filter-button svg { width: 14px; height: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      padding: 11px 18px;
+      background: #fafbfc;
+      color: #8a94a5;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    td { padding: 14px 18px; border-top: 1px solid #edf0f4; color: #647084; font-size: 11px; }
+    tr:first-child td { border-top: 0; }
+    .member { display: flex; align-items: center; gap: 10px; }
+    .mini-avatar {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #e8ebff;
+      color: #5145b9;
+      font-size: 10px;
+      font-weight: 750;
+    }
+    .mini-avatar.pink { background: #fee9f1; color: #b84671; }
+    .mini-avatar.blue { background: #e2f3ff; color: #2a6e9a; }
+    .member strong { display: block; color: #344054; font-size: 11px; font-weight: 650; }
+    .member span { display: block; margin-top: 2px; color: #98a2b3; font-size: 10px; }
+    .role-pill { display: inline-flex; padding: 4px 8px; border-radius: 12px; background: #f2f0ff; color: #6656e8; font-size: 10px; font-weight: 600; }
+    .status { display: inline-flex; align-items: center; gap: 6px; color: #526071; }
+    .status:before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #20b486; }
+    .dots-button { border: 0; background: transparent; color: #98a2b3; font-size: 18px; line-height: 1; }
+
+    .scrim {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      overflow-y: auto;
+      background: rgba(17, 24, 39, .42);
+      backdrop-filter: blur(1.5px);
+      animation: fadeIn .16s ease-out;
+    }
+    .scrim.hidden { display: none; }
+    .modal {
+      width: min(594px, calc(100vw - 32px));
+      border: 1px solid rgba(255,255,255,.7);
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      animation: rise .2s ease-out;
+    }
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .invite-icon {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: var(--purple-soft);
+      color: var(--purple);
+    }
+    .invite-icon svg { width: 21px; height: 21px; }
+    .modal-title { min-width: 0; flex: 1; }
+    .modal-title h2 { margin: 1px 0 5px; color: #172033; font-size: 19px; line-height: 1.25; letter-spacing: -.35px; }
+    .modal-title p { margin: 0; color: #788397; font-size: 12px; line-height: 1.5; }
+    .close-button {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      margin: -3px -5px 0 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #8a94a5;
+    }
+    .close-button:hover { background: #f3f5f8; color: #344054; }
+    .close-button svg { width: 18px; height: 18px; }
+    .modal-body { padding: 19px 24px 21px; }
+    .account-context {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 17px;
+      padding: 11px 12px;
+      border: 1px solid #e5e7fb;
+      border-radius: 10px;
+      background: #fafaff;
+    }
+    .account-logo {
+      width: 35px;
+      height: 35px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: #1e2942;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .account-info { min-width: 0; flex: 1; }
+    .account-info span { display: block; margin-bottom: 3px; color: #929bad; font-size: 9px; font-weight: 720; letter-spacing: .08em; text-transform: uppercase; }
+    .account-info strong { display: block; color: #313c51; font-size: 12px; font-weight: 650; }
+    .account-id { color: #8d96a7; font-size: 10px; white-space: nowrap; }
+    .form-grid { display: grid; grid-template-columns: 1.34fr 1fr; gap: 14px; }
+    .field { margin-bottom: 15px; }
+    .field label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 7px;
+      color: #344054;
+      font-size: 11px;
+      font-weight: 650;
+    }
+    .required { color: #e54b64; }
+    .input-wrap { position: relative; }
+    .input-wrap .leading-icon {
+      position: absolute;
+      top: 50%;
+      left: 11px;
+      width: 16px;
+      height: 16px;
+      color: #98a2b3;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #dfe3e9;
+      border-radius: 8px;
+      outline: none;
+      background: #fff;
+      color: #344054;
+      font-size: 12px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input, select { height: 39px; padding: 0 11px; }
+    input.with-icon { padding-left: 35px; }
+    input::placeholder, textarea::placeholder { color: #a8b0bd; }
+    input:focus, select:focus, textarea:focus { border-color: #8f83ff; box-shadow: 0 0 0 3px rgba(109,93,252,.10); }
+    select {
+      padding-right: 34px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    textarea { min-height: 63px; resize: vertical; padding: 10px 11px; line-height: 1.45; }
+    .field-hint { margin: 6px 0 0; color: #98a2b3; font-size: 10px; line-height: 1.4; }
+    .permission-box {
+      margin: 0 0 15px;
+      padding: 13px 14px;
+      border: 1px solid #e5e2ff;
+      border-radius: 10px;
+      background: #faf9ff;
+    }
+    .permission-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; color: #443a9d; font-size: 11px; font-weight: 700; }
+    .permission-heading svg { width: 15px; height: 15px; }
+    .permission-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 15px; }
+    .permission-item { display: flex; align-items: flex-start; gap: 7px; color: #5f6879; font-size: 10px; line-height: 1.35; }
+    .check {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
+      display: grid;
+      place-items: center;
+      margin-top: -1px;
+      border-radius: 50%;
+      background: #e9e6ff;
+      color: #6253e4;
+    }
+    .check svg { width: 9px; height: 9px; stroke-width: 3; }
+    .check.lock { background: #eef0f4; color: #8c95a4; }
+    .note-row { display: grid; grid-template-columns: 1fr; }
+    .copy-check { display: flex; align-items: center; gap: 8px; margin-top: -3px; color: #667085; font-size: 10px; cursor: pointer; }
+    .copy-check input { width: 15px; height: 15px; margin: 0; accent-color: var(--purple); }
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 15px 24px;
+      border-top: 1px solid var(--line);
+      background: #fbfcfd;
+      border-radius: 0 0 15px 15px;
+    }
+    .footer-note { display: flex; align-items: center; gap: 6px; color: #929bad; font-size: 9px; }
+    .footer-note svg { width: 13px; height: 13px; }
+    .footer-actions { display: flex; gap: 9px; }
+    .secondary-button {
+      height: 38px;
+      padding: 0 15px;
+      border: 1px solid #dfe3e9;
+      border-radius: 8px;
+      background: #fff;
+      color: #596579;
+      font-size: 11px;
+      font-weight: 620;
+    }
+    .send-button { min-width: 126px; }
+    .send-button:disabled { cursor: not-allowed; opacity: .7; }
+    .button-spinner {
+      width: 14px;
+      height: 14px;
+      display: none;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .sending .button-spinner { display: block; }
+    .sending .send-icon { display: none; }
+    .error-text { display: none; margin: 6px 0 0; color: #d7435a; font-size: 10px; }
+    .field.error input { border-color: #e46779; box-shadow: 0 0 0 3px rgba(229,75,100,.08); }
+    .field.error .error-text { display: block; }
+    .toast {
+      position: fixed;
+      z-index: 50;
+      left: 50%;
+      bottom: 25px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      min-width: 330px;
+      padding: 13px 15px;
+      border: 1px solid #d8eee7;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 12px 35px rgba(22,34,52,.16);
+      color: #344054;
+      font-size: 12px;
+      transform: translateX(-50%);
+    }
+    .toast.show { display: flex; animation: toastIn .25s ease-out; }
+    .toast-check { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; background: #e7f8f2; color: #14936c; }
+    .toast-check svg { width: 14px; height: 14px; stroke-width: 2.7; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: none; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+    @media (max-width: 920px) {
+      .sidebar { width: 78px; flex-basis: 78px; padding-inline: 10px; }
+      .brand { justify-content: center; padding-inline: 0; }
+      .brand > span, .workspace-text, .workspace-switch > svg, .nav-label, .nav-item span, .nav-badge, .upgrade, .user-meta, .user-panel > svg { display: none; }
+      .workspace-switch { justify-content: center; padding: 8px; }
+      .nav-item { justify-content: center; padding: 0; }
+      .user-panel { justify-content: center; padding-inline: 0; }
+      .content { padding-inline: 25px; }
+      .search { width: 150px; }
+    }
+    @media (max-width: 680px) {
+      .sidebar { display: none; }
+      .topbar { padding: 0 16px; }
+      .search { display: none; }
+      .content { padding: 25px 16px 60px; }
+      .summary-row { grid-template-columns: 1fr; }
+      .summary-card:nth-child(n+2) { display: none; }
+      .table-card { overflow-x: auto; }
+      table { min-width: 650px; }
+      .scrim { display: block; padding: 12px 8px; }
+      .scrim.hidden { display: none; }
+      .modal { margin: 0 auto; }
+      .form-grid, .permission-grid { grid-template-columns: 1fr; }
+      .modal-footer { align-items: flex-end; }
+      .footer-note { display: none; }
+      .footer-actions { width: 100%; }
+      .footer-actions button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12h3l2.1-5.2L11 17l2.4-8 2.1 5H21" />
+          </svg>
+        </div>
+        <span>PulseNotify</span>
+      </div>
+
+      <button class="workspace-switch" type="button" aria-label="Switch workspace">
+        <span class="workspace-avatar">AC</span>
+        <span class="workspace-text"><strong>Acme Collective</strong><span>Business workspace</span></span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m8 9 4-4 4 4M16 15l-4 4-4-4"/></svg>
+      </button>
+
+      <div class="nav-label">Manage</div>
+      <nav class="nav-list">
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Overview</span>
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14z"/><path d="M11.6 16.4 13 21H8l-1.5-5.7"/></svg>
+          <span>Campaigns</span><span class="nav-badge">12</span>
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Audiences</span>
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M8 21H5a2 2 0 0 1-2-2v-3m18 0v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="3"/><path d="M12 6v3m0 6v3m6-6h-3m-6 0H6"/></svg>
+          <span>Automations</span>
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 16 4-5 3 3 5-7"/></svg>
+          <span>Analytics</span>
+        </a>
+      </nav>
+
+      <div class="nav-divider"></div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav-list">
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4m8-4v4M3 9h18"/></svg>
+          <span>Ad accounts</span>
+        </a>
+        <a class="nav-item active" href="#" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>
+          <span>Team &amp; access</span>
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2.3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 8.5c.14.37.35.7.6 1 .3.28.68.42 1.1.4h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.7 1.1z"/></svg>
+          <span>Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+      <div class="upgrade">
+        <div class="upgrade-top">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5z"/></svg>
+          Scale plan
+        </div>
+        <p>8 of 12 team seats are currently in use.</p>
+        <a href="#">Manage your plan →</a>
+      </div>
+      <div class="user-panel">
+        <span class="user-avatar">JD</span>
+        <span class="user-meta"><strong>Jordan Davis</strong><span>Workspace admin</span></span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#737e92" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumbs"><span>Workspace</span><span class="slash">/</span><span>Acme Growth</span><span class="slash">/</span><b>Team &amp; access</b></div>
+        <div class="top-actions">
+          <div class="search" aria-label="Search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <span>Search anything</span><kbd>⌘ K</kbd>
+          </div>
+          <button class="icon-button" type="button" aria-label="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.8 2.1c-1 .65-1.5 1.15-1.5 2.4M12 17h.01"/></svg>
+          </button>
+          <button class="icon-button" type="button" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M13.7 21h-3.4"/></svg>
+            <span class="notify-dot"></span>
+          </button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="page-heading">
+          <div><h1>Team &amp; access</h1><p>Manage who can access the Acme Growth ad account.</p></div>
+          <button class="primary-button" id="openInvite" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Invite member
+          </button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" role="tab" aria-selected="true">Members <span class="tab-count">8</span></button>
+          <button class="tab" role="tab" aria-selected="false">Pending invitations <span class="tab-count">2</span></button>
+          <button class="tab" role="tab" aria-selected="false">Roles &amp; permissions</button>
+        </div>
+        <div class="summary-row">
+          <div class="summary-card">
+            <div class="summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg></div>
+            <div><strong>8</strong><span>Active members</span></div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <div><strong>2</strong><span>Pending invitations</span></div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <div><strong>4</strong><span>Seats available</span></div>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-tools">
+            <div class="member-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>Search members</span></div>
+            <button class="filter-button" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10m-7 6h4"/></svg>Filter</button>
+          </div>
+          <table aria-label="Workspace members">
+            <thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Last active</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><div class="member"><span class="mini-avatar">JD</span><div><strong>Jordan Davis</strong><span>jordan@acme.co</span></div></div></td><td><span class="role-pill">Administrator</span></td><td><span class="status">Active</span></td><td>Just now</td><td><button class="dots-button" aria-label="Member options">···</button></td></tr>
+              <tr><td><div class="member"><span class="mini-avatar pink">AK</span><div><strong>Avery Kim</strong><span>avery@acme.co</span></div></div></td><td><span class="role-pill">Campaign manager</span></td><td><span class="status">Active</span></td><td>2 hours ago</td><td><button class="dots-button" aria-label="Member options">···</button></td></tr>
+              <tr><td><div class="member"><span class="mini-avatar blue">RM</span><div><strong>Riley Morgan</strong><span>riley@acme.co</span></div></div></td><td><span class="role-pill">Analyst</span></td><td><span class="status">Active</span></td><td>Yesterday</td><td><button class="dots-button" aria-label="Member options">···</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="scrim" id="inviteScrim" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="inviteTitle" aria-describedby="inviteDescription">
+      <header class="modal-header">
+        <div class="invite-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>
+        </div>
+        <div class="modal-title">
+          <h2 id="inviteTitle">Invite a teammate</h2>
+          <p id="inviteDescription">Invite someone to collaborate on this ad account.</p>
+        </div>
+        <button class="close-button" id="closeInvite" type="button" aria-label="Close invitation dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <form id="inviteForm" novalidate>
+        <div class="modal-body">
+          <div class="account-context">
+            <div class="account-logo">AG</div>
+            <div class="account-info"><span>Inviting to ad account</span><strong>Acme Growth · United States</strong></div>
+            <div class="account-id">ID 482-901-73</div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field" id="emailField">
+              <label for="inviteEmail">Work email <span class="required">*</span></label>
+              <div class="input-wrap">
+                <svg class="leading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                <input class="with-icon" id="inviteEmail" name="email" type="email" autocomplete="email" value="maya.chen@acme.co" aria-describedby="emailError" />
+              </div>
+              <p class="error-text" id="emailError">Enter a valid work email address.</p>
+            </div>
+            <div class="field">
+              <label for="inviteRole">Role <span class="required">*</span></label>
+              <select id="inviteRole" name="role">
+                <option>Administrator</option>
+                <option selected>Marketing manager</option>
+                <option>Campaign manager</option>
+                <option>Analyst</option>
+                <option>Viewer</option>
+              </select>
+              <p class="field-hint">You can change this later.</p>
+            </div>
+          </div>
+
+          <div class="permission-box" id="permissionBox">
+            <div class="permission-heading">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              Marketing manager permissions
+            </div>
+            <div class="permission-grid">
+              <div class="permission-item"><span class="check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 6.2 2.1 2.1 4.9-5"/></svg></span><span>Create, edit and publish campaigns</span></div>
+              <div class="permission-item"><span class="check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 6.2 2.1 2.1 4.9-5"/></svg></span><span>Manage audiences and templates</span></div>
+              <div class="permission-item"><span class="check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 6.2 2.1 2.1 4.9-5"/></svg></span><span>View analytics and export reports</span></div>
+              <div class="permission-item"><span class="check lock"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="5.2" width="7.2" height="5" rx="1"/><path d="M4.2 5.2V3.7a1.8 1.8 0 0 1 3.6 0v1.5"/></svg></span><span>No billing or team management access</span></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="inviteNote">Personal message <span style="color:#98a2b3;font-weight:500">(optional)</span></label>
+            <textarea id="inviteNote" name="note">Hi Maya, welcome to the team! I’ve added you so you can manage our upcoming campaigns.</textarea>
+          </div>
+          <label class="copy-check"><input type="checkbox" checked /> Send me a copy of this invitation</label>
+        </div>
+
+        <footer class="modal-footer">
+          <div class="footer-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            Invitation expires in 7 days
+          </div>
+          <div class="footer-actions">
+            <button class="secondary-button" id="cancelInvite" type="button">Cancel</button>
+            <button class="primary-button send-button" id="sendInvite" type="submit">
+              <span class="button-spinner"></span>
+              <svg class="send-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+              <span class="button-label">Send invitation</span>
+            </button>
+          </div>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <div class="toast" id="successToast" role="status" aria-live="polite">
+    <span class="toast-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span>
+    <span>Invitation sent to <strong>maya.chen@acme.co</strong></span>
+  </div>
+
+  <script>
+    (function () {
+      const scrim = document.getElementById('inviteScrim');
+      const modal = scrim.querySelector('.modal');
+      const openButton = document.getElementById('openInvite');
+      const closeButton = document.getElementById('closeInvite');
+      const cancelButton = document.getElementById('cancelInvite');
+      const form = document.getElementById('inviteForm');
+      const email = document.getElementById('inviteEmail');
+      const emailField = document.getElementById('emailField');
+      const sendButton = document.getElementById('sendInvite');
+      const toast = document.getElementById('successToast');
+      const role = document.getElementById('inviteRole');
+      const permissionHeading = document.querySelector('.permission-heading');
+
+      function openModal() {
+        scrim.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        setTimeout(function () { email.focus(); email.setSelectionRange(email.value.length, email.value.length); }, 50);
+      }
+      function closeModal() {
+        scrim.classList.add('hidden');
+        document.body.style.overflow = '';
+        openButton.focus();
+      }
+      openButton.addEventListener('click', openModal);
+      closeButton.addEventListener('click', closeModal);
+      cancelButton.addEventListener('click', closeModal);
+      scrim.addEventListener('click', function (event) { if (event.target === scrim) closeModal(); });
+      modal.addEventListener('click', function (event) { event.stopPropagation(); });
+      document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !scrim.classList.contains('hidden')) closeModal(); });
+      email.addEventListener('input', function () { emailField.classList.remove('error'); });
+      role.addEventListener('change', function () { permissionHeading.lastChild.textContent = ' ' + role.value + ' permissions'; });
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        if (!email.validity.valid || !email.value.trim()) {
+          emailField.classList.add('error');
+          email.focus();
+          return;
+        }
+        emailField.classList.remove('error');
+        sendButton.disabled = true;
+        sendButton.classList.add('sending');
+        sendButton.querySelector('.button-label').textContent = 'Sending…';
+        setTimeout(function () {
+          const address = email.value.trim();
+          closeModal();
+          sendButton.disabled = false;
+          sendButton.classList.remove('sending');
+          sendButton.querySelector('.button-label').textContent = 'Send invitation';
+          toast.querySelector('strong').textContent = address;
+          toast.classList.add('show');
+          setTimeout(function () { toast.classList.remove('show'); }, 3800);
+        }, 700);
+      });
+    }());
+  </script>
+</body>
+</html>

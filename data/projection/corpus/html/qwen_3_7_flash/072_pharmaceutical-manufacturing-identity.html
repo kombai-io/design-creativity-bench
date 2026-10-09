@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>PharmaGrid — Compound Identity &amp; Spatial Arrangement Planner</title>
+<style>
+:root {
+  --color-bg-primary: #0e1117;
+  --color-bg-secondary: #161b22;
+  --color-bg-tertiary: #1c2333;
+  --color-bg-surface: #21283b;
+  --color-bg-surface-hover: #28304a;
+  --color-bg-selected: #1e3a5f;
+  --color-bg-highlight: #1a2f4a;
+  --color-bg-badge-verified: #0d3b2e;
+  --color-bg-badge-active: #2e3d1a;
+  --color-bg-badge-deprecated: #3d1a1a;
+  --color-bg-badge-review: #3d2e1a;
+  --color-bg-pager: #141a26;
+  --color-border-primary: #30363d;
+  --color-border-secondary: #252c36;
+  --color-border-header: #3a4150;
+  --color-border-accent: #2a5a8a;
+  --color-text-primary: #c9d1d9;
+  --color-text-secondary: #8b949e;
+  --color-text-tertiary: #545d68;
+  --color-text-heading: #e6edf3;
+  --color-text-accent: #58a6ff;
+  --color-text-verified: #56d364;
+  --color-text-active: #d2ca38;
+  --color-text-deprecated: #f47067;
+  --color-text-review: #d29922;
+  --color-brand-primary: #3a7bd5;
+  --color-brand-secondary: #2a5a8a;
+  --color-brand-accent: #58a6ff;
+  --color-status-green: #3fb950;
+  --color-status-yellow: #d29922;
+  --color-status-red: #f85149;
+  --color-status-blue: #58a6ff;
+  --radius-small: 3px;
+  --radius-medium: 5px;
+  --radius-large: 8px;
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 10px;
+  --spacing-lg: 14px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 28px;
+  --font-family-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  --font-size-xxs: 10px;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 17px;
+  --font-size-xxl: 20px;
+  --font-size-heading: 24px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-elevated: 0 4px 12px rgba(0,0,0,0.5);
+  --shadow-focus: 0 0 0 2px var(--color-brand-primary);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  line-height: 1.5;
+}
+
+/* ── Layout Grid Shell ── */
+.page-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ── Sidebar Navigation ── */
+.sidebar {
+  grid-row: 1 / -1;
+  grid-column: 1;
+  background: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border-primary);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.sidebar-brand svg { flex-shrink: 0; }
+
+.sidebar-brand-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-heading);
+  letter-spacing: 0.5px;
+}
+
+.sidebar-brand-sub {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.sidebar-section-label {
+  font-size: var(--font-size-xxs);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--color-text-tertiary);
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-xs);
+}
+
+.sidebar-nav-list {
+  list-style: none;
+  padding: 0 var(--spacing-sm) var(--spacing-md);
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-medium);
+  transition: background 0.15s, color 0.15s;
+  margin-bottom: 1px;
+}
+
+.sidebar-nav-item:hover {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.sidebar-nav-item.active {
+  background: var(--color-bg-selected);
+  color: var(--color-text-accent);
+}
+
+.sidebar-nav-item svg { opacity: 0.6; flex-shrink: 0; }
+.sidebar-nav-item.active svg { opacity: 1; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--color-border-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.sidebar-footer-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+/* ── Top Bar ── */
+.topbar {
+  grid-column: 2;
+  grid-row: 1;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-xl);
+  gap: var(--spacing-md);
+  min-height: 52px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.breadcrumb-sep { opacity: 0.4; }
+
+.breadcrumb-current {
+  color: var(--color-text-heading);
+  font-weight: 500;
+}
+
+.topbar-spacer { flex: 1; }
+
+.topbar-search {
+  position: relative;
+}
+
+.topbar-search input {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-large);
+  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 30px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  width: 240px;
+  outline: none;
+  font-family: inherit;
+}
+
+.topbar-search input::placeholder { color: var(--color-text-tertiary); }
+.topbar-search input:focus { border-color: var(--color-border-accent); box-shadow: var(--shadow-focus); }
+
+.topbar-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.4;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.topbar-btn {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-medium);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.topbar-btn:hover { background: var(--color-bg-surface); color: var(--color-text-primary); }
+
+.btn-primary-action {
+  background: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.btn-primary-action:hover { background: var(--color-brand-secondary); }
+
+/* ── Main Content Area ── */
+.main-content {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+}
+
+/* ── Page Header ── */
+.page-header {
+  padding: var(--spacing-xl) var(--spacing-xxl) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-secondary);
+}
+
+.page-header h1 {
+  font-size: var(--font-size-xxl);
+  font-weight: 700;
+  color: var(--color-text-heading);
+  margin-bottom: var(--spacing-xs);
+}
+
+.page-header-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 680px;
+  line-height: 1.6;
+}
+
+/* ── Tab System ── */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
+  padding: 0 var(--spacing-xxl);
+  gap: 0;
+}
+
+.tab-item {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tab-item:hover { color: var(--color-text-primary); }
+
+.tab-item.active {
+  color: var(--color-text-accent);
+  border-bottom-color: var(--color-brand-accent);
+  font-weight: 600;
+}
+
+.tab-badge {
+  display: inline-block;
+  font-size: var(--font-size-xxs);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  padding: 0 var(--spacing-xs);
+  border-radius: var(--radius-small);
+  margin-left: var(--spacing-xs);
+  vertical-align: middle;
+}
+
+/* ── Dense Data Grid ── */
+.data-grid-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.grid-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-xxl);
+  border-bottom: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-secondary);
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-large);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.filter-chip:hover { background: var(--color-bg-surface); }
+
+.filter-chip.active {
+  background: var(--color-bg-selected);
+  border-color: var(--color-border-accent);
+  color: var(--color-text-accent);
+}
+
+.toolbar-spacer { flex: 1; }
+
+.sort-select {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-medium);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.sort-select option { background: var(--color-bg-secondary); }
+
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  background: var(--color-bg-tertiary);
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+}
+
+.view-toggle-btn.active {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--color-border-primary); }
+
+/* ── Table ── */
+.table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  table-layout: fixed;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+thead th {
+  background: var(--color-bg-tertiary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--color-border-primary);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+thead th:hover { color: var(--color-text-primary); background: var(--color-bg-surface); }
+
+thead th.sorted-asc::after { content: ' ▲'; font-size: 8px; color: var(--color-text-accent); }
+thead th.sorted-desc::after { content: ' ▼'; font-size: 8px; color: var(--color-text-accent); }
+
+tbody tr {
+  border-bottom: 1px solid var(--color-border-secondary);
+  transition: background 0.1s;
+}
+
+tbody tr:hover { background: var(--color-bg-surface-hover); }
+tbody tr.selected { background: var(--color-bg-selected); }
+
+td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  vertical-align: middle;
+  color: var(--color-text-primary);
+}
+
+td.mono { font-family: var(--font-family-mono); font-size: var(--font-size-xs); }
+
+.id-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 260px;
+}
+
+.id-cell-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #fff;
+}
+
+.id-cell-info {
+  min-width: 0;
+}
+
+.id-cell-name {
+  font-weight: 600;
+  color: var(--color-text-heading);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.id-cell-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-mono);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 1px var(--spacing-sm);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-verified { background: var(--color-bg-badge-verified); color: var(--color-text-verified); }
+.status-verified .status-dot { background: var(--color-status-green); }
+
+.status-active { background: var(--color-bg-badge-active); color: var(--color-text-active); }
+.status-active .status-dot { background: var(--color-status-yellow); }
+
+.status-deprecated { background: var(--color-bg-badge-deprecated); color: var(--color-text-deprecated); }
+.status-deprecated .status-dot { background: var(--color-status-red); }
+
+.status-review { background: var(--color-bg-badge-review); color: var(--color-text-review); }
+.status-review .status-dot { background: var(--color-status-blue); }
+
+.prose-cell {
+  max-width: 380px;
+  font-size: var(--font-size-xs);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  white-space: normal;
+}
+
+.prose-cell strong { color: var(--color-text-primary); font-weight: 600; }
+
+.location-cell { font-family: var(--font-family-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); white-space: nowrap; }
+
+.weight-cell { font-family: var(--font-family-mono); font-size: var(--font-size-xs); text-align: right; }
+
+.date-cell { font-family: var(--font-family-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); white-space: nowrap; }
+
+.action-cell { white-space: nowrap; }
+
+.action-link {
+  color: var(--color-text-accent);
+  text-decoration: none;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 0;
+}
+
+.action-link:hover { text-decoration: underline; }
+
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-xxl);
+  border-top: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.pagination-info { white-space: nowrap; }
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.page-btn {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-medium);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.page-btn:hover:not(:disabled) { background: var(--color-bg-surface); color: var(--color-text-primary); }
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+
+.page-btn.current {
+  background: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.page-size-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.page-size-group label { white-space: nowrap; }
+
+.page-size-select {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-medium);
+  padding: var(--spacing-xs) 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.page-size-select option { background: var(--color-bg-secondary); }
+
+/* ── Detail Panel (right side) ── */
+.detail-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  height: 100vh;
+  background: var(--color-bg-secondary);
+  border-left: 1px solid var(--color-border-primary);
+  box-shadow: var(--shadow-elevated);
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.detail-overlay.open { display: flex; }
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-bottom: 1px solid var(--color-border-primary);
+  background: var(--color-bg-tertiary);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.detail-title {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text-heading);
+}
+
+.detail-close {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-medium);
+  display: flex;
+}
+
+.detail-close:hover { background: var(--color-bg-surface); color: var(--color-text-primary); }
+
+.detail-body { padding: var(--spacing-xl); flex: 1; }
+
+.detail-section { margin-bottom: var(--spacing-xl); }
+
+.detail-section-title {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+}
+
+.detail-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--color-border-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.detail-field-key { color: var(--color-text-secondary); }
+.detail-field-val { color: var(--color-text-heading); font-weight: 500; text-align: right; max-width: 60%; word-break: break-all; }
+
+.detail-prose {
+  font-size: var(--font-size-sm);
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+
+.detail-prose p { margin-bottom: var(--spacing-md); }
+
+.detail-prose strong { color: var(--color-text-primary); }
+
+.detail-actions {
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-top: 1px solid var(--color-border-primary);
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.detail-btn {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.detail-btn-primary { background: var(--color-brand-primary); border: none; color: #fff; }
+.detail-btn-primary:hover { background: var(--color-brand-secondary); }
+
+.detail-btn-secondary { background: var(--color-bg-tertiary); border: 1px solid var(--color-border-primary); color: var(--color-text-primary); }
+.detail-btn-secondary:hover { background: var(--color-bg-surface); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--color-border-primary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-tertiary); }
+
+/* ── Column widths ── */
+.col-id { width: 280px; }
+.col-status { width: 110px; }
+.col-type { width: 120px; }
+.col-location { width: 140px; }
+.col-weight { width: 100px; text-align: right; }
+.col-description { width: 380px; }
+.col-date { width: 110px; }
+.col-actions { width: 120px; }
+.col-batch { width: 120px; }
+.col-route { width: 140px; }
+
+/* Checkbox */
+.row-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-brand-primary);
+  cursor: pointer;
+}
+
+select[multiple] option { padding: var(--spacing-xs); }
+</style>
+</head>
+<body>
+
+<div class="page-shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" role="navigation" aria-label="Primary navigation">
+    <div class="sidebar-brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect x="2" y="2" width="24" height="24" rx="4" fill="var(--color-brand-primary)" opacity="0.15"/>
+        <rect x="2" y="2" width="24" height="24" rx="4" stroke="var(--color-brand-accent)" stroke-width="1.5"/>
+        <path d="M8 14h12M14 8v12" stroke="var(--color-brand-accent)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="14" cy="14" r="3" stroke="var(--color-brand-accent)" stroke-width="1.2" fill="none"/>
+      </svg>
+      <div>
+        <div class="sidebar-brand-title">PharmaGrid</div>
+        <div class="sidebar-brand-sub">Identity Planner v3.2</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section-label">Planning Workspace</div>
+    <ul class="sidebar-nav-list">
+      <li class="sidebar-nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="5" height="5" rx="1"/><rect x="10" y="1" width="5" height="5" rx="1"/><rect x="1" y="10" width="5" height="5" rx="1"/><rect x="10" y="10" width="5" height="5" rx="1"/></svg>Compound Registry</li>
+      <li class="sidebar-nav-item active"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14M1 8h14M1 13h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>Spatial Arrangement<span class="tab-badge" style="margin-left:auto">Active</span></li>
+      <li class="sidebar-nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 5v3l2 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>Batch Schedule</li>
+      <li class="sidebar-nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 14V4l6-2 6 2v10l-6 2-6-2z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>Route Mapping</li>
+      <li class="sidebar-nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h10v10H3z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M6 3v10M10 3v10M3 6h10M3 10h10" stroke="currentColor" stroke-width="0.8" opacity="0.5"/></svg>Zoning Plans</li>
+    </ul>
+
+    <div class="sidebar-section-label">Compliance &amp; Cases</div>
+    <ul class="sidebar-nav-list">
+      <li class="sidebar-nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 3h3l-2.5 3 1 3.5L8 8l-3.5 3.5 1-3.5L3 4h3z" stroke="currentColor" stroke-width="1" fill="none"/></svg>Quality Review</li>
+      <li class="sidebar-nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>Identity Verification<span class="tab-badge" style="margin-left:auto">7</span></li>
+      <li class="sidebar-nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 4h8v8H4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7 4v8M4 8h8" stroke="currentColor" stroke-width="0.8" opacity="0.4"/></svg>Cross-Reference Logs</li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-avatar">DR</div>
+      <div>
+        <div style="color: var(--color-text-primary); font-size: var(--font-size-sm);">Dr. Elena Rostova</div>
+        <div>Lead Identity Auditor · Sector 4</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ TOP BAR ═══ -->
+  <header class="topbar">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <span>Workspace</span>
+      <span class="breadcrumb-sep">›</span>
+      <span>Spatial Planning</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Compound Registry</span>
+    </nav>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-search">
+      <svg class="topbar-search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M9 9l3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      <input type="search" placeholder="Search compounds, lot IDs, locations…" aria-label="Search compounds">
+    </div>
+    <div class="topbar-actions">
+      <button class="topbar-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3h10M2 7h7M2 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span>Export</span></button>
+      <button class="topbar-btn btn-primary-action"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Add Compound</span></button>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <section class="page-header">
+      <h1>Spatial Arrangement &amp; Compound Identity Registry</h1>
+      <p class="page-header-desc">
+        Maintain and review the spatial mapping of all active pharmaceutical ingredients within Sector 4 processing facilities. Each entry corresponds to a verified identity dossier submitted under Case ID CV-2024-00817. Use the controls below to filter, sort, and navigate the full registry of scheduled compounds. This page serves as the authoritative reference for audit trails submitted by Dr. Rostova on 2024-11-12.
+      </p>
+    </section>
+
+    <!-- Tabs -->
+    <nav class="tab-bar" role="tablist" aria-label="Registry views">
+      <div class="tab-item active" role="tab" aria-selected="true" aria-controls="panel-grid" id="tab-grid">Full Registry<span class="tab-badge">147</span></div>
+      <div class="tab-item" role="tab" aria-selected="false" aria-controls="panel-grid" id="tab-active">Active Only<span class="tab-badge">89</span></div>
+      <div class="tab-item" role="tab" aria-selected="false" aria-controls="panel-grid" id="tab-review">Under Review<span class="tab-badge">12</span></div>
+      <div class="tab-item" role="tab" aria-selected="false" aria-controls="panel-grid" id="tab-deprecated">Deprecated</div>
+      <div class="tab-item" role="tab" aria-selected="false" aria-controls="panel-map" id="tab-map">Map View</div>
+      <div class="tab-item" role="tab" aria-selected="false" aria-controls="panel-reports" id="tab-reports">Reports</div>
+    </nav>
+
+    <!-- Tab Panels -->
+    <div role="tabpanel" id="panel-grid" aria-labelledby="tab-grid">
+
+      <!-- Toolbar -->
+      <div class="grid-toolbar">
+        <div class="filter-chip active">All Statuses</div>
+        <div class="filter-chip">Verified</div>
+        <div class="filter-chip">Active</div>
+        <div class="filter-chip">Review Pending</div>
+        <div class="filter-chip">Deprecated</div>
+        <div class="toolbar-spacer"></div>
+        <select class="sort-select" aria-label="Sort by">
+          <option>Sort: Name (A–Z)</option>
+          <option>Sort: Name (Z–A)</option>
+          <option>Sort: Date Added ↓</option>
+          <option>Sort: Batch Size ↑</option>
+          <option>Sort: Location</option>
+        </select>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" aria-label="Grid view"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="8" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="8" width="5" height="5" rx="0.5"/><rect x="8" y="8" width="5" height="5" rx="0.5"/></svg></button>
+          <button class="view-toggle-btn" aria-label="List view"><svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M2 3h10M2 7h10M2 11h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-scroll" role="region" aria-label="Compound registry data table" tabindex="0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-id" style="width:36px;"><input type="checkbox" class="row-checkbox" aria-label="Select all rows"></th>
+              <th class="col-id sorted-asc">Compound Identity</th>
+              <th class="col-status">Status</th>
+              <th class="col-batch">Batch / Lot</th>
+              <th class="col-type">Class</th>
+              <th class="col-route">Delivery Route</th>
+              <th class="col-location">Facility Zone</th>
+              <th class="col-weight" style="text-align:right;">Weight (g)</th>
+              <th class="col-date">Date Logged</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-bar">
+        <div class="pagination-info" id="pagination-info">Showing 1–25 of 147 compounds</div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div class="page-size-group">
+            <label for="pageSize">Rows per page:</label>
+            <select id="pageSize" class="page-size-select" aria-label="Rows per page">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="pagination-controls" id="pagination-controls" role="navigation" aria-label="Pagination">
+            <!-- Controls injected by JS -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+</div>
+
+<!-- ═══ DETAIL PANEL ═══ -->
+<aside class="detail-overlay" id="detailPanel" role="dialog" aria-modal="true" aria-label="Compound detail panel" aria-hidden="true">
+  <div class="detail-header">
+    <div class="detail-title" id="detailTitle">Compound Details</div>
+    <button class="detail-close" id="detailClose" aria-label="Close panel">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="detail-body" id="detailBody">
+    <!-- Populated by JS -->
+  </div>
+  <div class="detail-actions">
+    <button class="detail-btn detail-btn-secondary">Edit Record</button>
+    <button class="detail-btn detail-btn-primary">Verify Identity</button>
+  </div>
+</aside>
+
+<script>
+(function() {
+  // ─── Data ───
+  const compounds = [
+    { id:"CPI-7741", name:"Dapagliflozin Sodium Monohydrate", status:"verified", batch:"B-NA-2024-0891", cls:"SGLT2 Inhibitor", route:"Oral / Tablet", zone:"Zone A – Dry Room 12", weight:4820.5, date:"2024-11-12", desc:"Active pharmaceutical ingredient manufactured under GMP conditions at the Newark production facility. Supplied as sodium monohydrate polymorph form. Identity confirmed by <strong>H-NMR spectroscopy</strong> and <strong>HPLC purity ≥ 99.2%</strong>. Assigned to spatial coordinate A-12-B3 for integration into the multi-vessel compounding line.", substance:"Dapagliflozin Na·H₂O", cas:"10184190-84-2", manufacturer:"Bayer HealthCare AG", purity:99.3 },
+    { id:"CPI-7742", name:"Metformin Hydrochloride USP", status:"active", batch:"B-LY-2024-1044", cls:"Biguanide Antidiabetic", route:"Oral / Solution", zone:"Zone B – Wet Lab 07", weight:12450.0, date:"2024-11-11", desc:"Extended-release formulation component sourced from the <strong>Lyon satellite laboratory</strong>. Bulk quantity received via controlled logistics chain bearing cold-custody seals. Verified against European Pharmacopoeia 11th edition monograph 2368. Stored under <strong>controlled ambient conditions (20°C ± 2°C)</strong>.", substance:"Metformin·HCl", cas:"1115-70-4", manufacturer:"Merck KGaA", purity:99.8 },
+    { id:"CPI-7743", name:"Empagliflozin Anhydrous", status:"review", batch:"B-ZR-2024-0312", cls:"SGLT2 Inhibitor", route:"Oral / Film-Coated", zone:"Zone C – Isolation Suite 04", weight:1890.25, date:"2024-11-10", desc:"Received under conditional quarantine pending <strong>DSCAM analysis</strong>. Initial spectrometric profiles indicate minor crystalline variance from reference standard EMD-188609. Compounded at Zimmerwald, Switzerland site. Requires secondary confirmation by analytical team before spatial allocation is finalized.", substance:"Empagliflozin (anhydrous)", cas:"864078-23-7", manufacturer:"Boehringer Ingelheim", purity:98.7 },
+    { id:"CPI-7744", name:"Insulin Glargine Recombinant DNA Originated", status:"verified", batch:"B-RL-2024-5501", cls:"Long-Acting Insulin Analog", route:"Subcutaneous Injection", zone:"Zone D – Biologics Vault 01", weight:340.8, date:"2024-11-09", desc:"Biological product produced in <strong>Chinese Hamster Ovary (CHO) cell culture</strong>. Manufactured under current cGMP for biologics. Sterility confirmed via membrane filtration method per USP &lt;71&gt;. Storage at 2–8 °C mandatory. Chain-of-custody documentation includes temperature excursions report (within tolerance: 3.2 °C minimum).", substance:"rDNA origin Insulin Glargine", cas:"232264-34-9", manufacturer:"Sanofi-Aventis", purity:99.9 },
+    { id:"CPI-7745", name:"Amoxicillin Trihydrate", status:"deprecated", batch:"B-TK-2023-8877", cls:"Penicillin-class Antibiotic", route:"Oral / Capsule", zone:"Zone A – Quarantine Wing", weight:28700.0, date:"2024-06-14", desc:"<strong>DECOMMISSIONED</strong> – superseded by Amoxicillin Trihydrate USP 47th Edition specification revision. Original lot retained for reference archive and stability comparison studies only. No further production routing authorized. Retained sample quantities: 500 g each maintained at NDA-050229 S-012 repository.", substance:"Amoxicillin·3H₂O", cas:"26787-78-0", manufacturer:"Takeda Pharmaceuticals", purity:null },
+    { id:"CPI-7746", name:"Lisinopril ACS Grade", status:"active", batch:"B-MI-2024-2210", cls:"ACE Inhibitor", route:"Oral / Tablet", zone:"Zone B – Dry Room 09", weight:6100.0, date:"2024-11-08", desc:"Analytical chemical grade procured for <strong>stability-indicating assay development</strong>. Used exclusively as reference standard in HPLC gradient method validation. Not intended for clinical manufacturing. Catalogue number ACX-44129 ordered through Fisher Scientific Chemical Distribution.", substance:"Lisinopril (ACS)", cas:"83915-83-7", manufacturer:"Fisher Scientific", purity:99.5 },
+    { id:"CPI-7747", name:"Rivaroxaban Polymorph Form III", status:"verified", batch:"B-BA-2024-3305", cls:"Factor Xa Inhibitor / Anticoagulant", route:"Oral / Tablet", zone:"Zone A – Controlled Access 05", weight:2230.75, date:"2024-11-07", desc:"Polymorphic characterization completed by <strong>X-ray powder diffraction (XRPD)</strong>. Form III demonstrates superior compression characteristics versus Form II. Supplied by Bayer AG Basel operations under validated supply chain agreement. Integrated into Line-7 tablet press scheduling for Q1-2025 commercial batch preparation.", substance:"Rivaroxaban (Polymorph III)", cas:"366784-36-7", manufacturer:"Bayer AG Basel", purity:99.6 },
+    { id:"CPI-7748", name:"Trastuzumab Biosimilar CBPV-0024", status:"review", batch:"B-GS-2024-7710", cls:"Monoclonal Antibody (HER2)", route:"Intravenous Infusion", zone:"Zone D – Isolator Suite 12", weight:125.0, date:"2024-11-06", desc:"Biosimilar candidate developed under accelerated pathway designation. Currently undergoing <strong>comparability assessment phase</strong> against Herceptin® reference listed drug. Key attributes assessed: glycosylation profile, Fc receptor binding, ADCC potency. Site: Gentili Pharma SpA, Genoa. Pending EMA opinion on comparability dossier submission.", substance:"rhuMAb HER2 (biosimilar)", cas:"1799264-58-8", manufacturer:"Gentili Pharma SpA", purity:97.2 },
+    { id:"CPI-7749", name:"Sertraline Hydrochloride BP", status:"active", batch:"B-KN-2024-4488", cls:"SSRI Antidepressant", route:"Oral / Tablet, Oral Concentrate", zone:"Zone B – Blending Hall 03", weight:18900.0, date:"2024-11-05", desc:"Bulk API supplied from Kunshan manufacturing site, People's Republic of China. Shipped under <strong>GMP-certified sealed drum packaging</strong>. Certificate of Analysis confirms compliance with British Pharmacopoeia 2024 monograph. Residual solvents within ICH Q3C limits. Received 05 November via temperature-monitored logistics container TRK-884712.", substance:"Sertraline·HCl (BP)", cas:"79559-96-9", manufacturer:"Hikang Pharmaceutical", purity:99.4 },
+    { id:"CPI-7750", name:"Prednisolone Sodium Phosphate USP", status:"verified", batch:"B-PR-2024-1109", cls:"Glucocorticoid Corticosteroid", route:"Ophthalmic Solution / IM Injection", zone:"Zone C – Aseptic Filling 08", weight:3450.0, date:"2024-11-04", desc:"Sterile ophthalmic-grade material manufactured under ISO 14644-1 Class 5 conditions. Preservative-free formulation for <strong>single-dose unit-dose delivery system</strong>. Fill volume nominal 0.4 mL per dropper tube. Endotoxin level tested ≤ 0.1 EU/mL per USP &lt;85&gt;. Released after passing sterility and particulate matter tests.", substance:"Prednisolone Na-phosphate", cas:"23922-67-0", manufacturer:"Pfizer Central Research", purity:99.1 },
+    { id:"CPI-7751", name:"Atorvastatin Calcium Trihydrate", status:"active", batch:"B-VA-2024-5523", cls:"HMG-CoA Reductase Inhibitor", route:"Oral / Tablet", zone:"Zone A – Compression Line 06", weight:9870.0, date:"2024-11-03", desc:"Generic formulation material approved under ANDA 205432. Trihydrate crystalline form selected for improved flow properties during high-speed tablet compression. Raw material sourced from Viatris Inc.原料药 division. Particle size distribution D50 = 42 µm confirmed by laser diffraction analysis.", substance:"Atorvastatin Ca·3H₂O", cas:"204222-62-8", manufacturer:"Viatris Inc.", purity:99.5 },
+    { id:"CPI-7752", name:"Nirmatrelvir Intermediate P119", status:"review", batch:"B-SU-2024-0067", cls:"3CL Protease Inhibitor Precursor", route:"Oral / Tablet (co-administered)", zone:"Zone C – Synthetic Chemistry Lab", weight:580.2, date:"2024-11-02", desc:"Key intermediate in the synthetic sequence toward the protease inhibitor core structure. Synthesized via <strong>multi-step catalytic reductive amination protocol</strong>. Chiral purity confirmed by chiral HPLC (ee > 99.5%). Current stage: process optimization trial #P119-07. Target scale-up to 50 kg batch size.", substance:"Intermediate P119 (crude)", cas:"not-assigned", manufacturer:"Internal – Process Dev Div", purity:94.8 },
+    { id:"CPI-7753", name:"Enalapril Maleate IP", status:"deprecated", batch:"B-HU-2023-1290", cls:"ACE Inhibitor", route:"Oral / Tablet", zone:"Zone A – Obsolete Archive", weight:4100.0, date:"2023-12-20", desc:"Retired specification version — Indian Pharmacopoeia 2022 edition no longer accepted per internal quality policy QPOL-2024-03. All remaining stock decommissioned and transferred to waste management contractor Chem disposal Ltd., permit CM-44091. Final inventory reconciliation signed by Quality Unit on 2024-01-15.", substance:"Enalapril Maleate (IP)", cas:"75847-73-7", manufacturer:"Himalaya Wellness Co.", purity:null },
+    { id:"CPI-7754", name:"Buprenorphine Transdermal Matrix Reservoir", status:"active", batch:"B-NM-2024-8834", cls:"Partial μ-Opioid Agonist", route:"Transdermal Patch", zone:"Zone E – Patch Manufacturing Cell", weight:67.5, date:"2024-11-01", desc:"Controlled-release transdermal delivery system containing buprenorphine base embedded in silicone adhesive matrix. Drug reservoir thickness engineered at <strong>0.18 mm ± 0.01 mm</strong>. Release rate calibrated to 0.5 mcg/hr baseline output over 72-hour wear period. Tested for adhesion strength per ASTM D3330.", substance:"Buprenorphine Base (matrix)", cas:"54865-61-9", manufacturer:"Novartis Pharmaceuticals", purity:99.7 },
+    { id:"CPI-7755", name:"Oseltamivir Phosphate CAP (Tamiflu® Ref.)", status:"verified", batch:"B-RO-2024-2201", cls:"Neuraminidase Inhibitor", route:"Oral / Capsule", zone:"Zone A – Softgel Line 02", weight:7650.0, date:"2024-10-31", desc:"Reference standard capsule for bioequivalence study protocol BE-OST-2024-042. Manufactured by Roche Pharmaceutical GmbH, Grenzach-Wyhlen. Used as comparator arm in open-label, randomized, two-period crossover study enrolling healthy volunteers aged 18–55 years. Fasting administration per protocol amendment 003.", substance:"Oseltamivir phosphate (capsule)", cas:"196618-13-0", manufacturer:"Roche Deutschland GmbH", purity:99.8 },
+    { id:"CPI-7756", name:"Vancomycin Hydrochloride Pharmaco-poia", status:"active", batch:"B-JA-2024-6670", cls:"Glycopeptide Antibiotic", route:"Intravenous Infusion, Oral Capsule", zone:"Zone C – Containment Suite 06", weight:4200.0, date:"2024-10-30", desc:"High-potency active requiring <strong>closed-system transfer device (CSTD)</strong> handling procedures per OSHA guidance for hazardous drug handling. Classified as Category 2 carcinogen under NFPA 499. Cleanroom classification Class A / Grade A for sterile fill operations. Potency titer established at 910 U/mg by microbiological assay.", substance:"Vancomycin·HCl (Ph.Eur.)", cas:"1404-93-9", manufacturer:"Jiangsu Alpha Pharmaceutical", purity:98.5 },
+    { id:"CPI-7757", name:"Levothyroxine Sodium NLT 98%", status:"review", batch:"B-LE-2024-9901", cls:"Thyroid Hormone Replacement", route:"Oral / Tablet", zone:"Zone B – Low-Dose Blending 01", weight:28.3, date:"2024-10-29", desc:"Ultra-low-dose preparation ranging from 12.5 µg to 300 µg per tablet. <strong>Geometric dilution blending procedure</strong> required due to sub-milligram dosing levels. Assay by HPLC per USP monograph. Stability data indicates 24-month shelf life when stored in amber glass bottles desiccated at 25 °C / 60% RH.", substance:"Levothyroxine Na (NLT 98%)", cas:"55-06-1", manufacturer:"Lannett Company Inc.", purity:98.9 },
+    { id:"CPI-7758", name:"Carvedilol Phosphate Extended-Release Beads", status:"active", batch:"B-AL-2024-3344", cls:"Non-selective β-Blocker + α₁ Blocker", route:"Oral / XR Capsule (bead-filled)", zone:"Zone B – Pelletization Drum 04", weight:5430.0, date:"2024-10-28", desc:"Multi-particulate extended-release dosage form comprising carvedilol phosphate loaded onto non-permeable ethylcellulose-coated sugar beads. Drug loading capacity: <strong>18% w/w</strong>. Release profile: 20% in 1 h, 50% in 4 h, 90% in 12 h (pH 1.2 → pH 6.8 dissolution media). Produced on Fluid Bed Processor Master Gran 90.", substance:"Carvedilol phosphate (XR beads)", cas:"137224-67-4", manufacturer:"Alphapharm Pty Ltd", purity:99.0 },
+    { id:"CPI-7759", name:"Daratumumab SC (subcutaneous formulation)", status:"review", batch:"B-MSD-2024-1100", cls:"Anti-CD38 Monoclonal Antibody", route:"Subcutaneous Injection", zone:"Zone D – mAb Filling Suite", weight:95.0, date:"2024-10-27", desc:"Recombinant human IgG1κ monoclonal antibody targeting CD38 antigen expressed on plasma cells. Subcutaneous formulation utilizes recombinant human hyaluronidase PH20 (rHuPH20) as permeability enhancer. Administered as <strong>single-volume 1200 mg dose</strong> to reduce infusion chair occupancy time. Manufacturing under continuous mode upstream process.", substance:"Daratumumab + rHuPH20 (SC)", cas:"unassigned (biosimilar)", manufacturer:"Merck Sharp & Dohme LLC", purity:98.1 },
+    { id:"CPI-7760", name:"Gabapentin API Technical Grade", status:"active", batch:"B-KN-2024-7712", cls:"Anticonvulsant / Neuropathic Agent", route:"Oral / Capsule, Tablet, Oral Sol.", zone:"Zone A – General Purpose 08", weight:22100.0, date:"2024-10-26", desc:"Technical-grade bulk material destined for generic gabapentin capsule manufacturing at the <strong>Nashville packaging satellite facility</strong>. Supply contract holds 12-month rolling commitment with Nanjing King-Friend API Plant. Impurity profile monitored quarterly: alpha-chloro valerophenone precursor tracked per GC method KFN-GC-004.", substance:"Gabapentin (technical)", cas:"60142-96-3", manufacturer:"King-Friend API Corp.", purity:99.1 },
+    { id:"CPI-7761", name:"Hydroxychloroquine Sulfate USP", status:"verified", batch:"B-QN-2024-4409", cls:"Antimalarial / Disease-modifying DMARD", route:"Oral / Tablet", zone:"Zone B – Tableting Hall 02", weight:15670.0, date:"2024-10-25", desc:"Widely used in autoimmune indications including systemic lupus erythematosus and rheumatoid arthritis. US-origin material manufactured under FDA-registered facility per registration 2003971. Bioavailability noted to increase significantly with <strong>food administration</strong>. Recommended dosing: 200–400 mg daily divided. Cross-reactivity screening negative for sulfonamide hypersensitivity.", substance:"Hydroxychloroquine sulfate", cas:"17472-81-8", manufacturer:"Quanutpharm Ltd.", purity:99.6 },
+    { id:"CPI-7762", name:"Semaglutide GLP-1 Analogue Peptide", status:"review", batch:"B-NM-2024-0088", cls:"GLP-1 Receptor Agonist", route:"Subcutaneous Injection (pen device)", zone:"Zone D – Peptide Synthesis Bay", weight:18.4, date:"2024-10-24", desc:"Single-chain 31-amino acid peptide with 94% homology to native human GLP-1. Modification at position 8 introduces <strong>fatty acid diacid side chain</strong> enabling albumin binding and extended half-life (~1 week dosing interval). Solid-phase peptide synthesis (SPPS) on non-crosslinked PEG-based resin. Purification via reversed-phase HPLC.", substance:"Semaglutide acetate salt", cas:"910463-68-2", manufacturer:"Novo Nordisk A/S (internal)", purity:97.8 },
+    { id:"CPI-7763", name:"Fluconazole Intravenous Solution", status:"active", batch:"B-FA-2024-5560", cls:"Triazole Antifungal", route:"Intravenous Infusion", zone:"Zone C – IV Admixture Suite 11", weight:3200.0, date:"2024-10-23", desc:"Sterile aqueous solution 2 mg/mL concentration formulated with mannitol as tonicity adjuster and hydrochloric acid for pH adjustment to range <strong>4.0–5.5</strong>. Packaged in 100 mL glass Type I bottles with elastomeric closure. Terminal sterilization via hot water immersion at 121 °C for 30 minutes. Passed sterility and bacterial endotoxin testing.", substance:"Fluconazole IV (2 mg/mL)", cas:"86389-58-8", manufacturer:"Fresenius Kabi Austria", purity:99.3 },
+    { id:"CPI-7764", name:"Duloxetine Delayed-Release Enteric-Coated", status:"verified", batch:"B-EU-2024-3317", cls:"SNRI Antidepressant", route:"Oral / Enteric-Coated Capsule", zone:"Zone A – Coating Pan 07", weight:8920.0, date:"2024-10-22", desc:"Enteric-coated granules filled into Opadry II White-coated hard gelatin capsules. Disintegration specification: <strong>≤ 60 minutes in simulated gastric fluid (pH 1.2)</strong>, release commencing in phosphate buffer pH 6.8. Dual indications approved: major depressive disorder and diabetic peripheral neuropathic pain. Packaging: blisters of 28 × 60 mg.", substance:"Duloxetine HCl (enteric)", cas:"188555-74-2", manufacturer:"Eli Lilly and Company", purity:99.4 },
+    { id:"CPI-7765", name:"Acalabrutinib Citrate (Calquence® Ref.)", status:"active", batch:"B-AB-2024-8845", cls:"Bruton's Tyrosine Kinase (BTK) Inhibitor", route:"Oral / Capsule", zone:"Zone A – Precision Blending 03", weight:1540.0, date:"2024-10-21", desc:"Selective covalent BTK inhibitor targeting mantle cell lymphoma and chronic lymphocytic leukemia. Dose: 100 mg twice daily on continuous schedule. Reference standard retained in <strong>climate-controlled master sample room</strong> under controlled access log system MS-2024-ACC-09. Chemical class: benzeneacetonitrile derivative.", substance:"Acalabrutinib citrate", cas:"1202125-73-6", manufacturer:"AbbVie Inc.", purity:99.7 },
+    { id:"CPI-7766", name:"Methylphenidate Hydrochloride ER", status:"deprecated", batch:"B-JNJ-2023-6601", cls:"Central Nervous System Stimulant", route:"Oral / Extended-Release Tablet", zone:"Zone A – Archived Inventory", weight:7200.0, date:"2023-10-08", desc:"<strong>DISCONTINUED</strong> – superseded by methylphenidate HCl ER modified-release formulation meeting updated release kinetics per USP general chapter <general>1151&gt;. Original supplier discontinued manufacture under old monograph version. Remaining balance quarantined pending destruction authorization form DEA-222B issued 2024-02-28. Destroyed 2024-03-15 by certified incineration service.", substance:"Methylphenidate·HCl (old ER)", cas:"298-57-7", manufacturer:"Janssen Research Foundation", purity:null },
+    { id:"CPI-7767", name:"Adalimumab (Humira® Biosimilar ADX-310)", status:"review", batch:"B-RG-2024-2200", cls:"TNF-α Blocking Monoclonal Antibody", route:"Subcutaneous Injection (autoinjector)", zone:"Zone D – mAb Harvest Facility", weight:72.0, date:"2024-10-19", desc:"Fully human IgG1κ monoclonal antibody recombinantly produced in <strong>ovarian cell line (CHO-K1)</strong>. Proposed indication: Crohn's disease, ulcerative colitis, psoriatic arthritis. Phase III comparative immunogenicity study initiated October 2024 at 42 sites across Europe and North America. Primary endpoint: seroconversion rate at Week 54.", substance:"ADX-310 (anti-TNFα mAb)", cas:"unassigned (investigational)", manufacturer:"Regeneron Pharmaceuticals", purity:98.4 },
+    { id:"CPI-7768", name:"Omeprazole Magnesium delayed-release pellets", status:"active", batch:"B-ST-2024-7723", cls:"Proton Pump Inhibitor", route:"Oral / DR Capsule (pellets)", zone:"Zone B – Extrusion-Spheronizer 05", weight:4380.0, date:"2024-10-18", desc:"Magnesium salt variant offered in preference to conventional omeprazole due to improved moisture stability during pellet coating stage. Acid-labile proton pump inhibitor protected by enteric polymer coating: methacrylic acid copolymer Type C (<strong>Eudragit L30D-55 dispersion</strong>). Pellet diameter target: 800–1000 µm via extrusion-spheronization.", substance:"Omeprazole magnesium (pellets)", cas:"133286-48-3", manufacturer:"Stada Arzneimittel AG", purity:99.2 },
+  ];
+
+  // ─── State ───
+  let currentPage = 1;
+  let pageSize = 25;
+
+  // ─── Render helpers ───
+  function statusBadge(status) {
+    const map = {
+      verified: ['status-verified','Verified'],
+      active: ['status-active','Active'],
+      deprecated: ['status-deprecated','Deprecated'],
+      review: ['status-review','Review']
+    };
+    const [cls, label] = map[status] || ['status-active', status];
+    return `<span class="status-badge ${cls}"><span class="status-dot"></span>${label}</span>`;
+  }
+
+  function colorForCls(cls) {
+    const hash = (str) => { let h = 0; for(let i=0;i<str.length;i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0; return Math.abs(h); };
+    const colors = ['#2a5a8a','#3a7bd5','#1a6a4a','#5a3a7a','#8a5a2a','#2a5a5a','#7a2a5a','#5a6a2a'];
+    return colors[hash(cls) % colors.length];
+  }
+
+  function truncate(str, len) {
+    if (!str) return '—';
+    if (str.length <= len) return str;
+    return str.slice(0, len) + '…';
+  }
+
+  // ─── Build table rows ───
+  function renderTable() {
+    const tbody = document.getElementById('table-body');
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, compounds.length);
+    const pageData = compounds.slice(start, end);
+
+    tbody.innerHTML = '';
+
+    pageData.forEach((c, idx) => {
+      const rowIdx = start + idx;
+      const globalIdx = compounds.indexOf(c);
+      const bgColor = colorForCls(c.cls);
+      const initials = c.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-index', globalIdx);
+      tr.innerHTML = `
+        <td><input type="checkbox" class="row-checkbox" aria-label="Select ${c.id}"></td>
+        <td>
+          <div class="id-cell">
+            <div class="id-cell-icon" style="background:${bgColor};">${initials}</div>
+            <div class="id-cell-info">
+              <div class="id-cell-name">${c.name}</div>
+              <div class="id-cell-sub">${c.id}</div>
+            </div>
+          </div>
+        </td>
+        <td>${statusBadge(c.status)}</td>
+        <td class="mono">${truncate(c.batch, 18)}</td>
+        <td style="font-size:var(--font-size-xs);color:var(--color-text-secondary);white-space:nowrap;">${truncate(c.cls, 28)}</td>
+        <td style="font-size:var(--font-size-xs);color:var(--color-text-secondary);white-space:nowrap;">${c.route}</td>
+        <td class="location-cell">${c.zone}</td>
+        <td class="weight-cell">${c.weight !== null ? c.weight.toLocaleString('en-US', {minimumFractionDigits: 2}) : '—'}</td>
+        <td class="date-cell">${c.date}</td>
+        <td class="action-cell">
+          <button class="action-link" onclick="window.__openDetail(${globalIdx})">View details</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ─── Pagination ───
+  function renderPagination() {
+    const totalPages = Math.ceil(compounds.length / pageSize);
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, compounds.length);
+
+    document.getElementById('pagination-info').textContent = `Showing ${start}–${end} of ${compounds.length} compounds`;
+
+    const controls = document.getElementById('pagination-controls');
+    controls.innerHTML = '';
+
+    // Prev
+    const prevBtn = createPageBtn('‹', currentPage === 1, null);
+    prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; render(); }});
+    controls.appendChild(prevBtn);
+
+    // Page numbers
+    const pages = getPageNumbers(currentPage, totalPages);
+    pages.forEach(p => {
+      if (p === '...') {
+        const span = document.createElement('span');
+        span.textContent = '…';
+        span.style.cssText = 'padding:4px 2px;color:var(--color-text-tertiary);';
+        controls.appendChild(span);
+      } else {
+        const btn = createPageBtn(p, false, p === currentPage);
+        btn.addEventListener('click', () => { currentPage = p; render(); });
+        controls.appendChild(btn);
+      }
+    });
+
+    // Next
+    const nextBtn = createPageBtn('›', currentPage === totalPages, null);
+    nextBtn.addEventListener('click', () => { if (currentPage < totalPages) { currentPage++; render(); }});
+    controls.appendChild(nextBtn);
+  }
+
+  function createPageBtn(label, disabled, isActive) {
+    const btn = document.createElement('button');
+    btn.className = 'page-btn' + (isActive ? ' current' : '');
+    btn.textContent = label;
+    btn.disabled = disabled;
+    btn.setAttribute('aria-label', typeof label === 'number' ? `Go to page ${label}` : label);
+    return btn;
+  }
+
+  function getPageNumbers(current, total) {
+    if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  // ─── Detail panel ───
+  window.__openDetail = function(index) {
+    const c = compounds[index];
+    const panel = document.getElementById('detailPanel');
+    document.getElementById('detailTitle').textContent = `${c.name} (${c.id})`;
+
+    document.getElementById('detailBody').innerHTML = `
+      <div class="detail-section">
+        <div class="detail-section-title">Identification</div>
+        <div class="detail-field"><span class="detail-field-key">Registry ID</span><span class="detail-field-val mono">${c.id}</span></div>
+        <div class="detail-field"><span class="detail-field-key">CAS Number</span><span class="detail-field-val mono">${c.cas}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Batch / Lot</span><span class="detail-field-val mono">${c.batch}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Active Substance</span><span class="detail-field-val">${c.substance}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Therapeutic Class</span><span class="detail-field-val">${c.cls}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Status</span><span class="detail-field-val">${statusBadge(c.status)}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Purity (assay)</span><span class="detail-field-val mono">${c.purity != null ? c.purity + '%' : 'Not applicable'}</span></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Manufacturing &amp; Supply</div>
+        <div class="detail-field"><span class="detail-field-key">Manufacturer</span><span class="detail-field-val">${c.manufacturer}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Delivery Route</span><span class="detail-field-val">${c.route}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Facility Zone</span><span class="detail-field-val">${c.zone}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Total Weight</span><span class="detail-field-val mono">${c.weight != null ? c.weight.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' g' : '—'}</span></div>
+        <div class="detail-field"><span class="detail-field-key">Date Logged</span><span class="detail-field-val">${c.date}</span></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Narrative Description</div>
+        <div class="detail-prose"><p>${c.desc}</p></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Spatial Coordinates</div>
+        <div class="detail-prose"><p>This compound occupies the physical cell corresponding to <strong>${c.zone}</strong>. The assigned rack position has been cross-referenced against the master building information model (BIM) file Rev2024.11_Sector4.dwg. Temperature monitoring sensors ST-${Math.floor(Math.random()*900+100)} and ST-${Math.floor(Math.random()*900+100)} cover this zone continuously. HVAC setpoints verified against SOP-ENV-044 on ${c.date}.</p></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Audit Trail</div>
+        <div class="detail-prose"><p>Last reviewed: <strong>2024-11-12 14:32 UTC</strong> by Dr. Elena Rostova (ID: AUD-0044). Previous reviewer: Dr. Marcus Chen (AUD-0021) on 2024-10-28. Two change requests filed since last audit: CR-2024-0312 (zone reclassification) and CR-2024-0447 (batch size update).</p></div>
+      </div>
+    `;
+
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+  };
+
+  document.getElementById('detailClose').addEventListener('click', () => {
+    const panel = document.getElementById('detailPanel');
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+  });
+
+  // ─── Filters ───
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      // For demo, just filter locally
+      const label = chip.textContent.trim();
+      const filtered = label === 'All Statuses' ? compounds : compounds.filter(c => {
+        if (label === 'Verified') return c.status === 'verified';
+        if (label === 'Active') return c.status === 'active';
+        if (label === 'Review Pending') return c.status === 'review';
+        if (label === 'Deprecated') return c.status === 'deprecated';
+        return true;
+      });
+      // Re-render with filtered count shown in badge
+      currentPage = 1;
+    });
+  });
+
+  // ─── Page size ───
+  document.getElementById('pageSize').addEventListener('change', (e) => {
+    pageSize = parseInt(e.target.value);
+    currentPage = 1;
+    render();
+  });
+
+  // ─── Tabs ───
+  document.querySelectorAll('.tab-item').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab-item').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // ─── Init ───
+  function render() {
+    renderTable();
+    renderPagination();
+  }
+
+  render();
+})();
+</script>
+
+</body>
+</html>

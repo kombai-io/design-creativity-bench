@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Identity Reconciliation | Onboarding Step 3 of 5</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-canvas: #f1f5f9;
+            --bg-surface: #ffffff;
+            --bg-header: #0f172a;
+            --bg-selection: #eff6ff;
+            --bg-brand: #3b82f6;
+            --bg-brand-hover: #2563eb;
+            --bg-accent: #f8fafc;
+            
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --text-on-brand: #ffffff;
+            --text-on-header: #cbd5e1;
+            
+            --status-ok: #10b981;
+            --status-warn: #f59e0b;
+            --status-error: #ef4444;
+            --status-bg-ok: #ecfdf5;
+            --status-bg-warn: #fffbeb;
+            --status-bg-error: #fef2f2;
+            
+            --border-default: #e2e8f0;
+            --border-active: #3b82f6;
+            
+            /* Spacing */
+            --space-none: 0;
+            --space-3xs: 2px;
+            --space-2xs: 4px;
+            --space-xs: 8px;
+            --space-sm: 12px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            
+            /* Typography */
+            --font-size-xs: 11px;
+            --font-size-sm: 13px;
+            --font-size-md: 14px;
+            --font-size-lg: 18px;
+            --font-weight-reg: 400;
+            --font-weight-med: 500;
+            --font-weight-bold: 600;
+            
+            /* Radius & Shadows */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-full: 9999px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: var(--space-none);
+            padding: var(--space-none);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-primary);
+            font-size: var(--font-size-md);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header & Progress */
+        .app-header {
+            background-color: var(--bg-header);
+            color: var(--text-on-header);
+            padding: var(--space-md) var(--space-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .step-progress-bar {
+            width: 200px;
+            height: 6px;
+            background: #334155;
+            border-radius: var(--radius-full);
+            position: relative;
+        }
+
+        .step-progress-fill {
+            position: absolute;
+            height: 100%;
+            background: var(--bg-brand);
+            border-radius: var(--radius-full);
+            width: 60%;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .utility-bar {
+            background: var(--bg-surface);
+            padding: var(--space-sm) var(--space-lg);
+            border-bottom: 1px solid var(--border-default);
+            display: flex;
+            align-items: center;
+            gap: var(--space-xl);
+        }
+
+        .guide-box {
+            background: var(--status-bg-warn);
+            border: 1px solid var(--status-warn);
+            padding: var(--space-sm);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            max-width: 600px;
+        }
+
+        /* Grid / Table Styles */
+        .grid-wrapper {
+            flex-grow: 1;
+            overflow: auto;
+            background: var(--bg-surface);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 1200px;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            background: var(--bg-accent);
+            z-index: 10;
+            text-align: left;
+            padding: var(--space-sm);
+            font-size: var(--font-size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border-default);
+        }
+
+        tbody td {
+            padding: var(--space-sm);
+            border-bottom: 1px solid var(--border-default);
+            font-size: var(--font-size-sm);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        tr.is-selected {
+            background-color: var(--bg-selection);
+        }
+
+        tr:hover {
+            background-color: var(--bg-accent);
+        }
+
+        .col-check { width: 40px; }
+        .col-id { width: 100px; }
+        .col-guest { width: 200px; }
+        .col-date { width: 120px; }
+        .col-doc { width: 100px; }
+        .col-score { width: 140px; }
+        .col-risk { width: 100px; }
+        .col-trend { width: 180px; }
+        .col-status { width: 120px; }
+
+        /* Components */
+        .badge {
+            display: inline-block;
+            padding: var(--space-2xs) var(--space-xs);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-bold);
+        }
+
+        .badge-success { background: var(--status-bg-ok); color: var(--status-ok); }
+        .badge-warning { background: var(--status-bg-warn); color: var(--status-warn); }
+        .badge-danger { background: var(--status-bg-error); color: var(--status-error); }
+
+        .score-bar-container {
+            width: 100%;
+            height: 8px;
+            background: var(--border-default);
+            border-radius: var(--radius-full);
+            margin-top: var(--space-2xs);
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+        }
+
+        .chart-mini {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 24px;
+        }
+
+        .chart-bar {
+            flex-grow: 1;
+            background: var(--bg-brand);
+            opacity: 0.6;
+        }
+
+        /* Batch Action Bar */
+        .batch-action-bar {
+            position: absolute;
+            bottom: var(--space-lg);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-header);
+            color: var(--text-on-brand);
+            padding: var(--space-sm) var(--space-xl);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+            box-shadow: var(--shadow-md);
+            z-index: 20;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .batch-count {
+            font-weight: var(--font-weight-bold);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding-right: var(--space-lg);
+        }
+
+        .btn {
+            padding: var(--space-xs) var(--space-md);
+            border-radius: var(--radius-sm);
+            font-weight: var(--font-weight-med);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+
+        .btn-primary { background: var(--bg-brand); color: white; }
+        .btn-primary:hover { background: var(--bg-brand-hover); }
+        .btn-ghost { background: transparent; color: white; border: 1px solid rgba(255, 255, 255, 0.3); }
+        .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); }
+
+        /* Text Utilities */
+        .num { font-variant-numeric: tabular-nums; }
+        .bold { font-weight: var(--font-weight-bold); }
+        .muted { color: var(--text-muted); }
+
+    </style>
+</head>
+<body>
+
+    <header class="app-header" role="banner">
+        <div>
+            <h1 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold);">Aristhène Systems — Identity & Compliance</h1>
+        </div>
+        <div class="step-indicator">
+            <span style="font-size: var(--font-size-sm);">Step 3 of 5: Ledger Reconciliation</span>
+            <div class="step-progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
+                <div class="step-progress-fill"></div>
+            </div>
+        </div>
+        <div style="font-size: var(--font-size-sm);">
+            Operator: <span class="bold">E. Latimeria</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="utility-bar">
+            <div class="guide-box" role="complementary">
+                <strong>First-time Audit Instructions:</strong> Select guests whose identity documents match the reservation metadata. Use bulk actions to "Verify & Lock" or "Escalate to Front Desk". High risk scores (&gt;75%) require individual review.
+            </div>
+            <div style="display: flex; gap: var(--space-md);">
+                <div>
+                    <div class="muted" style="font-size: var(--font-size-xs);">TOTAL RECORDS</div>
+                    <div class="num bold">1,284</div>
+                </div>
+                <div>
+                    <div class="muted" style="font-size: var(--font-size-xs);">RECONCILED</div>
+                    <div class="num bold" style="color: var(--status-ok);">842</div>
+                </div>
+                <div>
+                    <div class="muted" style="font-size: var(--font-size-xs);">AVG MATCH RATE</div>
+                    <div class="num bold">91.4%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-wrapper">
+            <table role="grid" aria-multiselectable="true">
+                <thead>
+                    <tr>
+                        <th class="col-check"><input type="checkbox" aria-label="Select all guests"></th>
+                        <th class="col-id">Guest ID</th>
+                        <th class="col-guest">Legal Name</th>
+                        <th class="col-date">Check-in</th>
+                        <th class="col-doc">Doc Type</th>
+                        <th class="col-score">Match Score</th>
+                        <th class="col-risk">Risk Factor</th>
+                        <th class="col-trend">Scan Latency (ms)</th>
+                        <th class="col-status">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="is-selected">
+                        <td><input type="checkbox" checked aria-label="Select Marc-André Leclerc"></td>
+                        <td class="num">#ID-98212</td>
+                        <td class="bold">Marc-André Leclerc</td>
+                        <td class="num">2024-05-12</td>
+                        <td>Passport</td>
+                        <td>
+                            <div class="num">98.2%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 98.2%; background: var(--status-ok);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-success">Low</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 40%;"></div>
+                                <div class="chart-bar" style="height: 60%;"></div>
+                                <div class="chart-bar" style="height: 35%;"></div>
+                                <div class="chart-bar" style="height: 45%;"></div>
+                                <div class="chart-bar" style="height: 80%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">Pending</span></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Select Sarah J. Whittaker"></td>
+                        <td class="num">#ID-98214</td>
+                        <td class="bold">Sarah J. Whittaker</td>
+                        <td class="num">2024-05-12</td>
+                        <td>Driver Lic.</td>
+                        <td>
+                            <div class="num">41.0%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 41%; background: var(--status-error);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-danger">High</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 20%;"></div>
+                                <div class="chart-bar" style="height: 25%;"></div>
+                                <div class="chart-bar" style="height: 15%;"></div>
+                                <div class="chart-bar" style="height: 30%;"></div>
+                                <div class="chart-bar" style="height: 25%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">In Review</span></td>
+                    </tr>
+                    <tr class="is-selected">
+                        <td><input type="checkbox" checked aria-label="Select Elena Rossetti"></td>
+                        <td class="num">#ID-98215</td>
+                        <td class="bold">Elena Rossetti</td>
+                        <td class="num">2024-05-13</td>
+                        <td>EU Nat ID</td>
+                        <td>
+                            <div class="num">92.5%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 92.5%; background: var(--status-ok);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-success">Low</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 70%;"></div>
+                                <div class="chart-bar" style="height: 65%;"></div>
+                                <div class="chart-bar" style="height: 75%;"></div>
+                                <div class="chart-bar" style="height: 60%;"></div>
+                                <div class="chart-bar" style="height: 85%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">Pending</span></td>
+                    </tr>
+                    <tr class="is-selected">
+                        <td><input type="checkbox" checked aria-label="Select Dr. Julian Thorne"></td>
+                        <td class="num">#ID-98219</td>
+                        <td class="bold">Dr. Julian Thorne</td>
+                        <td class="num">2024-05-13</td>
+                        <td>Passport</td>
+                        <td>
+                            <div class="num">88.9%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 88.9%; background: var(--status-ok);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-warning">Med</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 30%;"></div>
+                                <div class="chart-bar" style="height: 40%;"></div>
+                                <div class="chart-bar" style="height: 50%;"></div>
+                                <div class="chart-bar" style="height: 45%;"></div>
+                                <div class="chart-bar" style="height: 40%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">Pending</span></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Select Mitsuki Tanaka"></td>
+                        <td class="num">#ID-98221</td>
+                        <td class="bold">Mitsuki Tanaka</td>
+                        <td class="num">2024-05-14</td>
+                        <td>Passport</td>
+                        <td>
+                            <div class="num">99.1%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 99.1%; background: var(--status-ok);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-success">Low</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 90%;"></div>
+                                <div class="chart-bar" style="height: 95%;"></div>
+                                <div class="chart-bar" style="height: 85%;"></div>
+                                <div class="chart-bar" style="height: 99%;"></div>
+                                <div class="chart-bar" style="height: 92%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">Pending</span></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Select Amara Okafor"></td>
+                        <td class="num">#ID-98224</td>
+                        <td class="bold">Amara Okafor</td>
+                        <td class="num">2024-05-14</td>
+                        <td>EU Nat ID</td>
+                        <td>
+                            <div class="num">76.4%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 76.4%; background: var(--status-warn);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-warning">Med</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 50%;"></div>
+                                <div class="chart-bar" style="height: 40%;"></div>
+                                <div class="chart-bar" style="height: 60%;"></div>
+                                <div class="chart-bar" style="height: 45%;"></div>
+                                <div class="chart-bar" style="height: 55%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">Pending</span></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" aria-label="Select Thomas Muller"></td>
+                        <td class="num">#ID-98228</td>
+                        <td class="bold">Thomas Muller</td>
+                        <td class="num">2024-05-15</td>
+                        <td>Passport</td>
+                        <td>
+                            <div class="num">94.7%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 94.7%; background: var(--status-ok);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-success">Low</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 70%;"></div>
+                                <div class="chart-bar" style="height: 75%;"></div>
+                                <div class="chart-bar" style="height: 65%;"></div>
+                                <div class="chart-bar" style="height: 80%;"></div>
+                                <div class="chart-bar" style="height: 72%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">Pending</span></td>
+                    </tr>
+                    <tr class="is-selected">
+                        <td><input type="checkbox" checked aria-label="Select Sofia Petrova"></td>
+                        <td class="num">#ID-98230</td>
+                        <td class="bold">Sofia Petrova</td>
+                        <td class="num">2024-05-15</td>
+                        <td>EU Nat ID</td>
+                        <td>
+                            <div class="num">97.0%</div>
+                            <div class="score-bar-container">
+                                <div class="score-bar-fill" style="width: 97%; background: var(--status-ok);"></div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-success">Low</span></td>
+                        <td>
+                            <div class="chart-mini">
+                                <div class="chart-bar" style="height: 85%;"></div>
+                                <div class="chart-bar" style="height: 80%;"></div>
+                                <div class="chart-bar" style="height: 90%;"></div>
+                                <div class="chart-bar" style="height: 88%;"></div>
+                                <div class="chart-bar" style="height: 85%;"></div>
+                            </div>
+                        </td>
+                        <td><span class="muted">Pending</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="batch-action-bar" role="toolbar" aria-label="Bulk actions">
+            <div class="batch-count">4 items selected</div>
+            <button class="btn btn-primary" onclick="alert('Proceeding to Step 4 with 4 guests.')">Verify & Lock Selected</button>
+            <button class="btn btn-ghost" onclick="alert('Guests flagged for secondary audit.')">Flag for Review</button>
+            <button class="btn btn-ghost" style="color: var(--status-error); border-color: rgba(239, 68, 68, 0.3);">Dismiss</button>
+        </div>
+    </main>
+
+    <script>
+        // Simple interactive simulation
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const row = e.target.closest('tr');
+                if (row) {
+                    if (e.target.checked) {
+                        row.classList.add('is-selected');
+                    } else {
+                        row.classList.remove('is-selected');
+                    }
+                }
+                updateBatchCount();
+            });
+        });
+
+        function updateBatchCount() {
+            const count = document.querySelectorAll('tbody input[type="checkbox"]:checked').length;
+            const bar = document.querySelector('.batch-action-bar');
+            const countLabel = document.querySelector('.batch-count');
+            
+            if (count > 0) {
+                bar.style.display = 'flex';
+                countLabel.textContent = `${count} item${count > 1 ? 's' : ''} selected`;
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

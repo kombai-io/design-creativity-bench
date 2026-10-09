@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fidelity Comms Group — Claim Validation Queue</title>
+<style>
+:root {
+  /* Colors */
+  --clr-bg-primary: #f6f7f9;
+  --clr-bg-panel: #ffffff;
+  --clr-bg-accent: #eef1f5;
+  --clr-bg-error: #fdf0ee;
+  --clr-bg-accepted: #edf7f0;
+  --clr-bg-chart-bar: #4a6fa5;
+  --clr-bg-chart-bar-alt: #7b9cc7;
+  --clr-bg-chart-track: #dde3ea;
+  --clr-bg-badge-green: #d0ead8;
+  --clr-bg-badge-amber: #fdebd0;
+  --clr-bg-badge-red: #f5c6c0;
+  --clr-bg-badge-blue: #dce6f3;
+  --clr-bg-nav: #2b3a4a;
+  --clr-bg-input-border: #c8cfd7;
+  --clr-bg-hover: #f0f2f6;
+
+  --clr-text-primary: #1e2a38;
+  --clr-text-secondary: #5a6674;
+  --clr-text-muted: #8a94a0;
+  --clr-text-inverse: #ffffff;
+  --clr-text-link: #3b6aad;
+  --clr-text-error: #b53a2e;
+  --clr-text-accepted: #2a7a4a;
+  --clr-text-positive: #1f6b3a;
+
+  --clr-border-primary: #d5dbe2;
+  --clr-border-focus: #3b6aad;
+  --clr-border-error: #d45a4e;
+  --clr-border-accepted: #5fb07a;
+
+  /* Font sizes */
+  --fs-xs: 0.6875rem;
+  --fs-sm: 0.75rem;
+  --fs-base: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.125rem;
+
+  /* Spacing */
+  --sp-2xs: 0.125rem;
+  --sp-xs: 0.25rem;
+  --sp-sm: 0.5rem;
+  --sp-md: 0.75rem;
+  --sp-lg: 1rem;
+  --sp-xl: 1.25rem;
+  --sp-2xl: 1.5rem;
+  --sp-3xl: 2rem;
+  --sp-4xl: 2.5rem;
+
+  /* Border radius */
+  --br-none: 0;
+  --br-xs: var(--sp-2xs);
+  --br-sm: var(--sp-xs);
+  --br-md: var(--sp-sm);
+  --br-lg: var(--sp-md);
+  --br-pill: 9999px;
+
+  /* Shadows */
+  --shadow-none: none;
+  --shadow-sm: 0 1px 3px rgba(30, 42, 56, 0.08);
+  --shadow-md: 0 2px 8px rgba(30, 42, 56, 0.10);
+  --shadow-lg: 0 4px 16px rgba(30, 42, 56, 0.12);
+
+  /* Typography */
+  --ff-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  --ff-mono: "Consolas", "Monaco", "Courier New", monospace;
+
+  /* Layout */
+  --panel-max-width: 86rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ff-sans);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--clr-text-primary);
+  background: var(--clr-bg-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Panel Shell ── */
+.ash-panel {
+  max-width: var(--panel-max-width);
+  margin: var(--sp-xl) auto;
+  background: var(--clr-bg-panel);
+  border-radius: var(--br-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* ── Top Bar ── */
+.panel-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-lg);
+  padding: var(--sp-lg) var(--sp-3xl);
+  background: var(--clr-bg-nav);
+  color: var(--clr-text-inverse);
+}
+
+.panel-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+}
+
+.panel-brand svg { flex-shrink: 0; }
+
+.panel-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-brand-name {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.panel-brand-sub {
+  font-size: var(--fs-xs);
+  color: rgba(255,255,255,0.6);
+  font-weight: 400;
+}
+
+.panel-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-lg);
+  font-size: var(--fs-sm);
+}
+
+.queue-counter {
+  background: rgba(255,255,255,0.12);
+  padding: var(--sp-xs) var(--sp-md);
+  border-radius: var(--br-pill);
+  font-weight: 600;
+}
+
+/* ── Tabs ── */
+.tabs-wrapper {
+  border-bottom: 2px solid var(--clr-border-primary);
+  padding: 0 var(--sp-3xl);
+  background: var(--clr-bg-accent);
+}
+
+[role="tablist"] {
+  display: flex;
+  gap: 0;
+}
+
+[role="tab"] {
+  position: relative;
+  padding: var(--sp-md) var(--sp-xl) var(--sp-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s;
+  font-family: inherit;
+}
+
+[role="tab"]:hover {
+  color: var(--clr-text-primary);
+}
+
+[role="tab"][aria-selected="true"] {
+  color: var(--clr-text-primary);
+  border-bottom-color: var(--clr-bg-chart-bar);
+}
+
+[role="tab"][aria-selected="false"] {
+  opacity: 0.7;
+}
+
+.tab-badge {
+  display: inline-block;
+  background: var(--clr-bg-badge-red);
+  color: var(--clr-text-error);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 0 var(--sp-xs);
+  border-radius: var(--br-pill);
+  margin-left: var(--sp-xs);
+  vertical-align: middle;
+}
+
+[role="tabpanel"] { display: none; }
+[role="tabpanel"].active { display: block; }
+
+/* ── Section Containers ── */
+.section {
+  padding: var(--sp-2xl) var(--sp-3xl);
+}
+
+.section + .section {
+  border-top: 1px solid var(--clr-border-primary);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sp-xl);
+  gap: var(--sp-lg);
+}
+
+.section-title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--clr-text-primary);
+}
+
+.section-meta {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+}
+
+/* ── Info Grid (row of stat cards) ── */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-xl);
+}
+
+.stat-card {
+  background: var(--clr-bg-accent);
+  border-radius: var(--br-md);
+  padding: var(--sp-lg) var(--sp-xl);
+  border-left: 4px solid var(--clr-bg-chart-bar);
+}
+
+.stat-card.amber { border-left-color: #c49030; }
+.stat-card.green { border-left-color: var(--clr-border-accepted); }
+.stat-card.red { border-left-color: var(--clr-border-error); }
+
+.stat-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--clr-text-muted);
+  font-weight: 600;
+  margin-bottom: var(--sp-xs);
+}
+
+.stat-value {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  line-height: 1.2;
+}
+
+.stat-unit {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--clr-text-secondary);
+}
+
+/* ── Claim Detail Block ── */
+.claim-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3xl);
+}
+
+.form-col { display: flex; flex-direction: column; gap: var(--sp-lg); }
+.data-col { display: flex; flex-direction: column; gap: var(--sp-lg); }
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+}
+
+.field-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+}
+
+.field-label .req {
+  color: var(--clr-text-error);
+  margin-left: 2px;
+}
+
+.field-input {
+  font-family: inherit;
+  font-size: var(--fs-base);
+  color: var(--clr-text-primary);
+  background: var(--clr-bg-panel);
+  border: 1.5px solid var(--clr-bg-input-border);
+  border-radius: var(--br-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.field-input:focus {
+  border-color: var(--clr-border-focus);
+  box-shadow: 0 0 0 3px rgba(59,106,173,0.12);
+}
+
+.field-input.error {
+  border-color: var(--clr-border-error);
+  background: var(--clr-bg-error);
+}
+
+.field-input.accepted {
+  border-color: var(--clr-border-accepted);
+  background: var(--clr-bg-accepted);
+}
+
+.field-hint {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+  line-height: 1.4;
+}
+
+.field-hint.error-msg {
+  color: var(--clr-text-error);
+  font-weight: 600;
+}
+
+.field-status-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.field-status-icon.approved {
+  color: var(--clr-text-accepted);
+}
+
+.field-status-icon.failed {
+  color: var(--clr-text-error);
+}
+
+/* ── Data Table ── */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--br-md);
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.audit-table thead {
+  background: var(--clr-bg-accent);
+}
+
+.audit-table th {
+  text-align: left;
+  padding: var(--sp-sm) var(--sp-md);
+  font-weight: 700;
+  color: var(--clr-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--fs-xs);
+  border-bottom: 2px solid var(--clr-border-primary);
+  white-space: nowrap;
+}
+
+.audit-table td {
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--clr-border-primary);
+  color: var(--clr-text-primary);
+  vertical-align: top;
+}
+
+.audit-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.audit-table tbody tr:hover {
+  background: var(--clr-bg-hover);
+}
+
+.td-num {
+  font-family: var(--ff-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.td-ref {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0 var(--sp-sm);
+  border-radius: var(--br-pill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badge-pending {
+  background: var(--clr-bg-badge-amber);
+  color: #8a5c10;
+}
+
+.badge-approved {
+  background: var(--clr-bg-badge-green);
+  color: var(--clr-text-positive);
+}
+
+.badgage-rejected {
+  background: var(--clr-bg-badge-red);
+  color: var(--clr-text-error);
+}
+
+.badge-reviewed {
+  background: var(--clr-bg-badge-blue);
+  color: #2a4f7a;
+}
+
+/* ── Chart Area ── */
+.chart-container {
+  background: var(--clr-bg-panel);
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--br-md);
+  padding: var(--sp-xl) var(--sp-2xl);
+}
+
+.chart-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  margin-bottom: var(--sp-sm);
+}
+
+.chart-subtitle {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+  margin-bottom: var(--sp-xl);
+}
+
+.bar-chart-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-sm);
+}
+
+.bar-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  text-align: right;
+}
+
+.bar-track {
+  height: var(--sp-lg);
+  background: var(--clr-bg-chart-track);
+  border-radius: var(--br-xs);
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: var(--br-xs);
+  background: var(--clr-bg-chart-bar);
+  min-width: 2%;
+  transition: width 0.3s ease;
+}
+
+.bar-fill.alt {
+  background: var(--clr-bg-chart-bar-alt);
+}
+
+.bar-value {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-family: var(--ff-mono);
+  color: var(--clr-text-primary);
+  text-align: right;
+}
+
+/* Donut chart */
+.donut-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2xl);
+  margin-top: var(--sp-xl);
+  padding-top: var(--sp-xl);
+  border-top: 1px solid var(--clr-border-primary);
+}
+
+.donut-chart { flex-shrink: 0; }
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font-size: var(--fs-sm);
+}
+
+.legend-dot {
+  width: var(--sp-sm);
+  height: var(--sp-sm);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-val {
+  font-family: var(--ff-mono);
+  font-weight: 700;
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--clr-text-primary);
+}
+
+/* ── Notes / Provenance ── */
+.provenance-block {
+  background: var(--clr-bg-accent);
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--br-md);
+  padding: var(--sp-lg) var(--sp-xl);
+  margin-top: var(--sp-lg);
+}
+
+.provenance-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--clr-text-secondary);
+  margin-bottom: var(--sp-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.provenance-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+}
+
+.provenance-list li {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-primary);
+  padding-left: var(--sp-lg);
+  position: relative;
+  line-height: 1.5;
+}
+
+.provenance-list li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: var(--clr-text-muted);
+}
+
+.provenance-list li strong {
+  color: var(--clr-text-secondary);
+}
+
+/* ── Actions Footer ── */
+.actions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-lg) var(--sp-3xl);
+  background: var(--clr-bg-accent);
+  border-top: 1px solid var(--clr-border-primary);
+}
+
+.action-left {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+}
+
+.action-right {
+  display: flex;
+  gap: var(--sp-md);
+}
+
+.btn {
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: var(--sp-sm) var(--sp-xl);
+  border-radius: var(--br-sm);
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-secondary {
+  background: var(--clr-bg-panel);
+  color: var(--clr-text-secondary);
+  border-color: var(--clr-border-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--clr-bg-hover);
+}
+
+.btn-primary {
+  background: var(--clr-bg-chart-bar);
+  color: var(--clr-text-inverse);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-warning {
+  background: var(--clr-bg-badge-amber);
+  color: #8a5c10;
+}
+
+/* ── Progress strip ── */
+.progress-strip {
+  display: flex;
+  height: 4px;
+  background: var(--clr-bg-chart-track);
+}
+
+.progress-segment {
+  height: 100%;
+}
+
+.progress-segment.done { background: var(--clr-border-accepted); }
+.progress-segment.current { background: var(--clr-bg-chart-bar); }
+.progress-segment.upcoming { background: var(--clr-border-primary); }
+
+/* ── Misc ── */
+.mono { font-family: var(--ff-mono); }
+.text-right { text-align: right; }
+.text-muted { color: var(--clr-text-muted); }
+.text-sm { font-size: var(--fs-sm); }
+.divider { border-top: 1px solid var(--clr-border-primary); margin: var(--sp-xl) 0; }
+</style>
+</head>
+<body>
+
+<div class="ash-panel" role="region" aria-label="Claim Validation Workspace">
+
+  <!-- Progress Strip -->
+  <div class="progress-strip" role="progressbar" aria-valuenow="3" aria-valuemin="1" aria-valuemax="6" aria-label="Validation progress: step 3 of 6">
+    <span class="progress-segment done"></span>
+    <span class="progress-segment done"></span>
+    <span class="progress-segment current"></span>
+    <span class="progress-segment upcoming"></span>
+    <span class="progress-segment upcoming"></span>
+    <span class="progress-segment upcoming"></span>
+  </div>
+
+  <!-- Top Bar -->
+  <header class="panel-topbar">
+    <div class="panel-brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="2" y="2" width="24" height="24" rx="4" fill="#4a6fa5"/>
+        <path d="M8 9h12M8 14h8M8 19h10" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="21" cy="19" r="3.5" fill="#d0ead8" stroke="#2a7a4a" stroke-width="1"/>
+        <path d="M20.2 19l.6.6 1.2-1.4" stroke="#2a7a4a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="panel-brand-text">
+        <span class="panel-brand-name">Fidelity Comms Group</span>
+        <span class="panel-brand-sub">Regulatory Compliance Module v4.2.1</span>
+      </div>
+    </div>
+    <div class="panel-topbar-right">
+      <span class="queue-counter">Queue: 14 remaining</span>
+      <span style="color:rgba(255,255,255,0.5);">Auditor: M. Chikarova</span>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tabs-wrapper">
+    <div role="tablist" aria-label="Claim detail sections">
+      <button role="tab" aria-selected="true" aria-controls="tab-claim" id="tab-btn-claim">Claim Details</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-evidence" id="tab-btn-evidence">Supporting Evidence <span class="tab-badge">3</span></button>
+      <button role="tab" aria-selected="false" aria-controls="tab-history" id="tab-btn-history">Revision History</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-risk" id="tab-btn-risk">Risk &amp; Scoring</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════ TAB 1: CLAIM DETAILS ═══════════ -->
+  <div role="tabpanel" id="tab-claim" class="active" aria-labelledby="tab-btn-claim">
+
+    <!-- Summary Stats -->
+    <div class="section" style="padding-bottom:var(--sp-lg)">
+      <div class="info-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Claim Value</div>
+          <div class="stat-value">$1,847,320<span class="stat-unit">.00</span></div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Outstanding Queries</div>
+          <div class="stat-value">7</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Approved Line Items</div>
+          <div class="stat-value">12<span class="stat-unit"> / 21</span></div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Overdue Items</div>
+          <div class="stat-value">2</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Claim Form + Metrics -->
+    <div class="section" style="padding-top:0;padding-bottom:0;">
+      <div class="section-header">
+        <h2 class="section-title">Claim Validation — Item 7 of 14</h2>
+        <span class="section-meta">Submitted by T. Ellsworth · 2025-04-11</span>
+      </div>
+
+      <div class="claim-detail">
+        <!-- Left: Form Fields -->
+        <div class="form-col">
+          <div class="field-group">
+            <label class="field-label" for="claim-id">Claim Reference ID</label>
+            <input class="field-input accepted" id="claim-id" value="FCG-2025-Q1-CM-04471" readonly aria-readonly="true">
+            <span class="field-status-icon approved">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#2a7a4a"/><path d="M4.5 7l1.8 1.8L9.5 5.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Verified · matches ledger entry LGR-99021
+            </span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="vendor-name">Vendor / Counterparty</label>
+            <input class="field-input" id="vendor-name" value="Rhone Communications Ltd." aria-describedby="vendor-hint">
+            <span class="field-hint" id="vendor-hint">Registered in England &amp; Wales. CRN 08912447.</span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="period-start">Service Period Start <span class="req">*</span></label>
+            <input class="field-input" id="period-start" value="" placeholder="YYYY-MM-DD">
+            <span class="field-hint">Expected: 2025-01-01</span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="period-end">Service Period End <span class="req">*</span></label>
+            <input class="field-input" id="period-end" value="" placeholder="YYYY-MM-DD">
+            <span class="field-hint">Expected: 2025-03-31</span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="line-desc">Line Item Description <span class="req">*</span></label>
+            <textarea class="field-input error" id="line-desc" rows="3" aria-describedby="desc-error" maxlength="240">Comms infrastructure rollout — Phase 2 fibre optic cabling and switch deployment across Manchester (Deansgate) and Birmingham (New Street Exchange) regional hubs. Includes 18 months managed services SLA.</textarea>
+            <span class="field-hint error-msg" id="desc-error">⚠ Description length exceeds maximum allowed characters (240).</span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="gross-amount">Gross Amount (GBP) <span class="req">*</span></label>
+            <input class="field-input" id="gross-amount" value="£1,847,320.00">
+            <span class="field-hint">Auto-populated from invoice INV-2025-0419-RCL. Verify against PO.</span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Withholding Tax Applied</label>
+            <div style="display:flex;gap:var(--sp-lg);align-items:center;">
+              <label style="font-size:var(--fs-sm);display:flex;align-items:center;gap:var(--sp-xs);">
+                <input type="radio" name="wht" checked> Yes — 10%
+              </label>
+              <label style="font-size:var(--fs-sm);display:flex;align-items:center;gap:var(--sp-xs);">
+                <input type="radio" name="wht"> No
+              </label>
+              <label style="font-size:var(--fs-sm);display:flex;align-items:center;gap:var(--sp-xs);">
+                <input type="radio" name="wht"> Treaty Exempt
+              </label>
+            </div>
+            <span class="field-hint">UK-India DTAA Article 12 — may apply if counterparty is Indian tax resident.</span>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="auditor-notes">Auditor Verification Notes</label>
+            <textarea class="field-input" id="auditor-notes" rows="4" placeholder="Enter your verification observations…"></textarea>
+          </div>
+        </div>
+
+        <!-- Right: Charts + Provenance -->
+        <div class="data-col">
+          <!-- Donut: Spend Breakdown -->
+          <div class="chart-container">
+            <div class="chart-title">Spend Breakdown by Category</div>
+            <div class="chart-subtitle">Q1 2025 — FCG Regional Operations</div>
+            <div class="donut-row" style="border:none;margin:0;padding:0;">
+              <svg class="donut-chart" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Donut chart: CapEx 42%, OpEx 28%, Managed Services 18%, Contingency 12%">
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#dde3ea" stroke-width="24"/>
+                <!-- CapEx 42% = 151.2deg -->
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#4a6fa5" stroke-width="24" stroke-dasharray="158.3 219.9" stroke-dashoffset="-94.2" transform="rotate(-90 80 80)"/>
+                <!-- OpEx 28% = 100.8deg -->
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#7b9cc7" stroke-width="24" stroke-dasharray="105.6 272.6" stroke-dashoffset="-252.5" transform="rotate(-90 80 80)"/>
+                <!-- Managed Svcs 18% = 64.8deg -->
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#c49030" stroke-width="24" stroke-dasharray="68.0 310.3" stroke-dashoffset="-358.1" transform="rotate(-90 80 80)"/>
+                <!-- Contingency 12% = 43.2deg -->
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#d45a4e" stroke-width="24" stroke-dasharray="45.2 333.1" stroke-dashoffset="-426.1" transform="rotate(-90 80 80)"/>
+                <text x="80" y="74" text-anchor="middle" font-size="16" font-weight="700" fill="#1e2a38" font-family="inherit">£4.92M</text>
+                <text x="80" y="92" text-anchor="middle" font-size="9" fill="#8a94a0" font-family="inherit">Q1 Total</text>
+              </svg>
+              <div class="donut-legend">
+                <div class="legend-item">
+                  <span class="legend-dot" style="background:#4a6fa5;"></span>
+                  <span>CapEx Infrastructure</span>
+                  <span class="legend-val">£2.07M</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background:#7b9cc7;"></span>
+                  <span>OpEx Running Costs</span>
+                  <span class="legend-val">£1.38M</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background:#c49030;"></span>
+                  <span>Managed Services</span>
+                  <span class="legend-val">£885K</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot" style="background:#d45a4e;"></span>
+                  <span>Contingency Reserve</span>
+                  <span class="legend-val">£588K</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Horizontal Bar: Monthly Cashflow -->
+          <div class="chart-container">
+            <div class="chart-title">Monthly Comms Spend (Jan–Mar)</div>
+            <div class="chart-subtitle">Actual vs. Budget — £ thousands</div>
+            <div style="margin-top:var(--sp-xl);">
+              <div class="bar-chart-row">
+                <span class="bar-label">January</span>
+                <div class="bar-track"><div class="bar-fill" style="width:72%;"></div></div>
+                <span class="bar-value">682K</span>
+              </div>
+              <div class="bar-chart-row">
+                <span class="bar-label">February</span>
+                <div class="bar-track"><div class="bar-fill alt" style="width:58%;"></div></div>
+                <span class="bar-value">547K</span>
+              </div>
+              <div class="bar-chart-row">
+                <span class="bar-label">March</span>
+                <div class="bar-track"><div class="bar-fill" style="width:94%;"></div></div>
+                <span class="bar-value">892K</span>
+              </div>
+              <div class="bar-chart-row" style="margin-top:var(--sp-md);border-top:1px dashed var(--clr-border-primary);padding-top:var(--sp-sm);">
+                <span class="bar-label" style="color:var(--clr-text-muted);">Budget</span>
+                <div class="bar-track"><div class="bar-fill" style="width:80%;background:repeating-linear-gradient(45deg,var(--clr-bg-chart-track),var(--clr-bg-chart-track) 3px,var(--clr-border-primary) 3px,var(--clr-border-primary) 6px);"></div></div>
+                <span class="bar-value" style="color:var(--clr-text-muted);">760K</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Provenance Block -->
+          <div class="provenance-block">
+            <div class="provenance-header">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v12M1 7h12" stroke="#5a6674" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Provenance Trail
+            </div>
+            <ul class="provenance-list">
+              <li><strong>Invoice INV-2025-0419-RCL</strong> received 2025-04-14 via AP intake portal. Hash: a3f8c1d0e2b7.</li>
+              <li><strong>PO-88104</strong> referenced on page 1 of invoice packet. Matches scope: Phase 2 fibre rollout.</li>
+              <li><strong>Milestone report MR-2025-033</strong> confirms 68% physical completion as of 2025-03-31. Signed off by J. Kaur, Engineering PM.</li>
+              <li><strong>Tax residency certificate (TRC)</strong> issued by HMRC, dated 2025-02-28. UK-resident vendor — no withholding.</li>
+              <li><strong>Previous payment:</strong> £615,800 (Phase 1) settled 2025-01-28. Within tolerance.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full-width table -->
+    <div class="section" style="padding-top:0;padding-bottom:var(--sp-lg);">
+      <div class="section-header">
+        <h2 class="section-title">Line Item Ledger</h2>
+        <span class="section-meta">21 line items total · 12 approved · 7 pending</span>
+      </div>
+      <div class="table-wrap">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th scope="col">Ref</th>
+              <th scope="col">Description</th>
+              <th scope="col" class="text-right">Qty</th>
+              <th scope="col" class="text-right">Unit Cost (£)</th>
+              <th scope="col" class="text-right">Extended (£)</th>
+              <th scope="col">Status</th>
+              <th scope="col">Last Reviewed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-ref">LN-001</td>
+              <td>Fibre optic cable — single-mode OS2, 12-fibre, duct grade</td>
+              <td class="td-num">4,200 m</td>
+              <td class="td-num">£34.50</td>
+              <td class="td-num">144,900.00</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td class="text-sm text-muted">2025-04-16</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-002</td>
+              <td>Cisco ISR 4451 X router platforms × 2 sites</td>
+              <td class="td-num">4 units</td>
+              <td class="td-num">£18,750.00</td>
+              <td class="td-num">75,000.00</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td class="text-sm text-muted">2025-04-16</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-003</td>
+              <td>Aruba 2930M 48-port PoE+ switches</td>
+              <td class="td-num">24 units</td>
+              <td class="td-num">£3,200.00</td>
+              <td class="td-num">76,800.00</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td class="text-sm text-muted">2025-04-15</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-004</td>
+              <td>Physical cabling labour — Manchester hub, Tier-2 rate</td>
+              <td class="td-num">480 hrs</td>
+              <td class="td-num">£62.00</td>
+              <td class="td-num">29,760.00</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td class="text-sm text-muted">2025-04-15</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-005</td>
+              <td>Physical cabling labour — Birmingham hub, Tier-2 rate</td>
+              <td class="td-num">520 hrs</td>
+              <td class="td-num">£62.00</td>
+              <td class="td-num">32,240.00</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td class="text-sm text-muted">2025-04-15</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-006</td>
+              <td>MPLS WAN circuit provisioning — BT Express Connect 500 Mbps</td>
+              <td class="td-num">2 circuits</td>
+              <td class="td-num">£22,500.00</td>
+              <td class="td-num">45,000.00</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td class="text-sm text-muted">2025-04-14</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-007</td>
+              <td>SD-WAN licence bundles — Cisco Viptela 12-month term</td>
+              <td class="td-num">8 ports</td>
+              <td class="td-num">£4,800.00</td>
+              <td class="td-num">38,400.00</td>
+              <td><span class="badge badge-reviewed">Reviewed</span></td>
+              <td class="text-sm text-muted">2025-04-17</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-008</td>
+              <td>Network monitoring add-on — SolarWinds NPM, enterprise tier</td>
+              <td class="td-num">1 site</td>
+              <td class="td-num">£12,600.00</td>
+              <td class="td-num">12,600.00</td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td class="text-sm text-muted">—</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-009</td>
+              <td>Facility fit-out — raised flooring, HVAC upgrade, Deansgate server room</td>
+              <td class="td-num">1 lot</td>
+              <td class="td-num">£89,500.00</td>
+              <td class="td-num">89,500.00</td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td class="text-sm text-muted">—</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-010</td>
+              <td>Uninterruptible power supply — APC Smart-UPS 3000VA × 6 units</td>
+              <td class="td-num">6 units</td>
+              <td class="td-num">£2,850.00</td>
+              <td class="td-num">17,100.00</td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td class="text-sm text-muted">—</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-011</td>
+              <td>Project management — Rhone PMO resource allocation, Q1</td>
+              <td class="td-num">360 hrs</td>
+              <td class="td-num">£85.00</td>
+              <td class="td-num">30,600.00</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td class="text-sm text-muted">2025-04-14</td>
+            </tr>
+            <tr>
+              <td class="td-ref">LN-012</td>
+              <td>Regulatory compliance documentation pack — Ofcom filing support</td>
+              <td class="td-num">1 project</td>
+              <td class="td-num">£15,200.00</td>
+              <td class="td-num">15,200.00</td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td class="text-sm text-muted">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 2: EVIDENCE ═══════════ -->
+  <div role="tabpanel" id="tab-evidence" aria-labelledby="tab-btn-evidence">
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Supporting Evidence Files</h2>
+        <span class="section-meta">3 uploaded · All scanned by SHA-256 integrity check</span>
+      </div>
+      <div class="table-wrap">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th scope="col">File Name</th>
+              <th scope="col">Type</th>
+              <th scope="col" class="text-right">Size</th>
+              <th scope="col">Upload Date</th>
+              <th scope="col">Uploader</th>
+              <th scope="col">SHA-256</th>
+              <th scope="col">Verification</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-ref">INV-2025-0419-RCL_scan.pdf</td>
+              <td>PDF Invoice</td>
+              <td class="td-num">2.4 MB</td>
+              <td class="text-sm">2025-04-14</td>
+              <td>T. Ellsworth</td>
+              <td class="td-ref" style="font-size:0.625rem;">a3f8c1d0e2b7…</td>
+              <td><span class="badge badge-approved">Verified</span></td>
+            </tr>
+            <tr>
+              <td class="td-ref">MR-2025-033_completion_report.pdf</td>
+              <td>PDF Report</td>
+              <td class="td-num">8.1 MB</td>
+              <td class="text-sm">2025-04-02</td>
+              <td>J. Kaur</td>
+              <td class="td-ref" style="font-size:0.625rem;">c71b3f92da44…</td>
+              <td><span class="badge badge-approved">Verified</span></td>
+            </tr>
+            <tr>
+              <td class="td-ref">TRC-HMRC-2025-0228_Rhone.pdf</td>
+              <td>PDF Certificate</td>
+              <td class="td-num">1.1 MB</td>
+              <td class="text-sm">2025-03-01</td>
+              <td>A. Whitfield</td>
+              <td class="td-ref" style="font-size:0.625rem;">e590a1f833c0…</td>
+              <td><span class="badge badge-pending">Review Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 3: HISTORY ═══════════ -->
+  <div role="tabpanel" id="tab-history" aria-labelledby="tab-btn-history">
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Revision History</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Actor</th>
+              <th scope="col">Action</th>
+              <th scope="col">Field Changed</th>
+              <th scope="col">Old Value</th>
+              <th scope="col">New Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-sm">2025-04-17 09:42</td>
+              <td>S. Nwosu</td>
+              <td>Submitted for review</td>
+              <td>Full claim</td>
+              <td>—</td>
+              <td>Active</td>
+            </tr>
+            <tr>
+              <td class="text-sm">2025-04-16 14:18</td>
+              <td>M. Chikarova</td>
+              <td>Approved lines</td>
+              <td>LN-001 through LN-006</td>
+              <td>Pending</td>
+              <td>Approved</td>
+            </tr>
+            <tr>
+              <td class="text-sm">2025-04-15 11:03</td>
+              <td>T. Ellsworth</td>
+              <td>Updated description</td>
+              <td>Line item desc</td>
+              <td>"Comms infra…" (218 chars)</td>
+              <td>"Comms infrastruc…" (243 chars)</td>
+            </tr>
+            <tr>
+              <td class="text-sm">2025-04-14 16:55</td>
+              <td>T. Ellsworth</td>
+              <td>Uploaded evidence</td>
+              <td>Evidence pack</td>
+              <td>2 files</td>
+              <td>3 files</td>
+            </tr>
+            <tr>
+              <td class="text-sm">2025-04-14 10:20</td>
+              <td>System</td>
+              <td>Created</td>
+              <td>Full claim</td>
+              <td>—</td>
+              <td>Draft</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB 4: RISK ═══════════ -->
+  <div role="tabpanel" id="tab-risk" aria-labelledby="tab-btn-risk">
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Risk Assessment &amp; Scoring</h2>
+        <span class="section-meta">Algorithm: FCG-Risk v3.8 | Confidence interval: 94%</span>
+      </div>
+      <div class="claim-detail">
+        <div class="form-col">
+          <div class="chart-container">
+            <div class="chart-title">Multi-Factor Risk Score</div>
+            <div class="chart-subtitle">Weighted composite — higher = lower risk</div>
+            <div style="margin-top:var(--sp-xl);">
+              <div class="bar-chart-row">
+                <span class="bar-label">Document Completeness</span>
+                <div class="bar-track"><div class="bar-fill" style="width:88%;"></div></div>
+                <span class="bar-value">88%</span>
+              </div>
+              <div class="bar-chart-row">
+                <span class="bar-label">Price Benchmarking</span>
+                <div class="bar-track"><div class="bar-fill alt" style="width:72%;"></div></div>
+                <span class="bar-value">72%</span>
+              </div>
+              <div class="bar-chart-row">
+                <span class="bar-label">Counterparty Due Diligence</span>
+                <div class="bar-track"><div class="bar-fill" style="width:95%;"></div></div>
+                <span class="bar-value">95%</span>
+              </div>
+              <div class="bar-chart-row">
+                <span class="bar-label">Scope vs. PO Alignment</span>
+                <div class="bar-track"><div class="bar-fill alt" style="width:64%;"></div></div>
+                <span class="bar-value">64%</span>
+              </div>
+              <div class="bar-chart-row">
+                <span class="bar-label">Historical Payment Accuracy</span>
+                <div class="bar-track"><div class="bar-fill" style="width:91%;"></div></div>
+                <span class="bar-value">91%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="data-col">
+          <div class="chart-container" style="background:var(--clr-bg-accepted);border-color:var(--clr-border-accepted);">
+            <div style="text-align:center;">
+              <div class="stat-label" style="margin-bottom:var(--sp-sm);">Composite Risk Rating</div>
+              <div class="stat-value" style="font-size:var(--fs-3xl);color:var(--clr-text-positive);">Low</div>
+              <div class="text-sm text-muted" style="margin-top:var(--sp-xs);">Overall score: 82 / 100 · Threshold: &gt;70 passes</div>
+            </div>
+          </div>
+          <div class="provenance-block">
+            <div class="provenance-header">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v12M1 7h12" stroke="#5a6674" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Flags Requiring Attention
+            </div>
+            <ul class="provenance-list">
+              <li><strong>Benchmark variance:</strong> Unit costs for Aruba switches are 8% above Q4 2024 market average per Internal Procurement Index.</li>
+              <li><strong>Scope drift:</strong> LN-009 (facility fit-out) was not included in original PO-88104. Supplementary PO SUP-88210 issued 2025-02-15.</li>
+              <li><strong>March spike:</strong> March spend exceeded budget by 17%. Unusual pattern — investigate whether one-off activation charges are included.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions Footer -->
+  <footer class="actions-footer">
+    <div class="action-left">
+      Showing <strong>item 7</strong> of <strong>14</strong> in queue · Saved automatically · Last saved 14 min ago
+    </div>
+    <div class="action-right">
+      <button class="btn btn-secondary" type="button">← Previous Claim</button>
+      <button class="btn btn-warning" type="button">Flag for Escalation</button>
+      <button class="btn btn-primary" type="button">Approve &amp; Next →</button>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function() {
+  const tabs = document.querySelectorAll('[role="tab"]');
+  const panels = document.querySelectorAll('[role="tabpanel"]');
+
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      tabs.forEach(function(t) { t.setAttribute('aria-selected', 'false'); });
+      panels.forEach(function(p) { p.classList.remove('active'); });
+      tab.setAttribute('aria-selected', 'true');
+      var targetId = tab.getAttribute('aria-controls');
+      document.getElementById(targetId).classList.add('active');
+    });
+
+    tab.addEventListener('keydown', function(e) {
+      var tabArr = Array.from(tabs);
+      var idx = tabArr.indexOf(tab);
+      var nextIdx;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        nextIdx = (idx + 1) % tabArr.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        nextIdx = (idx - 1 + tabArr.length) % tabArr.length;
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        nextIdx = 0;
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        nextIdx = tabArr.length - 1;
+      }
+      if (nextIdx !== undefined) {
+        tabArr[nextIdx].focus();
+        tabArr[nextIdx].click();
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MorrowSpec turns OpenAPI specifications into realistic, shareable mock APIs so software teams can build and test before backend services are ready. Join the private beta.">
+  <title>MorrowSpec — Realistic mock APIs from your specification</title>
+  <style>
+    :root {
+      --bg: #0a0d12;
+      --bg-2: #10151d;
+      --bg-3: #171e28;
+      --bg-4: #1e2733;
+      --ink: #f3eee4;
+      --ink-dim: #c4beb3;
+      --muted: #8d877c;
+      --line: rgba(243, 238, 228, 0.1);
+      --line-strong: rgba(243, 238, 228, 0.18);
+      --gold: #e0a84a;
+      --gold-2: #f6d08a;
+      --gold-dim: rgba(224, 168, 74, 0.14);
+      --teal: #4aa8a0;
+      --teal-2: #7ad4cc;
+      --teal-dim: rgba(74, 168, 160, 0.14);
+      --rose: #d pen;
+      --err: #d07262;
+      --ok: #6dbf8a;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      --radius: 14px;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", Georgia, serif;
+      --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+      --max: 1120px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(224, 168, 74, 0.09), transparent 55%),
+        radial-gradient(900px 500px at -10% 20%, rgba(74, 168, 160, 0.07), transparent 50%),
+        linear-gradient(180deg, #0c1118 0%, var(--bg) 28%);
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    a { color: var(--gold-2); text-decoration: none; }
+    a:hover { color: var(--gold); }
+    img, svg { display: block; max-width: 100%; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+
+    .skip {
+      position: absolute;
+      left: 12px;
+      top: -40px;
+      background: var(--gold);
+      color: #1a1408;
+      padding: 8px 12px;
+      z-index: 100;
+      border-radius: 6px;
+    }
+    .skip:focus { top: 12px; }
+
+    .wrap {
+      width: min(var(--max), calc(100% - 40px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    header.site {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+      background: rgba(10, 13, 18, 0.72);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+      gap: 20px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink);
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    .brand:hover { color: var(--ink); }
+    .mark {
+      width: 28px;
+      height: 28px;
+      flex: none;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      color: var(--ink-dim);
+      font-size: 0.92rem;
+    }
+    .nav-links a:hover { color: var(--ink); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 11px 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px;
+    }
+    .btn-gold {
+      background: linear-gradient(180deg, var(--gold-2), var(--gold));
+      color: #1a1408;
+      box-shadow: 0 8px 24px rgba(224, 168, 74, 0.22);
+    }
+    .btn-gold:hover { transform: translateY(-1px); color: #1a1408; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line-strong);
+    }
+    .btn-ghost:hover { background: var(--bg-3); color: var(--ink); }
+    .btn-lg { padding: 14px 22px; font-size: 1rem; }
+
+    .hero {
+      padding: 72px 0 40px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold-2);
+      background: var(--gold-dim);
+      border: 1px solid rgba(224, 168, 74, 0.28);
+      padding: 6px 10px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 4px rgba(224, 168, 74, 0.18);
+    }
+    h1 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(2.2rem, 4.4vw, 3.55rem);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      margin: 0 0 18px;
+    }
+    .lede {
+      font-size: 1.12rem;
+      color: var(--ink-dim);
+      max-width: 36rem;
+      margin: 0 0 28px;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .fine {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 460px;
+    }
+    .panel {
+      background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+    .win {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #3a4454;
+    }
+    .win.r { background: #c45c4a; }
+    .win.y { background: #d4a054; }
+    .win.g { background: #4aa86a; }
+    .panel-label {
+      margin-left: 6px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .code {
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      line-height: 1.65;
+      padding: 14px 16px 16px;
+      color: #d8d2c6;
+      white-space: pre;
+      overflow: auto;
+    }
+    .tok-key { color: #7ad4cc; }
+    .tok-str { color: #f6d08a; }
+    .tok-num { color: #e8b4a0; }
+    .tok-cmt { color: #6d7280; }
+    .tok-stat { color: #6dbf8a; }
+    .spec-card {
+      position: absolute;
+      left: 0; top: 18px;
+      width: 58%;
+      transform: rotate(-2.2deg);
+      z-index: 1;
+    }
+    .resp-card {
+      position: absolute;
+      right: 0; bottom: 0;
+      width: 64%;
+      transform: rotate(1.6deg);
+      z-index: 2;
+    }
+    .status-row {
+      display: flex;
+      gap: 6px;
+      padding: 0 16px 14px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--ink-dim);
+    }
+    .chip.ok { color: var(--ok); border-color: rgba(109,191,138,0.35); background: rgba(109,191,138,0.08); }
+    .chip.warn { color: var(--gold-2); border-color: rgba(224,168,74,0.35); background: var(--gold-dim); }
+    .chip.err { color: #e8a090; border-color: rgba(208,114,98,0.4); background: rgba(208,114,98,0.1); }
+
+    .horizon {
+      height: 1px;
+      margin: 28px 0 8px;
+      background: linear-gradient(90deg, transparent, rgba(224,168,74,0.45), rgba(74,168,160,0.4), transparent);
+      position: relative;
+      z-index: 2;
+    }
+
+    .proof {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 8px 0 56px;
+      position: relative;
+      z-index: 2;
+    }
+    .proof-item {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+      border-radius: 12px;
+      padding: 16px 16px 14px;
+    }
+    .proof-item strong {
+      display: block;
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--gold-2);
+      letter-spacing: -0.03em;
+    }
+    .proof-item span {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    section { padding: 28px 0 64px; position: relative; z-index: 2; }
+    .sec-head {
+      max-width: 640px;
+      margin-bottom: 32px;
+    }
+    h2 {
+      font-family: var(--serif);
+      font-size: clamp(1.7rem, 3vw, 2.3rem);
+      letter-spacing: -0.03em;
+      margin: 0 0 12px;
+      font-weight: 600;
+    }
+    .sec-head p { margin: 0; color: var(--ink-dim); }
+
+    .problem {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .card {
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+    .card p { margin: 0; color: var(--ink-dim); font-size: 0.96rem; }
+    .card.bad { border-color: rgba(208,114,98,0.28); }
+    .card.good { border-color: rgba(74,168,160,0.35); background: linear-gradient(180deg, rgba(74,168,160,0.08), var(--bg-2)); }
+    .label-mini {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      counter-reset: step;
+    }
+    .step {
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px 18px 18px;
+      position: relative;
+    }
+    .step::before {
+      counter-increment: step;
+      content: "0" counter(step);
+      font-family: var(--mono);
+      color: var(--gold);
+      font-size: 0.78rem;
+      display: block;
+      margin-bottom: 12px;
+    }
+    .step h3 { margin: 0 0 8px; font-size: 1rem; }
+    .step p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+    .features {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+    }
+    .feat-list {
+      display: grid;
+      gap: 12px;
+    }
+    .feat {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg-2);
+    }
+    .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--gold-dim);
+      display: grid;
+      place-items: center;
+      color: var(--gold-2);
+    }
+    .feat h3 { margin: 0 0 4px; font-size: 1rem; }
+    .feat p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+    .env-box {
+      background: var(--bg-2);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .env-url {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--teal-2);
+      overflow: auto;
+    }
+    .people {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .person {
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--bg-3);
+      border: 1px solid var(--line);
+      color: var(--ink-dim);
+    }
+
+    .roles {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .role {
+      padding: 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--bg-2);
+      min-height: 180px;
+    }
+    .role h3 { margin: 0 0 8px; font-size: 1.02rem; }
+    .role p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+    .beta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      align-items: start;
+      background:
+        linear-gradient(180deg, rgba(224,168,74,0.06), transparent 40%),
+        var(--bg-2);
+      border: 1px solid var(--line-strong);
+      border-radius: 20px;
+      padding: 36px;
+    }
+    .checks { list-style: none; margin: 16px 0 0; padding: 0; }
+    .checks li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      color: var(--ink-dim);
+      font-size: 0.95rem;
+    }
+    .checks svg { flex: none; margin-top: 3px; }
+
+    form.waitlist {
+      display: grid;
+      gap: 12px;
+    }
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--ink-dim);
+    }
+    .req { color: var(--gold); }
+    input[type="text"], input[type="email"], select, textarea {
+      background: var(--bg);
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      padding: 11px 12px;
+      color: var(--ink);
+      width: 100%;
+    }
+    textarea { min-height: 88px; resize: vertical; }
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .check-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+    .check-line input { margin-top: 3px; accent-color: var(--gold); }
+    .form-note { color: var(--muted); font-size: 0.8rem; margin: 0; }
+    .error {
+      color: #f0a090;
+      font-size: 0.82rem;
+      display: none;
+    }
+    .error.show { display: block; }
+    .success {
+      display: none;
+      background: rgba(109,191,138,0.1);
+      border: 1px solid rgba(109,191,138,0.35);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .success.show { display: block; }
+    .success h3 { margin: 0 0 6px; }
+    .success p { margin: 0; color: var(--ink-dim); }
+
+    .faq {
+      display: grid;
+      gap: 8px;
+      max-width: 760px;
+    }
+    details {
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    details p { margin: 10px 0 0; color: var(--muted); font-size: 0.95rem; }
+
+    footer.site {
+      border-top: 1px solid var(--line);
+      padding: 28px 0 40px;
+      position: relative;
+      z-index: 2;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    @media (max-width: 920px) {
+      .hero, .problem, .features, .beta, .roles, .steps, .proof {
+        grid-template-columns: 1fr 1fr;
+      }
+      .roles, .steps { grid-template-columns: 1fr 1fr; }
+      .nav-links { display: none; }
+      .stage { min-height: 420px; }
+    }
+    @media (max-width: 700px) {
+      .wrap { width: min(var(--max), calc(100% - 28px)); }
+      .hero, .problem, .features, .beta, .roles, .steps, .proof, .row-2 {
+        grid-template-columns: 1fr;
+      }
+      .hero { padding-top: 40px; }
+      .stage { min-height: 390px; }
+      .spec-card, .resp-card {
+        position: relative;
+        width: 100%;
+        left: auto; right: auto; top: auto; bottom: auto;
+        transform: none;
+        margin-bottom: 12px;
+      }
+      .beta { padding: 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .btn { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site">
+    <div class="wrap nav">
+      <a class="brand" href="#top" aria-label="MorrowSpec home">
+        <svg class="mark" viewBox="0 0 28 28" aria-hidden="true">
+          <rect width="28" height="28" rx="7" fill="#1a2118"/>
+          <path d="M4 18c4-1 6-7 10-7s6 6 10 7" fill="none" stroke="#e0a84a" stroke-width="1.8"/>
+          <circle cx="14" cy="10" r="2.1" fill="#f6d08a"/>
+        </svg>
+        MorrowSpec
+      </a>
+      <ul class="nav-links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#product">Product</a></li>
+        <li><a href="#teams">Teams</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <a class="btn btn-gold" href="#waitlist">Join waitlist</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap hero" id="top">
+      <div>
+        <div class="kicker"><span class="dot" aria-hidden="true"></span> Private beta · OpenAPI REST</div>
+        <h1>Build against the contract before the service exists.</h1>
+        <p class="lede">MorrowSpec turns an API specification into a realistic, hosted mock—complete with responses, errors, and test scenarios your whole team can share. Frontend, QA, and product keep moving while backend is still being written.</p>
+        <div class="hero-actions">
+          <a class="btn btn-gold btn-lg" href="#waitlist">Request private-beta access</a>
+          <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
+        </div>
+        <p class="fine">Initially for OpenAPI-based REST APIs. Spec in, live mock out. Updates when the contract changes.</p>
+      </div>
+      <div class="stage" aria-hidden="true">
+        <div class="panel spec-card">
+          <div class="panel-top">
+            <span class="win r"></span><span class="win y"></span><span class="win g"></span>
+            <span class="panel-label">openapi.yaml · synced from repo</span>
+          </div>
+          <div class="code"><span class="tok-cmt"># checkout.v1</span>
+<span class="tok-key">paths</span>:
+  <span class="tok-str">/orders</span>:
+    <span class="tok-key">post</span>:
+      <span class="tok-key">responses</span>:
+        <span class="tok-str">"201"</span>: OrderCreated
+        <span class="tok-str">"422"</span>: ValidationError
+  <span class="tok-str">/orders/{id}</span>:
+    <span class="tok-key">get</span>:
+      <span class="tok-key">responses</span>:
+        <span class="tok-str">"200"</span>: Order
+        <span class="tok-str">"404"</span>: NotFound</div>
+        </div>
+        <div class="panel resp-card">
+          <div class="panel-top">
+            <span class="win r"></span><span class="win y"></span><span class="win g"></span>
+            <span class="panel-label">GET env.morrowspec.dev /orders/1842</span>
+          </div>
+          <div class="code"><span class="tok-stat">200 OK</span>  ·  41ms  ·  scenario: paid
+{
+  <span class="tok-key">"id"</span>: <span class="tok-num">1842</span>,
+  <span class="tok-key">"status"</span>: <span class="tok-str">"paid"</span>,
+  <span class="tok-key">"total"</span>: <span class="tok-num">86.40</span>,
+  <span class="tok-key">"customer"</span>: {
+    <span class="tok-key">"email"</span>: <span class="tok-str">"ada@harbor.io"</span>
+  }
+}</div>
+          <div class="status-row">
+            <span class="chip ok">201 created</span>
+            <span class="chip warn">401 unauthorized</span>
+            <span class="chip err">422 validation</span>
+            <span class="chip">503 timeout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="horizon"></div>
+      <div class="proof">
+        <div class="proof-item"><strong>OpenAPI in</strong><span>Import a spec or sync from a repository.</span></div>
+        <div class="proof-item"><strong>Hosted mock</strong><span>A real endpoint with realistic payloads.</span></div>
+        <div class="proof-item"><strong>Live to spec</strong><span>The mock updates when the contract changes.</span></div>
+        <div class="proof-item"><strong>Shared envs</strong><span>Frontend, backend, QA, and product on one URL.</span></div>
+      </div>
+    </div>
+
+    <section>
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>Waiting on the backend is a process bug.</h2>
+          <p>Most teams already have the contract. What they lack is a service that behaves like it—so work piles up behind an unfinished API.</p>
+        </div>
+        <div class="problem">
+          <article class="card bad">
+            <div class="label-mini">Without MorrowSpec</div>
+            <h3>Stubs drift. Environments fragment.</h3>
+            <p>Frontend hardcodes fixtures. QA waits. Product demos against yesterday’s JSON. When the spec changes, nobody’s mock does. Integration week becomes archaeology.</p>
+          </article>
+          <article class="card good">
+            <div class="label-mini">With MorrowSpec</div>
+            <h3>One spec. One living mock. Every team.</h3>
+            <p>Import or sync the OpenAPI file. MorrowSpec hosts an endpoint with realistic success paths, errors, and scenarios. Share the environment. When the spec moves, the mock follows.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>From specification to shared environment.</h2>
+          <p>Designed for software teams who already write contracts and still lose weeks waiting to consume them.</p>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <h3>Bring the spec</h3>
+            <p>Upload an OpenAPI document or connect a repository so MorrowSpec stays aligned with the source of truth.</p>
+          </article>
+          <article class="step">
+            <h3>Get a hosted API</h3>
+            <p>Receive an endpoint that returns realistic bodies, status codes, and error shapes—not empty 200s.</p>
+          </article>
+          <article class="step">
+            <h3>Shape the scenarios</h3>
+            <p>Exercise happy paths, validation failures, auth gaps, and edge cases your clients will actually hit.</p>
+          </article>
+          <article class="step">
+            <h3>Share the environment</h3>
+            <p>Hand one URL to frontend, backend, QA, and product. The mock stays current as the spec evolves.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="product">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>A mock that behaves like the service you intend to ship.</h2>
+          <p>MorrowSpec is not a static fixture dump. It is a developer platform for contract-faithful APIs you can point real clients at.</p>
+        </div>
+        <div class="features">
+          <div class="feat-list">
+            <article class="feat">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h12M4 10h8M4 15h10"/></svg>
+              </div>
+              <div>
+                <h3>Import or repo sync</h3>
+                <p>Start from an OpenAPI specification you already maintain. Sync from a code repository so the mock tracks the contract instead of a copy-paste.</p>
+              </div>
+            </article>
+            <article class="feat">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M7 8h6M7 12h4"/></svg>
+              </div>
+              <div>
+                <h3>Realistic responses and errors</h3>
+                <p>Generated payloads follow your schemas. Clients can hit created, not-found, unauthorized, and validation failures—the cases that actually stall UI and tests.</p>
+              </div>
+            </article>
+            <article class="feat">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 14l4-8 4 5 4-7"/></svg>
+              </div>
+              <div>
+                <h3>Updates with the spec</h3>
+                <p>When routes, fields, or error models change, the hosted mock updates. Teams stop debugging stale stubs that no longer match the contract.</p>
+              </div>
+            </article>
+            <article class="feat">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="7" cy="8" r="2.4"/><circle cx="14" cy="8" r="2.4"/><circle cx="10.5" cy="14" r="2.4"/></svg>
+              </div>
+              <div>
+                <h3>Environments built for the whole team</h3>
+                <p>Share a stable base URL across frontend, backend, QA, and product so demos, tests, and integration work from the same mock.</p>
+              </div>
+            </article>
+          </div>
+          <aside class="env-box">
+            <div class="label-mini">Shared environment</div>
+            <div class="env-url">https://env.morrowspec.dev/acme-checkout</div>
+            <p class="fine" style="margin:0">Point clients at a hosted mock instead of a laptop process. Same contract, same scenarios, no VPN scavenger hunt.</p>
+            <div class="people">
+              <span class="person">Frontend</span>
+              <span class="person">Backend</span>
+              <span class="person">QA</span>
+              <span class="person">Product</span>
+            </div>
+            <p class="fine" style="margin:0">Private beta starts with OpenAPI-based REST APIs. Other styles come later.</p>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section id="teams">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>Who MorrowSpec is for</h2>
+          <p>If your team writes the contract first—or should—and still blocks on an unfinished service, the waitlist is for you.</p>
+        </div>
+        <div class="roles">
+          <article class="role">
+            <h3>Frontend</h3>
+            <p>Build screens, loading states, and error handling against real HTTP instead of commented-out fetch calls.</p>
+          </article>
+          <article class="role">
+            <h3>Backend</h3>
+            <p>Publish the spec, keep the mock honest, and implement the service without becoming everyone else’s blocker.</p>
+          </article>
+          <article class="role">
+            <h3>QA</h3>
+            <p>Write tests against stable scenarios—including the ugly paths—before production traffic exists.</p>
+          </article>
+          <article class="role">
+            <h3>Product</h3>
+            <p>Review flows and share demos on an environment that still matches last week’s agreed contract.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="waitlist">
+      <div class="wrap">
+        <div class="beta">
+          <div>
+            <div class="kicker"><span class="dot" aria-hidden="true"></span> Limited private beta</div>
+            <h2>Join teams who want the mock to keep up with the spec.</h2>
+            <p class="lede" style="margin-bottom:0">We’re onboarding software teams that already have (or are writing) OpenAPI specs for REST APIs and need a shareable mock before the backend is ready.</p>
+            <ul class="checks">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.2l3.1 3.1L13 4.5" fill="none" stroke="#e0a84a" stroke-width="1.8"/></svg>
+                Import OpenAPI or sync from a repository
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.2l3.1 3.1L13 4.5" fill="none" stroke="#e0a84a" stroke-width="1.8"/></svg>
+                Hosted endpoint with realistic responses, errors, and scenarios
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.2l3.1 3.1L13 4.5" fill="none" stroke="#e0a84a" stroke-width="1.8"/></svg>
+                Automatic updates when the specification changes
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.2l3.1 3.1L13 4.5" fill="none" stroke="#e0a84a" stroke-width="1.8"/></svg>
+                Shared environments across frontend, backend, QA, and product
+              </li>
+            </ul>
+          </div>
+          <div>
+            <form class="waitlist" id="waitlist-form" novalidate>
+              <div class="row-2">
+                <label>Full name
+                  <input type="text" name="name" autocomplete="name" required>
+                </label>
+                <label>Work email <span class="req">*</span>
+                  <input type="email" name="email" autocomplete="email" inputmode="email" required placeholder="you@company.com">
+                </label>
+              </div>
+              <div class="row-2">
+                <label>Role
+                  <select name="role" required>
+                    <option value="">Select…</option>
+                    <option>Frontend engineer</option>
+                    <option>Backend engineer</option>
+                    <option>Full-stack engineer</option>
+                    <option>QA / test</option>
+                    <option>Product</option>
+                    <option>Engineering manager</option>
+                    <option>Other</option>
+                  </select>
+                </label>
+                <label>Company
+                  <input type="text" name="company" autocomplete="organization" placeholder="Optional">
+                </label>
+              </div>
+              <label>What would you mock first?
+                <textarea name="use" placeholder="e.g. payments API, internal orders service, partner webhooks…"></textarea>
+              </label>
+              <label class="check-line">
+                <input type="checkbox" name="openapi" required>
+                <span>Our private beta starts with OpenAPI-based REST APIs. That’s a fit for my team.</span>
+              </label>
+              <p class="error" id="form-error" role="alert">Please add a valid work email, your role, and confirm OpenAPI REST is a fit.</p>
+              <button class="btn btn-gold btn-lg" type="submit">Request access</button>
+              <p class="form-note">We’ll only use this to follow up about the beta. No product yet means no product emails forever.</p>
+            </form>
+            <div class="success" id="form-success" role="status">
+              <h3>You’re on the list.</h3>
+              <p>We’ll reach out as we open private-beta seats for OpenAPI REST teams. Keep the spec handy.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2>Before you join</h2>
+          <p>Straight answers for teams deciding whether MorrowSpec belongs in the next sprint.</p>
+        </div>
+        <div class="faq">
+          <details>
+            <summary>What does MorrowSpec actually produce?</summary>
+            <p>A hosted mock API derived from your OpenAPI specification. Clients call a real URL and receive realistic responses, errors, and test scenarios—not a downloaded JSON file.</p>
+          </details>
+          <details>
+            <summary>How do specifications get into MorrowSpec?</summary>
+            <p>You import an OpenAPI document or sync one from a code repository. When the underlying spec changes, the mock updates so teams are not pinned to a stale contract.</p>
+          </details>
+          <details>
+            <summary>Who is the private beta for?</summary>
+            <p>Software teams that need to build and test before backend services are ready, and that can work with OpenAPI-based REST APIs. Frontend, backend, QA, and product should be able to share the same environment.</p>
+          </details>
+          <details>
+            <summary>Will you support GraphQL, gRPC, or SOAP in beta?</summary>
+            <p>Not at first. The private beta is intentionally narrow: OpenAPI-based REST. If that is your world, join the waitlist. Other API styles are out of scope for the initial beta.</p>
+          </details>
+          <details>
+            <summary>Is this a local CLI or a platform?</summary>
+            <p>MorrowSpec is a developer platform. The point is a shareable hosted endpoint so the mock is not trapped on one engineer’s machine.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap foot">
+      <span>MorrowSpec — mock APIs from specifications, before the backend is ready.</span>
+      <span>Private beta · OpenAPI REST</span>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var form = document.getElementById("waitlist-form");
+      var success = document.getElementById("form-success");
+      var error = document.getElementById("form-error");
+      if (!form) return;
+
+      if (window.localStorage && localStorage.getItem("morrowspec-waitlist") === "1") {
+        form.style.display = "none";
+        success.classList.add("show");
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        error.classList.remove("show");
+        var email = (form.email.value || "").trim();
+        var role = form.role.value;
+        var openapi = form.openapi.checked;
+        var validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validEmail || !role || !openapi) {
+          error.classList.add("show");
+          return;
+        }
+        try {
+          localStorage.setItem("morrowspec-waitlist", "1");
+        } catch (err) {}
+        form.style.display = "none";
+        success.classList.add("show");
+      });
+    })();
+  </script>
+</body>
+</html>

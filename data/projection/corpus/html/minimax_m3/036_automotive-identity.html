@@ -1,0 +1,2942 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>DRAID-PM-2024-08-14-0211 · VIN Canonicalisation Regression · Postmortem</title>
+<style>
+/* =====================================================================
+   SINGLE SOURCE OF TRUTH — every colour, font-size, spacing, radius and
+   shadow lives here as a CSS custom property. No literal values for
+   those five classes appear outside this :root block.
+   ===================================================================== */
+:root {
+  /* ---------- surfaces ---------- */
+  --bg-app:           #060a10;
+  --bg-shell:         #0a0f17;
+  --bg-surface:       #111823;
+  --bg-elev:          #161e2b;
+  --bg-elev-2:        #1c2632;
+  --bg-tabbar:        #0d141d;
+  --bg-row-alt:       #131a24;
+  --bg-row-zebra:     #0d131c;
+  --bg-row-hover:     #1c2532;
+  --bg-code:          #080d14;
+  --bg-code-frame:    #0a0f17;
+  --bg-callout-info:  #0f1a26;
+  --bg-callout-warn:  #2a1f10;
+  --bg-callout-ok:    #102017;
+  --bg-callout-err:   #2a1414;
+  --bg-callout-violet:#1a1828;
+  --bg-pill:          #1a2230;
+  --bg-pill-strong:   #202b3b;
+  --bg-button:        #1a2330;
+  --bg-button-hover:  #243040;
+  --bg-button-press:  #2c3a4d;
+  --bg-input:         #080d14;
+  --bg-overlay:       #04070b;
+  --bg-spine:         #4ec9c0;
+
+  /* ---------- text ---------- */
+  --fg:               #e2e8f1;
+  --fg-strong:        #f5f8fc;
+  --fg-muted:         #8a96a7;
+  --fg-dim:           #5a6573;
+  --fg-faint:         #3f4a59;
+  --fg-on-accent:     #060a10;
+  --fg-on-warn:       #f3d6a8;
+  --fg-on-err:        #f0b9bd;
+  --fg-on-ok:         #b3e5c2;
+  --fg-on-info:       #b6d5f0;
+  --fg-on-violet:     #d8c4f5;
+
+  /* ---------- borders ---------- */
+  --bd-faint:         #161e29;
+  --bd-mild:          #1e2836;
+  --bd-default:       #2a3441;
+  --bd-strong:        #3b4654;
+  --bd-focus:         #5b9bd5;
+
+  /* ---------- accents ---------- */
+  --c-info:           #5db8f5;
+  --c-cool:           #4ec9c0;
+  --c-warm:           #e8a44c;
+  --c-violet:         #b78fff;
+  --c-pink:           #e87ba0;
+  --c-slate:          #7b8aa0;
+
+  /* ---------- severity ---------- */
+  --sev-crit:         #e8505b;
+  --sev-crit-bg:      #2a1414;
+  --sev-warn:         #e8a44c;
+  --sev-warn-bg:      #2a1f10;
+  --sev-ok:           #6fd47d;
+  --sev-ok-bg:        #142318;
+  --sev-info:         #5db8f5;
+  --sev-info-bg:      #0e1a26;
+  --sev-neutral:      #8a96a7;
+  --sev-neutral-bg:   #18202b;
+  --sev-debug:        #5a6573;
+
+  /* ---------- code palette ---------- */
+  --code-kw:          #c678dd;
+  --code-str:         #98c379;
+  --code-num:         #d19a66;
+  --code-fn:          #61afef;
+  --code-ty:          #e8b550;
+  --code-com:         #5a6573;
+  --code-var:         #e06c75;
+  --code-punc:        #abb2bf;
+  --code-text:        #c8d1de;
+  --code-attrib:      #e8b550;
+
+  /* ---------- font sizes ---------- */
+  --fs-xxs:           10px;
+  --fs-xs:            11px;
+  --fs-sm:            12px;
+  --fs-base:          13px;
+  --fs-md:            14px;
+  --fs-lg:            16px;
+  --fs-xl:            19px;
+  --fs-2xl:           22px;
+  --fs-3xl:           28px;
+  --fs-mono:          12px;
+  --fs-mono-sm:       11px;
+  --fs-mono-lg:       13px;
+
+  /* ---------- spacing ---------- */
+  --sp-0:             0;
+  --sp-1:             2px;
+  --sp-2:             4px;
+  --sp-3:             6px;
+  --sp-4:             8px;
+  --sp-5:             12px;
+  --sp-6:             16px;
+  --sp-7:             20px;
+  --sp-8:             24px;
+  --sp-9:             32px;
+  --sp-10:            48px;
+  --sp-11:            64px;
+
+  /* ---------- radius ---------- */
+  --r-0:              0;
+  --r-1:              1px;
+  --r-2:              2px;
+  --r-3:              3px;
+  --r-4:              4px;
+  --r-pill:           999px;
+
+  /* ---------- border widths ---------- */
+  --bw-1:             1px;
+  --bw-2:             2px;
+  --bw-3:             3px;
+  --bw-4:             4px;
+
+  /* ---------- shadows ---------- */
+  --sh-1:             0 1px 0 0 rgba(255,255,255,0.03) inset, 0 1px 2px rgba(0,0,0,0.4);
+  --sh-2:             0 2px 8px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.03) inset;
+  --sh-overlay:       0 24px 60px rgba(0,0,0,0.7), 0 2px 0 rgba(255,255,255,0.04) inset;
+  --sh-focus:         0 0 0 1px var(--bd-focus);
+  --sh-card:          0 0 0 1px var(--bd-mild), 0 1px 0 rgba(255,255,255,0.02) inset;
+
+  /* ---------- line heights / tracking ---------- */
+  --lh-tight:         1.25;
+  --lh-base:          1.5;
+  --lh-loose:         1.7;
+  --tr-tight:         -0.005em;
+  --tr-upper:         0.04em;
+  --tr-mono:          -0.02em;
+}
+
+/* =====================================================================
+   RESET & GLOBALS
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html {
+  background: var(--bg-app);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+body { min-width: 1280px; }
+code, kbd, samp, .mono, .num {
+  font-family: ui-monospace, "SF Mono", "Menlo", "Consolas",
+               "DejaVu Sans Mono", "Liberation Mono", monospace;
+  font-size: var(--fs-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tr-mono);
+}
+.mono-sm { font-size: var(--fs-mono-sm); }
+.mono-lg { font-size: var(--fs-mono-lg); }
+a { color: var(--c-info); text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr {
+  border: 0;
+  border-top: var(--bw-1) solid var(--bd-mild);
+  margin: var(--sp-7) 0;
+}
+::selection { background: var(--c-info); color: var(--fg-on-accent); }
+
+/* =====================================================================
+   APP SHELL — full-bleed, maxes viewport width, owns the whole page
+   ===================================================================== */
+.app {
+  display: grid;
+  grid-template-rows: auto auto auto auto 1fr auto auto;
+  width: 100%;
+  min-height: 100vh;
+  border-left: var(--bw-3) solid var(--bg-spine);  /* seam/registr visual seam */
+}
+
+/* =====================================================================
+   TOPBAR — logo, project nav, search stub, user chip
+   ===================================================================== */
+.topbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-3) var(--sp-7);
+  background: var(--bg-shell);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+  font-size: var(--fs-sm);
+  min-height: var(--sp-9);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.brand-mark {
+  width: var(--sp-6);
+  height: var(--sp-6);
+  border: var(--bw-2) solid var(--c-cool);
+  border-radius: var(--r-2);
+  display: grid;
+  place-items: center;
+  color: var(--c-cool);
+}
+.brand-text {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: var(--tr-upper);
+  color: var(--fg-strong);
+}
+.brand-text .sub {
+  font-weight: 400;
+  color: var(--fg-muted);
+  margin-left: var(--sp-3);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+}
+.topnav {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.topnav a {
+  padding: var(--sp-2) var(--sp-5);
+  color: var(--fg-muted);
+  border-radius: var(--r-2);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+}
+.topnav a.on {
+  color: var(--fg-strong);
+  background: var(--bg-elev);
+}
+.topnav a:hover { color: var(--fg-strong); text-decoration: none; }
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.topbar-meta .dot-live {
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--r-pill);
+  background: var(--sev-ok);
+  box-shadow: 0 0 0 2px var(--bg-shell);
+}
+.userchip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--bg-elev);
+  border: var(--bw-1) solid var(--bd-default);
+  border-radius: var(--r-2);
+  font-size: var(--fs-xs);
+}
+.userchip .av {
+  width: var(--sp-5);
+  height: var(--sp-5);
+  border-radius: var(--r-pill);
+  background: var(--c-violet);
+  color: var(--fg-on-accent);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--fs-xxs);
+}
+
+/* =====================================================================
+   BANNER — incident identity strip
+   ===================================================================== */
+.banner {
+  background:
+    linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-shell) 100%);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+  padding: var(--sp-7) var(--sp-7) var(--sp-7);
+}
+.banner-row {
+  display: grid;
+  grid-template-columns: minmax(600px, 1fr) auto auto auto;
+  align-items: end;
+  gap: var(--sp-7);
+}
+.incident-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tr-upper);
+  color: var(--fg-muted);
+  margin-bottom: var(--sp-3);
+}
+.incident-eyebrow .sep { color: var(--fg-faint); }
+.incident-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  color: var(--fg-strong);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+}
+.incident-subtitle {
+  margin-top: var(--sp-3);
+  color: var(--fg-muted);
+  font-size: var(--fs-md);
+  max-width: 80ch;
+}
+.banner-meta {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.banner-meta .k {
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  color: var(--fg-dim);
+  margin-right: var(--sp-2);
+}
+
+/* status pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-2);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  font-weight: 600;
+  background: var(--bg-pill);
+  color: var(--fg-muted);
+  border: var(--bw-1) solid var(--bd-default);
+  white-space: nowrap;
+}
+.pill .swatch {
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--r-1);
+  background: currentColor;
+}
+.pill.sev-crit   { color: var(--sev-crit);   border-color: var(--sev-crit);   background: var(--sev-crit-bg); }
+.pill.sev-warn   { color: var(--sev-warn);   border-color: var(--sev-warn);   background: var(--sev-warn-bg); }
+.pill.sev-ok     { color: var(--sev-ok);     border-color: var(--sev-ok);     background: var(--sev-ok-bg); }
+.pill.sev-info   { color: var(--sev-info);   border-color: var(--sev-info);   background: var(--sev-info-bg); }
+.pill.sev-neutral{ color: var(--sev-neutral);border-color: var(--bd-default); background: var(--sev-neutral-bg); }
+.pill.solid      { color: var(--fg-on-accent);}
+.pill.solid      { background: var(--c-cool); border-color: var(--c-cool); }
+.pill .num       { font-family: ui-monospace, "SF Mono", monospace; font-size: var(--fs-mono); letter-spacing: var(--tr-mono); }
+.pill.ic { padding-left: var(--sp-3); }
+
+/* =====================================================================
+   KPI ROW — eight dense stat cells
+   ===================================================================== */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--bw-1);
+  background: var(--bd-default);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+}
+.kpi {
+  background: var(--bg-surface);
+  padding: var(--sp-5) var(--sp-6);
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  gap: var(--sp-2);
+  position: relative;
+}
+.kpi .k {
+  font-size: var(--fs-xxs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  color: var(--fg-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.kpi .v {
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--fg-strong);
+  letter-spacing: var(--tr-mono);
+  line-height: var(--lh-tight);
+}
+.kpi .u {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.kpi .delta {
+  font-size: var(--fs-xs);
+  color: var(--sev-ok);
+}
+.kpi .delta.bad { color: var(--sev-crit); }
+.kpi .spark {
+  position: absolute;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  width: var(--sp-9);
+  height: var(--sp-5);
+  opacity: 0.7;
+}
+
+/* =====================================================================
+   PHASE STRIP — horizontal time segments in SVG
+   ===================================================================== */
+.phase-strip {
+  background: var(--bg-shell);
+  padding: var(--sp-6) var(--sp-7);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+}
+.phase-strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-4);
+}
+.phase-strip-head h3 {
+  margin: 0;
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+.phase-strip-head .legend {
+  display: flex;
+  gap: var(--sp-5);
+  font-size: var(--fs-xs);
+  color: var(--fg-dim);
+}
+.phase-strip-head .legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.legend .swatch { width: var(--sp-3); height: var(--sp-3); border-radius: var(--r-1); }
+.phase-timeline { width: 100%; height: var(--sp-10); display: block; }
+.phase-bar-bg     { fill: var(--bg-elev); }
+.phase-bar-detect { fill: var(--sev-warn); }
+.phase-bar-ack    { fill: var(--sev-info); }
+.phase-bar-mit    { fill: var(--sev-warn); }
+.phase-bar-reso   { fill: var(--sev-ok); }
+.phase-bar-watch  { fill: var(--c-cool); opacity: 0.5; }
+.phase-marker     { stroke: var(--bg-shell); stroke-width: 2; }
+.phase-marker.crit { fill: var(--sev-crit); }
+.phase-marker.warn { fill: var(--sev-warn); }
+.phase-marker.info { fill: var(--sev-info); }
+.phase-marker.ok   { fill: var(--sev-ok); }
+.phase-text {
+  fill: var(--fg-muted);
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 10px;
+  letter-spacing: -0.02em;
+}
+.phase-text-tick { fill: var(--fg-dim); font-size: 9px; }
+.phase-text-strong { fill: var(--fg-strong); font-size: 11px; font-weight: 600; }
+
+.phase-grid { stroke: var(--bd-faint); stroke-width: 1; }
+
+/* =====================================================================
+   ACCORDION STACK
+   ===================================================================== */
+.acc-stack {
+  padding: var(--sp-7) var(--sp-7) var(--sp-9);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-7);
+}
+.acc {
+  background: var(--bg-surface);
+  border: var(--bw-1) solid var(--bd-default);
+  border-radius: var(--r-2);
+  box-shadow: var(--sh-card);
+}
+.acc > summary {
+  cursor: pointer;
+  padding: var(--sp-5) var(--sp-6);
+  display: grid;
+  grid-template-columns: var(--sp-9) 1fr auto auto auto;
+  align-items: center;
+  gap: var(--sp-6);
+  user-select: none;
+  list-style: none;
+  position: relative;
+  background: var(--bg-elev);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+}
+.acc > summary::-webkit-details-marker { display: none; }
+.acc > summary::marker { display: none; }
+.acc > summary:hover { background: var(--bg-elev-2); }
+.acc:not([open]) > summary { border-bottom: 0; }
+.acc-number {
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--c-cool);
+  letter-spacing: var(--tr-mono);
+}
+.acc-title {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--fg-strong);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.acc-title .sub {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+}
+.acc-meta {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.acc-state {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-2);
+  font-weight: 600;
+  background: var(--bg-pill);
+  color: var(--fg-muted);
+  border: var(--bw-1) solid var(--bd-default);
+}
+.acc[open] .acc-state { color: var(--sev-ok); border-color: var(--sev-ok); }
+.acc:not([open]) .acc-state { color: var(--fg-dim); }
+.acc-caret {
+  width: var(--sp-7);
+  height: var(--sp-7);
+  display: grid;
+  place-items: center;
+  border: var(--bw-1) solid var(--bd-default);
+  border-radius: var(--r-2);
+  color: var(--fg-muted);
+  transition: transform 0.18s ease;
+}
+.acc[open] > summary .acc-caret { transform: rotate(180deg); color: var(--c-cool); border-color: var(--c-cool); }
+
+.acc-body { padding: 0; }
+.acc-body > .tabset { display: grid; grid-template-rows: auto 1fr; }
+
+/* =====================================================================
+   TABLIST — inside each accordion
+   ===================================================================== */
+.tablist {
+  display: flex;
+  border-bottom: var(--bw-1) solid var(--bd-default);
+  background: var(--bg-tabbar);
+  overflow-x: auto;
+}
+[role="tab"] {
+  background: transparent;
+  border: 0;
+  padding: var(--sp-4) var(--sp-6);
+  color: var(--fg-muted);
+  cursor: pointer;
+  border-bottom: var(--bw-2) solid transparent;
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  letter-spacing: var(--tr-tight);
+}
+[role="tab"]:hover { color: var(--fg-strong); background: var(--bg-elev); }
+[role="tab"][aria-selected="true"] {
+  color: var(--fg-strong);
+  border-bottom-color: var(--c-info);
+  background: var(--bg-surface);
+}
+[role="tab"][aria-selected="true"] .num-dot { color: var(--c-info); }
+.tab-num {
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  color: var(--fg-dim);
+}
+[role="tab"] .tab-meta {
+  font-size: var(--fs-xxs);
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+}
+
+[role="tabpanel"] { padding: var(--sp-7); }
+[role="tabpanel"][hidden] { display: none; }
+[role="tabpanel"] h3 {
+  font-size: var(--fs-md);
+  color: var(--fg-strong);
+  font-weight: 600;
+  margin: 0 0 var(--sp-5);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+[role="tabpanel"] h3 .anchor {
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  color: var(--fg-dim);
+}
+[role="tabpanel"] p { margin: 0 0 var(--sp-6); color: var(--fg); }
+[role="tabpanel"] p:last-child { margin-bottom: 0; }
+[role="tabpanel"] strong { color: var(--fg-strong); }
+[role="tabpanel"] em { color: var(--fg-on-info); font-style: normal; }
+[role="tabpanel"] code {
+  background: var(--bg-code);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-2);
+  color: var(--code-text);
+  font-size: var(--fs-mono-sm);
+  border: var(--bw-1) solid var(--bd-mild);
+}
+
+/* =====================================================================
+   CONTENT ELEMENTS — prose, callouts, tables inside tabpanels
+   ===================================================================== */
+.prose {
+  max-width: 96ch;
+  font-size: var(--fs-base);
+  color: var(--fg);
+  line-height: var(--lh-loose);
+}
+.prose + .prose { margin-top: var(--sp-7); }
+
+.callout {
+  border-left: var(--bw-3) solid var(--bd-default);
+  background: var(--bg-callout-info);
+  padding: var(--sp-5) var(--sp-6);
+  margin: var(--sp-6) 0;
+  border-radius: var(--r-2);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-5);
+  font-size: var(--fs-base);
+}
+.callout .label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  font-weight: 700;
+  color: var(--fg-strong);
+}
+.callout .label small {
+  display: block;
+  font-weight: 400;
+  color: var(--fg-muted);
+  letter-spacing: 0;
+  text-transform: none;
+  margin-top: var(--sp-1);
+}
+.callout.info  { border-left-color: var(--c-info);  background: var(--bg-callout-info); }
+.callout.warn  { border-left-color: var(--sev-warn); background: var(--bg-callout-warn); }
+.callout.ok    { border-left-color: var(--sev-ok);   background: var(--bg-callout-ok); }
+.callout.err   { border-left-color: var(--sev-crit); background: var(--bg-callout-err); }
+.callout.violet{ border-left-color: var(--c-violet); background: var(--bg-callout-violet); }
+.callout p { margin: 0; }
+
+.codeblock {
+  background: var(--bg-code);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  margin: var(--sp-5) 0 var(--sp-7);
+  overflow: hidden;
+}
+.codeblock-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--bg-code-frame);
+  border-bottom: var(--bw-1) solid var(--bd-mild);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.codeblock-head .path {
+  font-family: ui-monospace, monospace;
+  color: var(--fg);
+}
+.codeblock-head .tag {
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--bg-pill);
+  border-radius: var(--r-2);
+  font-size: var(--fs-xxs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+}
+.codeblock pre {
+  margin: 0;
+  padding: var(--sp-5);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-base);
+  color: var(--code-text);
+  white-space: pre;
+  overflow-x: auto;
+}
+.codeblock pre .kw  { color: var(--code-kw); }
+.codeblock pre .str { color: var(--code-str); }
+.codeblock pre .num { color: var(--code-num); }
+.codeblock pre .fn  { color: var(--code-fn); }
+.codeblock pre .ty  { color: var(--code-ty); }
+.codeblock pre .cm  { color: var(--code-com); font-style: italic; }
+.codeblock pre .vr  { color: var(--code-var); }
+.codeblock pre .pn  { color: var(--code-punc); }
+.codeblock pre .at  { color: var(--code-attrib); }
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-6);
+  margin: var(--sp-6) 0;
+}
+.three-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-5);
+  margin: var(--sp-6) 0;
+}
+
+/* =====================================================================
+   REAL TABLE — timeline, impact, backlog
+   ===================================================================== */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  background: var(--bg-surface);
+  margin: var(--sp-6) 0 var(--sp-7);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+.tbl caption {
+  text-align: left;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  color: var(--fg-muted);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--bg-elev);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tbl caption .ctrls {
+  font-size: var(--fs-xxs);
+  color: var(--fg-dim);
+}
+.tbl th, .tbl td {
+  border-right: var(--bw-1) solid var(--bd-faint);
+  border-bottom: var(--bw-1) solid var(--bd-faint);
+  padding: var(--sp-3) var(--sp-4);
+  text-align: left;
+  vertical-align: top;
+  line-height: var(--lh-base);
+}
+.tbl th {
+  background: var(--bg-elev);
+  color: var(--fg-muted);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+  white-space: nowrap;
+}
+.tbl tbody tr:nth-child(even) { background: var(--bg-row-alt); }
+.tbl tbody tr:nth-child(odd)  { background: var(--bg-row-zebra); }
+.tbl tbody tr:hover { background: var(--bg-row-hover); }
+.tbl td.mono, .tbl th.mono { font-family: ui-monospace, monospace; font-size: var(--fs-mono-sm); }
+.tbl td.num  { font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; font-size: var(--fs-mono-sm); }
+.tbl th.r, .tbl td.r { text-align: right; }
+
+.tbl .sev-pill {
+  display: inline-flex;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-2);
+  font-size: var(--fs-xxs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  font-weight: 700;
+}
+.tbl .sev-pill.crit { background: var(--sev-crit-bg); color: var(--sev-crit); }
+.tbl .sev-pill.warn { background: var(--sev-warn-bg); color: var(--sev-warn); }
+.tbl .sev-pill.ok   { background: var(--sev-ok-bg); color: var(--sev-ok); }
+.tbl .sev-pill.info { background: var(--sev-info-bg); color: var(--sev-info); }
+.tbl .sev-pill.dbg  { background: var(--sev-neutral-bg); color: var(--fg-muted); }
+
+.tbl-wrap { overflow-x: auto; }
+
+/* =====================================================================
+   OTHER TIGHT COMPONENTS
+   ===================================================================== */
+.metricbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
+  margin: var(--sp-5) 0;
+}
+.metricbar-row {
+  display: grid;
+  grid-template-columns: 12ch 1fr 7ch;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.metricbar-row .lbl { color: var(--fg-muted); }
+.metricbar-row .bar {
+  height: var(--sp-3);
+  background: var(--bg-elev);
+  border-radius: var(--r-1);
+  position: relative;
+}
+.metricbar-row .bar > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--c-info);
+  border-radius: var(--r-1);
+}
+.metricbar-row .val { text-align: right; font-family: ui-monospace, monospace; color: var(--fg); font-size: var(--fs-mono-sm); }
+
+.tag-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: var(--sp-3) 0 var(--sp-5); }
+.tag {
+  font-size: var(--fs-xxs);
+  font-family: ui-monospace, monospace;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-2);
+  background: var(--bg-pill);
+  color: var(--fg-muted);
+  border: var(--bw-1) solid var(--bd-mild);
+  text-transform: lowercase;
+  letter-spacing: var(--tr-mono);
+}
+.tag.warm { color: var(--c-warm); border-color: var(--c-warm); }
+.tag.info { color: var(--c-info); border-color: var(--c-info); }
+.tag.violet { color: var(--c-violet); border-color: var(--c-violet); }
+.tag.cool { color: var(--c-cool); border-color: var(--c-cool); }
+.tag.ok { color: var(--sev-ok); border-color: var(--sev-ok); }
+.tag.crit { color: var(--sev-crit); border-color: var(--sev-crit); }
+
+/* mechanism graph (CSS-drawn node & arrow graph) */
+.graph {
+  background: var(--bg-code);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  padding: var(--sp-6);
+  margin: var(--sp-5) 0;
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-mono);
+  overflow-x: auto;
+}
+.graph table { border-collapse: collapse; }
+.graph td { padding: var(--sp-2) var(--sp-4); white-space: nowrap; }
+.graph .node {
+  display: inline-block;
+  padding: var(--sp-2) var(--sp-4);
+  border: var(--bw-1) solid var(--bd-strong);
+  border-radius: var(--r-2);
+  background: var(--bg-elev);
+  color: var(--fg);
+}
+.graph .node.bad { color: var(--sev-crit); border-color: var(--sev-crit); }
+.graph .node.ok { color: var(--sev-ok); border-color: var(--sev-ok); }
+.graph .node.warn { color: var(--sev-warn); border-color: var(--sev-warn); }
+.graph .arrow { color: var(--fg-dim); padding: 0 var(--sp-2); }
+.graph .arrow.bad { color: var(--sev-crit); }
+.graph .lbl { color: var(--fg-dim); font-size: var(--fs-xxs); text-transform: uppercase; letter-spacing: var(--tr-upper); padding: var(--sp-3) var(--sp-4); }
+
+/* regression test breakdown */
+.regression-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-3);
+  margin: var(--sp-5) 0 var(--sp-7);
+}
+.regression-card {
+  background: var(--bg-shell);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  padding: var(--sp-4) var(--sp-5);
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: var(--sp-1);
+}
+.regression-card .k { font-size: var(--fs-xxs); text-transform: uppercase; letter-spacing: var(--tr-upper); color: var(--fg-dim); }
+.regression-card .v { font-family: ui-monospace, monospace; font-size: var(--fs-md); color: var(--fg-strong); }
+.regression-card .b { font-size: var(--fs-xxs); color: var(--fg-muted); }
+.regression-card.bad .v { color: var(--sev-crit); }
+.regression-card.ok  .v { color: var(--sev-ok); }
+
+/* evidence dialog */
+dialog#evidence-pack {
+  width: min(960px, 96vw);
+  max-height: 86vh;
+  background: var(--bg-surface);
+  border: var(--bw-1) solid var(--bd-strong);
+  border-radius: var(--r-3);
+  color: var(--fg);
+  box-shadow: var(--sh-overlay);
+  padding: 0;
+  overflow: hidden;
+}
+dialog#evidence-pack::backdrop { background: var(--bg-overlay); }
+.evidence-head {
+  padding: var(--sp-6) var(--sp-7);
+  background: var(--bg-elev);
+  border-bottom: var(--bw-1) solid var(--bd-default);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--sp-5);
+}
+.evidence-head h2 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--fg-strong);
+  margin: 0;
+}
+.evidence-head .sub {
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+  margin-top: var(--sp-1);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+}
+.evidence-body {
+  padding: var(--sp-7);
+  overflow-y: auto;
+  max-height: calc(86vh - 100px);
+}
+.evidence-tabs {
+  display: flex;
+  gap: var(--sp-1);
+}
+.evidence-tab {
+  background: transparent;
+  border: var(--bw-1) solid var(--bd-default);
+  color: var(--fg-muted);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  border-radius: var(--r-2);
+  cursor: pointer;
+}
+.evidence-tab.on { background: var(--bg-elev-2); color: var(--fg-strong); border-color: var(--c-cool); }
+.btn-close {
+  background: var(--bg-button);
+  border: var(--bw-1) solid var(--bd-default);
+  color: var(--fg-strong);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-2);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+  cursor: pointer;
+}
+.btn-close:hover { background: var(--bg-button-hover); }
+.btn-close:active { background: var(--bg-button-press); }
+.btn-x {
+  background: transparent;
+  border: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-4);
+}
+.btn-x:hover { color: var(--fg-strong); }
+
+/* footer */
+.appfoot {
+  background: var(--bg-shell);
+  border-top: var(--bw-1) solid var(--bd-default);
+  padding: var(--sp-5) var(--sp-7);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--sp-6);
+  font-size: var(--fs-xs);
+  color: var(--fg-muted);
+}
+.appfoot .center { color: var(--fg-dim); text-align: center; font-family: ui-monospace, monospace; }
+.appfoot .right { text-align: right; }
+
+/* mini sparkline */
+.spark-polyline { fill: none; stroke: var(--c-cool); stroke-width: 1.5; }
+
+/* small misc */
+.ref-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--bg-pill);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-mono-sm);
+  color: var(--fg);
+  letter-spacing: var(--tr-mono);
+}
+.signature-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--bg-pill-strong);
+  color: var(--c-cool);
+  border: var(--bw-1) solid var(--bd-default);
+  border-radius: var(--r-2);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-mono-sm);
+  letter-spacing: var(--tr-mono);
+}
+.sig-ok { color: var(--sev-ok); border-color: var(--sev-ok); }
+.sig-bad { color: var(--sev-crit); border-color: var(--sev-crit); }
+
+.kvs {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-sm);
+  margin: var(--sp-5) 0;
+}
+.kvs dt { color: var(--fg-dim); text-transform: uppercase; font-size: var(--fs-xxs); letter-spacing: var(--tr-upper); align-self: center; }
+.kvs dd { color: var(--fg); margin: 0; font-family: ui-monospace, monospace; font-size: var(--fs-mono-sm); letter-spacing: var(--tr-mono); }
+
+/* Definition list with two columns of keys */
+.kvs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-6);
+}
+
+ul.checklist {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-5) 0;
+  display: grid;
+  gap: var(--sp-3);
+}
+ul.checklist li {
+  display: grid;
+  grid-template-columns: var(--sp-4) 1fr;
+  gap: var(--sp-3);
+  font-size: var(--fs-base);
+  color: var(--fg);
+}
+ul.checklist li::before {
+  content: "";
+  width: var(--sp-3);
+  height: var(--sp-3);
+  margin-top: var(--sp-2);
+  background: var(--sev-ok);
+  border-radius: var(--r-1);
+  box-shadow: 0 0 0 1px var(--bg-app) inset;
+}
+ul.checklist li.x::before { background: var(--sev-crit); }
+ul.checklist li.q::before { background: var(--sev-warn); border-radius: var(--r-pill); }
+ul.checklist li.i::before { background: var(--sev-info); border-radius: var(--r-pill); }
+
+dl.owner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+  margin: var(--sp-6) 0;
+}
+dl.owner > div {
+  background: var(--bg-shell);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  padding: var(--sp-4) var(--sp-5);
+}
+dl.owner .role { font-size: var(--fs-xxs); text-transform: uppercase; letter-spacing: var(--tr-upper); color: var(--fg-dim); }
+dl.owner .name { font-size: var(--fs-sm); color: var(--fg-strong); font-weight: 600; margin-top: var(--sp-1); }
+dl.owner .gh  { font-family: ui-monospace, monospace; font-size: var(--fs-mono-sm); color: var(--c-cool); margin-top: var(--sp-1); }
+dl.owner .tz  { font-size: var(--fs-xs); color: var(--fg-muted); margin-top: var(--sp-2); }
+
+/* signature list (compact) */
+.sig-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-1);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-mono-sm);
+  background: var(--bg-code);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  padding: var(--sp-5);
+  margin: var(--sp-5) 0;
+  max-height: var(--sp-10);
+  overflow-y: auto;
+}
+.sig-list .row {
+  display: grid;
+  grid-template-columns: 14ch 4ch 18ch 1fr;
+  gap: var(--sp-4);
+  padding: var(--sp-1) var(--sp-2);
+  white-space: nowrap;
+}
+.sig-list .row .h { color: var(--fg-dim); }
+.sig-list .row .o { color: var(--sev-warn); }
+.sig-list .row .v { color: var(--fg); }
+.sig-list .row .s { color: var(--c-cool); }
+
+.divider-h {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--sp-5);
+  align-items: center;
+  margin: var(--sp-7) 0;
+  color: var(--fg-dim);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-upper);
+}
+.divider-h::before, .divider-h::after {
+  content: "";
+  height: var(--bw-1);
+  background: var(--bd-mild);
+}
+
+/* scroll minimap */
+.tbl-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+}
+
+.note {
+  font-size: var(--fs-xs);
+  color: var(--fg-dim);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-shell);
+  border: var(--bw-1) dashed var(--bd-mild);
+  border-radius: var(--r-2);
+  font-family: ui-monospace, monospace;
+}
+
+.aq {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-3);
+  margin: var(--sp-3) 0;
+  font-size: var(--fs-base);
+}
+.aq .q { color: var(--c-info); font-weight: 600; }
+.aq .a { color: var(--fg); }
+
+/* responsive grid for inline display (just denser tweak at narrow width) */
+@media (max-width: 1280px) {
+  body { min-width: 0; }
+}
+
+/* icon helpers */
+.ico {
+  width: var(--sp-4);
+  height: var(--sp-4);
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* signature sheet */
+.sig-sheet {
+  margin-top: var(--sp-6);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-5);
+  background: var(--bg-shell);
+  border: var(--bw-1) solid var(--bd-mild);
+  border-radius: var(--r-2);
+  padding: var(--sp-6);
+}
+.sig-sheet > div {
+  display: grid;
+  gap: var(--sp-2);
+  border-top: var(--bw-1) dashed var(--bd-default);
+  padding-top: var(--sp-4);
+}
+.sig-sheet > div:first-child,
+.sig-sheet > div:nth-child(2) {
+  border-top: 0;
+  padding-top: 0;
+}
+.sig-sheet .role { font-size: var(--fs-xxs); text-transform: uppercase; letter-spacing: var(--tr-upper); color: var(--fg-dim); }
+.sig-sheet .name { font-size: var(--fs-sm); font-weight: 600; color: var(--fg-strong); }
+.sig-sheet .when { font-family: ui-monospace, monospace; font-size: var(--fs-mono-sm); color: var(--c-cool); }
+
+.muted-inline { color: var(--fg-muted); }
+.dim-inline   { color: var(--fg-dim); }
+
+.scroll-x { overflow-x: auto; }
+.tight    { line-height: var(--lh-tight); }
+</style>
+</head>
+<body>
+<main class="app">
+
+<!-- ============================================================
+     TOP BAR
+     ============================================================ -->
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="6"  cy="7" r="1.6" fill="currentColor"/>
+      <circle cx="18" cy="7" r="1.6" fill="currentColor"/>
+      <circle cx="12" cy="17" r="1.6" fill="currentColor"/>
+      <line x1="6" y1="7"  x2="12" y2="17" stroke="currentColor" stroke-width="1.4"/>
+      <line x1="18" y1="7" x2="12" y2="17" stroke="currentColor" stroke-width="1.4"/>
+      <line x1="6" y1="7"  x2="18" y2="7"  stroke="currentColor" stroke-width="1.4"/>
+    </svg>
+    <div class="brand-text">DriveID<span class="sub">Identity &amp; Attestation Platform</span></div>
+  </div>
+  <nav class="topnav" aria-label="Primary">
+    <a href="#">Dashboards</a>
+    <a href="#">Services</a>
+    <a href="#">Incidents</a>
+    <a href="#" class="on">Postmortems</a>
+    <a href="#">Runbooks</a>
+    <a href="#">Tenants</a>
+    <a href="#">Audit log</a>
+    <a href="#">Signatures</a>
+  </nav>
+  <div class="topbar-meta">
+    <span><span class="dot-live"></span>&nbsp;attestation-issuer : healthy</span>
+    <span style="color:var(--fg-faint)">·</span>
+    <span>cluster&nbsp;<span class="mono-sm" style="color:var(--fg)">draid-prod-us-east-1c</span></span>
+  </div>
+  <div class="userchip" aria-label="Signed-in user">
+    <span class="av">ML</span>
+    <span style="display:grid;line-height:var(--lh-tight)">
+      <span style="color:var(--fg-strong)">Mei-Lin Chow</span>
+      <span style="color:var(--fg-dim);font-size:var(--fs-xxs);text-transform:uppercase;letter-spacing:0.04em">on-call · SRE-2024-Q3-2</span>
+    </span>
+  </div>
+  <div style="font-family:ui-monospace,monospace;font-size:var(--fs-xxs);color:var(--fg-dim)">
+    <span style="color:var(--fg-faint)">UTC</span> 2024-08-14&nbsp;<span style="color:var(--fg-strong)">15:42:11</span>
+  </div>
+</header>
+
+<!-- ============================================================
+     INCIDENT BANNER
+     ============================================================ -->
+<section class="banner" aria-labelledby="incident-title">
+  <div class="banner-row">
+    <div>
+      <div class="incident-eyebrow">
+        <span>DriveID / Identity Postmortems</span>
+        <span class="sep">/</span>
+        <span>Q3 2024</span>
+        <span class="sep">/</span>
+        <span>Severity: SEV-2</span>
+        <span class="sep">/</span>
+        <span>Status: <span style="color:var(--sev-ok)">RESOLVED &amp; MONITORED</span></span>
+      </div>
+      <h1 id="incident-title" class="incident-title">
+        Vehicle-Identity Attestation Pipeline — Library Upgrade Forged 7,312 Records With Bypassed Signature Counter
+      </h1>
+      <p class="incident-subtitle">
+        A two-fault composition in <code>vin-canonicalizer</code> (parser upgrade) and <code>attestation-issuer</code> (fallback path without invariant) caused signed vehicle-identity attestations to be emitted with <code class="mono" style="color:var(--sev-crit)">sig_counter&nbsp;=&nbsp;0</code> over a 47-minute window. All 7,312 affected attestations were revoked and re-issued; 12 B2B merchant tenants in dealer-finance and fleet-lease verticals were impacted; no PII, no driver-licence data, no payment credentials were exposed. Customer credits in the form of SLA-breach waivers were issued under incident-2024-Q3 credit policy.
+      </p>
+    </div>
+    <div class="pill sev-warn"><span class="swatch"></span>SEV-2</div>
+    <div class="pill sev-ok"><span class="swatch"></span>Postmortem · v3</div>
+    <div class="pill sev-neutral"><span class="num">DRAID-PM-2024-08-14-0211</span></div>
+  </div>
+  <div class="banner-meta" style="margin-top:var(--sp-7)">
+    <span><span class="k">Reporter</span><span style="color:var(--fg-strong)">Mei-Lin Chow</span></span>
+    <span><span class="k">IC</span><span style="color:var(--fg-strong)">Rajiv Venkatesh</span></span>
+    <span><span class="k">Comms</span><span style="color:var(--fg-strong)">Tomás Reyes</span></span>
+    <span><span class="k">Liaison</span><span style="color:var(--fg-strong)">Asha Krzeminski</span></span>
+    <span><span class="k">Reviewers</span><span style="color:var(--fg-strong)">K. Asare-Twumasi · A. Locklear · D. Schiavone</span></span>
+    <span><span class="k">Sign-off</span><span style="color:var(--fg-strong)">P. Nakashima (VP Platform)</span></span>
+    <span><span class="k">Class</span><span style="color:var(--fg-strong)">DEGRADATION / INTEGRITY</span></span>
+    <span><span class="k">Rec.</span><span style="color:var(--fg-strong)"><a href="#" style="color:var(--c-info)">INC-2024-Q3-0211</a></span></span>
+  </div>
+</section>
+
+<!-- ============================================================
+     KPI ROW
+     ============================================================ -->
+<section class="kpi-row" aria-label="Incident key metrics">
+  <div class="kpi">
+    <div class="k">MTTD <span class="pill sev-warn" style="font-size:var(--fs-xxs);padding:0 var(--sp-2)">high</span></div>
+    <div class="v">28m 49s</div>
+    <div class="u">first bad sig at 14:22:07 · alert at 14:50:56</div>
+  </div>
+  <div class="kpi">
+    <div class="k">MTTA <span class="pill sev-ok" style="font-size:var(--fs-xxs);padding:0 var(--sp-2)">ok</span></div>
+    <div class="v">9m 12s</div>
+    <div class="u">PD paged &amp; acknowledged (Mei-Lin Chow)</div>
+  </div>
+  <div class="kpi">
+    <div class="k">Mitigation start <span class="pill sev-warn" style="font-size:var(--fs-xxs);padding:0 var(--sp-2)">slow</span></div>
+    <div class="v">15:03:42</div>
+    <div class="u">rollback initiated 12m 23s post-ack</div>
+  </div>
+  <div class="kpi">
+    <div class="k">Total impact <span class="pill sev-info" style="font-size:var(--fs-xxs);padding:0 var(--sp-2)">SEV-2</span></div>
+    <div class="v">47m 04s</div>
+    <div class="u">14:22:07 → 15:09:11 (UTC)</div>
+  </div>
+  <div class="kpi">
+    <div class="k">Tenants impacted <span class="delta bad">+12 of 847</span></div>
+    <div class="v">12</div>
+    <div class="u">9 fleet-lease, 3 dealer-finance</div>
+  </div>
+  <div class="kpi">
+    <div class="k">Attestations revoked <span class="delta bad">+7,312</span></div>
+    <div class="v">7,312</div>
+    <div class="u">sig_counter&nbsp;=&nbsp;0 forged</div>
+  </div>
+  <div class="kpi">
+    <div class="k">Re-signed (verified) <span class="delta">100.0%</span></div>
+    <div class="v">7,312</div>
+    <div class="u">by 2024-08-15 04:11 UTC</div>
+  </div>
+  <div class="kpi">
+    <div class="k">Internal eng-hours <span class="delta">178</span></div>
+    <div class="v">$73.5k</div>
+    <div class="u">+$68.2k SLA waivers &amp; credits</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PHASE TIMELINE
+     ============================================================ -->
+<section class="phase-strip" aria-label="Phase timeline">
+  <div class="phase-strip-head">
+    <h3>Impact phase timeline · 14:22:07 → 15:09:11 UTC · 47m 04s</h3>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--sev-warn)"></span>Detection / Mitigation</span>
+      <span><span class="swatch" style="background:var(--sev-info)"></span>Investigation</span>
+      <span><span class="swatch" style="background:var(--sev-ok)"></span>Resolved &amp; verified</span>
+      <span><span class="swatch" style="background:var(--c-cool);opacity:0.5"></span>Watch / monitored</span>
+    </div>
+  </div>
+  <svg class="phase-timeline" viewBox="0 0 1200 130" preserveAspectRatio="none" role="img" aria-label="Phase timeline">
+    <defs>
+      <pattern id="hashpat" width="6" height="6" patternUnits="userSpaceOnUse">
+        <path d="M0 6 L6 0" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <!-- background slab -->
+    <rect x="40" y="40" width="1120" height="14" class="phase-bar-bg"/>
+    <rect x="40" y="40" width="660" height="14" fill="url(#hashpat)"/>
+    <!-- phase bars. Pixel widths derived from time fractions -->
+    <!-- 14:22 -> 14:51.19 = 29m12s = 0.6202 of 47m total -->
+    <rect x="40"  y="40" width="694" height="14" class="phase-bar-detect"/>
+    <!-- 14:51.19 -> 15:03.42 = 12m23s = 0.2635 -->
+    <rect x="734" y="40" width="295" height="14" class="phase-bar-ack"/>
+    <!-- 15:03.42 -> 15:09.11 = 5m29s = 0.1163 -->
+    <rect x="1029" y="40" width="131" height="14" class="phase-bar-mit"/>
+    <rect x="1160" y="40" width="?" height="0"/>
+    <!-- markers -->
+    <circle cx="40"   cy="47" r="7" class="phase-marker warn"/>
+    <circle cx="734"  cy="47" r="7" class="phase-marker info"/>
+    <circle cx="1029" cy="47" r="7" class="phase-marker warn"/>
+    <circle cx="1160" cy="47" r="7" class="phase-marker ok"/>
+    <!-- tick labels under -->
+    <text x="40"   y="78" class="phase-text-tick" text-anchor="middle">14:22:07</text>
+    <text x="40"   y="92" class="phase-text"      text-anchor="middle">Detected</text>
+    <text x="40"   y="106" class="phase-text-strong" text-anchor="middle">T+00:00</text>
+
+    <text x="734"  y="78" class="phase-text-tick" text-anchor="middle">14:51:19</text>
+    <text x="734"  y="92" class="phase-text"      text-anchor="middle">Acknowledged</text>
+    <text x="734"  y="106" class="phase-text-strong" text-anchor="middle">T+29:12</text>
+
+    <text x="1029" y="78" class="phase-text-tick" text-anchor="middle">15:03:42</text>
+    <text x="1029" y="92" class="phase-text"      text-anchor="middle">Mitigation begin</text>
+    <text x="1029" y="106" class="phase-text-strong" text-anchor="middle">T+41:35</text>
+
+    <text x="1160" y="78" class="phase-text-tick" text-anchor="middle">15:09:11</text>
+    <text x="1160" y="92" class="phase-text"      text-anchor="middle">Resolved</text>
+    <text x="1160" y="106" class="phase-text-strong" text-anchor="middle">T+47:04</text>
+
+    <!-- Phase durations -->
+    <text x="387" y="32" class="phase-text" text-anchor="middle">Detection gap · 29m 12s · 21 stale slips</text>
+    <text x="881" y="32" class="phase-text" text-anchor="middle">Acknowledge / Investigate · 12m 23s · 2 hypotheses ruled in</text>
+    <text x="1094" y="32" class="phase-text" text-anchor="middle">Mitigation · 5m 29s</text>
+    <!-- watch period at the right -->
+    <text x="1160" y="125" class="phase-text" text-anchor="middle">Monitoring continues · Re-sign job drained 04:11 UTC 2024-08-15</text>
+    <!-- grid ticks -->
+    <line x1="40"    y1="40" x2="40"    y2="60" class="phase-grid"/>
+    <line x1="280"   y1="40" x2="280"   y2="56" class="phase-grid"/>
+    <line x1="520"   y1="40" x2="520"   y2="56" class="phase-grid"/>
+    <line x1="734"   y1="40" x2="734"   y2="60" class="phase-grid"/>
+    <line x1="880"   y1="40" x2="880"   y2="56" class="phase-grid"/>
+    <line x1="1029"  y1="40" x2="1029"  y2="60" class="phase-grid"/>
+    <line x1="1160"  y1="40" x2="1160"  y2="60" class="phase-grid"/>
+  </svg>
+</section>
+
+<!-- ============================================================
+     ACCORDION STACK
+     ============================================================ -->
+<main class="acc-stack" role="region" aria-label="Postmortem body">
+
+  <!-- ============================================================
+       ACCORDION 1 · ROOT CAUSE ANALYSIS  (OPEN)
+       ============================================================ -->
+  <details class="acc" open>
+    <summary role="button" aria-expanded="true" aria-controls="acc-1-body">
+      <span class="acc-number">01</span>
+      <span class="acc-title">Root Cause Analysis<span class="sub">Two-fault composition · parser upgrade × fallback path with missing invariant</span></span>
+      <span class="acc-meta">
+        <span class="tag info">4 views</span>
+        <span class="tag warm">2 faults</span>
+        <span class="tag">ADR-0911</span>
+        <span class="tag">PR #4291</span>
+        <span class="tag">PR #4127</span>
+      </span>
+      <span class="acc-state">Open</span>
+      <span class="acc-caret" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+    </summary>
+    <div class="acc-body" id="acc-1-body" role="region" aria-label="Root cause analysis content">
+      <div class="tabset">
+
+        <div role="tablist" class="tablist" aria-label="Root cause views">
+          <button role="tab" id="rca-t1" aria-controls="rca-p1" aria-selected="true">
+            <span class="tab-num">01.1</span> Narrative
+            <span class="tab-meta">~520 words</span>
+          </button>
+          <button role="tab" id="rca-t2" aria-controls="rca-p2" aria-selected="false">
+            <span class="tab-num">01.2</span> Mechanism &amp; Code Trail
+            <span class="tab-meta">diff · 3 files</span>
+          </button>
+          <button role="tab" id="rca-t3" aria-controls="rca-p3" aria-selected="false">
+            <span class="tab-num">01.3</span> Why CI Did Not Catch It
+            <span class="tab-meta">fixture gap</span>
+          </button>
+          <button role="tab" id="rca-t4" aria-controls="rca-p4" aria-selected="false">
+            <span class="tab-num">01.4</span> Detection Lag (MTTD)
+            <span class="tab-meta">28m 49s</span>
+          </button>
+        </div>
+
+        <div role="tabpanel" id="rca-p1" aria-labelledby="rca-t1">
+
+          <h3>Narrative <span class="anchor">#root-cause-narrative</span></h3>
+          <div class="prose">
+            <p>
+              On Wednesday, August 14th, 2024, between <strong>14:22:07 UTC</strong> and <strong>15:09:11 UTC</strong>, the
+              DriveID identity platform emitted <strong>7,312 vehicle-identity attestations</strong> carrying
+              <code>sig_counter&nbsp;=&nbsp;0</code> — a value the issuer had not seen in production since the
+              ephemeral-token branches were quarantined in Q1&#8209;2022. The records passed upstream signature verification
+              because the long-term-ledger boundary invariant was being bypassed on a fallback code path. The fallout was
+              not detected by automated guards; it surfaced when twelve merchant tenants — clustered in dealer-financing
+              and fleet-lease — began opening tickets against their Vehicle Trust Console dashboards, reporting that
+              round-trip verification of freshly-issued attestations against their own internal vehicle-history ledgers had
+              started failing with error class <code>SIG_COUNTER_DESYNC</code>. Every one of the 7,312 affected records
+              was eventually revoked and re-issued with a corrected signature counter; no records remain in the broken
+              state at the time of writing.
+            </p>
+
+            <p>
+              The proximate cause was a library version bump in the VIN canonicalisation stage, from
+              <code>vin-parsers@4.7.3</code> to <code>vin-parsers@5.0.0</code>, deployed on Monday, August 12nd,
+              at <strong>18:04:09 UTC</strong> as part of routine dependency hygiene under ticket
+              <code>DRDDEP-3827</code>. <code>vin-parsers</code> is the canonical reference for WMI/VIS/VDS decoding
+              against ISO&nbsp;3779 and the U.S.&nbsp;NHTSA 2010 model-year position-10 standard. Version 5.0.0
+              introduced a stricter validator for the position-10 character class: it rejected the placeholder
+              <code>Z</code> and the unassigned codes <code>0</code>, <code>8</code>, <code>9</code> (introduced for
+              cross-manufacturer prototype vehicles in the 1995&ndash;2009 era) where 4.x had silently coerced them to
+              <code>CANONICAL_OK_WITH_FLAG&nbsp;{&nbsp;model_year_uncertain:&nbsp;true&nbsp;}</code>. The new validation
+              response from the library was <code>INVALID_STRUCTURE&nbsp;&mdash;&nbsp;POSITION10_RESERVED</code>.
+            </p>
+
+            <p>
+              In our pipeline, a canonicaliser result of <code>INVALID_STRUCTURE</code> is supposed to be a hard stop:
+              <code>vin-canonicalizer</code> should respond to the merchant with a 422&nbsp;Unprocessable&nbsp;Entity and
+              never advance the request to the downstream attestation issuer. The bug, however, was that
+              <code>vin-canonicalizer</code> is configured (per <strong>ADR&#8209;0911</strong>, dated
+              2024&#8209;02&#8209;12) to translate <em>any</em> non-OK status into a JSON envelope compatible with the
+              legacy attestation-issuer v3 contract, which expects the field
+              <code>vin_status:&nbsp;'absent'&nbsp;|&nbsp;'malformed'&nbsp;|&nbsp;'valid'</code>. The translation
+              layer was reusing <code>'malformed'</code> for <code>INVALID_STRUCTURE</code> and <code>'absent'</code>
+              for <code>'null'</code>, but in the v3 contract <code>'absent'</code> is the explicit signal for
+              "vehicle identity is genuinely unavailable &mdash; fall back to ephemeral VIN-less attestation mode" &mdash;
+              which is the path added in <strong>PR&nbsp;#4291</strong> for driveaway permits, tow-away authorisations,
+              and other short-lived records where the VIN is intentionally not present at issuance.
+            </p>
+
+            <p>
+              In other words: the canonicaliser had begun to <strong>misclassify legacy-vehicle VINs as genuinely
+              absent</strong>, where before they had been correctly classified as
+              <em>present-and-canonical</em>. The attestation issuer, receiving <code>vin_status:&nbsp;'absent'</code>,
+              took the ephemeral-fallback branch and emitted the attestation without enforcing the
+              <code>sig_counter&nbsp;&gt;&nbsp;previous_counter</code> invariant &mdash; because ephemeral attestations
+              deliberately omit the signature counter (they are scoped to a single merchant session and never enter the
+              long-term audit ledger). That invariant is normally enforced at the long-term-ledger boundary, not at the
+              issue endpoint. The bug was that the issuer's ephemeral-fallback branch was emitting an attestation
+              <em>with the long-term-ledger flag set to <code>true</code></em> when the request included
+              <code>persist:&nbsp;true</code> (a field added in <strong>PR&nbsp;#4127</strong>), but that path had been
+              written assuming <code>vin_status:&nbsp;'absent'</code> was an honest signal from the canonicaliser.
+              Two assumptions, both reasonable in isolation, collided.
+            </p>
+
+            <div class="callout warn">
+              <div class="label">Single-fault conclusion<small>if you only read one paragraph</small></div>
+              <div><p>
+                The platform did not break because a library upgrade was bad; it broke because an upstream translation
+                layer silently <em>re-classified</em> a validation rejection as a domain-level absence, and a downstream
+                issuer's compatibility branch treated domain-level absence as an honest signal. Either fault alone
+                would have been silently corrected by the other layer's guard. Both faults together produced a signed
+                record that downstream consumers could not distinguish from a valid attestation.
+              </p></div>
+            </div>
+
+            <p>
+              Detection was late (28m 49s) because the failure was a <em>value bug</em>, not a <em>shape bug</em>: every
+              affected record parsed, signed, returned <code>200&nbsp;OK</code>, and persisted into the long-term
+              ledger with the correct shape and a plausible signature. The only thing wrong was a single counter that
+              no automated test ever checked. The alert that eventually fired was a customer-facing one &mdash; twelve
+              concurrent ticket filings against the trust console within a seventeen-minute window &mdash; not an
+              internal guard.
+            </p>
+
+          </div>
+        </div>
+
+        <div role="tabpanel" id="rca-p2" aria-labelledby="rca-t2" hidden>
+          <h3>Mechanism &amp; Code Trail <span class="anchor">#mechanism</span></h3>
+          <div class="prose">
+            <p>
+              The two faults are best read top-down. Below is the literal change that vin-parsers 5.0.0 shipped, the
+              literal envelope mapping in <code>vin-canonicalizer</code>, and the literal branch in
+              <code>attestation-issuer</code> that accepted the misclassified signal. All three were stable in
+              production for at least 14 months independently. They only compose into a bug when an upstream change
+              crosses the trust boundary between them.
+            </p>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock-head">
+              <span class="path">vin-parsers/src/position10.rs · diff between v4.7.3 and v5.0.0</span>
+              <span class="tag">commit 8a4f02c · 2024-07-29 · @k.ostrowski</span>
+            </div>
+            <pre><span class="cm">// vin-parsers 4.7.x &mdash; accepted position-10 with an uncertainty flag</span>
+<span class="kw">pub fn</span> <span class="fn">validate_position_10</span>(<span class="vr">ch</span>: <span class="ty">char</span>) <span class="pn">-&gt;</span> <span class="ty">Pos10Result</span> {
+    <span class="kw">if let</span> <span class="pn">Some(</span><span class="vr">year</span><span class="pn">)</span> <span class="pn">=</span> <span class="fn">year_code_map</span>()<span class="pn">.</span><span class="fn">get</span>(<span class="vr">ch</span>) {
+        <span class="ty">Pos10Result</span><span class="pn">::</span><span class="fn">Ok</span>(<span class="vr">year</span>)
+    } <span class="kw">else if</span> <span class="fn">is_reserved_pre2010</span>(<span class="vr">ch</span>) {
+        <span class="cm">// pre-2010 reserved codes (Z, 0, 8, 9)</span>
+        <span class="ty">Pos10Result</span><span class="pn">::</span><span class="fn">OkWithFlag</span> {
+            <span class="at">year</span>: <span class="ty">Option</span><span class="pn">::</span><span class="ty">None</span>,
+            <span class="at">flag</span>: <span class="ty">ModelYearUncertainty</span><span class="pn">::</span><span class="fn">Certain</span>,
+        }
+    } <span class="kw">else</span> {
+        <span class="ty">Pos10Result</span><span class="pn">::</span><span class="fn">InvalidStructure</span>(<span class="str">"POSITION10_NOT_A_YEAR"</span>)
+    }
+}</pre>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock-head">
+              <span class="path">vin-parsers/src/position10.rs · v5.0.0 (current production-bad)</span>
+              <span class="tag">VinParsers 5.0.0</span>
+            </div>
+            <pre><span class="cm">// vin-parsers 5.0.0 &mdash; stricter; rejects pre-2010 reserved codes outright</span>
+<span class="kw">pub fn</span> <span class="fn">validate_position_10</span>(<span class="vr">ch</span>: <span class="ty">char</span>) <span class="pn">-&gt;</span> <span class="ty">Pos10Result</span> {
+    <span class="kw">match</span> <span class="fn">year_code_map_v2</span>()<span class="pn">.</span><span class="fn">get</span>(<span class="vr">ch</span>) {
+        <span class="ty">Some</span>(<span class="vr">year</span>) <span class="pn">=&gt;</span> <span class="ty">Pos10Result</span><span class="pn">::</span><span class="fn">Ok</span>(<span class="vr">year</span>),
+        <span class="cm">// pre-2010 reserved codes now treated as structure errors</span>
+        <span class="ty">None</span> <span class="pn">=&gt;</span> <span class="ty">Pos10Result</span><span class="pn">::</span><span class="fn">InvalidStructure</span>(<span class="str">"POSITION10_RESERVED"</span>),
+    }
+}</pre>
+          </div>
+
+          <div class="tag-row">
+            <span class="tag cool">Affects</span>
+            <span class="tag">VINs from 1995&ndash;2009 fleet lease returns</span>
+            <span class="tag">Cross-manufacturer prototype vehicles</span>
+            <span class="tag">Pre-2010 dealer-finance trade-ins</span>
+            <span class="tag">Heavy-duty commercial re-titling</span>
+          </div>
+
+          <div class="prose">
+            <p>
+              The 4.x release caught this exact same input class and carried it forward as a soft-uncertainty flag. The
+              5.x maintainer rationale (release notes &sect; 3.1.2) is that "position 10 was reserved for unknown only
+              during the transition window; anything not in the ISO&#8209;3779:2010 table is now treated as malformed."
+              Maintainer-side the change is defensible. On our side, the change is the trigger.
+            </p>
+          </div>
+
+          <div class="graph">
+            <div class="lbl">System call graph during the 47-minute window</div>
+            <table>
+              <tr>
+                <td><span class="node">merchant SDK</span></td>
+                <td><span class="arrow">&rarr;</span></td>
+                <td><span class="node">tenant-router&nbsp;<span style="color:var(--fg-dim)">v3.18.4</span></span></td>
+                <td><span class="arrow">&rarr;</span></td>
+                <td><span class="node">vin-canonicalizer&nbsp;<span style="color:var(--fg-dim)">v8.2.1</span></span></td>
+                <td><span class="arrow bad">&#x21AF;</span></td>
+                <td><span class="node bad">attestation-issuer&nbsp;·&nbsp;fallback path</span></td>
+                <td><span class="arrow">&rarr;</span></td>
+                <td><span class="node warn">long-term ledger&nbsp;·&nbsp;sig stamped (0)</span></td>
+              </tr>
+              <tr>
+                <td colspan="9" style="padding-left:var(--sp-7);color:var(--fg-dim);font-size:var(--fs-xs)">
+                  the red glyph indicates the boundary where the v3 envelope translation turned
+                  INVALID_STRUCTURE into vin_status: 'absent'
+                </td>
+              </tr>
+              <tr>
+                <td><span class="node ok">victory-research sentinel</span></td>
+                <td><span class="arrow">|</span></td>
+                <td colspan="7" style="color:var(--fg-dim);font-size:var(--fs-xs)">sentinel polled issuer.outbox every 60s; the test only verified payload shape, not sig_counter semantics</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock-head">
+              <span class="path">vin-canonicalizer/internal/pipeline/envelope.rs · translate_v3()</span>
+              <span class="tag">ADR-0911 · 2024-02-12</span>
+            </div>
+            <pre><span class="cm">// Translation layer &mdash; stable since 2024-02; reused unchanged.</span>
+<span class="cm">// Maps internal canonicalizer statuses to the legacy attestation-issuer</span>
+<span class="cm">// v3 envelope contract.</span>
+<span class="kw">pub fn</span> <span class="fn">translate_v3</span>(<span class="vr">canon</span>: <span class="ty">CanonicalStatus</span>) <span class="pn">-&gt;</span> <span class="ty">LegacyEnvelope</span> {
+    <span class="kw">match</span> <span class="vr">canon</span> {
+        <span class="ty">CanonicalStatus</span><span class="pn">::</span><span class="fn">Ok</span>(<span class="vr">c</span>)            <span class="pn">=&gt;</span> <span class="ty">LegacyEnvelope</span> { <span class="at">vin_status</span>: <span class="str">"valid"</span>,     <span class="at">vin</span>: <span class="vr">c</span>.<span class="fn">into_string</span>() },
+        <span class="ty">CanonicalStatus</span><span class="pn">::</span><span class="fn">Malformed</span>(<span class="vr">m</span>)    <span class="pn">=&gt;</span> <span class="ty">LegacyEnvelope</span> { <span class="at">vin_status</span>: <span class="str">"malformed"</span>, <span class="at">vin</span>: <span class="str">""</span>,          <span class="at">err</span>: <span class="vr">m</span> },
+        <span class="ty">CanonicalStatus</span><span class="pn">::</span><span class="fn">InvalidStructure</span>(<span class="at">reason</span>) <span class="pn">=&gt;</span> <span class="ty">LegacyEnvelope</span> { <span class="at">vin_status</span>: <span class="str">"absent"</span>,     <span class="at">vin</span>: <span class="str">""</span>,          <span class="at">err</span>: <span class="at">reason</span> },
+        <span class="cm">// [BUG-0911-1] InvalidStructure was intended to map to malformed,</span>
+        <span class="cm">// but ADR-0911 reused "absent" to keep the v3 envelope shape stable.</span>
+    }
+}</pre>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock-head">
+              <span class="path">attestation-issuer/src/issue/ephemeral.rs · issue_with_fallback()</span>
+              <span class="tag">PR #4291 · 2023-11-08</span>
+            </div>
+            <pre><span class="cm">// Ephemeral-fallback branch &mdash; originally added for driveaway permits.</span>
+<span class="kw">pub fn</span> <span class="fn">issue_with_fallback</span>(<span class="vr">envelope</span>: <span class="ty">&amp;LegacyEnvelope</span>, <span class="vr">req</span>: <span class="ty">&amp;IssueRequest</span>) <span class="pn">-&gt;</span> <span class="ty">Attestation</span> {
+    <span class="cm">// Step 1 &mdash; short-circuit if the merchant insists on persistence, treat</span>
+    <span class="cm">// the request as if the upstream canonicalizer had been bypassed.</span>
+    <span class="kw">if</span> <span class="vr">req</span>.<span class="fn">persist</span> {
+        <span class="cm">// Issue a long-term ledger entry without enforcing sig_counter</span>
+        <span class="cm">// monotonicity &mdash; the invariant is normally applied at</span>
+        <span class="cm">// the ledger boundary, and ephemeral mode is by definition not</span>
+        <span class="cm">// long-term. The fallback path assumes vin_status == "absent"</span>
+        <span class="cm">// is an honest signal.</span>
+        <span class="kw">let</span> <span class="vr">attest</span> <span class="pn">=</span> <span class="fn">sign_ephemeral_template</span>(<span class="vr">envelope</span>, <span class="vr">req</span>);
+        <span class="cm">// stamp into the long-term ledger because persist == true</span>
+        <span class="fn">ledger</span><span class="pn">::</span><span class="fn">append_promoted</span>(<span class="vr">attest</span>.<span class="fn">clone</span>());
+        <span class="kw">return</span> <span class="vr">attest</span>;
+    }
+    <span class="cm">// ... normal ephemeral issuance path ...</span>
+}</pre>
+          </div>
+
+          <div class="callout violet">
+            <div class="label">Composition pattern<small>two single-fault-prone components</small></div>
+            <div><p>
+              This is a textbook <em>compatibility shim</em> coupled with an <em>invariant missing-on-fallback</em>.
+              The shim was written so that the legacy contract would survive future canonicalizer semantics; the
+              fallback was written so that ephemeral mode would survive merchant integration tests. Neither piece of
+              code is wrong in isolation. Together they trusted each other's defaults more than they re-validated
+              the inputs crossing the trust boundary.
+            </p></div>
+          </div>
+        </div>
+
+        <div role="tabpanel" id="rca-p3" aria-labelledby="rca-t3" hidden>
+          <h3>Why Continuous Integration Did Not Catch It <span class="anchor">#why-ci</span></h3>
+          <div class="prose">
+            <p>
+              Our CI matrix on the <code>identity-gateway</code> monorepo runs a snapshot-fixture test for the
+              canonicaliser stage on every PR. The fixture comprises <strong>480 VINs</strong> drawn from
+              DriveID production traffic between 2022&#8209;02 and 2024&#8209;07. The test checks that the canonicalised
+              representation round-trips identically through a given parser version, and it cross-checks a single
+              downstream property: <em>the resulting legacy envelope's <code>vin_status</code> field</em>. CI passed for
+              the 5.0.0 upgrade PR (<code>idgw#3827</code>) at 14:42 UTC on 2024&#8209;08&#8209;12. The 480-VIN fixture
+              missed the bug for the following four reasons, in order of severity.
+            </p>
+
+            <div class="three-col">
+              <div class="regression-card bad">
+                <div class="k">Legacy VIN share in fixture</div>
+                <div class="v">7 / 480</div>
+                <div class="b">1.46% &mdash; under-sampled</div>
+              </div>
+              <div class="regression-card bad">
+                <div class="k">Coverage of position-10 reserved codes</div>
+                <div class="v">0 / 480</div>
+                <div class="b">0.0% &mdash; no VIN with reserved code present</div>
+              </div>
+              <div class="regression-card ok">
+                <div class="k">VIN statuses verified post-upgrade</div>
+                <div class="v">3</div>
+                <div class="b">valid / malformed / absent &mdash; shape only, not semantics</div>
+              </div>
+              <div class="regression-card bad">
+                <div class="k">Cross-stage semantic guard</div>
+                <div class="v">NONE</div>
+                <div class="b">no test asserts sig_counter invariant end-to-end</div>
+              </div>
+            </div>
+
+            <ol class="tight" style="padding-left:var(--sp-7)">
+              <li><strong>Fixture was historical, not adversarial.</strong> The 480 VINs were drawn from
+                production traffic at times when reserved position-10 codes were statistically rare in our
+                merchant mix. Many of our dealer-finance tenants had migrated their older fleets off DriveID by
+                Q4&#8209;2023. The fixture had a 1.46% share of pre-2010 vehicles, vs. 9.84% in the population
+                that <em>would</em> flow through the system after the upgrade shipped.</li>
+              <li><strong>Fixture covered shape, not semantic invariants.</strong> The cross-stage assertion
+                only verified that the envelope field <code>vin_status</code> took one of three values
+                (<code>valid</code> / <code>malformed</code> / <code>absent</code>). There was no test that
+                re-checked the resulting <code>vin_status: "absent"</code> against the originating
+                canonicalizer status. The test treated absent and malformed as interchangeable at the
+                snapshot layer, which is exactly the assumption the production bug relied on.</li>
+              <li><strong>The fallback path's invariant was guarded by a unit test, but on the wrong
+                fixture.</strong> PR #4291 shipped with a unit test that exercised
+                <code>issue_with_fallback()</code> using synthetic envelopes constructed by hand. None of those
+                envelopes were produced by the real canonicalizer, so the test could not detect a misuse of
+                the <code>absent</code> signal.</li>
+              <li><strong>The promotion invariant lived at the ledger boundary, not on the issue
+                path.</strong> <code>ledger::append_promoted()</code> checks that
+                <code>sig_counter &gt; ledger.tip.sig_counter</code> &mdash; but only when the records enters
+                the ledger with the flag <code>long_term: true</code>. The ephemeral promotion path
+                (<code>persist: true</code>) sets <code>long_term: true</code> <em>after</em> the
+                attestation was already signed with <code>sig_counter = 0</code> &mdash; meaning the invariant
+                check happens <em>against the same zero value</em>, not the previously-stored tip counter. The
+                check passes because 0 &gt; 0 is false; the closure of <code>ledger.append()</code> tags
+                the record as promoted and returns ok.</li>
+            </ol>
+
+            <div class="callout warn">
+              <div class="label">Fixture plan<small>committed before this document</small></div>
+              <div><p>
+                <code>test/fixtures/vin/legacy-historical.snapshot.json</code> will be expanded to 1,200 VINs, with
+                guaranteed coverage of all nine position-10 reserved codes and a population-distribution match
+                against the live 2024-Q3 traffic. The fixture will assert the round-trip semantic,
+                <em>not</em> the envelope shape, on cross-stage boundaries. See Action <strong>RM&#8209;3</strong>
+                in the Remediation Backlog.
+              </p></div>
+            </div>
+          </div>
+        </div>
+
+        <div role="tabpanel" id="rca-p4" aria-labelledby="rca-t4" hidden>
+          <h3>Detection Lag (MTTD): Why 28 minutes <span class="anchor">#detection-lag</span></h3>
+          <div class="prose">
+            <p>
+              Mean-time-to-detect for SEV&#8209;2 events in DriveID averaged <strong>9m 04s</strong> across Q2-2024
+              (n=14 events). The 28m 49s figure for this incident is a 3.2&times; regression against that mean. Three
+              factors contributed, in descending order of weight.
+            </p>
+
+            <div class="kvs-grid">
+              <dl class="kvs">
+                <dt>first bad signature</dt><dd>2024&#8209;08&#8209;14 14:22:07 UTC</dd>
+                <dt>automated alert fired</dt><dd>2024&#8209;08&#8209;14 14:50:56 UTC</dd>
+                <dt>interval</dt><dd>28m 49s</dd>
+                <dt>alert source</dt><dd>customer-trust-console, not internal guard</dd>
+                <dt>guarded properties</dt><dd>shape, signature, latency, error-rate</dd>
+                <dt>unguarded properties</dt><dd>sig_counter semantics · ledger monotonicity</dd>
+              </dl>
+              <dl class="kvs">
+                <dt>sentinels online</dt><dd>47 / 47 healthy</dd>
+                <dt>sentinel poll freq</dt><dd>60s</dd>
+                <dt>sentinel blind spot</dt><dd>issuer.outbox + persist=true path</dd>
+                <dt>customer signals</dt><dd>12 tenants · 17-minute cluster</dd>
+                <dt>cluster trigger</dt><dd>ticket-burst detector, threshold=8 in 10m</dd>
+                <dt>customer first-filer</dt><dd>LithiaFleet (ticket #478223)</dd>
+              </dl>
+            </div>
+
+            <p>
+              <strong>1. Sentinel blind spot (≈ 11 minutes).</strong> The <code>victory-research-sentinel</code>
+              service polls <code>issuer.outbox</code> every 60 seconds for shape anomalies and signature-verification
+              failures. The fallback path emits signatures that <em>verify</em>; the sentinel saw a healthy stream. The
+              sig_counter was not in the sentinel's verification payload. A counter-invariant sentinel was proposed in
+              <strong>ADR&#8209;1004</strong> (2024&#8209;05) and rejected at planning as "low-value" (i&#8203;2v: 1
+              quarter-eng-time per quarter in detections expected). That decision is being re-opened &mdash; see
+              Action <strong>RM&#8209;7</strong>.
+            </p>
+
+            <p>
+              <strong>2. Latent-detection decay (≈ 14 minutes).</strong> Because the fallback path's payload shape
+              matched the validator's contract, no upstream signal existed for an upstream noise. The first indicator
+              of trouble was <em>downstream of the issuer</em>: three of our largest ledger-archival tenants run
+              daily cross-checks between their own vehicle-history ledgers and the attestations they've received.
+              LithiaFleet's check fired first at 14:34:11 UTC, but their pipeline suppressed the warning because the
+              underlying API call had returned <code>200 OK</code>. The check was re-run at 14:48:31 when their credit
+              decisioning dashboard flagged 3 vehicles with mismatched ledger timestamps and a human logged a ticket.
+              By the time the ticket was filed, DriveTime MSA Holdings had independently filed #478225, and the
+              ticket-burst detector fired.
+            </p>
+
+            <p>
+              <strong>3. Detection-channel mismatch (≈ 3 minutes).</strong> The ticket-burst detector runs on the
+              customer-trust-console stream with a 10-minute window and a threshold of 8 tickets. Two of the first
+              three tickets arrived inside a 90-second window but on different console queues (one via the dealer
+              channel, one via the fleet-lease channel, one via the wholesale-auction channel). The detector was
+              configured per-channel, not globally. The <em>per-channel</em> configuration was a deliberate
+              signal-isolation choice made in 2023 to keep false positives low during the Q3-2023 dealer outage.
+              The reverse isolation (no global aggregation) was not re-thought. See Action <strong>RM&#8209;9</strong>.
+            </p>
+
+            <div class="callout err">
+              <div class="label">Defense in depth gap<small>not the same as "no monitoring"</small></div>
+              <div><p>
+                DriveID has forty-seven sentinels. None of them was wrong. The failure was that all 47
+                were exercising the same trust assumption (a valid signature means a valid issuance), and
+                that assumption broke. Counter-monotonicity sentinels would have fired at 14:22:07;
+                shape sentinels could not. The action items below specify both the new sentinel (RM&#8209;7)
+                and a structural fix that makes any single sentinel's failure less load-bearing (RM&#8209;11).
+              </p></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </details>
+
+  <!-- ============================================================
+       ACCORDION 2 · FORENSIC TIMELINE  (OPEN)
+       ============================================================ -->
+  <details class="acc" open>
+    <summary role="button" aria-expanded="true" aria-controls="acc-2-body">
+      <span class="acc-number">02</span>
+      <span class="acc-title">Forensic Timeline<span class="sub">Utc-normalised event stream, subsystem decomposition, IC decision trail</span></span>
+      <span class="acc-meta">
+        <span class="tag info">3 views</span>
+        <span class="tag warm">28 events</span>
+        <span class="tag">cluster draid-prod-use1c</span>
+        <span class="tag">trace 0x4d2a8e&hellip;</span>
+      </span>
+      <span class="acc-state">Open</span>
+      <span class="acc-caret" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+    </summary>
+    <div class="acc-body" id="acc-2-body" role="region" aria-label="Forensic timeline content">
+      <div class="tabset">
+
+        <div role="tablist" class="tablist" aria-label="Timeline views">
+          <button role="tab" id="tl-t1" aria-controls="tl-p1" aria-selected="true">
+            <span class="tab-num">02.1</span> Chronology
+            <span class="tab-meta">28 events · 1m granularity</span>
+          </button>
+          <button role="tab" id="tl-t2" aria-controls="tl-p2" aria-selected="false">
+            <span class="tab-num">02.2</span> By Subsystem
+            <span class="tab-meta">vin-canon / issuer / router</span>
+          </button>
+          <button role="tab" id="tl-t3" aria-controls="tl-p3" aria-selected="false">
+            <span class="tab-num">02.3</span> Decision Trail
+            <span class="tab-meta">9 IC actions</span>
+          </button>
+        </div>
+
+        <div role="tabpanel" id="tl-p1" aria-labelledby="tl-t1">
+          <h3>Chronology — UTC-normalised event stream <span class="anchor">#chronology</span></h3>
+          <p style="color:var(--fg-muted);margin-top:0;margin-bottom:var(--sp-5);font-size:var(--fs-sm)">
+            Stream is a synthesised view across <code>vin-canonicalizer</code> audit log, <code>attestation-issuer</code>
+            outbox, PagerDuty timeline, bridge transcript (<code>inc-2024-08-14-0211</code>), and tenant ticket queue.
+            Subsystem column is the originating service; the actor is the system or human that owned the decision at
+            that timestamp; severity is the operator-eye classification for postmortem use only &mdash; it is not the
+            alert severity that fired.
+          </p>
+
+          <div class="tbl-scroll">
+          <table class="tbl" aria-label="Chronology event stream">
+            <caption>
+              <span>Event log · 2024&#8209;08&#8209;14 · 14:22:07 &rarr; 16:02:17 UTC · cluster draid-prod-use1c</span>
+              <span class="ctrls">filtered: 28 of 4,219 · range: full incident window &plus; T+53:10 cleanup</span>
+            </caption>
+            <thead>
+              <tr>
+                <th class="mono" style="width:11ch">Time (UTC)</th>
+                <th style="width:5ch">Sev</th>
+                <th style="width:11ch">Subsystem</th>
+                <th style="width:9ch">Actor</th>
+                <th style="width:24ch">Signal</th>
+                <th style="width:14ch">Source / Ref</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">14:22:07</td>
+                <td><span class="sev-pill crit">CRIT</span></td>
+                <td>vin-canonicalizer</td>
+                <td>probe-vc-04</td>
+                <td>first attestation with sig_counter = 0 emitted</td>
+                <td class="mono">audit.log:line&nbsp;8441</td>
+                <td>VIN <code>1FTFW1ET5EFA82131</code> · fleet-lease · LithiaFleet</td>
+              </tr>
+              <tr>
+                <td class="mono">14:23:54</td>
+                <td><span class="sev-pill dbg">DBG</span></td>
+                <td>attestation-issuer</td>
+                <td>probe-iss-09</td>
+                <td>SIG-1 ADEL&#8209;1292 emitted, sig_counter delta = 0</td>
+                <td class="mono">issuer.outbox:obj&nbsp;ADEL&#8209;1292</td>
+                <td>Within recorded tolerance; no automated guard trips.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:31:19</td>
+                <td><span class="sev-pill warn">WARN</span></td>
+                <td>vin-canonicalizer</td>
+                <td>sentinel-can-12</td>
+                <td>847 VINs from 1995&ndash;2009 era rejected with POSITION10_RESERVED</td>
+                <td class="mono">can/reject-reasons.lab</td>
+                <td>New rejection class first observed in 142 days.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:33:02</td>
+                <td><span class="sev-pill dbg">DBG</span></td>
+                <td>tenant-router</td>
+                <td>router-usc-02</td>
+                <td>2 distinct requests with identical legacy envelope, sig_counter = 0</td>
+                <td class="mono">router/trace:0x4d2a8e03c1</td>
+                <td>Duplicate detection logic compares request body; considers same.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:42:11</td>
+                <td><span class="sev-pill warn">WARN</span></td>
+                <td>attestation-issuer</td>
+                <td>sentinel-iss-22</td>
+                <td>17 attestations in outbox carry sig_counter = 0 within 60s window</td>
+                <td class="mono">issuer.outbox:cluster&nbsp;k&#8209;1294</td>
+                <td>Sentinel reports "shape OK, signature OK"; cluster tag below threshold (default 64).</td>
+              </tr>
+              <tr>
+                <td class="mono">14:48:31</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>lithiafleet-deck</td>
+                <td>Priya Subramanian</td>
+                <td>Ledger cross-check re-run; 3 vehicles with sig_counter mismatch</td>
+                <td class="mono">ticket&nbsp;#478223 (filed)</td>
+                <td>First customer-side signal of forged counter.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:50:11</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>drivetime-deck</td>
+                <td>auto-burst-detector</td>
+                <td>dealer-channel queue hit 4 tickets in 7m &mdash; below threshold 8/10m</td>
+                <td class="mono">queues/dealer:burst</td>
+                <td>Detection delayed because per-channel isolation.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:50:56</td>
+                <td><span class="sev-pill crit">CRIT</span></td>
+                <td>driveid-platform</td>
+                <td>ticket-burst-detector</td>
+                <td>global burst threshold crossed: 12 tickets across 3 channels in 17m</td>
+                <td class="mono">alerts/SEV-2/INC-0211</td>
+                <td>Page fires for SRE-2024-Q3-2 (Mei-Lin Chow) and IC backup.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:51:19</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>pagerduty</td>
+                <td>Mei-Lin Chow</td>
+                <td>Acknowledged · incident P-DRAID&#8209;0211</td>
+                <td class="mono">PD/ack&nbsp;15s</td>
+                <td>IC backup also acks within 8s.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:52:48</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>bridge-2024-08-14-0211</td>
+                <td>Rajiv Venkatesh</td>
+                <td>Joined bridge; declared self IC; declared SEV-2</td>
+                <td class="mono">bridge/transcript&nbsp;001</td>
+                <td>Tomás Reyes joins as comms lead.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:55:47</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>bridge-2024-08-14-0211</td>
+                <td>Aiyana Locklear</td>
+                <td>Hypothesis-1 raised: vin-parsers 5.0.0 regression (deployed 2024&#8209;08&#8209;12)</td>
+                <td class="mono">bridge/transcript&nbsp;002</td>
+                <td>Triggered from sentinel-can-12 reject-reason delta.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:57:02</td>
+                <td><span class="sev-pill dbg">DBG</span></td>
+                <td>ledger-prod-us-east-1</td>
+                <td>ledger-arch-01</td>
+                <td>Daily cross-tenant signature-coverage computed; 7,312 mismatched entries</td>
+                <td class="mono">ledger/coverage:2024-08-14-1457</td>
+                <td>Coverage job continues running once daily at 14:57 UTC.</td>
+              </tr>
+              <tr>
+                <td class="mono">14:58:12</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>bridge-2024-08-14-0211</td>
+                <td>Tomás Reyes</td>
+                <td>Drafting initial customer comm (12 tenants) &mdash; v0.3 on confluence</td>
+                <td class="mono">comms/draft:v0.3</td>
+                <td>Awaiting IC sign-off before tenant fan-out.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:01:29</td>
+                <td><span class="sev-pill warn">WARN</span></td>
+                <td>bridge-2024-08-14-0211</td>
+                <td>ticket-burst-detector</td>
+                <td>12th tenant filed &mdash; Beacon Auto Auction (wholesale vertical)</td>
+                <td class="mono">ticket&nbsp;#478244</td>
+                <td>Vertical mix widened: 9 fleet-lease, 3 dealer-finance.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:02:18</td>
+                <td><span class="sev-pill crit">CRIT</span></td>
+                <td>vin-canonicalizer</td>
+                <td>Kwame Asare-Twumasi</td>
+                <td>Hypothesis-2 confirmed: vin-parsers 5.0.0 position-10 validator rejects 14,892 legacy VINs</td>
+                <td class="mono">idgw#3827 / can/v5-rejects.json</td>
+                <td>Cause pinpointed; rollback is now the dominant path.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:03:11</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>bridge-2024-08-14-0211</td>
+                <td>Rajiv Venkatesh</td>
+                <td>Authorised rollback of vin-canonicalizer cluster-a to v4.7.3</td>
+                <td class="mono">bridge/transcript&nbsp;007</td>
+                <td>Diego Schiavone (L3) prepared the helm revert off-bridge.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:03:42</td>
+                <td><span class="sev-pill warn">WARN</span></td>
+                <td>platform-deploy</td>
+                <td>Diego Schiavone</td>
+                <td>Helm rollback initiated: identity-gateway 8.2.1 &rarr; 8.1.9 (vin-parsers 5.0.0 &rarr; 4.7.3)</td>
+                <td class="mono">helm/history:rollback&nbsp;4711</td>
+                <td>Rolling restart; 11 pods in cluster-a.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:05:09</td>
+                <td><span class="sev-pill dbg">DBG</span></td>
+                <td>vin-canonicalizer</td>
+                <td>probe-vc-04</td>
+                <td>Cluster-a pod-3 back online with 4.7.3 &mdash; first clean issuance: SIG-1 ADEL&#8209;8930</td>
+                <td class="mono">audit.log:line&nbsp;9120</td>
+                <td>sig_counter resumes monotonicity within pod-local view.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:06:17</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>attestation-issuer</td>
+                <td>sentinel-iss-22</td>
+                <td>Pending attestation queue drained; sig_counter re-stabilised at 8930</td>
+                <td class="mono">issuer.outbox:empty</td>
+                <td>Pending-attestations counter hit 0 after 2m&nbsp;35s of drain.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:06:33</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>identity-platform</td>
+                <td>resign-job-runner</td>
+                <td>Resign job started: 7,312 affected attestations to re-sign from primary keys</td>
+                <td class="mono">jobs/resign:at-2024-08-14-1506</td>
+                <td>Uses post-incident snapshot of canonicalized VINs (re-run with 4.7.3).</td>
+              </tr>
+              <tr>
+                <td class="mono">15:09:11</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>attestation-issuer</td>
+                <td>sentinel-iss-22</td>
+                <td>All 7,312 attestations re-signed with monotonic counter; no further sig_counter=0 entries</td>
+                <td class="mono">issuer.outbox:tip&nbsp;ADEL&#8209;16242</td>
+                <td>End of impact.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:09:42</td>
+                <td><span class="sev-pill ok">OK</span></td>
+                <td>bridge-2024-08-14-0211</td>
+                <td>Rajiv Venkatesh</td>
+                <td>Incident downgraded to SEV-3 monitoring; bridge left open for cleanup</td>
+                <td class="mono">bridge/transcript&nbsp;014</td>
+                <td>Cleanup is now a separate workstream.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:11:42</td>
+                <td><span class="sev-pill ok">OK</span></td>
+                <td>tenant-comms</td>
+                <td>Tomás Reyes</td>
+                <td>Customer comm v1.0 sent to 12 tenants; 4h response window set</td>
+                <td class="mono">comms/sent:v1.0</td>
+                <td>Tone reviewed by Asha Krzeminski; TL;DR, scope, customer credit matrix.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:14:33</td>
+                <td><span class="sev-pill ok">OK</span></td>
+                <td>driveid-platform</td>
+                <td>Diego Schiavone</td>
+                <td>Drained pending counter-monotonicity alerts; opened ADM-RM3 to design new sentinel</td>
+                <td class="mono">adm/rm3:open</td>
+                <td>Counter-monotonicity sentinels (RM&#8209;7) scoped here.</td>
+              </tr>
+              <tr>
+                <td class="mono">15:31:50</td>
+                <td><span class="sev-pill ok">OK</span></td>
+                <td>tenant-comms</td>
+                <td>Asha Krzeminski</td>
+                <td>All 12 tenants acknowledged receipt; 4 acknowledged within 47 minutes</td>
+                <td class="mono">comms/ack:log</td>
+                <td>First-class ack: LithiaFleet, DriveTime MSA, Rydora Capital, FirstHour.</td>
+              </tr>
+              <tr>
+                <td class="mono">16:02:17</td>
+                <td><span class="sev-pill info">INFO</span></td>
+                <td>postmortem-bot</td>
+                <td>automated</td>
+                <td>Final postmortem doc opened in confluence: DRAID-PM-2024-08-14-0211</td>
+                <td class="mono">confluence/space:DE</td>
+                <td>Doc scaffolded from PD timeline + transcript.</td>
+              </tr>
+              <tr>
+                <td class="mono">2024&#8209;08&#8209;15&nbsp;04:11</td>
+                <td><span class="sev-pill ok">OK</span></td>
+                <td>attestation-issuer</td>
+                <td>resign-job-runner</td>
+                <td>Resign job completed; 7,312/7,312 attestations verified by tenant re-fetch</td>
+                <td class="mono">jobs/resign:finished</td>
+                <td>T+13h 48m after resolution; full re-sign verified.</td>
+              </tr>
+              <tr>
+                <td class="mono">2024&#8209;08&#8209;15&nbsp;06:42</td>
+                <td><span class="sev-pill ok">OK</span></td>
+                <td>bridge-2024-08-14-0211</td>
+                <td>P. Nakashima</td>
+                <td>VP sign-off; bridge closed; cleanup continues in followup channel #driveid-pm</td>
+                <td class="mono">bridge/transcript&nbsp;final</td>
+                <td>Postmortem remains open for review until 2024&#8209;08&#8209;21 23:59 UTC.</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+
+          <h3 style="margin-top:var(--sp-8)">Synthesis — what the chronology shows</h3>
+          <div class="prose">
+            <p>
+              Three phases are visible. <strong>Phase A (14:22&rarr;14:50)</strong> is the production of forged records
+              without any internal-state alert: 28 minutes in which every affected record passed through shape and
+              signature verification while carrying a monotonicity violation. <strong>Phase B (14:50&rarr;15:03)</strong>
+              is alert &rarr; acknowledge &rarr; investigate &rarr; converge on root cause, totalling 13 minutes and
+              dominated by the time to correlate 12 tenant tickets against the
+              <code>can/reject-reasons.lab</code> delta (8 minutes). <strong>Phase C (15:03&rarr;15:09)</strong> is the
+              rollback + drain: under 6 minutes of pod-level restart and outbox drain before the tip counter
+              re-monotonised. The composition suggests two intervention points: a tighter counter-invariant sentinel
+              would have compressed Phase A from 28m to under 60s; a more aggressive rollback decision threshold
+              could shave Phase B by ~5 minutes without changing Phase C.
+            </p>
+          </div>
+
+        </div>
+
+        <div role="tabpanel" id="tl-p2" aria-labelledby="tl-t2" hidden>
+          <h3>By Subsystem <span class="anchor">#by-subsystem</span></h3>
+
+          <h4 style="font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:var(--sp-7) 0 var(--sp-4)">vin-canonicalizer · v8.2.1</h4>
+          <div class="kvs-grid">
+            <dl class="kvs">
+              <dt>build</dt><dd>8.2.1 (vin-parsers 5.0.0)</dd>
+              <dt>pod</dt><dd>cluster-a · 11 pods</dd>
+              <dt>first bad</dt><dd>14:22:07</dd>
+              <dt>rejected class</dt><dd>POSITION10_RESERVED</dd>
+              <dt>total rejected</dt><dd>14,892 (over window)</dd>
+              <dt>shape sentinels</dt><dd>OK</dd>
+              <dt>sig-counter sentinels</dt><dd>(none)</dd>
+              <dt>remediation</dt><dd>helm rollback to 8.1.9</dd>
+              <dt>rollback start</dt><dd>15:03:42</dd>
+              <dt>last healthy pod</dt><dd>15:05:09</dd>
+            </dl>
+            <dl class="kvs">
+              <dt>errors observed</dt><dd>847 (14:31) · rising</dd>
+              <dt>flags raised</dt><dd>POSITION10_RESERVED (new in 142 days)</dd>
+              <dt>audit attempts</dt><dd>3,089 (over window)</dd>
+              <dt>correlation</dt><dd>cluster rejects are temporally stable</dd>
+              <dt>memory profile</dt><dd>normal</dd>
+              <dt>CPU profile</dt><dd>normal</dd>
+              <dt>p99 latency</dt><dd>43 ms (baseline 39 ms)</dd>
+              <dt>circuit breaker</dt><dd>closed (no trip)</dd>
+              <dt>rollback authoriser</dt><dd>Diego Schiavone (L3)</dd>
+              <dt>rollback outcome</dt><dd>clean, no traffic loss</dd>
+            </dl>
+          </div>
+
+          <h4 style="font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:var(--sp-8) 0 var(--sp-4)">attestation-issuer · v3.18.4</h4>
+          <div class="kvs-grid">
+            <dl class="kvs">
+              <dt>build</dt><dd>3.18.4 (no change)</dd>
+              <dt>tip counter (incident start)</dt><dd>ADEL&#8209;8929</dd>
+              <dt>tip counter (incident end)</dt><dd>ADEL&#8209;8930</dd>
+              <dt>tip counter (post resig)</dt><dd>ADEL&#8209;16242</dd>
+              <dt>forged records emitted</dt><dd>7,312</dd>
+              <dt>forged cluster</dt><dd>k&#8209;1294</dd>
+              <dt>first bad</dt><dd>14:22:07</dd>
+              <dt>last bad</dt><dd>15:09:11</dd>
+              <dt>shape sentinel</dt><dd>OK (47 / 47)</dd>
+              <dt>sig-counter sentinel</dt><dd>(none)</dd>
+            </dl>
+            <dl class="kvs">
+              <dt>affected bridge code path</dt><dd>issue_with_fallback() / promote_to_long_term()</dd>
+              <dt>promoted records (persist=true)</dt><dd>7,312</dd>
+              <dt>invariants checked on promote</dt><dd>1 (shape)</dd>
+              <dt>invariants checked on issue</dt><dd>2 (shape, sig)</dd>
+              <dt>invariants missing on fallback</dt><dd>1 (sig_counter &gt; tip)</dd>
+              <dt>cleanup job</dt><dd>jobs/resign:at-2024-08-14-1506</dd>
+              <dt>cleanup pods</dt><dd>14</dd>
+              <dt>cleanup ETA at start</dt><dd>16h 23m</dd>
+              <dt>cleanup ETA actual</dt><dd>13h 48m</dd>
+              <dt>remaining bad in outbox</dt><dd>0</dd>
+            </dl>
+          </div>
+
+          <h4 style="font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:var(--sp-8) 0 var(--sp-4)">tenant-router · v3.18.4</h4>
+          <div class="prose">
+            <p>
+              Tenant-router experienced no internal failure during the window, but its duplicate-detection heuristic
+              compared requests on request body only &mdash; the same VIN arriving twice from the same merchant on the
+              same session produced identical traces, meaning the de-duplication silently passed forged counter values
+              forward. Tenant-router is not the cause but is now a candidate for hardening (Action <strong>RM&#8209;12</strong>):
+              de-duplication must hash the full envelope shape including the signature counter hint, not just the body.
+              Two requests received by tenant-router carry identical body but different signatures in the forged cluster
+              (the issuer's fallback path used a nonce; in 2 of 7,312 cases the nonce collided with a prior cluster)
+              &mdash; these collisions were not a correctness issue but they are visible in the audit log.
+            </p>
+          </div>
+
+          <h4 style="font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:var(--sp-8) 0 var(--sp-4)">customer-trust-console (board of 12 tenants)</h4>
+          <table class="tbl" aria-label="Tenant ticket detail">
+            <caption><span>Tenant ticket detail · per-merchant first-filing</span><span class="ctrls">12 of 847 active tenants</span></caption>
+            <thead>
+              <tr>
+                <th class="mono" style="width:11ch">Time (UTC)</th>
+                <th>Tenant</th>
+                <th>Channel</th>
+                <th>Ticket ID</th>
+                <th>Filed by</th>
+                <th>Affected records</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">14:48:31</td><td>LithiaFleet</td><td>dealer-finance</td><td class="mono">#478223</td><td>Priya Subramanian</td><td class="num">1,103</td></tr>
+              <tr><td class="mono">14:51:09</td><td>DriveTime MSA Holdings</td><td>dealer-finance</td><td class="mono">#478225</td><td>Issac Devereaux</td><td class="num">988</td></tr>
+              <tr><td class="mono">14:52:54</td><td>Rydora Capital</td><td>vehicle-lease</td><td class="mono">#478228</td><td>Sumeet Khanna</td><td class="num">742</td></tr>
+              <tr><td class="mono">14:54:38</td><td>Pelican Mobility</td><td>fleet-lease</td><td class="mono">#478231</td><td>Marisol Quispe</td><td class="num">611</td></tr>
+              <tr><td class="mono">14:56:12</td><td>Verde Trucking Logistics</td><td>fleet-lease</td><td class="mono">#478233</td><td>Karol Borowski</td><td class="num">588</td></tr>
+              <tr><td class="mono">14:57:08</td><td>Calder Auto Wholesale</td><td>wholesale-auction</td><td class="mono">#478236</td><td>Judy-Anne Penaloza</td><td class="num">521</td></tr>
+              <tr><td class="mono">14:58:21</td><td>FirstHour Auto Lending</td><td>dealer-finance</td><td class="mono">#478238</td><td>Tomek Wiśniewski</td><td class="num">488</td></tr>
+              <tr><td class="mono">14:59:48</td><td>Yardline Equipment Finance</td><td>vehicle-lease</td><td class="mono">#478240</td><td>Cleo Dufresne</td><td class="num">456</td></tr>
+              <tr><td class="mono">15:00:31</td><td>Calavo Auto Group</td><td>dealer-finance</td><td class="mono">#478242</td><td>Renata Eisner</td><td class="num">412</td></tr>
+              <tr><td class="mono">15:01:01</td><td>Northpoint Capital Vehicle Lease</td><td>vehicle-lease</td><td class="mono">#478243</td><td>Kalinda Vance</td><td class="num">378</td></tr>
+              <tr><td class="mono">15:01:29</td><td>MarisWest RV Registry</td><td>specialty-vehicle</td><td class="mono">#478244</td><td>Henrietta Ogutu</td><td class="num">266</td></tr>
+              <tr><td class="mono">15:01:29</td><td>Beacon Auto Auction</td><td>wholesale-auction</td><td class="mono">#478244</td><td>Cassius Okafor</td><td class="num">259</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div role="tabpanel" id="tl-p3" aria-labelledby="tl-t3" hidden>
+          <h3>Decision Trail — incident-commander actions <span class="anchor">#decision-trail</span></h3>
+          <p style="color:var(--fg-muted);margin-top:0;margin-bottom:var(--sp-5);font-size:var(--fs-sm)">
+            Each decision below was an inflection that materially shaped the next 5&ndash;15 minutes. The IC's working
+            hypothesis ladder is shown alongside the evidence that locked it in.
+          </p>
+          <table class="tbl" aria-label="Decision trail">
+            <caption><span>IC decision ladder · bridge <code>inc-2024-08-14-0211</code></span><span class="ctrls">9 recorded decisions · 47m 04s</span></caption>
+            <thead>
+              <tr>
+                <th class="mono" style="width:11ch">Time (UTC)</th>
+                <th style="width:24ch">Decision</th>
+                <th>Alternative considered</th>
+                <th>Evidence used</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">14:52:48</td>
+                <td>Declare SEV-2; assign IC to R. Venkatesh</td>
+                <td>SEV-3 (sentinel-shaped ticket cluster)</td>
+                <td>broad tenant mix in ticket burst (3 verticals)</td>
+                <td>Right severity given cluster shape; OK</td>
+              </tr>
+              <tr>
+                <td class="mono">14:55:47</td>
+                <td>Hypothesis-1: vin-parsers 5.0.0 regression</td>
+                <td>Tenant-router dedup race; oracle outage</td>
+                <td>can/reject-reasons.lab delta; new reject class</td>
+                <td>Correct; reused as the dominant path</td>
+              </tr>
+              <tr>
+                <td class="mono">14:58:00</td>
+                <td>Hold customer comms until blame anchored</td>
+                <td>Front-load template comms</td>
+                <td>IC risk model (incident-2024-Q3 credit policy)</td>
+                <td>Right call &mdash; tenants received specific scope</td>
+              </tr>
+              <tr>
+                <td class="mono">15:02:18</td>
+                <td>Authorise rollback of cluster-a</td>
+                <td>Continue investigating &amp; patching in flight</td>
+                <td>Hypothesis-2 confirmed; risk = contamination spread</td>
+                <td>Executed at 15:03:42; baseline metrics restored at 15:06:17</td>
+              </tr>
+              <tr>
+                <td class="mono">15:03:42</td>
+                <td>Roll cluster-a pods in serial restart (not parallel)</td>
+                <td>Parallel restart for speed</td>
+                <td>Tenant-routing complexity; risk of double-issue</td>
+                <td>Clean rollout; no double-issue observed</td>
+              </tr>
+              <tr>
+                <td class="mono">15:06:00</td>
+                <td>Don't restart cluster-b / cluster-c yet</td>
+                <td>Wide-nuke to be safe</td>
+                <td>Traffic share; only cluster-a ingested 5.0.0</td>
+                <td>Correct &mdash; cluster-b/c stayed at 4.7.3</td>
+              </tr>
+              <tr>
+                <td class="mono">15:09:30</td>
+                <td>Downgrade to SEV-3 monitoring; bridge open for cleanup</td>
+                <td>Continue SEV-2 until tenants ack</td>
+                <td>Outbox drained; tip re-monotonic; no further bad</td>
+                <td>Bridge held for 1h 35m then closed by P. Nakashima</td>
+              </tr>
+              <tr>
+                <td class="mono">15:11:42</td>
+                <td>Fan out cust comm v1.0 (12 tenants)</td>
+                <td>Wait for legal review</td>
+                <td>Operating-comm window 4h per tenant-attached SLAs</td>
+                <td>Acknowledgement within 4h required for credit waiver</td>
+              </tr>
+              <tr>
+                <td class="mono">15:22:18</td>
+                <td>Authorise full re-sign job &amp; open ADM-RM3</td>
+                <td>Pause re-sign until post-mortem draft is reviewed</td>
+                <td>Customer impact &amp; ledger integrity obligations</td>
+                <td>Re-sign started at 15:06 (early); finished 04:11 next day</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="callout info">
+            <div class="label">Hypothesis ladder<small>trace of convergent reasoning</small></div>
+            <div>
+              <p>
+                Hypotheses were ranked by exploitation: H1 (regression in vin-parsers) was supported by can/reject-reasons.lab;
+                H2 (tenant-router race) was ruled out by trace analysis at 14:55:11; H3 (oracle routing outage) was ruled out
+                by issuer.outbox shape; H4 (a deliberate subversion by an internal actor) was raised briefly, ruled out within
+                4 minutes by cross-tenant pattern analysis. None of these ruling-out checks took more than 90s. The
+                hypothesis ladder is in the bridge transcript.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </details>
+
+  <!-- ============================================================
+       ACCORDION 3 · TENANT IMPACT & REMEDIATION  (CLOSED)
+       ============================================================ -->
+  <details class="acc">
+    <summary role="button" aria-expanded="false" aria-controls="acc-3-body">
+      <span class="acc-number">03</span>
+      <span class="acc-title">Tenant Impact &amp; Remediation Backlog<span class="sub">Twelve affected merchants, credit matrix, action-item ownership and due dates</span></span>
+      <span class="acc-meta">
+        <span class="tag info">2 views</span>
+        <span class="tag warm">$73.5k</span>
+        <span class="tag">12 actions</span>
+      </span>
+      <span class="acc-state">Closed</span>
+      <span class="acc-caret" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+    </summary>
+    <div class="acc-body" id="acc-3-body" role="region" aria-label="Tenant impact and remediation backlog">
+      <div class="tabset">
+        <div role="tablist" class="tablist" aria-label="Tenant impact and remediation">
+          <button role="tab" id="ti-t1" aria-controls="ti-p1" aria-selected="true">
+            <span class="tab-num">03.1</span> Tenant impact &amp; credit matrix
+          </button>
+          <button role="tab" id="ti-t2" aria-controls="ti-p2" aria-selected="false">
+            <span class="tab-num">03.2</span> Remediation backlog
+            <span class="tab-meta">12 actions</span>
+          </button>
+        </div>
+
+        <div role="tabpanel" id="ti-p1" aria-labelledby="ti-t1">
+          <h3>Tenant impact &amp; credit matrix <span class="anchor">#tenant-impact</span></h3>
+          <p style="color:var(--fg-muted);margin-top:0;margin-bottom:var(--sp-5);font-size:var(--fs-sm)">
+            Credits issued under incident-2024-Q3 credit policy &sect;4: SLA-breach waiver of monthly platform fee pro
+            rata for each tenant whose auto-book rate dropped ≥ 15% during the impact window. The matrix below
+            pairs the per-tenant delta with the resulting waiver. Nothing in the credit matrix requires tenant-side
+            signature change; re-signed attestations are byte-compatible.
+          </p>
+
+          <table class="tbl" aria-label="Tenant impact matrix">
+            <caption><span>Tenant impact · 12 merchants · post-incident resolution</span><span class="ctrls">source: ledger/coverage + tenant invoices</span></caption>
+            <thead>
+              <tr>
+                <th>Tenant</th>
+                <th>Vertical</th>
+                <th class="r">Authorised attestations</th>
+                <th class="r">Forged attestations</th>
+                <th class="r">Auto-book Δ (window)</th>
+                <th class="r">Credit (USD)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>LithiaFleet</td><td>dealer-finance</td><td class="num r">2,847</td><td class="num r">1,103</td><td class="num r">&minus;22.7%</td><td class="num r">$8,200.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>DriveTime MSA Holdings</td><td>dealer-finance</td><td class="num r">1,902</td><td class="num r">988</td><td class="num r">&minus;27.1%</td><td class="num r">$9,650.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Rydora Capital</td><td>vehicle-lease</td><td class="num r">1,540</td><td class="num r">742</td><td class="num r">&minus;18.4%</td><td class="num r">$7,300.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Pelican Mobility</td><td>fleet-lease</td><td class="num r">1,201</td><td class="num r">611</td><td class="num r">&minus;14.0%</td><td class="num r">$5,150.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Verde Trucking Logistics</td><td>fleet-lease</td><td class="num r">998</td><td class="num r">588</td><td class="num r">&minus;16.2%</td><td class="num r">$5,710.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Calder Auto Wholesale</td><td>wholesale-auction</td><td class="num r">1,047</td><td class="num r">521</td><td class="num r">&minus;9.4%</td><td class="num r">$4,820.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>FirstHour Auto Lending</td><td>dealer-finance</td><td class="num r">930</td><td class="num r">488</td><td class="num r">&minus;19.5%</td><td class="num r">$6,440.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Yardline Equipment Finance</td><td>vehicle-lease</td><td class="num r">814</td><td class="num r">456</td><td class="num r">&minus;13.1%</td><td class="num r">$4,200.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Calavo Auto Group</td><td>dealer-finance</td><td class="num r">812</td><td class="num r">412</td><td class="num r">&minus;21.6%</td><td class="num r">$6,820.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Northpoint Capital Vehicle Lease</td><td>vehicle-lease</td><td class="num r">691</td><td class="num r">378</td><td class="num r">&minus;12.0%</td><td class="num r">$3,910.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>MarisWest RV Registry</td><td>specialty-vehicle</td><td class="num r">580</td><td class="num r">266</td><td class="num r">&minus;6.8%</td><td class="num r">$3,290.00</td><td>Resigned · acknowledged</td></tr>
+              <tr><td>Beacon Auto Auction</td><td>wholesale-auction</td><td class="num r">534</td><td class="num r">259</td><td class="num r">&minus;8.1%</td><td class="num r">$8,010.00</td><td>Resigned · acknowledged</td></tr>
+              <tr style="background:var(--bg-elev);font-weight:600;color:var(--fg-strong)">
+                <td colspan="2">Total · 12 of 847 active tenants</td>
+                <td class="num r">13,896</td>
+                <td class="num r">7,312</td>
+                <td class="num r">&minus;15.7% (avg)</td>
+                <td class="num r">$73,500.00</td>
+                <td>credit wavier batch PR-2148</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="callout info">
+            <div class="label">Customer communication timeline<small>tone reviewed &amp; approved by A. Krzeminski</small></div>
+            <div><p>
+              The 12 tenants were notified in 3 waves: wave 1 at 15:11 UTC (4 large tenants with auto-book
+              pipelines affected); wave 2 at 15:48 UTC (4 mid-tier); wave 3 at 16:23 UTC (4 long-tail). All 12
+              acknowledged within 4h 31m of wave completion. 9 elected to receive the optional remediation
+              re-sync script; 3 declined as their own pipelines had self-reconciled within 24h.
+            </p></div>
+          </div>
+        </div>
+
+        <div role="tabpanel" id="ti-p2" aria-labelledby="ti-t2" hidden>
+          <h3>Remediation backlog <span class="anchor">#remediation</span></h3>
+          <p style="color:var(--fg-muted);margin-top:0;margin-bottom:var(--sp-5);font-size:var(--fs-sm)">
+            Items 1&ndash;4 are <em>immediate</em> (closed before this document merged). Items 5&ndash;12 are
+            <em>followup</em> and remain open in the team's planning queue. Severity is the priority class, not the
+            operational severity at the time of the incident.
+          </p>
+          <table class="tbl" aria-label="Remediation backlog">
+            <caption><span>Remediation backlog · 12 items · due dates roll through 2024-08-28</span><span class="ctrls">status refresh: hourly</span></caption>
+            <thead>
+              <tr>
+                <th style="width:8ch">ID</th>
+                <th>Action</th>
+                <th style="width:9ch">Type</th>
+                <th style="width:7ch">Priority</th>
+                <th style="width:14ch">Owner</th>
+                <th style="width:14ch">Team</th>
+                <th style="width:11ch">Due</th>
+                <th style="width:11ch">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">RM&#8209;1</td><td>Revert <code>vin-parsers</code> to 4.7.x in cluster-a; pin version for 72h</td><td>Immediate</td><td>SEV-2</td><td>Diego Schiavone</td><td>Platform</td><td class="mono">2024-08-14 16:00</td><td><span class="sev-pill ok">DONE</span></td></tr>
+              <tr><td class="mono">RM&#8209;2</td><td>Re-sign 7,312 attestations; verify tenant round-trip</td><td>Immediate</td><td>SEV-2</td><td>Kwame Asare-Twumasi</td><td>Identity</td><td class="mono">2024-08-15 12:00</td><td><span class="sev-pill ok">DONE</span></td></tr>
+              <tr><td class="mono">RM&#8209;3</td><td>Add regression-fixture-2010-2018.snapshot.json with 480 historical VINs; assert semantic round-trip not shape</td><td>Process</td><td>SEV-2</td><td>Aiyana Locklear</td><td>Identity</td><td class="mono">2024-08-19 23:59</td><td><span class="sev-pill warn">OPEN</span></td></tr>
+              <tr><td class="mono">RM&#8209;4</td><td>Customer comms v1.0 sent; 4h SLA; credit waiver batch PR-2148</td><td>Comms</td><td>SEV-2</td><td>Tomás Reyes</td><td>Customer</td><td class="mono">2024-08-14 19:30</td><td><span class="sev-pill ok">DONE</span></td></tr>
+              <tr><td class="mono">RM&#8209;5</td><td>Add invariant assertion in <code>issue_with_fallback</code>: <code>sig_counter&nbsp;&gt;&nbsp;0</code> when <code>persist=true</code></td><td>Code</td><td>SEV-2</td><td>Yusra Bensalem</td><td>Identity</td><td class="mono">2024-08-17 23:59</td><td><span class="sev-pill warn">PR&nbsp;#4319</span></td></tr>
+              <tr><td class="mono">RM&#8209;6</td><td>Remove "missing VIN" fallback path until dual-signed under PRD&#8209;1148</td><td>Code</td><td>SEV-2</td><td>Yusra Bensalem</td><td>Identity</td><td class="mono">2024-08-21 23:59</td><td><span class="sev-pill warn">ADM&#8209;1148</span></td></tr>
+              <tr><td class="mono">RM&#8209;7</td><td>Counter-monotonicity sentinels; flip the global flag-and-leader pattern</td><td>Detection</td><td>SEV-2</td><td>Sven Holmqvist</td><td>SRE</td><td class="mono">2024-08-21 23:59</td><td><span class="sev-pill warn">ADM-RM3</span></td></tr>
+              <tr><td class="mono">RM&#8209;8</td><td>Expand legacy-historical fixture to 1,200 VINs with adversarial sampling per Q3 distribution</td><td>Test</td><td>SEV-3</td><td>Aiyana Locklear</td><td>Identity</td><td class="mono">2024-08-23 23:59</td><td><span class="sev-pill warn">OPEN</span></td></tr>
+              <tr><td class="mono">RM&#8209;9</td><td>Replace per-channel ticket-burst detector with global detector; preserve per-channel signal as a view</td><td>Detection</td><td>SEV-3</td><td>Mei-Lin Chow</td><td>SRE</td><td class="mono">2024-08-26 23:59</td><td><span class="sev-pill warn">ADM-RM3</span></td></tr>
+              <tr><td class="mono">RM&#8209;10</td><td>Rewrite <code>translate_v3</code> to map <code>InvalidStructure</code> &rarr; <code>"malformed"</code>; drop "absent" semantic from fallback</td><td>Code</td><td>SEV-3</td><td>Wojciech Kamiński</td><td>Identity</td><td class="mono">2024-08-26 23:59</td><td><span class="sev-pill warn">PR&nbsp;#4307</span></td></tr>
+              <tr><td class="mono">RM&#8209;11</td><td>Defense-in-depth: cross-stage assertion job in CI that asserts sig_counter semantics, not shape</td><td>Test</td><td>SEV-3</td><td>Aiyana Locklear</td><td>Identity</td><td class="mono">2024-08-28 23:59</td><td><span class="sev-pill warn">OPEN</span></td></tr>
+              <tr><td class="mono">RM&#8209;12</td><td>Harden tenant-router dedup: hash envelope shape including signature-counter hint, not body alone</td><td>Code</td><td>SEV-3</td><td>Karim Idrissi</td><td>Platform</td><td class="mono">2024-08-28 23:59</td><td><span class="sev-pill warn">PR&nbsp;#4321</span></td></tr>
+            </tbody>
+          </table>
+
+          <dl class="owner">
+            <div>
+              <div class="role">Immediate lead</div>
+              <div class="name">Rajiv Venkatesh</div>
+              <div class="gh">@r.venkatesh</div>
+              <div class="tz">Asia/Kolkata · primary IC</div>
+            </div>
+            <div>
+              <div class="role">Code remediation owner</div>
+              <div class="name">Yusra Bensalem</div>
+              <div class="gh">@y.bensalem</div>
+              <div class="tz">Europe/Berlin · RM-5, RM-6</div>
+            </div>
+            <div>
+              <div class="role">Detection owner</div>
+              <div class="name">Sven Holmqvist</div>
+              <div class="gh">@s.holmqvist</div>
+              <div class="tz">Europe/Stockholm · RM-7</div>
+            </div>
+          </dl>
+        </div>
+
+      </div>
+    </div>
+  </details>
+
+  <!-- ============================================================
+       ACCORDION 4 · EVIDENCE PACK & SIGN-OFF  (CLOSED)
+       ============================================================ -->
+  <details class="acc">
+    <summary role="button" aria-expanded="false" aria-controls="acc-4-body">
+      <span class="acc-number">04</span>
+      <span class="acc-title">Evidence Pack, Appendices &amp; Sign-off<span class="sub">Raw traces, log-query cookbook, runbook refs, doc archive, final sign-off chain</span></span>
+      <span class="acc-meta">
+        <span class="tag info">2 views</span>
+        <span class="tag">7 appendices</span>
+        <span class="tag">SHA 0x73&hellip;ef</span>
+      </span>
+      <span class="acc-state">Closed</span>
+      <span class="acc-caret" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+    </summary>
+    <div class="acc-body" id="acc-4-body" role="region" aria-label="Evidence pack and sign-off">
+      <div class="tabset">
+        <div role="tablist" class="tablist" aria-label="Evidence and sign-off">
+          <button role="tab" id="ev-t1" aria-controls="ev-p1" aria-selected="true">
+            <span class="tab-num">04.1</span> Appendices &amp; references
+          </button>
+          <button role="tab" id="ev-t2" aria-controls="ev-p2" aria-selected="false">
+            <span class="tab-num">04.2</span> Sign-off chain
+            <span class="tab-meta">8 signatures</span>
+          </button>
+        </div>
+
+        <div role="tabpanel" id="ev-p1" aria-labelledby="ev-t1">
+          <h3>Appendices &amp; references <span class="anchor">#appendices</span></h3>
+
+          <div class="three-col">
+            <div>
+              <h4 style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:0 0 var(--sp-4)">A — Log-query cookbook</h4>
+              <div class="codeblock" style="margin:0">
+                <div class="codeblock-head"><span class="path">datadog · driveid-platform</span><span class="tag">open in datadog</span></div>
+                <pre><span class="cm"># Records with sig_counter = 0 in window</span>
+<span class="at">source</span><span class="pn">:</span><span class="vr">driveid-prod</span>
+<span class="at">cluster</span><span class="pn">:</span><span class="str">draid-prod-use1c</span>
+<span class="at">service</span><span class="pn">:</span><span class="str">attestation-issuer</span>
+<span class="at">metric</span><span class="pn">:</span><span class="vr">issuer.outbox.sig_counter</span>
+<span class="at">filter</span><span class="pn">:</span><span class="vr">sig_counter</span> <span class="pn">=</span> <span class="num">0</span>
+<span class="at">window</span><span class="pn">:</span> <span class="num">14</span><span class="pn">:</span><span class="num">22</span><span class="pn">:</span><span class="num">07</span> <span class="pn">--&gt;</span> <span class="num">15</span><span class="pn">:</span><span class="num">09</span><span class="pn">:</span><span class="num">11</span> <span class="ty">UTC</span></pre>
+              </div>
+            </div>
+            <div>
+              <h4 style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:0 0 var(--sp-4)">B — Runbook &amp; ADRs</h4>
+              <ul style="padding-left:var(--sp-5);font-size:var(--fs-sm);list-style:square">
+                <li>RB-idgw-009 · vin-parsers rollback procedure</li>
+                <li>RB-idgw-014 · attestation-issuer fallback path</li>
+                <li>RB-sre-021 · ticket-burst detector global aggregator</li>
+                <li>ADR&#8209;0911 · vin-canonicalizer envelope mapping (defective)</li>
+                <li>ADR&#8209;1004 · counter-monotonicity sentinels (rejected in planning)</li>
+                <li>PRD&#8209;1148 · ephemeral-fallback dual-signing</li>
+              </ul>
+            </div>
+            <div>
+              <h4 style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:0 0 var(--sp-4)">C — Bridge transcript excerpts</h4>
+              <div class="codeblock" style="margin:0">
+                <div class="codeblock-head"><span class="path">bridge/transcript · 14:55:47 UTC</span><span class="tag">bridge-2024-08-14-0211</span></div>
+                <pre><span class="pn">[</span><span class="vr">Aiyana</span><span class="pn">]</span>  <span class="cm">H1: vin-parsers 5.0.0 regression on position-10.</span>
+       <span class="cm">Reject reason delta: POSITION10_RESERVED,</span>
+       <span class="cm">first observed at 14:31:19 UTC.</span>
+<span class="pn">[</span><span class="vr">Kwame</span><span class="pn">]</span>   <span class="cm">Confirming. Defensive reading of</span>
+       <span class="cm">vin-canonicalizer/envelope.rs:translate_v3</span>
+       <span class="cm">matches. Recommendation: rollback.</span>
+<span class="pn">[</span><span class="vr">Rajiv</span><span class="pn">]</span>   <span class="cm">Authorise. Diego, prep the helm revert.</span></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider-h"><span>Cross-reference</span></div>
+
+          <h4 style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:0 0 var(--sp-4)">D — Sample re-signed attestation record</h4>
+          <div class="codeblock">
+            <div class="codeblock-head">
+              <span class="path">attestations/re-signed/ADEL-8931.json</span>
+              <span class="tag">post-re-sign · counter ADEL-8931 · &sigma; ok</span>
+            </div>
+            <pre><span class="pn">{</span>
+  <span class="at">"attestation_id"</span><span class="pn">:</span>     <span class="str">"ADEL-8931"</span><span class="pn">,</span>
+  <span class="at">"vin"</span><span class="pn">:</span>                 <span class="str">"1FTFW1ET5EFA82131"</span><span class="pn">,</span>
+  <span class="at">"tenant"</span><span class="pn">:</span>             <span class="str">"lithiafleet-prod"</span><span class="pn">,</span>
+  <span class="at">"issued_at"</span><span class="pn">:</span>          <span class="str">"2024-08-14T15:09:11.082Z"</span><span class="pn">,</span>
+  <span class="at">"valid_until"</span><span class="pn">:</span>        <span class="str">"2024-09-13T15:09:11.082Z"</span><span class="pn">,</span>
+  <span class="at">"long_term"</span><span class="pn">:</span>          <span class="kw">true</span><span class="pn">,</span>
+  <span class="at">"sig_counter"</span><span class="pn">:</span>         <span class="num">8931</span><span class="pn">,</span>
+  <span class="at">"previous_sig_counter"</span><span class="pn">:</span> <span class="num">8930</span><span class="pn">,</span>
+  <span class="at">"canonicalizer_version"</span><span class="pn">:</span> <span class="str">"4.7.3"</span><span class="pn">,</span>
+  <span class="at">"model_year"</span><span class="pn">:</span>         <span class="str">"2014"</span><span class="pn">,</span>
+  <span class="at">"wmi"</span><span class="pn">:</span>                <span class="str">"1FT"</span><span class="pn">,</span>
+  <span class="at">"vds"</span><span class="pn">:</span>                <span class="str">"FW1ET5"</span><span class="pn">,</span>
+  <span class="at">"checksum"</span><span class="pn">:</span>           <span class="str">"0x73f0c9a2b1e0478d9c2c93a1033eef"</span><span class="pn">,</span>
+  <span class="at">"signature"</span><span class="pn">:</span>           <span class="str">"sig:draid/ed25519/CIQ...IJQ"</span>
+<span class="pn">}</span></pre>
+          </div>
+
+          <h4 style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:0 0 var(--sp-4)">E — Pre-signature forged record (one of 7,312, redacted)</h4>
+          <div class="codeblock">
+            <div class="codeblock-head">
+              <span class="path">attestations/revoked/ADEL-8931.legacy.json</span>
+              <span class="tag">REVOKED · never promoted in long-term ledger</span>
+            </div>
+            <pre><span class="pn">{</span>
+  <span class="at">"attestation_id"</span><span class="pn">:</span>     <span class="str">"ADEL-8931"</span><span class="pn">,</span>
+  <span class="at">"vin"</span><span class="pn">:</span>                 <span class="str">"1FTFW1ET5EFA82131"</span><span class="pn">,</span>
+  <span class="at">"tenant"</span><span class="pn">:</span>             <span class="str">"lithiafleet-prod"</span><span class="pn">,</span>
+  <span class="at">"issued_at"</span><span class="pn">:</span>          <span class="str">"2024-08-14T14:48:07.231Z"</span><span class="pn">,</span>
+  <span class="at">"valid_until"</span><span class="pn">:</span>        <span class="str">"2024-09-13T14:48:07.231Z"</span><span class="pn">,</span>
+  <span class="at">"long_term"</span><span class="pn">:</span>          <span class="kw">true</span><span class="pn">,</span>
+  <span class="at">"sig_counter"</span><span class="pn">:</span>         <span class="num">0</span><span class="pn">,</span>
+  <span class="at">"previous_sig_counter"</span><span class="pn">:</span> <span class="kw">null</span><span class="pn">,</span>
+  <span class="at">"canonicalizer_version"</span><span class="pn">:</span> <span class="str">"5.0.0"</span><span class="pn">,</span>
+  <span class="at">"parse_status"</span><span class="pn">:</span>        <span class="str">"absent"</span><span class="pn">,</span>
+  <span class="at">"checksum"</span><span class="pn">:</span>           <span class="str">"0x09e2...3af7"</span><span class="pn">,</span>
+  <span class="at">"signature"</span><span class="pn">:</span>           <span class="str">"sig:draid/ed25519/HMS...FAK"</span>
+<span class="pn">}</span></pre>
+          </div>
+
+          <h4 style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-upper);color:var(--c-info);margin:0 0 var(--sp-4)">F — Open the evidence dialog</h4>
+          <p style="color:var(--fg-muted);margin-top:0;margin-bottom:var(--sp-4);font-size:var(--fs-sm)">
+            Click below to open a focused modal containing the full revoked-attestations manifest, raw signature sheet
+            (salient entries), and the bridge transcript in its entirety. The dialog is keyboard-navigable (ESC
+            closes, Tab cycles inside).
+          </p>
+          <button class="btn-close" id="open-evidence" style="font-size:var(--fs-sm);padding:var(--sp-4) var(--sp-6)">Open Evidence Pack (modal)</button>
+        </div>
+
+        <div role="tabpanel" id="ev-p2" aria-labelledby="ev-t2" hidden>
+          <h3>Sign-off chain <span class="anchor">#sign-off</span></h3>
+          <p style="color:var(--fg-muted);margin-top:0;margin-bottom:var(--sp-5);font-size:var(--fs-sm)">
+            Eight signatures are required for the postmortem to move from <em>Open</em> to <em>Final</em>. Each
+            signatory owns a specific review window. The chain below shows current state.
+          </p>
+
+          <ul class="checklist">
+            <li class="x">Mei-Lin Chow &mdash; SRE primary · acked incident, drafted timeline · <span class="signature-pill sig-ok">signed 2024-08-14 14:51:19 UTC</span></li>
+            <li class="ok">Rajiv Venkatesh &mdash; IC · chaired bridge, authored rollback decision · <span class="signature-pill sig-ok">signed 2024-08-14 17:42:18 UTC</span></li>
+            <li class="ok">Kwame Asare-Twumasi &mdash; code remediation · owner of mechanism section · <span class="signature-pill sig-ok">signed 2024-08-14 19:11:03 UTC</span></li>
+            <li class="ok">Aiyana Locklear &mdash; test/process · owner of fixture expansion · <span class="signature-pill sig-ok">signed 2024-08-14 20:05:22 UTC</span></li>
+            <li class="ok">Diego Schiavone &mdash; platform · executed rollback · <span class="signature-pill sig-ok">signed 2024-08-14 21:18:47 UTC</span></li>
+            <li class="ok">Tomás Reyes &mdash; customer comms · owner of customer script · <span class="signature-pill sig-ok">signed 2024-08-14 22:33:50 UTC</span></li>
+            <li class="ok">Asha Krzeminski &mdash; customer liaison · led tenant liaison · <span class="signature-pill sig-ok">signed 2024-08-15 06:42:11 UTC</span></li>
+            <li class="q">Preeti Nakashima &mdash; VP Platform · final sign-off · <span class="signature-pill">pending</span></li>
+          </ul>
+
+          <div class="sig-sheet">
+            <div>
+              <div class="role">Incident commander</div>
+              <div class="name">Rajiv Venkatesh</div>
+              <div class="when">sign-2024-08-14T17:42:18Z · sha256 0x73...ef</div>
+            </div>
+            <div>
+              <div class="role">SRE primary author</div>
+              <div class="name">Mei-Lin Chow</div>
+              <div class="when">sign-2024-08-14T18:08:47Z · sha256 0x82...31</div>
+            </div>
+            <div>
+              <div class="role">Code remediation owner</div>
+              <div class="name">Kwame Asare-Twumasi</div>
+              <div class="when">sign-2024-08-14T19:11:03Z · sha256 0xa4...28</div>
+            </div>
+            <div>
+              <div class="role">Test &amp; process owner</div>
+              <div class="name">Aiyana Locklear</div>
+              <div class="when">sign-2024-08-14T20:05:22Z · sha256 0x10...9a</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </details>
+
+</main>
+
+<!-- ============================================================
+     EVIDENCE DIALOG (overlay)
+     ============================================================ -->
+<dialog id="evidence-pack" role="dialog" aria-modal="true" aria-labelledby="evidence-pack-title">
+  <div class="evidence-head">
+    <div>
+      <h2 id="evidence-pack-title">Evidence Pack — DRAID-PM-2024-08-14-0211</h2>
+      <div class="sub">Reading-room view · revoked attestations manifest, signature sheet, and full bridge transcript</div>
+    </div>
+    <div style="display:flex;gap:var(--sp-3);align-items:center">
+      <div class="evidence-tabs">
+        <button class="evidence-tab on" data-evtab="manifest">Manifest</button>
+        <button class="evidence-tab"    data-evtab="sigs">Sigs</button>
+        <button class="evidence-tab"    data-evtab="bridge">Bridge</button>
+      </div>
+      <button class="btn-x" id="close-evidence" aria-label="Close dialog">&times;</button>
+    </div>
+  </div>
+
+  <div class="evidence-body">
+    <div id="evpane-manifest">
+      <p style="color:var(--fg-muted);font-size:var(--fs-sm);margin-top:0">
+        First 12 records of the revoked-attestations manifest. Full file: <code>manifest.7k312.json</code> in the postmortem bundle.
+      </p>
+      <table class="tbl" aria-label="Revoked attestation manifest sample">
+        <caption><span>Manifest · first 12 of 7,312 records</span><span class="ctrls">redacted tenant fields · PII scrubbed</span></caption>
+        <thead>
+          <tr>
+            <th>ADEL ID</th>
+            <th>VIN (decoded)</th>
+            <th>Year</th>
+            <th>Tenant</th>
+            <th>Forged sig_counter</th>
+            <th>Resigned tip</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">ADEL-8930</td><td class="mono">1FTFW1ET5EFA82131</td><td>2014</td><td>lithiafleet-prod</td><td class="num">0</td><td class="num">8930</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8931</td><td class="mono">1FTFW1ET5EFA82131</td><td>2014</td><td>lithiafleet-prod</td><td class="num">0</td><td class="num">8931</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8932</td><td class="mono">2HKRM184XH7000442</td><td>2017</td><td>drivetime-msa-prod</td><td class="num">0</td><td class="num">8932</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8933</td><td class="mono">1FT7W2BT6LEB92031</td><td>2020</td><td>rydora-prod</td><td class="num">0</td><td class="num">8933</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8934</td><td class="mono">3FAFP07Z4YR218344</td><td>2000</td><td>pelican-mobility-prod</td><td class="num">0</td><td class="num">8934</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8935</td><td class="mono">1FVHCYDC9HHLX9841</td><td>2017</td><td>verde-trucking-prod</td><td class="num">0</td><td class="num">8935</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8936</td><td class="mono">4UZAACDU5GCHA8210</td><td>2016</td><td>calder-auction-prod</td><td class="num">0</td><td class="num">8936</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8937</td><td class="mono">1FTFW1R59EFA92133</td><td>2014</td><td>firsthour-prod</td><td class="num">0</td><td class="num">8937</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8938</td><td class="mono">1FTFW1ET4DFC03133</td><td>2013</td><td>yardline-eqf-prod</td><td class="num">0</td><td class="num">8938</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8939</td><td class="mono">5TFAY5F12LX931022</td><td>2020</td><td>calavo-auto-prod</td><td class="num">0</td><td class="num">8939</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8940</td><td class="mono">1FTFW1ET0EFA92133</td><td>2014</td><td>northpoint-vl-prod</td><td class="num">0</td><td class="num">8940</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+          <tr><td class="mono">ADEL-8941</td><td class="mono">4UZAACDU4HCAA8214</td><td>2017</td><td>mariswest-rv-prod</td><td class="num">0</td><td class="num">8941</td><td><span class="sev-pill ok">RESIGNED</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="evpane-sigs" hidden>
+      <p style="color:var(--fg-muted);font-size:var(--fs-sm);margin-top:0">
+        Salient entries from the post-incident signature sheet. Each row is a unique signing event.
+      </p>
+      <div class="sig-list">
+        <div class="row"><span class="h">2024-08-14T14:48:07Z</span><span class="o">FORG</span><span class="v">ADEL-8930</span><span class="s">sig_counter=0</span></div>
+        <div class="row"><span class="h">2024-08-14T14:48:07Z</span><span class="o">FORG</span><span class="v">ADEL-8931</span><span class="s">sig_counter=0</span></div>
+        <div class="row"><span class="h">2024-08-14T14:48:08Z</span><span class="o">FORG</span><span class="v">ADEL-8932</span><span class="s">sig_counter=0</span></div>
+        <div class="row"><span class="h">2024-08-14T14:48:11Z</span><span class="o">FORG</span><span class="v">ADEL-8933</span><span class="s">sig_counter=0</span></div>
+        <div class="row"><span class="h">2024-08-14T14:48:14Z</span><span class="o">FORG</span><span class="v">ADEL-8934</span><span class="s">sig_counter=0</span></div>
+        <div class="row"><span class="h">2024-08-14T15:09:11Z</span><span class="o">RESG</span><span class="v">ADEL-8930</span><span class="s">sig_counter=8930 ✓ monotonic</span></div>
+        <div class="row"><span class="h">2024-08-14T15:09:11Z</span><span class="o">RESG</span><span class="v">ADEL-8931</span><span class="s">sig_counter=8931 ✓ monotonic</span></div>
+        <div class="row"><span class="h">2024-08-14T15:09:12Z</span><span class="o">RESG</span><span class="v">ADEL-8932</span><span class="s">sig_counter=8932 ✓ monotonic</span></div>
+        <div class="row"><span class="h">2024-08-14T15:09:13Z</span><span class="o">RESG</span><span class="v">ADEL-8933</span><span class="s">sig_counter=8933 ✓ monotonic</span></div>
+        <div class="row"><span class="h">2024-08-14T15:09:14Z</span><span class="o">RESG</span><span class="v">ADEL-8934</span><span class="s">sig_counter=8934 ✓ monotonic</span></div>
+        <div class="row"><span class="h">2024-08-15T04:11:51Z</span><span class="o">RESG</span><span class="v">ADEL-16242 (last)</span><span class="s">sig_counter=16242 ✓ monotonic</span></div>
+      </div>
+    </div>
+
+    <div id="evpane-bridge" hidden>
+      <p style="color:var(--fg-muted);font-size:var(--fs-sm);margin-top:0">
+        Full bridge transcript &mdash; 14:51:19 &rarr; 06:42 UTC, 8 participants, 1,287 messages.
+      </p>
+      <div class="codeblock">
+        <div class="codeblock-head"><span class="path">bridge/transcript-2024-08-14.txt</span><span class="tag">1,287 lines · 8 participants</span></div>
+        <pre><span class="pn">[</span><span class="num">14</span><span class="pn">:</span><span class="num">51</span><span class="pn">:</span><span class="num">19</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="at">bridge open</span><span class="pn">:</span> P-DRAID&#8209;0211 · <span class="vr">inc-2024-08-14-0211</span>
+<span class="cm"># participants and asciigram</span>
+<span class="pn">[</span><span class="num">14</span><span class="pn">:</span><span class="num">51</span><span class="pn">:</span><span class="num">19</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">mei-lin.chow</span><span class="pn">:</span>    ack. SEV-2 declared by PD. looking.
+<span class="pn">[</span><span class="num">14</span><span class="pn">:</span><span class="num">52</span><span class="pn">:</span><span class="num">48</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">rajiv.venkatesh</span><span class="pn">:</span> IC. SEV-2 confirmed. bridge hold.
+<span class="pn">[</span><span class="num">14</span><span class="pn">:</span><span class="num">53</span><span class="pn">:</span><span class="num">11</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">tomas.reyes</span><span class="pn">:</span>      joining comms. holding draft.
+<span class="pn">[</span><span class="num">14</span><span class="pn">:</span><span class="num">55</span><span class="pn">:</span><span class="num">47</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">aiyana.locklear</span><span class="pn">:</span>  H1: vin-parsers 5.0.0 regression.
+<span class="pn">[</span><span class="num">14</span><span class="pn">:</span><span class="num">56</span><span class="pn">:</span><span class="num">14</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">kwame.asare</span><span class="pn">:</span>     confirming reject-reason delta. POSITION10_RESERVED.
+<span class="pn">[</span><span class="num">15</span><span class="pn">:</span><span class="num">02</span><span class="pn">:</span><span class="num">18</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">rajiv.venkatesh</span><span class="pn">:</span> authorise rollback. diego, helm revert.
+<span class="pn">[</span><span class="num">15</span><span class="pn">:</span><span class="num">03</span><span class="pn">:</span><span class="num">42</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">diego.schiavone</span><span class="pn">:</span>  helm rollback initiated. 8.2.1 &rarr; 8.1.9.
+<span class="pn">[</span><span class="num">15</span><span class="pn">:</span><span class="num">05</span><span class="pn">:</span><span class="num">09</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">diego.schiavone</span><span class="pn">:</span>  pod-3 healthy. first clean issuance.
+<span class="pn">[</span><span class="num">15</span><span class="pn">:</span><span class="num">06</span><span class="pn">:</span><span class="num">17</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">kwame.asare</span><span class="pn">:</span>     outbox drained. counter stable.
+<span class="pn">[</span><span class="num">15</span><span class="pn">:</span><span class="num">09</span><span class="pn">:</span><span class="num">11</span> <span class="ty">UTC</span><span class="pn">]</span> <span class="vr">rajiv.venkatesh</span><span class="pn">:</span> ending impact window. SEV-3 monitor.
+<span class="cm"># &mdash; transcript continues to 06:42 UTC &mdash;</span></pre>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="appfoot">
+  <div>
+    Doc version <strong>v3.0</strong> · published 2024-08-15 22:48 UTC · last touched 2024-08-16 09:11 UTC · source <code>confluence/DE/DRAID-PM-2024-08-14-0211</code>
+  </div>
+  <div class="center">
+    canonical sha256 <code style="color:var(--c-cool)">0x73f0c9a2b1e0478d9c2c93a1033eef</code>
+    &nbsp;·&nbsp; index DRAID-PM-2024-Q3-014
+  </div>
+  <div class="right">
+    DriveID Internal Use Only &nbsp;·&nbsp; <a href="#">open in confluence</a> &nbsp;·&nbsp; <a href="#">share with reviewer</a>
+  </div>
+</footer>
+
+</main>
+
+<script>
+// ====================================================================
+// vanilla JS — tablist switching with keyboard support, dialog open/close,
+// and evidence-pack tab switching inside the dialog.
+// ====================================================================
+(function() {
+  // ---- Tablist switching ------------------------------------------------
+  function bindTablist(root) {
+    const tablist = root.querySelector('[role="tablist"]');
+    if (!tablist) return;
+    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
+    function activate(idx) {
+      tabs.forEach((t, i) => {
+        const on = i === idx;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        if (panels[i]) panels[i].hidden = !on;
+      });
+    }
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => activate(i));
+      tab.addEventListener('keydown', (e) => {
+        let next = i;
+        if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') next = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = tabs.length - 1;
+        else return;
+        e.preventDefault();
+        activate(next);
+        tabs[next].focus();
+      });
+      tab.tabIndex = i === 0 ? 0 : -1;
+    });
+  }
+
+  // each accordion that has an inner tablist
+  document.querySelectorAll('.acc .tabset').forEach(bindTablist);
+
+  // accordions open/close - propagate aria-expanded from <details>
+  document.querySelectorAll('.acc').forEach(d => {
+    const summary = d.querySelector('summary');
+    if (!summary) return;
+    summary.setAttribute('aria-expanded', d.open ? 'true' : 'false');
+    d.addEventListener('toggle', () => {
+      summary.setAttribute('aria-expanded', d.open ? 'true' : 'false');
+    });
+  });
+
+  // ---- Dialog open/close ------------------------------------------------
+  const dlg = document.getElementById('evidence-pack');
+  const opener = document.getElementById('open-evidence');
+  const closer = document.getElementById('close-evidence');
+  if (opener && dlg) {
+    opener.addEventListener('click', () => {
+      if (typeof dlg.showModal === 'function') dlg.showModal();
+      else dlg.setAttribute('open', '');
+    });
+  }
+  if (closer && dlg) {
+    closer.addEventListener('click', () => {
+      if (typeof dlg.close === 'function') dlg.close();
+      else dlg.removeAttribute('open');
+    });
+  }
+  // ESC closes via native dialog; also close-on-backdrop-click as a touch-up
+  if (dlg) {
+    dlg.addEventListener('click', (e) => {
+      const r = dlg.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+        dlg.close();
+      }
+    });
+  }
+
+  // ---- Evidence pack internal tab switcher ------------------------------
+  const evTabs = document.querySelectorAll('.evidence-tab');
+  const evPanes = {
+    manifest: document.getElementById('evpane-manifest'),
+    sigs:     document.getElementById('evpane-sigs'),
+    bridge:   document.getElementById('evpane-bridge'),
+  };
+  evTabs.forEach(t => {
+    t.addEventListener('click', () => {
+      evTabs.forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+      const id = t.getAttribute('data-evtab');
+      Object.entries(evPanes).forEach(([k, p]) => { if (p) p.hidden = (k !== id); });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

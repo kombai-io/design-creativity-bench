@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWIFTNet Correspondent Banking Communication Ledger — PayTrail</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  /* Colours — background surfaces */
+  --bg-canvas:    #080c11;
+  --bg-panel:     #0d1117;
+  --bg-surface:   #131820;
+  --bg-elevated:  #1a2030;
+  --bg-hover:     #1e2a3a;
+  --bg-active:    #253040;
+  --bg-selected:  #1c3050;
+  --bg-skeleton:  #1a2233;
+  --bg-input:     #141a24;
+
+  /* Colours — borders */
+  --border-default: #2a3444;
+  --border-subtle:  #1e2634;
+  --border-accent:  #2a4a6a;
+  --border-focus:   #3a7bd5;
+
+  /* Colours — text */
+  --text-primary:   #e2e8f0;
+  --text-secondary: #8892a4;
+  --text-muted:     #5a6478;
+  --text-inverse:   #0d1117;
+  --text-link:      #5ca0e6;
+  --text-link-hover:#7bb8f0;
+
+  /* Colours — semantic */
+  --status-ok:      #3fb950;
+  --status-warn:    #d29922;
+  --status-error:   #f85149;
+  --status-info:    #58a6ff;
+  --status-dim:     #2d4055;
+
+  /* Colours — accent */
+  --accent-blue:    #3a7bd5;
+  --accent-blue-dim:#1c3a5a;
+
+  /* Spacing scale */
+  --sp-xs:  4px;
+  --sp-sm:  8px;
+  --sp-md:  12px;
+  --sp-lg:  16px;
+  --sp-xl:  20px;
+  --sp-2xl: 28px;
+  --sp-3xl: 40px;
+  --sp-4xl: 56px;
+
+  /* Typography scale */
+  --fs-micro: .6875rem;
+  --fs-caption:.75rem;
+  --fs-small: .8125rem;
+  --fs-base:  .9375rem;
+  --fs-medium:.9531rem;
+  --fs-lead:  1.0625rem;
+  --fs-headline:1.1875rem;
+  --fs-title: 1.375rem;
+  --fs-display:1.75rem;
+
+  /* Line-height */
+  --lh-tight: 1.2;
+  --lh-snug:  1.35;
+  --lh-normal:1.55;
+  --lh-relaxed:1.7;
+
+  /* Borders */
+  --radius-sm:  3px;
+  --radius-md:  5px;
+  --radius-lg:  8px;
+  --radius-round:9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+  --shadow-md: 0 4px 14px rgba(0,0,0,.45);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,.55);
+
+  /* Z-index scale */
+  --z-nav: 10;
+  --z-list: 20;
+  --z-detail: 30;
+  --z-overlay: 100;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-med:  250ms ease;
+
+  /* Layout widths (exempt — layout values) */
+  --nav-width:  195px;
+  --list-width: 340px;
+  --header-h:   44px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0 }
+  100% { background-position: 200% 0 }
+}
+
+@keyframes pulse-dot {
+  0%,100% { opacity:1 }
+  50%     { opacity:.4 }
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── HEADER BAR ─── */
+.header-bar {
+  height: var(--header-h);
+  min-height: var(--header-h);
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-lg);
+  z-index: var(--z-detail);
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+}
+.header-brand svg {
+  width: 22px; height: 22px;
+}
+.header-title {
+  font-size: var(--fs-medium);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: var(--sp-xs);
+}
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  font-size: var(--fs-small);
+  color: var(--text-secondary);
+}
+.status-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--status-ok);
+  animation: pulse-dot 2s ease infinite;
+}
+.status-dot.warning {
+  background-color: var(--status-warn);
+}
+.freshness {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── MAIN LAYOUT ─── */
+.main-shell {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─── NAV PANE ─── */
+.nav-pane {
+  width: var(--nav-width);
+  min-width: var(--nav-width);
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+.nav-section-label {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: var(--sp-lg) var(--sp-lg) var(--sp-sm);
+  font-weight: 600;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-lg);
+  cursor: pointer;
+  font-size: var(--fs-small);
+  color: var(--text-secondary);
+  border-left: 2px solid transparent;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  user-select: none;
+}
+.nav-item:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+.nav-item.active {
+  background-color: var(--bg-selected);
+  color: var(--text-primary);
+  border-left-color: var(--accent-blue);
+}
+.nav-item svg {
+  width: 15px; height: 15px;
+  flex-shrink: 0;
+  opacity: .6;
+}
+.nav-item.active svg { opacity: 1; }
+.nav-badge {
+  margin-left: auto;
+  background-color: var(--accent-blue-dim);
+  color: var(--status-info);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  padding: 1px var(--sp-xs);
+  border-radius: var(--radius-sm);
+  min-width: 18px;
+  text-align: center;
+}
+.nav-divider {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: var(--sp-sm) var(--sp-lg);
+}
+
+/* ─── LIST PANE ─── */
+.list-pane {
+  width: var(--list-width);
+  min-width: var(--list-width);
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.list-header {
+  padding: var(--sp-md) var(--sp-lg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.search-box {
+  position: relative;
+}
+.search-box input {
+  width: 100%;
+  padding: var(--sp-sm) var(--sp-md) var(--sp-sm) 28px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--fs-small);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.search-box input::placeholder {
+  color: var(--text-muted);
+}
+.search-box input:focus {
+  border-color: var(--border-focus);
+}
+.search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  pointer-events: none;
+}
+.filter-row {
+  display: flex;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filter-chip {
+  font-size: var(--fs-micro);
+  padding: 2px var(--sp-sm);
+  border-radius: var(--radius-round);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  user-select: none;
+  background: transparent;
+}
+.filter-chip:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+.filter-chip.active {
+  border-color: var(--accent-blue);
+  background-color: var(--accent-blue-dim);
+  color: var(--text-link);
+}
+
+/* Message list */
+.msg-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+.msg-entry {
+  padding: var(--sp-md) var(--sp-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  user-select: none;
+}
+.msg-entry:hover {
+  background-color: var(--bg-hover);
+}
+.msg-entry.selected {
+  background-color: var(--bg-selected);
+  border-left: 2px solid var(--accent-blue);
+}
+.msg-entry.unread::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-blue);
+  margin-right: var(--sp-sm);
+  vertical-align: middle;
+}
+.msg-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-xs);
+}
+.msg-time {
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.msg-priority {
+  font-size: var(--fs-micro);
+  padding: 0 var(--sp-xs);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+.priority-high {
+  color: var(--status-error);
+  background-color: rgba(248,81,73,.1);
+}
+.priority-medium {
+  color: var(--status-warn);
+  background-color: rgba(210,153,34,.1);
+}
+.priority-low {
+  color: var(--status-dim);
+}
+.msg-sender {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+.msg-subject {
+  font-size: var(--fs-small);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  line-height: var(--lh-snug);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.msg-preview {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: var(--lh-snug);
+}
+
+/* Skeleton loader */
+.skeleton-line {
+  height: var(--sp-md);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-skeleton) 25%, rgba(255,255,255,.04) 50%, var(--bg-skeleton) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+.skeleton-line.short { width: 60%; }
+.skeleton-line.tiny { width: 35%; }
+.skeleton-msg {
+  padding: var(--sp-md) var(--sp-lg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.skeleton-meta {
+  display: flex;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-sm);
+}
+
+/* ─── DETAIL PANE ─── */
+.detail-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--bg-surface);
+}
+.detail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: var(--sp-md);
+  padding: var(--sp-3xl);
+  text-align: center;
+}
+.detail-empty svg {
+  width: 48px; height: 48px;
+  opacity: .25;
+}
+.detail-empty-text {
+  font-size: var(--fs-medium);
+  color: var(--text-secondary);
+}
+
+/* Selected detail view */
+.detail-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.detail-header {
+  padding: var(--sp-lg) var(--sp-2xl);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.detail-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-sm);
+}
+.detail-subject {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  flex: 1;
+}
+.detail-actions {
+  display: flex;
+  gap: var(--sp-sm);
+  flex-shrink: 0;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+.btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+.btn svg {
+  width: 13px; height: 13px;
+}
+.btn-primary {
+  background-color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #fff;
+}
+.btn-primary:hover {
+  background-color: #4a8be5;
+  color: #fff;
+}
+.detail-meta-row {
+  display: flex;
+  gap: var(--sp-2xl);
+  flex-wrap: wrap;
+}
+.detail-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.detail-meta-label {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+.detail-meta-value {
+  font-size: var(--fs-small);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabs */
+.tab-strip {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 var(--sp-2xl);
+  background-color: var(--bg-surface);
+}
+.tab-btn {
+  padding: var(--sp-md) var(--sp-lg);
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  user-select: none;
+  font-family: inherit;
+}
+.tab-btn:hover {
+  color: var(--text-secondary);
+}
+.tab-btn[aria-selected="true"] {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-blue);
+  font-weight: 600;
+}
+.tab-panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+.tab-panel.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prose content area */
+.prose-area {
+  padding: var(--sp-2xl) var(--sp-2xl) var(--sp-3xl);
+  max-width: 820px;
+}
+.prose-area p {
+  font-size: var(--fs-base);
+  line-height: var(--lh-relaxed);
+  color: var(--text-secondary);
+  margin-bottom: var(--sp-lg);
+}
+.prose-area p:last-child {
+  margin-bottom: 0;
+}
+.prose-area h3 {
+  font-size: var(--fs-lead);
+  color: var(--text-primary);
+  margin-bottom: var(--sp-md);
+  margin-top: var(--sp-2xl);
+  font-weight: 600;
+}
+.prose-area h3:first-child {
+  margin-top: 0;
+}
+.prose-area ul {
+  margin-bottom: var(--sp-lg);
+  padding-left: var(--sp-xl);
+}
+.prose-area li {
+  font-size: var(--fs-base);
+  line-height: var(--lh-relaxed);
+  color: var(--text-secondary);
+  margin-bottom: var(--sp-sm);
+}
+.prose-area strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.prose-area code {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: var(--fs-caption);
+  background-color: var(--bg-elevated);
+  color: var(--text-link);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── TABLE STYLES ─── */
+.data-table-wrap {
+  padding: var(--sp-lg) 0;
+  overflow-x: auto;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+.data-table thead th {
+  text-align: left;
+  padding: var(--sp-sm) var(--sp-md);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: var(--fs-caption);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 1px solid var(--border-default);
+  background-color: var(--bg-elevated);
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: var(--sp-sm) var(--sp-md);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+  line-height: var(--lh-snug);
+}
+.data-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+.data-table .cell-highlight {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.tag {
+  display: inline-block;
+  font-size: var(--fs-micro);
+  padding: 1px var(--sp-xs);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+.tag-failed {
+  color: var(--status-error);
+  background: rgba(248,81,73,.1);
+}
+.tag-retried {
+  color: var(--status-warn);
+  background: rgba(210,153,34,.1);
+}
+.tag-settled {
+  color: var(--status-ok);
+  background: rgba(63,185,80,.1);
+}
+.tag-pending {
+  color: var(--status-info);
+  background: rgba(88,166,255,.1);
+}
+
+/* ─── DIALOG OVERLAY ─── */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,.6);
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-med), visibility var(--transition-med);
+}
+.dialog-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+.dialog-box {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 480px;
+  max-width: calc(100vw - var(--sp-4xl));
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.dialog-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-lg) var(--sp-xl);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.dialog-title {
+  font-size: var(--fs-headline);
+  font-weight: 600;
+}
+.dialog-close {
+  width: 24px; height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+.dialog-close:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+.dialog-body {
+  padding: var(--sp-xl);
+  overflow-y: auto;
+}
+.dialog-footer {
+  padding: var(--sp-md) var(--sp-xl);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-sm);
+}
+.form-group {
+  margin-bottom: var(--sp-lg);
+}
+.form-label {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  margin-bottom: var(--sp-sm);
+  font-weight: 500;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: var(--sp-sm) var(--sp-md);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--fs-small);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--border-focus);
+}
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: var(--lh-normal);
+}
+.form-select {
+  appearance: none;
+  cursor: pointer;
+}
+
+/* ─── TIMELINE (in detail panel) ─── */
+.timeline {
+  padding: var(--sp-xl) 0;
+  position: relative;
+}
+.timeline-item {
+  display: flex;
+  gap: var(--sp-md);
+  padding: var(--sp-md) var(--sp-xl);
+  position: relative;
+}
+.timeline-dot-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+.timeline-dot {
+  width: 8px; height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.timeline-line {
+  flex: 1;
+  width: 1px;
+  background-color: var(--border-default);
+  margin-top: var(--sp-sm);
+}
+.timeline-content {
+  flex: 1;
+}
+.timeline-time {
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+  margin-bottom: var(--sp-xs);
+}
+.timeline-heading {
+  font-size: var(--fs-small);
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.timeline-desc {
+  font-size: var(--fs-small);
+  color: var(--text-secondary);
+  line-height: var(--lh-snug);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: var(--radius-round); }
+
+/* Live update flash */
+.live-flash {
+  animation: flashHighlight 1.2s ease;
+}
+@keyframes flashHighlight {
+  0%   { background-color: var(--accent-blue-dim) }
+  100% { background-color: transparent }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ HEADER ═══════ -->
+<header class="header-bar">
+  <div class="header-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--accent-blue)">
+      <rect x="2" y="3" width="20" height="18" rx="3"/>
+      <line x1="2" y1="8" x2="22" y2="8"/>
+      <circle cx="15" cy="14" r="2.5"/>
+      <line x1="5" y1="12" x2="10" y2="12"/>
+      <line x1="5" y1="16" x2="10" y2="16"/>
+    </svg>
+    <span class="header-title">PayTrail — SWIFTNet Ledger</span>
+  </div>
+  <div class="header-status">
+    <span class="status-dot" id="connDot"></span>
+    <span id="connText">Connected</span>
+    <span style="color:var(--border-default)">|</span>
+    <span>Last sync: <span class="freshness" id="freshVal">12s ago</span></span>
+    <span style="color:var(--border-default)">|</span>
+    <button class="btn" onclick="openDialog()" title="Log new event">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Entry
+    </button>
+  </div>
+</header>
+
+<!-- ═══════ MAIN SHELL ═══════ -->
+<div class="main-shell">
+
+  <!-- ── NAV PANE ── -->
+  <nav class="nav-pane" aria-label="Primary navigation">
+    <div class="nav-section-label">Modules</div>
+    <div class="nav-item active" data-module="msgs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="7" y1="15" x2="17" y2="15"/></svg>
+      Message Inboxes
+      <span class="nav-badge">7</span>
+    </div>
+    <div class="nav-item" data-module="compliance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L3 7v5c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Compliance Records
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item" data-module="network">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><line x1="12" y1="7.5" x2="5" y2="16.5"/><line x1="12" y1="7.5" x2="19" y2="16.5"/></svg>
+      Network Diagnostics
+    </div>
+    <div class="nav-item" data-module="settlement">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="13" rx="2"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="7" y1="7" x2="7" y2="4"/><line x1="17" y1="7" x2="17" y2="4"/></svg>
+      Settlement Recon
+    </div>
+    <div class="nav-item" data-module="audit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Audit Configuration
+    </div>
+
+    <div class="nav-divider"></div>
+    <div class="nav-section-label">Filter by Party</div>
+    <div class="nav-item" data-party="db">Deutsche Bank AG</div>
+    <div class="nav-item" data-party="hsbc">HSBC UK</div>
+    <div class="nav-item" data-party="bofa">Bank of America</div>
+    <div class="nav-item" data-party="ecb">ECB Clearing</div>
+    <div class="nav-item" data-party="fed">Federal Reserve</div>
+
+    <div class="nav-divider"></div>
+    <div class="nav-section-label">Quick Links</div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      Help &amp; Documentation
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+  </nav>
+
+  <!-- ── LIST PANE ── -->
+  <aside class="list-pane">
+    <div class="list-header">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search message ID, sender, subject…" id="searchInput" oninput="filterMessages()">
+      </div>
+    </div>
+    <div class="filter-row" role="group" aria-label="Message filters">
+      <button class="filter-chip active" data-filter="all" onclick="setFilter(this)">All</button>
+      <button class="filter-chip" data-filter="pacs" onclick="setFilter(this)">pacs.008</button>
+      <button class="filter-chip" data-filter="camt" onclick="setFilter(this)">camt.052</button>
+      <button class="filter-chip" data-filter="swift" onclick="setFilter(this)">MT103</button>
+      <button class="filter-chip" data-filter="warning" onclick="setFilter(this)">⚠ Warnings</button>
+      <button class="filter-chip" data-filter="failed" onclick="setFilter(this)">✕ Failed</button>
+    </div>
+    <div class="msg-list" id="msgList" role="list" aria-label="Message entries">
+      <!-- Content injected by JS -->
+    </div>
+  </aside>
+
+  <!-- ── DETAIL PANE ── -->
+  <main class="detail-pane" id="detailPane">
+    <div class="detail-empty" id="detailEmpty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      <span class="detail-empty-text">Select a message to view details</span>
+      <span style="font-size:var(--fs-small);color:var(--text-muted)">Use the message list on the left to browse</span>
+    </div>
+
+    <!-- Detail view (hidden initially) -->
+    <div class="detail-view" id="detailView" style="display:none">
+      <div class="detail-header">
+        <div class="detail-header-top">
+          <h2 class="detail-subject" id="detailSubject"></h2>
+          <div class="detail-actions">
+            <button class="btn" onclick="openDialog()" title="Add internal note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Note
+            </button>
+            <button class="btn btn-primary" title="Escalate to senior ops">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+              Escalate
+            </button>
+          </div>
+        </div>
+        <div class="detail-meta-row" id="detailMeta"></div>
+      </div>
+
+      <!-- Tab strip with real ARIA roles -->
+      <div class="tab-strip" role="tablist" aria-label="Detail sections">
+        <button class="tab-btn" role="tab" aria-selected="true" aria-controls="panel-overview" id="tab-overview" onclick="switchTab('overview')">Overview</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-chain" id="tab-chain" onclick="switchTab('chain')">Message Chain</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-compliance" id="tab-compliance" onclick="switchTab('compliance')">Compliance Notes</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-payload" id="tab-payload" onclick="switchTab('payload')">Payload Data</button>
+      </div>
+
+      <!-- Tab panels -->
+      <div class="tab-panel active" role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
+        <div class="prose-area" id="proseContent"></div>
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-chain" aria-labelledby="tab-chain">
+        <div class="timeline" id="timelineContent"></div>
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-compliance" aria-labelledby="tab-compliance">
+        <div class="prose-area" id="complianceContent"></div>
+        <div class="data-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Rule</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Investigator</th>
+              </tr>
+            </thead>
+            <tbody id="complianceTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-payload" aria-labelledby="tab-payload">
+        <div class="prose-area" id="payloadContent"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════ DIALOG ═══════ -->
+<div class="dialog-overlay" id="dialogOverlay" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+  <div class="dialog-box">
+    <div class="dialog-titlebar">
+      <h3 class="dialog-title" id="dialogTitle">Log New Event</h3>
+      <button class="dialog-close" onclick="closeDialog()" aria-label="Close dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="form-group">
+        <label class="form-label" for="evParty">Counterparty Institution</label>
+        <select class="form-select" id="evParty">
+          <option>Deutsche Bank AG — Frankfurt</option>
+          <option>HSBC UK — London</option>
+          <option>Bank of America N.A. — New York</option>
+          <option>European Central Bank — Frankfurt</option>
+          <option>Federal Reserve Bank — New York</option>
+          <option>Société Générale — Paris</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="evType">Event Type</label>
+        <select class="form-select" id="evType">
+          <option value="delivery">Message Delivery Confirmation</option>
+          <option value="error">Error / Exception</option>
+          <option value="recon">Reconciliation Discrepancy</option>
+          <option value="alert">Regulatory Alert</option>
+          <option value="maintenance">System Maintenance Window</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="evDesc">Description</label>
+        <textarea class="form-textarea" id="evDesc" placeholder="Provide a detailed description of the event…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="evRef">Internal Reference</label>
+        <input class="form-input" type="text" id="evRef" placeholder="e.g. REF-2025-06-14-DE-4471">
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEntry()">Submit Log</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───
+const messages = [
+  {
+    id: "PACS-008-2025-06-14-0041",
+    time: "2025-06-14T14:32:07Z",
+    sender: "Deutsche Bank AG, Frankfurt",
+    recipient: "HSBC UK, London",
+    subject: "pacs.008 Credit Transfer Initiated — Interbank Liquidity Sweep Batch #7",
+    preview: "High-volume EUR liquidity sweep initiated across nostro/Vostro accounts held at the ECB Target2 layer. Total exposure €47.2M distributed across 13 sub-transactions.",
+    body: `<p>The interbank liquidity sweep batch identified on Saturday morning represents the largest single-day nostro account reconciliation operation recorded in Q2 2025. The message was transmitted via the SWIFT Alliance Access gateway under ISO 20022 migration profile pacs.008.001.03, routed through the dedicated SWIFTNode service node SN-FRA-07 which connects directly to the ECB's TARGET2 settlement facility.</p>
+
+<p>The initiating party, Deutsche Bank AG's Treasury Operations desk in Frankfurt, structured the sweep as a response to intraday liquidity pressure observed on their primary nostro account held at the Bundesbank. By late afternoon CET on Friday 13 June, the account balance had declined to €11.3 million — approximately 18% below the bank's standard minimum threshold of €60 million set by the Internal Liquidity Management Policy (ILMP) document ILMP-DB-EU-004. Rather than approaching the ECB overnight deposit window, the Treasury desk elected to redistribute excess balances from three subsidiary nostro positions held at other European correspondent banks back into the main Bundesbank account.</p>
+
+<p>The batch comprises 13 individual credit transfer instructions, each between €2.1 million and €6.8 million. The total net flow is approximately €47.2 million. Seven of the 13 transfers involve debit postings to nostro accounts held at Société Générale Paris (€18.4M), UniCredit Milan (€9.1M), and BNP Paribas Brussels (€12.3M). The remaining six target credit postings to HSBC London nostro positions, executed as part of the recurring daily liquidity rebalancing protocol documented in DB-LiqOp-Protocol Rev 12.3.</p>
+
+<h3>Routing and Settlement Timeline</h3>
+<p>All 13 transactions were queued in the SWIFT outbound queue FQ-SWIFT-FRA at 14:32 UTC, corresponding to 16:32 CET. The first settlement instruction arrived at the TARGET2 settlement engine at 16:33:41 CET and was processed successfully. The last of the batch settled at 16:47:12 CET. Deutsche Bank's internal TMS (Treasury Management System) logged final confirmation of all 13 settlements at 16:48:03 CET, with the Bundesbank nostro balance returning to €56.8 million.</p>
+
+<p>A minor anomaly occurred with transaction item PACS-ID-TRX-7741, a €4.2M transfer to HSBC's GBP nostro settlement leg. The payment experienced a 14-second retry cycle due to a transient connectivity fault in the SWIFT Node-to-Node encryption tunnel (SNIT session SN-FRA-07/LON-HSBC-03). The error code returned was RJCT-034 — Timeout during TLS 1.3 handshake renegotiation. The automatic retry mechanism, configured per SOP-SWIFT-TIMEOUT-2023 Section 4.1, re-attempted the transmission at 16:34:15 UTC and succeeded on the second attempt. No customer funds were affected; the entire delay was absorbed within the bank's internal treasury processing buffer.</p>`,
+    priority: "medium",
+    tags: ["pacs", "settlement"],
+    overviewProse: `<p>The overall outcome of this liquidity sweep operation was successful. All 13 constituent transactions settled within the expected settlement window. The minor timeout event on TRX-7741 was classified as a Level-2 operational incident per the SWIFT Operational Incident Classification Framework and was logged as case IOF-2025-0614-07. Resolution was achieved through automated failover without manual intervention, and the incident did not trigger escalation to the Head of SWIFT Operations or the Group Risk Committee.</p>`,
+    timeline: [
+      { time: "2025-06-14 14:32:07 UTC", heading: "Batch queued in outbound pipe", desc: "SWIFT Node FQ-SWIFT-FRA accepted all 13 messages. Batch tag LB-LIQ-Q2-25-B." },
+      { time: "2025-06-14 14:33:41 UTC", heading: "First settlement confirmed", desc: "TARGET2 engine acknowledged receipt. Item TRX-7731 settled immediately." },
+      { time: "2025-06-14 14:33:58 UTC", heading: "Retry triggered — TRX-7741", desc: "TLS 1.3 renegotiation timed out after 14 seconds against node LON-HSBC-03. Code: RJCT-034." },
+      { time: "2025-06-14 14:34:15 UTC", heading: "Automatic retransmission", desc: "Failover path activated per SOP-SWIFT-TIMEOUT-2023 §4.1. Second attempt successful." },
+      { time: "2025-06-14 14:47:12 UTC", heading: "Final batch settlement", desc: "Last of 13 items posted to HSBC GBP nostro. Bundle complete." },
+      { time: "2025-06-14 14:48:03 UTC", heading: "Internal recon reconciliation", desc: "DB TMS confirmed Bundesbank nostro balance at €56.8M. Threshold restored." }
+    ],
+    complianceNotes: `<p>The batch was screened against the EU Sanctions Compliance Screening Engine (SCSE v4.7.2) prior to transmission. All counterparty IBANs and beneficiary institutions passed the sanctions hit check. No positive hits were generated against the EU Consolidated List of Financial Sanctions Targets (updated 2025-06-12).</p>
+
+<p>Anti-Money Laundering (AML) screening under FATF Recommendation 16 triggered a routine review for two transfers exceeding the €10,000 rapid reporting threshold — both TRX-7738 (€6.8M to UniCredit) and TRX-7745 (€5.2M to BNP Paribas). Both transfers fell within pre-approved whitelist parameters defined in the bank's Delegates-of-Authority Matrix (DOAM-Directorate-3), so escalated approval was not required.</p>`,
+    complianceRows: [
+      { ref: "SCSE-SCAN-2025-06-14-0041", rule: "EU Consol. Sanctions List", status: "tag-settled", statusLabel: "Pass", date: "14-Jun-2025", investigator: "Auto-screen / SCSE v4.7" },
+      { ref: "AML-RTG-7738", rule: "FATF Rec. 16", status: "tag-settled", statusLabel: "Whitelisted", date: "14-Jun-2025", investigator: "D. M. Karpov, Ops Review" },
+      { ref: "AML-RTG-7745", rule: "FATF Rec. 16", status: "tag-settled", statusLabel: "Whitelisted", date: "14-Jun-2025", investigator: "D. M. Karpov, Ops Review" }
+    ],
+    payloadSnippet: `<?xml version="1.0" encoding="UTF-8"?>\n<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.03">\n  <CdtTrfTxInf>\n    <PmtId>\n      <InstrId>LB-LIQ-Q2-25-B</InstrId>\n      <EndToEndId>DBTKRFTY-20250614-N1</EndToEndId>\n    </PmtId>\n    <Amt>\n      <InstdAmt Ccy="EUR">47,200,000.00</InstdAmt>\n    </Amt>\n    <ChrgBr>SLEV</ChrgBr>\n  </CdtTrfTxInf>\n</Document>`
+  },
+  {
+    id: "CAMT-052-2025-06-13-0882",
+    time: "2025-06-13T09:15:44Z",
+    sender: "Federal Reserve Bank of New York",
+    recipient: "Bank of America N.A., Charlotte",
+    subject: "camt.052 Account Statement — USD Clearing Balance Reconciliation Variance",
+    preview: "Daily statement cam.052 reveals a €1.2M discrepancy between BoA's reported clearing balance and FRBNY's ledger. Root cause appears to be an unsettled Fedwire batch from 12 June.",
+    priority: "high",
+    tags: ["camt", "discrepancy"],
+    overviewProse: `<p>The camt.052 account statement received from the Federal Reserve Bank of New York on the morning of 13 June flags a persistent balance variance that has now remained unresolved for over 24 hours. The discrepancy amounts to exactly $1,247,830.52 in favour of the Federal Reserve, meaning BoA's own internal general ledger overstates its clearing balance at the New YorkFed by this figure.</p>
+
+<p>The root cause appears traceable to Fedwire Funds Service batch FWD-2025-06-12-44110, submitted at 15:42 EDT on Friday 12 June by BoA's Wholesale Payments unit. The batch contained five individual wire transfers totalling $8.3 million, with the flagged amount corresponding to a single large-dollar outgoing payment to JPMorgan Chase's clearing account (ABA 021000021), reference number JPMLGE-SETTLE-JUN12-CORR.</p>
+
+<p>The anomaly arose because the originating side of the transaction was debited correctly from BoA's internal ledger upon submission at 15:42, but the corresponding credit entry at the receiving institution (JPMorgan Chase, ABA 021000021) never materialised on the FRBNY books — effectively creating a void in the clearing chain. The amount remains stuck in a deferred posting state, labelled FRBNY-DEFERRED-POSG-STATUS-3.</p>`,
+    timeline: [
+      { time: "12-Jun-2025 15:42:00 EDT", heading: "BoA submits Fedwire batch", desc: "Batch FWD-44110 containing 5 wires. Total $8.3M. All appeared to settle normally at origin." },
+      { time: "12-Jun-2025 15:44:33 EDT", heading: "FRBNY acknowledges receipt", desc: "Confirmation sent to BoA T24. All 5 items show 'Processed' status in BoA upstream feed." },
+      { time: "13-Jun-2025 07:00:00 EDT", heading: "Nightly recon run triggers alert", desc: "BoA General Ledger recon engine reports variance of $1,247,830.52 vs FRBNY statement." },
+      { time: "13-Jun-2025 09:15:44 EDT", heading: "camt.052 statement received", desc: "FRBNY formal statement arrives confirming deficit. Flagged as unresolved open item." },
+      { time: "13-Jun-2025 10:30:00 EDT", heading: "BoA escalation to Ops Bridge", desc: "Payment Exceptions team opened ticket PAYEX-2025-0613-882." }
+    ],
+    complianceNotes: `<p>This discrepancy falls under the purview of Regulation CC (Expedited Funds Collection Act) and requires resolution within the regulatory 10-business-day window for out-of-region collection disputes. Given the dollar value exceeds the expedited exception threshold of $500,000, the matter has been assigned to Senior Manager Elena Vasquez of the Wholesome Collections Division.</p>
+
+<p>The associated risk assessment indicates moderate impact. The shortfall is temporary and covered by BoA's intraday credit facilities with the Federal Reserve. However, prolonged unresolved status above 48 hours would trigger an internal breach report to the Office of the Chief Risk Officer (OCRO) under operational risk event category ORC-TRAN-SETTLEMENT.</p>`,
+    complianceRows: [
+      { ref: "PAYEX-882", rule: "Regulation CC / Sec. 229.31", status: "tag-pending", statusLabel: "Open", date: "13-Jun-2025", investigator: "E. Vasquez, WC Div." },
+      { ref: "ORC-OPT-44110", rule: "ORC-TRAN-SETTLEMENT", status: "tag-retried", statusLabel: "Under Review", date: "13-Jun-2025", investigator: "Risk Dept. Auto-flag" },
+      { ref: "REGCC-TIMELY-001", rule: "Funds Availability Schedule", status: "tag-pending", statusLabel: "Within Window", date: "13-Jun-2025", investigator: "Compliance Auto-monitor" }
+    ],
+    payloadSnippet: `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.07">\n  <DocNb>camt.052-FRN-20250613-0882</DocNb>\n  <DbtAcct>\n    <Id>\n      <Othr>\n        <Id>BOA-NYFE-0012-CLR</Id>\n      </Othr>\n    </Id>\n    <Ccy>USD</Ccy>\n  </DbtAcct>\n  <Bal>\n    <Tp>\n      <CdOrPrtry>\n        <Cd>OPBD</Cd>\n      </CdOrPrtry>\n    </Tp>\n    <Amt Ccy="USD">-1,247,830.52</Amt>\n    <CdtDebItmInd>false</CdtDebItmInd>\n  </Bal>\n</Document>`
+  },
+  {
+    id: "WEBHOOK-2025-06-13-1771",
+    time: "2025-06-13T11:20:18Z",
+    sender: "SEPA Direct Debit Scheme Manager",
+    recipient: "Various Acquiring Banks (Broadcast)",
+    subject: "SDN Scheme Change Notice — Mandatory XML Schema Migration to v3.2 by September 2025",
+    preview: "The SEPA Direct Debit Scheme Manager has issued mandatory migration notice requiring all acquirers to adopt camt.054 schema v3.2 by 30 September 2025.",
+    priority: "medium",
+    tags: ["scheme", "broadcast"],
+    overviewProse: `<p>The SEPA Direct Debit Scheme Manager, operating under the authority of the European Payments Council (EPC), has published an updated Scheme Rulebook incorporating version 3.2 of the camt.054 Account Report message format. This release introduces four significant structural changes to the payload definition, including expanded support for multi-currency mandate references, enhanced dispute tracking metadata fields, and revised end-to-end identification formatting rules.</p>
+
+<p>All acquiring banks within the SEPA footprint — including direct participants in the TARGET2 ecosystem and indirect participants settling via intermediaries — must migrate fully to the v3.2 schema no later than 30 September 2025. After this deadline, any camt.054 messages conforming to prior versions (v1.0 through v3.1) will be rejected by the SEPACT (SEPA Clearing and Settlement Technical) engine with error code SCH-RJT-009.</p>`,
+    timeline: [
+      { time: "2025-03-15", heading: "Scheme Rulebook v3.2 published", desc: "Initial publication by EPC. 6-month migration window begins." },
+      { time: "2025-05-20", heading: "Test environment availability", desc: "SEPACT test net opens for v3.2 schema validation testing." },
+      { time: "2025-06-13", heading: "Final notice broadcast", desc: "Webhook alert sent to all registered acquirer endpoints." },
+      { time: "2025-09-30", heading: "Migration deadline", desc: "Pre-v3.2 messages rejected post-deadline." }
+    ],
+    complianceNotes: `<p>Failure to migrate by the stated deadline carries material consequences. Beyond the immediate operational impact of incoming message rejection, non-compliant institutions may face suspension from the SEPACT clearing membership pending remediation. The EPC has indicated that it will publish a public list of non-migrated institutions starting 1 October 2025.</p>
+
+<p>The bank's SWIFT Integration Team estimates approximately 120 working days of effort for full schema migration, including UAT, regression testing, and production cutover planning. Budget allocation has been approved under Project SEPACT-MIGRATE-2025, cost centre CCGEO-PAY-4100.</p>`,
+    complianceRows: [
+      { ref: "EPC-SDN-3.2", rule: "SEPACT Scheme Rulebook §12.4", status: "tag-pending", statusLabel: "Pending Migration", date: "13-Jun-2025", investigator: "Integration Team Lead" },
+      { ref: "INT-RISK-SDN001", rule: "Operational Residual Risk", status: "tag-retried", statusLabel: "Mitigated", date: "14-Jun-2025", investigator: "Project Risk Board" }
+    ],
+    payloadSnippet: `{\n  "webhookSource": "SEPACT-SchemeManager",\n  "noticeId": "SCH-NOTICE-2025-0613-001",\n  "schemaVersion": {"from":"3.1","to":"3.2"},\n  "effectiveDate": "2025-09-30T00:00:00Z",\n  "scope": "ALL_ACQUIRING_PARTICIPANTS",\n  "mandatory": true\n}`
+  },
+  {
+    id: "MT103-2025-06-12-3390",
+    time: "2025-06-12T08:45:33Z",
+    sender: "Société Générale, Paris",
+    recipient: "Deutsche Bank AG, Frankfurt",
+    subject: "MT103 Single Customer Credit Transfer — Cross-Border Invoice Settlement (EUR 2.1M)",
+    preview: "Incoming MT103 from SG Paris covering invoice settlement for engineering project delivered under contract EG-DE-FR-4412. Payment delayed 4 business days beyond contractual maturity.",
+    priority: "low",
+    tags: ["swift", "invoice"],
+    overviewProse: `<p>This MT103 message, received via SWIFT Alliance Message Centre at 08:45 CET on Thursday 12 June, constitutes a single customer credit transfer of €2,147,500.00 from Société Générale's client account (IBAN FR76 3000 4028 3700 0100 0235 629) to Deutsche Bank's client account (IBAN DE89 3704 0044 0532 0130 00). The transfer covers the outstanding balance of commercial invoice CIV-4412-INV-03 related to the cross-border industrial machinery supply contract numbered EG-DE-FR-4412, governed by German law and the United Nations Convention on Contracts for the International Sale of Goods (CISG).</p>
+
+<p>The payment arrived four business days after the contractual maturity date of 5 June 2025. Per the terms of Contract EG-DE-FR-4412, Section 8.3 (Late Payment), the buyer is liable for default interest calculated at 8.5% above the applicable Euribor 3-month reference rate, compounded daily. Based on the delay period and prevailing Euribor rates, the calculated default interest accrues to approximately €8,234.17, which Deutsche Bank's Trade Finance division has assessed and invoiced separately as additional charge reference CHG-LATE-4412-001.</p>`,
+    timeline: [
+      { time: "2025-05-05", heading: "Invoice CIV-4412-INV-03 issued", desc: "Issued per contract maturity schedule. Net 30 payment terms." },
+      { time: "2025-06-05", heading: "Payment overdue", desc: "Contractual maturity date passes. Automated reminder sent to SG client relations." },
+      { time: "2025-06-09", heading: "Follow-up notice dispatched", desc: "Deutsche Bank Trade Finance sends formal demand letter via registered courier and SWIFT MT199." },
+      { time: "2025-06-12", heading: "MT103 received", desc: "Payment clears through SWIFT network. Principal received in full." },
+      { time: "2025-06-12", heading: "Default interest assessed", desc: "CHF-4412-001 generated for €8,234.17 late payment surcharge." }
+    ],
+    complianceNotes: `<p>The trade finance compliance team has verified that the underlying commercial contract EG-DE-FR-4412 does not involve any sanctioned jurisdictions, restricted parties, or dual-use goods falling under EU Dual-Use Regulation (EC) No 428/2009. The transaction involves standard industrial pump systems manufactured by a supplier based in Baden-Württemberg, Germany, destined for a chemical processing facility near Lyon, France.</p>`,
+    complianceRows: [
+      { ref: "TF-COMPL-4412", rule: "EU Dual-Use Reg. 428/2009", status: "tag-settled", statusLabel: "Cleared", date: "12-Jun-2025", investigator: "T. H. Lindqvist, Trade Fin." },
+      { ref: "KYC-SGC-CLNT-07", rule: "Customer Due Diligence", status: "tag-settled", statusLabel: "Current", date: "01-Mar-2025", investigator: "KYC Unit Paris" }
+    ],
+    payloadSnippet: `[SWIFT MT103]\n:20:CIV4412INV03\n:23B:IRDT\n:32A:250612EUR2147500,\n:50K:/FR7630004028370001000\n   235629CLIENT NAME REDACTED\n:57A:DEUTDEFF\n:59:/DE89370400440532013000\n   CLIENT ACCOUNT REDACTED\n:70:INVOICE SETTLEMENT EG-DE-\n   FR-4412. PAYMENT DELAYED.\n   DEFAULT INTEREST APPLIED.`
+  },
+  {
+    id: "ALERT-2025-06-11-0557",
+    time: "2025-06-11T16:02:11Z",
+    sender: "ECB Directorate-General Supervision",
+    recipient: "All Significant Institutions — Regulatory Notification",
+    subject: "Regulatory Notification — Updated Capital Conservation Buffer Requirement Effective Q3 2025",
+    preview: "ECB supervisory directive raises the capital conservation buffer for credit institutions operating in the eurozone from 2.5% to 3.125% of risk-weighted assets.",
+    priority: "high",
+    tags: ["regulatory", "alert"],
+    overviewProse: `<p>By letter dated 6 June 2025 and formally communicated through the ECB's Official Supervisory Channel (OSC) on 11 June, the Directorate-General for Prudential Supervision and Resolution has notified all significant institutions under direct ECB supervision of an increase to the Capital Conservation Buffer (CCoB) requirement. The adjustment takes effect for capital adequacy calculations commencing with the Q3 2025 reporting period, with a full compliance deadline of 31 December 2025.</p>
+
+<p>The buffer increases from the current 2.5% to 3.125% of Total Risk-Weighted Assets (TRWA), representing an increase of 62.5 basis points. This change implements provisions of the Basel III finalisation package as transposed into EU law under the Capital Requirements Regulation (CRR) II Amendment Package, adopted by the European Commission in December 2024 and ratified by the European Parliament in March 2025.</p>
+
+<p>For Deutsche Bank AG specifically, the calculated incremental capital requirement amounts to approximately €2.8 billion, based on the bank's reported TRWA of €896 billion as disclosed in the Q2 2025 Pillar 3 disclosure document. The ECB has stipulated that institutions failing to meet the new buffer threshold by the compliance deadline will face escalating restrictions on dividend distributions, share buybacks, and discretionary bonus payments, beginning with a 50% limitation on distributable profits and tightening to 100% restriction if deficiencies persist beyond 90 days past the deadline.</p>`,
+    timeline: [
+      { time: "2024-12-18", heading: "Commission adopts CRR II amendment", desc: "European Commission formal adoption of Basel III transposition measures." },
+      { time: "2025-03-12", heading: "European Parliament ratification", desc: "Full parliamentary vote approving buffer increase provisions." },
+      { time: "2025-06-06", heading: "Internal ECB letter drafted", desc: "DG Sup drafting directive to affected institutions." },
+      { time: "2025-06-11", heading: "Notification sent via OSC channel", desc: "All significant institutions receive formal regulatory notice." },
+      { time: "2025-12-31", heading: "Compliance deadline", desc: "New CCoB of 3.125% fully enforceable." }
+    ],
+    complianceNotes: `<p>The institution's ALCO (Asset and Liability Committee) has convened an emergency session scheduled for 17–18 June 2025 to evaluate potential capital raising scenarios. Three options are under consideration: (a) retained earnings accumulation, requiring a reduction in dividend payout ratio from 30% to approximately 15% over a 12-month horizon; (b) Tier 2 supplementary capital instrument issuance, estimated at €3–4 billion; (c) risk-weighted asset reduction through securitisation of non-core loan portfolios, estimated capacity of €1.5–2.0 billion in TRWA relief.</p>`,
+    complianceRows: [
+      { ref: "ECB-DIR-2025-Q3-CCOB", rule: "CRR II Amendment / Art. 104a CRD V", status: "tag-pending", statusLabel: "Assessing Impact", date: "11-Jun-2025", investigator: "ALCO / Treasury" },
+      { ref: "CAP-RSTR-001", rule: "Dividend Distribution Limitation", status: "tag-pending", statusLabel: "Contingent", date: "11-Jun-2025", investigator: "Corp. Secretary" }
+    ],
+    payloadSnippet: `// OSC Formal Notification Extract\n// Source: ECB DG Sup / Prudential Reporting\n{\n  "directiveId": "ECB-PRUD-2025-0042",\n  "measureType": "CapitalConservationBufferIncrease",\n  "oldRate": "2.50%",\n  "newRate": "3.125%",\n  "baseMeasure": "Total Risk Weighted Assets",\n  "effectivePeriod": "Q3-2025",\n  "fullComplianceDeadline": "2025-12-31",\n  "enforcementMechanism": "Tiered distribution restrictions",\n  "applicabilityScope": "All significant ECB-supervised institutions"\n}`
+  },
+  {
+    id: "CONN-CHK-2025-06-11-0012",
+    time: "2025-06-11T06:00:00Z",
+    sender: "SWIFT NetCo Monitoring Platform",
+    recipient: "All Registered Users — Internal Service Desk",
+    subject: "Network Connectivity Diagnostic — Routine Health Check Results, 11 June 2025",
+    preview: "Automated diagnostic sweep of all SWIFT SNA connections completed. One degraded link detected between Frankfurt (SNA-07) and Zurich (SNA-ZH-02). Latency elevated to 340ms baseline.",
+    priority: "low",
+    tags: ["diagnostic", "connectivity"],
+    overviewProse: `<p>The automated network health check performed by the SWIFT NetCo Monitoring Platform (SNMP) at 06:00 CET on Wednesday 11 June 2025 completed its scheduled sweep of all registered Service Network Access (SNA) connections across the Eurozone node cluster. The diagnostic evaluated 47 active SNA links using the SNMP v2.5 probe methodology, measuring packet loss rate, round-trip latency, and available bandwidth utilization.</p>
+
+<p>The results indicate that 44 of the 47 monitored connections are operating within nominal performance parameters. Three connections reported marginal degradation — latency above the historical 95th percentile threshold — but none exceeded the critical degradation threshold that would trigger an automatic service level agreement (SLA) breach notification to SWIFT NetCo support services.</p>
+
+<p>The most notable finding concerns the dedicated encrypted tunnel between Frankfurt SNA node 07 and the Zurich correspondent banking hub at SNA-ZH-02. This link, primarily utilized for Swiss franc correspondent clearing messages and UBS Group AG relay traffic, exhibited a sustained average latency of 340 milliseconds during the diagnostic window, compared to the historical baseline of 112 milliseconds established over the preceding quarter. Packet loss averaged 0.03% on this link versus the acceptable threshold of 0.05%. While neither metric individually warrants immediate remediation, the combined pattern of elevated latency and micro-packet-loss suggests an emerging degradation trend that the infrastructure operations team has flagged for continued monitoring.</p>`,
+    timeline: [
+      { time: "11-Jun-2025 06:00:00 CET", heading: "Scheduled diagnostic sweep launched", desc: "SNMP v2.5 probes dispatched to all 47 SNA endpoints." },
+      { time: "11-Jun-2025 06:12:33 CET", heading: "Degraded link detected", desc: "FRA-07 ↔ ZH-02 tunnel shows 340ms avg latency (baseline: 112ms)." },
+      { time: "11-Jun-2025 06:30:00 CET", heading: "Alert triaged to Infra Ops", desc: "Ticket INFRA-2025-0611-012 created. Assigned to on-call network engineer." },
+      { time: "11-Jun-2025 08:00:00 CET", heading: "Peak-hour monitoring confirmed", desc: "Latency spike persists through morning peak (07:00–09:00 CET). Trend noted." }
+    ],
+    complianceNotes: `<p>The degradation does not currently constitute a reportable operational incident under SWIFT's CSP 151 certification framework. However, per internal Standard Operating Procedure SOP-NET-MONITORING-2024 Section 7.2, the infrastructure team has elected to maintain enhanced monitoring of this link until the next scheduled maintenance window on 20 June 2025, when physical optical fibre diagnostics may be conducted at the Frankfurt exchange colocation facility.</p>`,
+    complianceRows: [
+      { ref: "INFRA-012", rule: "SOP-NET-MONITORING §7.2", status: "tag-pending", statusLabel: "Monitoring", date: "11-Jun-2025", investigator: "On-call Net. Eng." },
+      { ref: "CSP-151-MAINT-0611", rule: "SWIFT CSP-151 Cert. Req.", status: "tag-settled", statusLabel: "No Breach", date: "11-Jun-2025", investigator: "Auto-diagnostic" }
+    ],
+    payloadSnippet: `// SNMP Diagnostic Summary Extract\n{\n  "scanTimestamp": "2025-06-11T04:00:00Z",\n  "totalEndpoints": 47,\n  "nominalConnections": 44,\n  "degradedConnections": 3,\n  "criticalConnections": 0,\n  "flaggedLink": {\n    "source": "SNA-FRA-07",\n    "destination": "SNA-ZH-02",\n    "avgLatency": "340ms",\n    "baselineLatency": "112ms",\n    "packetLoss": "0.03%",\n    "trendDirection": "upward"\n  }\n}`
+  },
+  {
+    id: "RECON-2025-06-10-2201",
+    time: "2025-06-10T22:14:05Z",
+    sender: "ACH Network Operator — National Clearing House",
+    recipient: "Participating depository institutions",
+    subject: "ACH Return Notification — High-Volume Image Return Processing Cycle (June 10 Cut-Off)",
+    preview: "National clearing house reports 247 returned ACH items for June 10 cut-off cycle. Aggregate return rate 0.87%. Top reasons: NSF (62%), unauthorized debit (18%), account closed (11%).",
+    priority: "low",
+    tags: ["recon", "return"],
+    overviewProse: `<p>The nightly Automated Clearing House (ACH) reconciliation report for the 10 June 2025 processing cycle indicates a total of 247 returned items across all participating depository institutions in the national clearing network. The aggregate return rate for the cycle was 0.87%, which falls within the normal operational band of 0.5% to 1.5% established by the National ACH Association's quality benchmarking guidelines.</p>
+
+<p>The breakdown of return reasons follows a familiar seasonal pattern. Non-Sufficient Funds (NSF) returns accounted for the majority of item declines at 62% (153 items), typically reflecting payroll-related timing mismatches at month-end. Unauthorized debit returns represented 18% (45 items), of which approximately 30% involved suspected fraudulent debit authorizations that triggered mandatory early return windows under Regulation E.</p>`,
+    timeline: [
+      { time: "10-Jun-2025 17:00:00 EDT", heading: "ACH cut-off window closes", desc: "All same-day and regular-advance submissions must clear." },
+      { time: "10-Jun-2025 22:14:05 EDT", heading: "Clearing house processes returns", desc: "247 items returned. Batch ID: RET-20250610-FINAL." },
+      { time: "11-Jun-2025 08:00:00 EDT", heading: "Depository institutions notified", desc: "Return advices distributed via ODFI notification channels." }
+    ],
+    complianceNotes: `<p>The 13 suspected fraud cases identified under the unauthorized debit category require immediate escalation to the bank's Fraud Operations unit under the Expedited Return procedure mandated by Nacha Operating Rules, Chapter 7, Section 3. Each fraudulent return must be investigated and responded to within two business days of notification, with a provisional credit issued to the consumer's account within one business day per Regulation E requirements.</p>`,
+    complianceRows: [
+      { ref: "NACHA-RET-0610-247", rule: "Nacha Op. Rules Ch.7 §3", status: "tag-retried", statusLabel: "Processing", date: "10-Jun-2025", investigator: "Fraud Ops Auto-route" },
+      { ref: "REG-E-PROV-001", rule: "Regulation E §205.12", status: "tag-pending", statusLabel: "2 BD Response", date: "11-Jun-2025", investigator: "Consumer Protection" }
+    ],
+    payloadSnippet: `// ACH Return Summary\n{\n  "cycleDate": "2025-06-10",\n  "totalItems": 28394,\n  "returnedItems": 247,\n  "returnRate": "0.87%",\n  "breakdown": {\n    "NSF": { "count": 153, "percent": "62%" },\n    "UnauthorizedDebit": { "count": 45, "percent": "18%" },\n    "AccountClosed": { "count": 27, "percent": "11%" },\n    "Other": { "count": 22, "percent": "9%" }\n  }\n}`
+  }
+];
+
+// ─── STATE ───
+let selectedMsg = null;
+let currentFilter = 'all';
+let loadPhase = 'skeleton'; // 'skeleton' → 'partial' → 'full'
+let freshSeconds = 12;
+
+// ─── RENDER SKELETONS ───
+function renderSkeletons() {
+  const list = document.getElementById('msgList');
+  let html = '';
+  for (let i = 0; i < 6; i++) {
+    html += `<div class="skeleton-msg">
+      <div class="skeleton-meta">
+        <div class="skeleton-line tiny"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+      <div class="skeleton-line" style="margin-bottom:6px"></div>
+      <div class="skeleton-line short"></div>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+// ─── RENDER MESSAGE LIST ───
+function renderMessages(filtered) {
+  const list = document.getElementById('msgList');
+  const items = filtered || messages;
+  let html = '';
+  items.forEach((m, idx) => {
+    const unread = m.priority === 'high' && !selectedMsg;
+    const cls = selectedMsg === m ? 'msg-entry selected' : `msg-entry${unread ? ' unread' : ''}`;
+    const prioCls = m.priority === 'high' ? 'priority-high' : m.priority === 'medium' ? 'priority-medium' : 'priority-low';
+    const timeStr = m.time.slice(0,10).replace(/-/g,'/') + ' ' + m.time.slice(11,16);
+    html += `<div class="${cls}" role="listitem" tabindex="0" data-idx="${messages.indexOf(m)}"
+               onclick="selectMessage(${messages.indexOf(m)})" onkeydown="if(event.key==='Enter')selectMessage(${messages.indexOf(m)})">
+      <div class="msg-meta">
+        <span class="msg-time">${timeStr}</span>
+        <span class="msg-priority ${prioCls}">${m.priority.toUpperCase()}</span>
+      </div>
+      <div class="msg-subject">${m.subject}</div>
+      <div class="msg-preview">${m.preview}</div>
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+// ─── SELECT MESSAGE ───
+function selectMessage(idx) {
+  const m = messages[idx];
+  if (!m) return;
+  selectedMsg = m;
+  renderMessages(); // re-render to mark selected
+
+  document.getElementById('detailEmpty').style.display = 'none';
+  document.getElementById('detailView').style.display = 'flex';
+
+  document.getElementById('detailSubject').textContent = m.subject;
+
+  const metaHtml = `
+    <div class="detail-meta-item">
+      <span class="detail-meta-label">Message ID</span>
+      <span class="detail-meta-value">${m.id}</span>
+    </div>
+    <div class="detail-meta-item">
+      <span class="detail-meta-label">Timestamp</span>
+      <span class="detail-meta-value">${m.time.replace('T',' ').slice(0,19)}</span>
+    </div>
+    <div class="detail-meta-item">
+      <span class="detail-meta-label">Sender</span>
+      <span class="detail-meta-value">${m.sender}</span>
+    </div>
+    <div class="detail-meta-item">
+      <span class="detail-meta-label">Recipient</span>
+      <span class="detail-meta-value">${m.recipient}</span>
+    </div>
+  `;
+  document.getElementById('detailMeta').innerHTML = metaHtml;
+
+  // Populate Overview
+  document.getElementById('proseContent').innerHTML = m.body + m.overviewProse;
+
+  // Populate Timeline
+  let tlHtml = '';
+  m.timeline.forEach((t, i) => {
+    const dotColor = i === m.timeline.length - 1 ? 'var(--status-ok)' : i === 0 ? 'var(--accent-blue)' : 'var(--border-default)';
+    const isLast = i === m.timeline.length - 1;
+    tlHtml += `<div class="timeline-item">
+      <div class="timeline-dot-col">
+        <div class="timeline-dot" style="background:${dotColor};width:${isLast?'10px':'8px'};height:${isLast?'10px':'8px'}"></div>
+        ${!isLast ? '<div class="timeline-line"></div>' : ''}
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-time">${t.time}</div>
+        <div class="timeline-heading">${t.heading}</div>
+        <div class="timeline-desc">${t.desc}</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('timelineContent').innerHTML = tlHtml;
+
+  // Populate Compliance Notes
+  document.getElementById('complianceContent').innerHTML = m.complianceNotes;
+
+  // Populate Table
+  let tblHtml = '';
+  m.complianceRows.forEach(r => {
+    tblHtml += `<tr>
+      <td class="cell-highlight">${r.ref}</td>
+      <td>${r.rule}</td>
+      <td><span class="tag ${r.status}">${r.statusLabel}</span></td>
+      <td>${r.date}</td>
+      <td>${r.investigator}</td>
+    </tr>`;
+  });
+  document.getElementById('complianceTableBody').innerHTML = tblHtml;
+
+  // Populate Payload
+  document.getElementById('payloadContent').innerHTML = `<pre style="font-family:'Consolas','Courier New',monospace;font-size:var(--fs-caption);color:var(--text-link);background:var(--bg-elevated);padding:var(--sp-lg);border-radius:var(--radius-md);overflow-x:auto;line-height:var(--lh-normal);white-space:pre-wrap;">${escapeHtml(m.payloadSnippet)}</pre>`;
+
+  // Reset tabs to overview
+  switchTab('overview');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── TAB SWITCHING ───
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const isActive = btn.id === 'tab-' + tabName;
+    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === 'panel-' + tabName);
+  });
+}
+
+// ─── FILTER ───
+function setFilter(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = el.dataset.filter;
+  filterMessages();
+}
+
+function filterMessages() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  let filtered = messages.filter(m => {
+    const matchQuery = !query ||
+      m.id.toLowerCase().includes(query) ||
+      m.sender.toLowerCase().includes(query) ||
+      m.subject.toLowerCase().includes(query) ||
+      m.preview.toLowerCase().includes(query);
+    const matchFilter = currentFilter === 'all' ||
+      (currentFilter === 'warning' && m.priority === 'high') ||
+      (currentFilter === 'failed' && m.tags.includes('discrepancy')) ||
+      m.tags.some(t => t.includes(currentFilter)) ||
+      m.id.toLowerCase().includes(currentFilter);
+    return matchQuery && matchFilter;
+  });
+  renderMessages(filtered);
+}
+
+// ─── DIALOG ───
+function openDialog() {
+  document.getElementById('dialogOverlay').classList.add('open');
+}
+function closeDialog() {
+  document.getElementById('dialogOverlay').classList.remove('open');
+}
+function submitEntry() {
+  const party = document.getElementById('evParty').value.split('—')[0].trim();
+  const type = document.getElementById('evType');
+  const typeText = type.options[type.selectedIndex].text;
+  const desc = document.getElementById('evDesc').value || 'No description provided.';
+  const ref = document.getElementById('evRef').value || 'REF-NEW-' + Date.now();
+
+  const now = new Date();
+  const iso = now.toISOString();
+  const timeStr = iso.slice(0,10).replace(/-/g,'/') + ' ' + iso.slice(11,16);
+
+  const newMsg = {
+    id: ref.toUpperCase(),
+    time: iso,
+    sender: party + ' — ' + party.split(',').pop().trim(),
+    recipient: 'PayTrail Internal Queue',
+    subject: typeText + ' — ' + ref,
+    preview: desc.substring(0, 120) + (desc.length > 120 ? '…' : ''),
+    body: `<p>New event logged at ${timeStr}. Source party: ${party}. Type: ${typeText}.</p><p>${desc}</p>`,
+    overviewProse: `<p>This entry was manually logged through the PayTrail ledger interface. The event has been categorized and tagged for subsequent review by the appropriate operations team. Internal reference identifier: <code>${ref}</code>.</p>`,
+    timeline: [
+      { time: iso.slice(0,10)+' '+iso.slice(11,16), heading: 'Event logged', desc: `Manually entered. Ref: ${ref}.` }
+    ],
+    complianceNotes: `<p>No additional compliance actions required at the time of logging. This event will be included in the daily compliance summary report distributed to the Office of the Chief Risk Officer at 08:00 CET the following business day.</p>`,
+    complianceRows: [
+      { ref: ref, rule: "PayTrail Internal Protocol", status: "tag-pending", statusLabel: "Logged", date: timeStr.slice(0,5), investigator: "Field operator" }
+    ],
+    payloadSnippet: JSON.stringify({ logEntry: ref, source: party, type: type.value, loggedAt: iso }, null, 2),
+    priority: type.value === 'error' || type.value === 'alert' ? 'high' : type.value === 'recon' ? 'medium' : 'low',
+    tags: ['manual'],
+  };
+
+  messages.unshift(newMsg);
+  closeDialog();
+  selectedMsg = null;
+  document.getElementById('detailEmpty').style.display = 'flex';
+  document.getElementById('detailView').style.display = 'none';
+  filterMessages();
+}
+
+// ─── NAV ITEMS ───
+document.querySelectorAll('.nav-item[data-module]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item[data-module]').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+// ─── LIVE STATUS SIMULATION ───
+setInterval(() => {
+  freshSeconds++;
+  document.getElementById('freshVal').textContent = freshSeconds + 's ago';
+  if (freshSeconds > 30) {
+    document.getElementById('connDot').classList.add('warning');
+    document.getElementById('connText').textContent = 'Degraded';
+    freshSeconds = 0;
+  } else {
+    document.getElementById('connDot').classList.remove('warning');
+    document.getElementById('connText').textContent = 'Connected';
+  }
+}, 10000);
+
+// ─── INIT ───
+renderSkeletons();
+
+setTimeout(() => {
+  if (loadPhase === 'skeleton') {
+    loadPhase = 'partial';
+    renderMessages();
+  }
+}, 1800);
+
+// Close dialog on overlay click
+document.getElementById('dialogOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeDialog();
+});
+
+// Escape key closes dialog
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDialog();
+});
+</script>
+</body>
+</html>

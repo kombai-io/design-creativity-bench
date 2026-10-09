@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Insight Review Queue — ThreatLens</title>
+<style>
+:root {
+  /* Color tokens */
+  --c-bg-base: #0b0f17;
+  --c-bg-elev-1: #111824;
+  --c-bg-elev-2: #182233;
+  --c-bg-elev-3: #1f2a3f;
+  --c-bg-overlay: #05080f;
+  --c-border-subtle: #243049;
+  --c-border-default: #2d3b56;
+  --c-border-strong: #3a4b6b;
+  --c-text-primary: #e6edf7;
+  --c-text-secondary: #a9b6cf;
+  --c-text-muted: #6c7a96;
+  --c-text-inverse: #0b0f17;
+  --c-accent-primary: #6ea8ff;
+  --c-accent-primary-hover: #8dbcff;
+  --c-accent-primary-soft: #1a2a4a;
+  --c-status-pending: #f0c674;
+  --c-status-pending-soft: #3a2e15;
+  --c-status-approved: #5fd6a3;
+  --c-status-approved-soft: #163528;
+  --c-status-rejected: #ff7a8a;
+  --c-status-rejected-soft: #3a1820;
+  --c-status-escalated: #c89bff;
+  --c-status-escalated-soft: #2c1e44;
+  --c-status-critical: #ff5566;
+  --c-status-critical-soft: #401820;
+  --c-severity-info: #6ea8ff;
+  --c-severity-info-soft: #15233e;
+  --c-severity-low: #5fd6a3;
+  --c-severity-low-soft: #133226;
+  --c-severity-medium: #f0c674;
+  --c-severity-medium-soft: #342613;
+  --c-severity-high: #ff9a5c;
+  --c-severity-high-soft: #3a221a;
+  --c-severity-critical: #ff5566;
+  --c-severity-critical-soft: #3a131c;
+  --c-confidence-high: #5fd6a3;
+  --c-confidence-med: #f0c674;
+  --c-confidence-low: #ff7a8a;
+  --c-danger: #ff5566;
+  --c-danger-hover: #ff7788;
+  --c-danger-soft: #3a1820;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-base: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fs-3xl: 28px;
+  --lh-tight: 1.25;
+  --lh-base: 1.5;
+  --lh-relaxed: 1.65;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Spacing */
+  --sp-0: 0;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 48px;
+  --sp-10: 64px;
+
+  /* Radii */
+  --r-xs: 3px;
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --sh-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --sh-md: 0 4px 12px rgba(0,0,0,0.45);
+  --sh-lg: 0 12px 32px rgba(0,0,0,0.55);
+  --sh-inset: inset 0 0 0 1px rgba(255,255,255,0.04);
+  --sh-focus: 0 0 0 3px rgba(110,168,255,0.35);
+  --sh-danger: 0 0 0 3px rgba(255,85,102,0.3);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--c-bg-base);
+  color: var(--c-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+button:focus-visible { outline: none; box-shadow: var(--sh-focus); }
+a { color: var(--c-accent-primary); text-decoration: none; }
+
+.app {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  min-height: 100vh;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ============ HEADER ============ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-6);
+  border-bottom: 1px solid var(--c-border-subtle);
+  background: var(--c-bg-elev-1);
+}
+.brand {
+  display: flex; align-items: center; gap: var(--sp-3);
+}
+.brand-mark {
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--c-accent-primary), var(--c-status-escalated));
+  border-radius: var(--r-sm);
+  color: var(--c-text-inverse);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-md);
+  box-shadow: var(--sh-inset);
+}
+.brand-name {
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-lg);
+  letter-spacing: -0.01em;
+}
+.brand-sub {
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  margin-left: var(--sp-2);
+}
+.top-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+.top-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--c-text-secondary);
+}
+.dot-live {
+  width: 8px; height: 8px;
+  background: var(--c-status-approved);
+  border-radius: var(--r-pill);
+  box-shadow: 0 0 0 4px var(--c-status-approved-soft);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.user-chip {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-pill);
+}
+.avatar {
+  width: 24px; height: 24px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, #6ea8ff, #c89bff);
+  display: grid; place-items: center;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-inverse);
+}
+.user-name { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.user-role { font-size: var(--fs-xs); color: var(--c-text-muted); }
+
+/* ============ STEPPER ============ */
+.stepper-wrap {
+  padding: var(--sp-5) var(--sp-6) var(--sp-4);
+  background: var(--c-bg-elev-1);
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.stepper-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--sp-4);
+}
+.stepper-title {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+}
+.stepper-title small {
+  font-weight: var(--fw-regular);
+  color: var(--c-text-muted);
+  margin-left: var(--sp-2);
+  font-size: var(--fs-md);
+}
+.stepper-meta {
+  font-size: var(--fs-sm);
+  color: var(--c-text-secondary);
+}
+.stepper-meta b { color: var(--c-text-primary); font-weight: var(--fw-semibold); }
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: 1;
+}
+.step-circle {
+  width: 28px; height: 28px;
+  border-radius: var(--r-pill);
+  display: grid; place-items: center;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  border: 1.5px solid var(--c-border-default);
+  background: var(--c-bg-elev-2);
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+}
+.step-label {
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+  font-weight: var(--fw-medium);
+}
+.step-sub {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  margin-top: 2px;
+}
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--c-border-default);
+  border-radius: var(--r-pill);
+  min-width: var(--sp-7);
+}
+.step.done .step-circle {
+  background: var(--c-status-approved-soft);
+  border-color: var(--c-status-approved);
+  color: var(--c-status-approved);
+}
+.step.done .step-label { color: var(--c-text-secondary); }
+.step.done .step-connector { background: var(--c-status-approved); }
+.step.active .step-circle {
+  background: var(--c-accent-primary);
+  border-color: var(--c-accent-primary);
+  color: var(--c-text-inverse);
+  box-shadow: var(--sh-focus);
+}
+.step.active .step-label { color: var(--c-text-primary); font-weight: var(--fw-semibold); }
+.step.active .step-sub { color: var(--c-text-secondary); }
+
+/* ============ KPI BAND ============ */
+.kpi-band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--c-border-subtle);
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.kpi {
+  background: var(--c-bg-elev-1);
+  padding: var(--sp-4) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.kpi-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+  font-weight: var(--fw-semibold);
+}
+.kpi-value {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+}
+.kpi-trend {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  margin-top: var(--sp-1);
+}
+.trend-up { color: var(--c-status-approved); }
+.trend-down { color: var(--c-status-rejected); }
+.trend-neutral { color: var(--c-text-muted); }
+.kpi .accent-blue { color: var(--c-accent-primary); }
+.kpi .accent-amber { color: var(--c-status-pending); }
+.kpi .accent-green { color: var(--c-status-approved); }
+.kpi .accent-rose { color: var(--c-status-rejected); }
+
+/* ============ MAIN LAYOUT ============ */
+.main {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 0;
+}
+.queue-pane {
+  border-right: 1px solid var(--c-border-subtle);
+  background: var(--c-bg-elev-1);
+  display: flex;
+  flex-direction: column;
+}
+.detail-pane {
+  background: var(--c-bg-base);
+  display: flex;
+  flex-direction: column;
+}
+
+.pane-head {
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.pane-title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.count-badge {
+  background: var(--c-bg-elev-3);
+  color: var(--c-text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-border-subtle);
+}
+.tabs {
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-4) 0;
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.tab {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+  font-weight: var(--fw-medium);
+  border-bottom: 2px solid transparent;
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+.tab[aria-selected="true"] {
+  color: var(--c-text-primary);
+  border-bottom-color: var(--c-accent-primary);
+}
+.tab-count {
+  font-size: var(--fs-xs);
+  background: var(--c-bg-elev-3);
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  font-weight: var(--fw-semibold);
+}
+.tab[aria-selected="true"] .tab-count { background: var(--c-accent-primary-soft); color: var(--c-accent-primary); }
+
+/* Queue list */
+.queue-filters {
+  padding: var(--sp-3) var(--sp-4);
+  display: flex; gap: var(--sp-2);
+  border-bottom: 1px solid var(--c-border-subtle);
+  background: var(--c-bg-elev-1);
+}
+.search {
+  flex: 1;
+  position: relative;
+}
+.search input {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-7);
+  background: var(--c-bg-elev-2);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-md);
+  color: var(--c-text-primary);
+  font-size: var(--fs-sm);
+  font-family: inherit;
+}
+.search input:focus { outline: none; border-color: var(--c-accent-primary); box-shadow: var(--sh-focus); }
+.search svg {
+  position: absolute;
+  left: var(--sp-2);
+  top: 50%; transform: translateY(-50%);
+  color: var(--c-text-muted);
+}
+.filter-chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--c-bg-elev-2);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-md);
+  font-size: var(--fs-xs);
+  color: var(--c-text-secondary);
+}
+
+.queue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-2);
+}
+.queue-item {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: var(--sp-1);
+  transition: background 0.15s;
+}
+.queue-item:hover { background: var(--c-bg-elev-2); }
+.queue-item[aria-selected="true"] {
+  background: var(--c-accent-primary-soft);
+  border-color: var(--c-accent-primary);
+}
+.qi-row1 {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.qi-id {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+.qi-time {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+.qi-title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  margin-bottom: var(--sp-2);
+  color: var(--c-text-primary);
+}
+.qi-summary {
+  font-size: var(--fs-sm);
+  color: var(--c-text-secondary);
+  line-height: var(--lh-base);
+  margin-bottom: var(--sp-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.qi-row2 {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center;
+}
+
+/* Status & severity pills */
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.pill-pending { background: var(--c-status-pending-soft); color: var(--c-status-pending); }
+.pill-approved { background: var(--c-status-approved-soft); color: var(--c-status-approved); }
+.pill-rejected { background: var(--c-status-rejected-soft); color: var(--c-status-rejected); }
+.pill-escalated { background: var(--c-status-escalated-soft); color: var(--c-status-escalated); }
+.pill-critical { background: var(--c-status-critical-soft); color: var(--c-status-critical); }
+
+.pill-info { background: var(--c-severity-info-soft); color: var(--c-severity-info); }
+.pill-low { background: var(--c-severity-low-soft); color: var(--c-severity-low); }
+.pill-medium { background: var(--c-severity-medium-soft); color: var(--c-severity-medium); }
+.pill-high { background: var(--c-severity-high-soft); color: var(--c-severity-high); }
+.pill-crit { background: var(--c-severity-critical-soft); color: var(--c-severity-critical); }
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  background: var(--c-bg-elev-3);
+  color: var(--c-text-secondary);
+  padding: 1px 6px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--c-border-subtle);
+}
+
+/* ============ DETAIL PANE ============ */
+.detail-head {
+  padding: var(--sp-5) var(--sp-7) var(--sp-4);
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.breadcrumb {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  margin-bottom: var(--sp-3);
+  display: flex; align-items: center; gap: var(--sp-1);
+}
+.breadcrumb span { color: var(--c-text-secondary); }
+.detail-h1 {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  line-height: var(--lh-tight);
+  margin-bottom: var(--sp-3);
+}
+.detail-meta {
+  display: flex; flex-wrap: wrap; gap: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--c-text-secondary);
+  margin-bottom: var(--sp-3);
+}
+.meta-pair {
+  display: flex; flex-direction: column;
+}
+.meta-pair .meta-k {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.meta-pair .meta-v { color: var(--c-text-primary); font-weight: var(--fw-medium); }
+.detail-tags {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2);
+}
+
+.detail-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  overflow: hidden;
+}
+.detail-main {
+  padding: var(--sp-6) var(--sp-7);
+  overflow-y: auto;
+  border-right: 1px solid var(--c-border-subtle);
+}
+.detail-side {
+  padding: var(--sp-5);
+  overflow-y: auto;
+  background: var(--c-bg-elev-1);
+}
+
+.section-h {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-text-muted);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--sp-3);
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+.section-h::after {
+  content: ""; flex: 1; height: 1px; background: var(--c-border-subtle);
+}
+.section + .section { margin-top: var(--sp-7); }
+
+.summary-block {
+  background: var(--c-bg-elev-1);
+  border: 1px solid var(--c-border-subtle);
+  border-left: 3px solid var(--c-accent-primary);
+  border-radius: var(--r-md);
+  padding: var(--sp-4) var(--sp-5);
+  font-size: var(--fs-base);
+  line-height: var(--lh-relaxed);
+  color: var(--c-text-secondary);
+}
+
+/* Metrics table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  background: var(--c-bg-elev-1);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+thead th {
+  text-align: left;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--c-bg-elev-2);
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+tbody td {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--c-border-subtle);
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--c-bg-elev-2); }
+.mono { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--c-text-secondary); }
+.bar {
+  display: inline-block;
+  height: 6px;
+  background: var(--c-bg-elev-3);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  width: 80px;
+  vertical-align: middle;
+}
+.bar-fill {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--c-accent-primary), var(--c-status-escalated));
+}
+.bar-fill.green { background: var(--c-status-approved); }
+.bar-fill.amber { background: var(--c-status-pending); }
+.bar-fill.red { background: var(--c-status-rejected); }
+
+/* Evidence list */
+.evidence-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.evidence-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--c-bg-elev-1);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+}
+.ev-icon {
+  width: 32px; height: 32px;
+  background: var(--c-bg-elev-3);
+  border-radius: var(--r-sm);
+  display: grid; place-items: center;
+  color: var(--c-accent-primary);
+}
+.ev-text { color: var(--c-text-primary); }
+.ev-meta { font-size: var(--fs-xs); color: var(--c-text-muted); }
+.ev-status {
+  font-size: var(--fs-xs);
+  color: var(--c-status-approved);
+  font-weight: var(--fw-semibold);
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* Side panels */
+.side-card {
+  background: var(--c-bg-elev-2);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+}
+.side-card + .side-card { margin-top: var(--sp-4); }
+.sc-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--sp-3);
+}
+.confidence-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+.conf-label {
+  font-size: var(--fs-sm);
+  color: var(--c-text-secondary);
+  width: 70px;
+}
+.conf-track {
+  flex: 1;
+  height: 8px;
+  background: var(--c-bg-elev-3);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.conf-fill { height: 100%; border-radius: var(--r-pill); }
+.conf-fill.high { background: var(--c-confidence-high); }
+.conf-fill.med { background: var(--c-confidence-med); }
+.conf-fill.low { background: var(--c-confidence-low); }
+.conf-val {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--c-text-primary);
+  font-weight: var(--fw-semibold);
+  width: 36px;
+  text-align: right;
+}
+
+.reviewer {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+}
+.reviewer + .reviewer { border-top: 1px solid var(--c-border-subtle); margin-top: var(--sp-2); padding-top: var(--sp-3); }
+.rev-info { flex: 1; }
+.rev-name { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.rev-role { font-size: var(--fs-xs); color: var(--c-text-muted); }
+.rev-verdict { font-size: var(--fs-xs); padding: 2px var(--sp-2); border-radius: var(--r-sm); font-weight: var(--fw-semibold); }
+
+.timeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.tl-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: var(--sp-3);
+  font-size: var(--fs-sm);
+}
+.tl-dot {
+  width: 10px; height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--c-accent-primary);
+  margin-top: 5px;
+  margin-left: 5px;
+  box-shadow: 0 0 0 4px var(--c-accent-primary-soft);
+}
+.tl-item.done .tl-dot { background: var(--c-status-approved); box-shadow: 0 0 0 4px var(--c-status-approved-soft); }
+.tl-item.current .tl-dot { background: var(--c-accent-primary); box-shadow: 0 0 0 4px var(--c-accent-primary-soft); }
+.tl-content { color: var(--c-text-secondary); }
+.tl-content b { color: var(--c-text-primary); font-weight: var(--fw-semibold); }
+.tl-time { font-size: var(--fs-xs); color: var(--c-text-muted); margin-top: 2px; }
+
+/* ============ ACTION BAR ============ */
+.actionbar {
+  border-top: 1px solid var(--c-border-subtle);
+  background: var(--c-bg-elev-1);
+  padding: var(--sp-3) var(--sp-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.ab-left { display: flex; align-items: center; gap: var(--sp-3); }
+.ab-right { display: flex; align-items: center; gap: var(--sp-2); }
+.queue-progress {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--c-text-secondary);
+}
+.queue-progress .bar { width: 120px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn-ghost {
+  background: transparent;
+  border-color: var(--c-border-default);
+  color: var(--c-text-primary);
+}
+.btn-ghost:hover { background: var(--c-bg-elev-2); border-color: var(--c-border-strong); }
+.btn-secondary {
+  background: var(--c-bg-elev-2);
+  border-color: var(--c-border-default);
+  color: var(--c-text-primary);
+}
+.btn-secondary:hover { background: var(--c-bg-elev-3); }
+.btn-primary {
+  background: var(--c-accent-primary);
+  color: var(--c-text-inverse);
+}
+.btn-primary:hover { background: var(--c-accent-primary-hover); }
+.btn-danger {
+  background: transparent;
+  border-color: var(--c-danger);
+  color: var(--c-danger);
+}
+.btn-danger:hover { background: var(--c-danger-soft); }
+.btn-escalate {
+  background: var(--c-status-escalated-soft);
+  border-color: var(--c-status-escalated);
+  color: var(--c-status-escalated);
+}
+.btn-escalate:hover { background: var(--c-status-escalated); color: var(--c-text-inverse); }
+
+/* ============ DIALOG ============ */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 15, 0.7);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  animation: fade 0.18s ease;
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.dialog {
+  background: var(--c-bg-elev-2);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-lg);
+  max-width: 480px;
+  width: 100%;
+  overflow: hidden;
+  animation: pop 0.18s ease;
+}
+@keyframes pop { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.dialog-head {
+  padding: var(--sp-5) var(--sp-5) var(--sp-3);
+  display: flex; gap: var(--sp-3); align-items: flex-start;
+}
+.danger-icon {
+  width: 40px; height: 40px;
+  background: var(--c-danger-soft);
+  color: var(--c-danger);
+  border-radius: var(--r-pill);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.dialog-title { font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+.dialog-body {
+  padding: 0 var(--sp-5) var(--sp-4);
+  font-size: var(--fs-md);
+  color: var(--c-text-secondary);
+  line-height: var(--lh-relaxed);
+}
+.dialog-body code {
+  font-family: var(--font-mono);
+  background: var(--c-bg-elev-3);
+  padding: 1px 6px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-sm);
+  color: var(--c-text-primary);
+}
+.dialog-warning {
+  margin: var(--sp-3) var(--sp-5) 0;
+  padding: var(--sp-3);
+  background: var(--c-danger-soft);
+  border-left: 3px solid var(--c-danger);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--c-text-primary);
+}
+.dialog-foot {
+  padding: var(--sp-3) var(--sp-5) var(--sp-4);
+  display: flex; justify-content: flex-end; gap: var(--sp-2);
+  border-top: 1px solid var(--c-border-subtle);
+  background: var(--c-bg-elev-1);
+  margin-top: var(--sp-3);
+}
+.dialog-foot .btn-danger-solid {
+  background: var(--c-danger);
+  color: var(--c-text-inverse);
+}
+.dialog-foot .btn-danger-solid:hover { background: var(--c-danger-hover); }
+
+/* utility */
+.scroll-hide::-webkit-scrollbar { width: 8px; }
+.scroll-hide::-webkit-scrollbar-thumb { background: var(--c-border-default); border-radius: var(--r-pill); }
+.scroll-hide::-webkit-scrollbar-track { background: transparent; }
+
+.kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  background: var(--c-bg-elev-3);
+  border: 1px solid var(--c-border-default);
+  border-bottom-width: 2px;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  color: var(--c-text-secondary);
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">T</div>
+      <div>
+        <span class="brand-name">ThreatLens</span>
+        <span class="brand-sub">/ Insight Operations</span>
+      </div>
+    </div>
+    <div class="top-meta">
+      <div class="top-meta-item">
+        <span class="dot-live"></span>
+        <span>Live queue · 14 reviewers online</span>
+      </div>
+      <div class="top-meta-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>SLA: 2h 14m remaining</span>
+      </div>
+      <div class="user-chip">
+        <div class="avatar">MR</div>
+        <div>
+          <div class="user-name">Maya Reuther</div>
+          <div class="user-role">Senior Analyst · L3</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- STEPPER -->
+  <section class="stepper-wrap">
+    <div class="stepper-head">
+      <div class="stepper-title">Insight Review Queue <small>Processing CVE-2024-3094 follow-on detections</small></div>
+      <div class="stepper-meta">Item <b>7</b> of <b>23</b> · Avg. handling time <b>4m 12s</b></div>
+    </div>
+    <ol class="stepper" role="list">
+      <li class="step done">
+        <div class="step-circle">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div class="step-label">Ingest</div>
+          <div class="step-sub">12,438 signals</div>
+        </div>
+      </li>
+      <div class="step-connector"></div>
+      <li class="step done">
+        <div class="step-circle">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div class="step-label">Triage</div>
+          <div class="step-sub">312 candidates</div>
+        </div>
+      </li>
+      <div class="step-connector"></div>
+      <li class="step active">
+        <div class="step-circle">3</div>
+        <div>
+          <div class="step-label">Review</div>
+          <div class="step-sub">23 in queue</div>
+        </div>
+      </li>
+      <div class="step-connector"></div>
+      <li class="step">
+        <div class="step-circle">4</div>
+        <div>
+          <div class="step-label">Approve</div>
+          <div class="step-sub">Pending</div>
+        </div>
+      </li>
+      <div class="step-connector"></div>
+      <li class="step">
+        <div class="step-circle">5</div>
+        <div>
+          <div class="step-label">Publish</div>
+          <div class="step-sub">Customer portal</div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- KPI BAND -->
+  <section class="kpi-band">
+    <div class="kpi">
+      <span class="kpi-label">In Queue</span>
+      <span class="kpi-value accent-amber">23</span>
+      <span class="kpi-trend trend-up">▲ 4 since 09:00</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Approved Today</span>
+      <span class="kpi-value accent-green">47</span>
+      <span class="kpi-trend trend-up">▲ 12% vs yesterday</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Rejected</span>
+      <span class="kpi-value accent-rose">8</span>
+      <span class="kpi-trend trend-down">▼ 3 duplicate</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">SLA At Risk</span>
+      <span class="kpi-value accent-blue">2</span>
+      <span class="kpi-trend trend-neutral">Escalating in 1h 14m</span>
+    </div>
+  </section>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- QUEUE PANE -->
+    <aside class="queue-pane">
+      <div class="pane-head">
+        <div class="pane-title">Review Queue <span class="count-badge">23</span></div>
+        <button class="btn btn-ghost" style="padding: 4px 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Queue filter">
+        <button class="tab" role="tab" aria-selected="false">
+          All <span class="tab-count">23</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="true" aria-controls="panel-assigned">
+          Assigned <span class="tab-count">12</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false">
+          Unassigned <span class="tab-count">8</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false">
+          Flagged <span class="tab-count">3</span>
+        </button>
+      </div>
+      <div class="queue-filters">
+        <div class="search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Search insight ID, IOC, or tag…">
+        </div>
+        <button class="filter-chip">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filter
+        </button>
+      </div>
+
+      <div class="queue-list scroll-hide" id="panel-assigned" role="tabpanel">
+
+        <article class="queue-item" aria-selected="false" tabindex="0">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03817</span>
+            <span class="qi-time">14m ago</span>
+          </div>
+          <div class="qi-title">APT29 spear-phishing cluster targeting EU diplomatic missions</div>
+          <div class="qi-summary">Six new domains mimicking Schengen visa portals identified via passive DNS, all resolving to 185.220.101.[…] over the past 36 hours.</div>
+          <div class="qi-row2">
+            <span class="pill pill-crit">Critical</span>
+            <span class="pill pill-pending">Pending</span>
+            <span class="tag">apt29</span>
+            <span class="tag">phishing</span>
+          </div>
+        </article>
+
+        <article class="queue-item" aria-selected="false" tabindex="0">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03816</span>
+            <span class="qi-time">27m ago</span>
+          </div>
+          <div class="qi-title">Linux kernel privilege escalation — CVE-2024-1086 weaponized</div>
+          <div class="qi-summary">Public exploit released by @chompie1337 referenced in three ransomware affiliate Telegram channels within 90 minutes.</div>
+          <div class="qi-row2">
+            <span class="pill pill-high">High</span>
+            <span class="pill pill-escalated">Escalated</span>
+            <span class="tag">lpe</span>
+            <span class="tag">linux</span>
+            <span class="tag">ransomware</span>
+          </div>
+        </article>
+
+        <article class="queue-item" aria-selected="true" tabindex="0" style="border-color: var(--c-accent-primary);">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03815</span>
+            <span class="qi-time">41m ago</span>
+          </div>
+          <div class="qi-title">AsyncRAT resurgence via malicious VSCode marketplace extensions</div>
+          <div class="qi-summary">Fourty-two installs observed across customer telemetry since 02:00 UTC. C2 endpoints overlap with previous Qakbot infrastructure.</div>
+          <div class="qi-row2">
+            <span class="pill pill-high">High</span>
+            <span class="pill pill-pending">Pending</span>
+            <span class="tag">asyncrat</span>
+            <span class="tag">supply-chain</span>
+          </div>
+        </article>
+
+        <article class="queue-item" aria-selected="false" tabindex="0">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03814</span>
+            <span class="qi-time">1h ago</span>
+          </div>
+          <div class="qi-title">Anomalous Okta admin role grants from single ASN</div>
+          <div class="qi-summary">Eleven Super Admin elevations originating from AS-CHOOPA within 6-minute window, against three unrelated customer tenants.</div>
+          <div class="qi-row2">
+            <span class="pill pill-medium">Medium</span>
+            <span class="pill pill-pending">Pending</span>
+            <span class="tag">okta</span>
+            <span class="tag">identity</span>
+          </div>
+        </article>
+
+        <article class="queue-item" aria-selected="false" tabindex="0">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03813</span>
+            <span class="qi-time">1h ago</span>
+          </div>
+          <div class="qi-title">Black Basta affiliates shifting to Microsoft Quick Assist abuse</div>
+          <div class="qi-summary">Trendline from Microsoft Threat Intelligence correlates with 38% uptick in social-engineering complaints to our helpline.</div>
+          <div class="qi-row2">
+            <span class="pill pill-high">High</span>
+            <span class="pill pill-pending">Pending</span>
+            <span class="tag">black-basta</span>
+            <span class="tag">social-eng</span>
+          </div>
+        </article>
+
+        <article class="queue-item" aria-selected="false" tabindex="0">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03812</span>
+            <span class="qi-time">1h ago</span>
+          </div>
+          <div class="qi-title">Cryptocurrency clipper malware in fake Ledger Live updates</div>
+          <div class="qi-summary">Distribution via Reddit XSS redirect and SEO-poisoned GitHub repos. Wallet targets include ETH, SOL, and BTC mainnet.</div>
+          <div class="qi-row2">
+            <span class="pill pill-medium">Medium</span>
+            <span class="pill pill-rejected">Duplicate</span>
+            <span class="tag">crypto</span>
+            <span class="tag">stealer</span>
+          </div>
+        </article>
+
+        <article class="queue-item" aria-selected="false" tabindex="0">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03811</span>
+            <span class="qi-time">2h ago</span>
+          </div>
+          <div class="qi-title">Misconfigured Snowflake customer instances exposing PII</div>
+          <div class="qi-summary">Public bucket discovery via ORY-004 enumeration tool. Affected customers span fintech, healthcare, and retail verticals.</div>
+          <div class="qi-row2">
+            <span class="pill pill-medium">Medium</span>
+            <span class="pill pill-pending">Pending</span>
+            <span class="tag">misconfig</span>
+            <span class="tag">data-exposure</span>
+          </div>
+        </article>
+
+        <article class="queue-item" aria-selected="false" tabindex="0">
+          <div class="qi-row1">
+            <span class="qi-id">INS-2024-03810</span>
+            <span class="qi-time">2h ago</span>
+          </div>
+          <div class="qi-title">Phishing kit mimicking DocuSign Envelopes with new evasion layer</div>
+          <div class="qi-summary">Cloudflare Turnstile bypass via rogue CDN and dynamic JavaScript obfuscation rotated every 6 hours.</div>
+          <div class="qi-row2">
+            <span class="pill pill-low">Low</span>
+            <span class="pill pill-pending">Pending</span>
+            <span class="tag">phishing</span>
+            <span class="tag">docusign</span>
+          </div>
+        </article>
+
+      </div>
+    </aside>
+
+    <!-- DETAIL PANE -->
+    <section class="detail-pane">
+      <div class="detail-head">
+        <div class="breadcrumb">
+          Review Queue › <span>Assigned</span> › <span>INS-2024-03815</span>
+        </div>
+        <h1 class="detail-h1">AsyncRAT resurgence via malicious VSCode marketplace extensions</h1>
+        <div class="detail-meta">
+          <div class="meta-pair"><span class="meta-k">Severity</span><span class="meta-v" style="color: var(--c-severity-high);">High</span></div>
+          <div class="meta-pair"><span class="meta-k">Confidence</span><span class="meta-v">92%</span></div>
+          <div class="meta-pair"><span class="meta-k">Submitted by</span><span class="meta-v">Detector v4.7.2 · YARA-L ruleset</span></div>
+          <div class="meta-pair"><span class="meta-k">Source</span><span class="meta-v">Tel. cluster · 8 customers</span></div>
+          <div class="meta-pair"><span class="meta-k">SLA</span><span class="meta-v">2h 14m remaining</span></div>
+        </div>
+        <div class="detail-tags">
+          <span class="pill pill-high">High Severity</span>
+          <span class="pill pill-pending">Awaiting Review</span>
+          <span class="tag">asyncrat</span>
+          <span class="tag">supply-chain</span>
+          <span class="tag">vscode</span>
+          <span class="tag">c2-91.214.78[.]21</span>
+          <span class="tag">c2-194.40.243[.]9</span>
+        </div>
+      </div>
+
+      <div class="detail-body">
+
+        <div class="detail-main scroll-hide">
+
+          <section class="section">
+            <h2 class="section-h">Executive Summary</h2>
+            <div class="summary-block">
+              ThreatLens has correlated 142 telemetry events across 8 customer tenants indicating a coordinated
+              distribution of AsyncRAT 0.5.7B through fourty-two malicious Visual Studio Code marketplace
+              extensions. The campaign exploits developer trust in IDE-integrated tools and leverages C2
+              infrastructure previously attributed to the operators behind the Qakbot takedown rebuild.
+              Affected extensions were collectively installed 1,847 times before takedown initiated at 09:42 UTC.
+            </div>
+          </section>
+
+          <section class="section">
+            <h2 class="section-h">Detection Telemetry</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Indicator</th>
+                  <th>Type</th>
+                  <th>Hits</th>
+                  <th>First Seen</th>
+                  <th>Prevalence</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono">ext:vscode-marketplace:darkpp-theme-pro</td>
+                  <td>Supply-chain</td>
+                  <td><b>512</b></td>
+                  <td>2024-05-14 02:14 UTC</td>
+                  <td><span class="bar"><span class="bar-fill red" style="width: 92%"></span></span></td>
+                </tr>
+                <tr>
+                  <td class="mono">91.214.78[.]21:443</td>
+                  <td>C2 endpoint</td>
+                  <td><b>318</b></td>
+                  <td>2024-05-14 03:02 UTC</td>
+                  <td><span class="bar"><span class="bar-fill red" style="width: 78%"></span></span></td>
+                </tr>
+                <tr>
+                  <td class="mono">hash:e8c4…b27a (sha256)</td>
+                  <td>Loader</td>
+                  <td><b>206</b></td>
+                  <td>2024-05-14 02:51 UTC</td>
+                  <td><span class="bar"><span class="bar-fill amber" style="width: 58%"></span></span></td>
+                </tr>
+                <tr>
+                  <td class="mono">ext:vscode-marketplace:ai-pair-coder</td>
+                  <td>Supply-chain</td>
+                  <td><b>189</b></td>
+                  <td>2024-05-13 22:48 UTC</td>
+                  <td><span class="bar"><span class="bar-fill red" style="width: 71%"></span></span></td>
+                </tr>
+                <tr>
+                  <td class="mono">user-agent:VSCodeFetcher/2.1</td>
+                  <td>Behavioral</td>
+                  <td><b>142</b></td>
+                  <td>2024-05-14 04:17 UTC</td>
+                  <td><span class="bar"><span class="bar-fill amber" style="width: 44%"></span></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="section">
+            <h2 class="section-h">Evidence</h2>
+            <ul class="evidence-list">
+              <li class="evidence-item">
+                <div class="ev-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div>
+                  <div class="ev-text">Packed AsyncRAT binary reverse-engineered — config block exposes C2 schedule</div>
+                  <div class="ev-meta">Provided by Jordan Halsell · 41 minutes ago</div>
+                </div>
+                <div class="ev-status">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  Verified
+                </div>
+              </li>
+              <li class="evidence-item">
+                <div class="ev-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div>
+                  <div class="ev-text">EDR network beacon graph — 91.214.78[.]21 contacted by 4 developer hosts</div>
+                  <div class="ev-meta">Auto-collected from SentinelOne · 38 minutes ago</div>
+                </div>
+                <div class="ev-status">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  Verified
+                </div>
+              </li>
+              <li class="evidence-item">
+                <div class="ev-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div>
+                  <div class="ev-text">Pivot to campaign infrastructure — overlaps with Q4-2023 Qakbot rebuild cluster</div>
+                  <div class="ev-meta">Attributed by Pavel Stromberg · 12 minutes ago</div>
+                </div>
+                <div class="ev-status">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  Verified
+                </div>
+              </li>
+            </ul>
+          </section>
+
+        </div>
+
+        <aside class="detail-side scroll-hide">
+
+          <div class="side-card">
+            <div class="sc-label">Confidence Breakdown</div>
+            <div class="confidence-row">
+              <span class="conf-label">Detection</span>
+              <div class="conf-track"><div class="conf-fill high" style="width: 96%"></div></div>
+              <span class="conf-val">96</span>
+            </div>
+            <div class="confidence-row">
+              <span class="conf-label">Attribution</span>
+              <div class="conf-track"><div class="conf-fill med" style="width: 71%"></div></div>
+              <span class="conf-val">71</span>
+            </div>
+            <div class="confidence-row">
+              <span class="conf-label">Scope</span>
+              <div class="conf-track"><div class="conf-fill high" style="width: 88%"></div></div>
+              <span class="conf-val">88</span>
+            </div>
+            <div class="confidence-row">
+              <span class="conf-label">Novelty</span>
+              <div class="conf-track"><div class="conf-fill high" style="width: 82%"></div></div>
+              <span class="conf-val">82</span>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="sc-label">Customer Impact</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+              <div>
+                <div style="font-size: var(--fs-xs); color: var(--c-text-muted);">Affected tenants</div>
+                <div style="font-size: var(--fs-xl); font-weight: var(--fw-semibold);">8</div>
+              </div>
+              <div>
+                <div style="font-size: var(--fs-xs); color: var(--c-text-muted);">Exposed hosts</div>
+                <div style="font-size: var(--fs-xl); font-weight: var(--fw-semibold);">42</div>
+              </div>
+              <div>
+                <div style="font-size: var(--fs-xs); color: var(--c-text-muted);">Containments</div>
+                <div style="font-size: var(--fs-xl); font-weight: var(--fw-semibold); color: var(--c-status-approved);">31</div>
+              </div>
+              <div>
+                <div style="font-size: var(--fs-xs); color: var(--c-text-muted);">Pending</div>
+                <div style="font-size: var(--fs-xl); font-weight: var(--fw-semibold); color: var(--c-status-pending);">11</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="sc-label">Reviewers</div>
+            <div class="reviewer">
+              <div class="avatar" style="background: linear-gradient(135deg, #5fd6a3, #6ea8ff);">MR</div>
+              <div class="rev-info">
+                <div class="rev-name">Maya Reuther <span style="color: var(--c-text-muted); font-weight: var(--fw-regular);">(you)</span></div>
+                <div class="rev-role">Primary · Senior Analyst L3</div>
+              </div>
+              <div class="rev-verdict pill-pending" style="background: var(--c-status-pending-soft);">Drafting</div>
+            </div>
+            <div class="reviewer">
+              <div class="avatar" style="background: linear-gradient(135deg, #f0c674, #ff9a5c);">PS</div>
+              <div class="rev-info">
+                <div class="rev-name">Pavel Stromberg</div>
+                <div class="rev-role">Threat Intel · Attribution</div>
+              </div>
+              <div class="rev-verdict" style="background: var(--c-status-approved-soft); color: var(--c-status-approved);">Endorsed</div>
+            </div>
+            <div class="reviewer">
+              <div class="avatar" style="background: linear-gradient(135deg, #c89bff, #6ea8ff);">JH</div>
+              <div class="rev-info">
+                <div class="rev-name">Jordan Halsell</div>
+                <div class="rev-role">Reverse Engineering</div>
+              </div>
+              <div class="rev-verdict" style="background: var(--c-status-approved-soft); color: var(--c-status-approved);">Confirmed</div>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="sc-label">Audit Trail</div>
+            <ul class="timeline">
+              <li class="tl-item done">
+                <span class="tl-dot"></span>
+                <div class="tl-content">
+                  <b>Auto-correlated</b> by detector
+                  <div class="tl-time">14:08 UTC · 41 minutes ago</div>
+                </div>
+              </li>
+              <li class="tl-item done">
+                <span class="tl-dot"></span>
+                <div class="tl-content">
+                  Routed to <b>supply-chain queue</b>
+                  <div class="tl-time">14:09 UTC</div>
+                </div>
+              </li>
+              <li class="tl-item done">
+                <span class="tl-dot"></span>
+                <div class="tl-content">
+                  Evidence <b>triaged</b> by Jordan Halsell
+                  <div class="tl-time">14:31 UTC · 18 minutes ago</div>
+                </div>
+              </li>
+              <li class="tl-item current">
+                <span class="tl-dot"></span>
+                <div class="tl-content">
+                  <b>In review</b> with Maya Reuther
+                  <div class="tl-time">Now</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+        </aside>
+      </div>
+
+      <!-- ACTION BAR -->
+      <div class="actionbar">
+        <div class="ab-left">
+          <div class="queue-progress">
+            <span>Queue</span>
+            <span class="bar"><span class="bar-fill green" style="width: 70%"></span></span>
+            <span style="color: var(--c-text-primary); font-weight: var(--fw-semibold);">16/23</span>
+          </div>
+          <span style="font-size: var(--fs-sm); color: var(--c-text-muted);">
+            <span class="kbd">A</span> approve · <span class="kbd">R</span> reject · <span class="kbd">E</span> escalate
+          </span>
+        </div>
+        <div class="ab-right">
+          <button class="btn btn-danger" id="openRejectDialog">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Reject Insight
+          </button>
+          <button class="btn btn-escalate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+            Escalate
+          </button>
+          <button class="btn btn-ghost">Save Draft</button>
+          <button class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Approve &amp; Publish
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</div>
+
+<!-- DESTRUCTIVE ACTION CONFIRMATION DIALOG -->
+<div class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="dialog-title" id="rejectDialog">
+  <div class="dialog">
+    <div class="dialog-head">
+      <div class="danger-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div class="dialog-title" id="dialog-title">Reject insight INS-2024-03815?</div>
+      </div>
+    </div>
+    <div class="dialog-body">
+      You are about to discard <b>AsyncRAT resurgence via malicious VSCode marketplace extensions</b> from
+      the active queue. This insight was corroborated by <b>2 reviewers</b> and references
+      <code>142 telemetry events</code> across <code>8 customer tenants</code>.
+    </div>
+    <div class="dialog-warning">
+      Rejecting will close the insight, remove it from active tracking, and notify the detection pipeline.
+      This action cannot be undone from this screen.
+    </div>
+    <div class="dialog-foot">
+      <button class="btn btn-ghost" id="cancelReject">Keep in Review</button>
+      <button class="btn btn-danger-solid" id="confirmReject">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="3 6 5 6 21 6"/><path d="M19 6 17.6 19a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+        Reject &amp; Close Insight
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const dialog = document.getElementById('rejectDialog');
+  const openBtn = document.getElementById('openRejectDialog');
+  const cancelBtn = document.getElementById('cancelReject');
+  const confirmBtn = document.getElementById('confirmReject');
+
+  openBtn.addEventListener('click', () => {
+    dialog.style.display = 'grid';
+  });
+
+  function closeDialog() {
+    dialog.style.display = 'none';
+  }
+
+  cancelBtn.addEventListener('click', closeDialog);
+  confirmBtn.addEventListener('click', () => {
+    confirmBtn.textContent = '✓ Insight rejected';
+    confirmBtn.disabled = true;
+    setTimeout(closeDialog, 900);
+  });
+
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) closeDialog();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dialog.style.display === 'grid') closeDialog();
+  });
+</script>
+</body>
+</html>

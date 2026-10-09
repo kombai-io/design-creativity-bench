@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0e13">
+<title>Patchbay Cloud — Test and debug webhooks before they reach production</title>
+<meta name="description" content="Patchbay Cloud gives software teams temporary endpoints to capture, inspect, replay and break webhook events before connecting them to production systems. Join the private-beta waitlist.">
+<style>
+:root{
+  --bg:#0a0e13;
+  --bg-elev:#0d1219;
+  --surface:#121a24;
+  --surface-2:#172130;
+  --border:rgba(255,255,255,.08);
+  --border-strong:rgba(255,255,255,.15);
+  --text:#e8eef4;
+  --muted:#a6b4c3;
+  --dim:#7b8a99;
+  --accent:#ff8a3d;
+  --accent-strong:#ffa05f;
+  --accent-ink:#1b0d03;
+  --green:#3ddc97;
+  --red:#ff6b6b;
+  --amber:#ffc857;
+  --cyan:#6fd6ea;
+  --radius:14px;
+  --shadow:0 30px 80px rgba(0,0,0,.5);
+  --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --container:1140px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased}
+svg{display:block}
+a{color:inherit}
+h1,h2,h3,h4,p,li{overflow-wrap:break-word}
+[id]{scroll-margin-top:86px}
+.container{width:min(var(--container),calc(100% - 2.5rem));margin-inline:auto}
+.visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(61,220,151,.45)}70%{box-shadow:0 0 0 6px rgba(61,220,151,0)}}
+@keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+/* Skip link */
+.skip-link{position:absolute;left:1rem;top:-100px;z-index:100;background:var(--accent);color:var(--accent-ink);padding:.6rem 1rem;border-radius:8px;font-weight:600;text-decoration:none}
+.skip-link:focus{top:1rem}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.8rem 1.25rem;border-radius:10px;font-weight:600;font-size:.95rem;line-height:1.2;text-decoration:none;border:1px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+.btn-primary{background:var(--accent);color:var(--accent-ink)}
+.btn-primary:hover{background:var(--accent-strong)}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border-strong)}
+.btn-ghost:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+.btn-sm{padding:.55rem .95rem;font-size:.875rem}
+.btn svg{width:18px;height:18px}
+
+/* Header */
+.site-header{position:sticky;top:0;z-index:50;background:rgba(10,14,19,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;height:66px}
+.logo{display:inline-flex;align-items:center;gap:.65rem;text-decoration:none;font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
+.logo-mark{width:30px;height:30px;flex:none}
+.logo .light{font-weight:500;color:var(--muted)}
+.nav{display:flex;gap:1.75rem}
+.nav a{text-decoration:none;color:var(--muted);font-size:.93rem;font-weight:500;transition:color .15s}
+.nav a:hover{color:var(--text)}
+@media (max-width:860px){.nav{display:none}}
+
+/* Hero */
+.hero{position:relative;padding:5rem 0 4.5rem;overflow:hidden;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:0;z-index:-2;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1.6px);background-size:28px 28px;-webkit-mask-image:radial-gradient(ellipse 70% 65% at 30% 25%,#000 20%,transparent 100%);mask-image:radial-gradient(ellipse 70% 65% at 30% 25%,#000 20%,transparent 100%);pointer-events:none}
+.hero::after{content:"";position:absolute;z-index:-2;width:860px;height:860px;right:-280px;top:-360px;background:radial-gradient(closest-side,rgba(255,138,61,.17),transparent);pointer-events:none}
+.hero-cables{position:absolute;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none;opacity:.55}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:3.5rem;align-items:center;position:relative}
+.badge{display:inline-flex;align-items:center;gap:.55rem;margin:0;padding:.38rem .85rem .38rem .65rem;border-radius:999px;border:1px solid var(--border-strong);background:rgba(255,255,255,.03);font-size:.8rem;font-weight:600;color:var(--muted);letter-spacing:.01em}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s ease-out infinite;flex:none}
+h1{font-size:clamp(2.5rem,5.2vw,4rem);line-height:1.04;letter-spacing:-.032em;margin:1.3rem 0 1.2rem;font-weight:800}
+h1 .hl{color:var(--accent)}
+.lead{font-size:1.15rem;color:var(--muted);max-width:36rem;margin:0 0 2rem}
+
+.waitlist-form{max-width:34rem}
+.inline-form{display:flex;gap:.6rem;align-items:stretch}
+.inline-form .field{flex:1;min-width:0}
+.input{width:100%;padding:.85rem 1rem;border-radius:10px;border:1px solid var(--border-strong);background:rgba(255,255,255,.04);color:var(--text);font:inherit;font-size:1rem;line-height:1.3;transition:border-color .15s,box-shadow .15s}
+.input::placeholder{color:var(--dim)}
+.input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(255,138,61,.25)}
+.input[aria-invalid="true"]{border-color:var(--red)}
+.field-error{color:var(--red);font-size:.86rem;margin:.45rem 0 0;min-height:1.2em}
+.form-note{color:var(--dim);font-size:.85rem;margin:.4rem 0 0}
+.form-success{border:1px solid rgba(61,220,151,.35);background:rgba(61,220,151,.08);padding:1rem 1.2rem;border-radius:12px;display:flex;gap:.8rem;align-items:flex-start;max-width:34rem;animation:rise .3s ease-out}
+.form-success svg{flex:none;color:var(--green);margin-top:.15rem}
+.form-success p{margin:0;color:var(--muted)}
+.form-success strong{color:var(--text)}
+.form-success[hidden]{display:none}
+.hero-points{display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;list-style:none;padding:0;margin:1.8rem 0 0;color:var(--muted);font-size:.9rem}
+.hero-points li{display:flex;align-items:center;gap:.45rem}
+.hero-points svg{color:var(--green);flex:none}
+
+@media (max-width:1040px){
+  .hero{padding:4rem 0 3.5rem}
+  .hero-grid{grid-template-columns:1fr;gap:3rem}
+  .hero-visual{max-width:680px}
+  .hero-cables{display:none}
+}
+@media (max-width:560px){
+  .inline-form{flex-direction:column}
+  .inline-form .btn{width:100%}
+}
+
+/* Product mock */
+.hero-visual{margin:0;min-width:0}
+.mock{position:relative;background:var(--surface);border:1px solid var(--border-strong);border-radius:16px;box-shadow:var(--shadow);font-family:var(--mono);font-size:12.5px;line-height:1.45;overflow:hidden;color:var(--muted)}
+.mock-chrome{display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.mock-dots{display:flex;gap:6px;flex:none}
+.mock-dots i{width:10px;height:10px;border-radius:50%;background:#2b3644;display:block}
+.mock-url{flex:1;display:flex;align-items:center;gap:.5rem;min-width:0;padding:.38rem .7rem;border-radius:8px;background:rgba(0,0,0,.35);color:var(--muted);border:1px solid var(--border)}
+.mock-url svg{flex:none;color:var(--green)}
+.mock-url span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mock-url b{color:var(--text);font-weight:600}
+.live{display:inline-flex;align-items:center;gap:.4rem;color:var(--green);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;flex:none}
+.tag{display:inline-flex;align-items:center;gap:.35rem;padding:.16rem .5rem;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.tag-green{background:rgba(61,220,151,.12);color:var(--green)}
+.tag-amber{background:rgba(255,200,87,.14);color:var(--amber)}
+.tag-red{background:rgba(255,107,107,.14);color:var(--red)}
+.tag-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.mock-body{display:grid;grid-template-columns:196px minmax(0,1fr)}
+.mock-list{border-right:1px solid var(--border);background:rgba(0,0,0,.18);padding:.55rem;display:flex;flex-direction:column}
+.mock-list-head{display:flex;justify-content:space-between;align-items:center;padding:.35rem .45rem .6rem;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+.evt-list{display:flex;flex-direction:column;gap:2px}
+.evt{width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:.5rem .55rem;color:var(--muted);cursor:pointer;font:inherit;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:.5rem;align-items:center;transition:background-color .15s,border-color .15s}
+.evt:hover{background:rgba(255,255,255,.04)}
+.evt[aria-current="true"]{background:rgba(255,138,61,.1);border-color:rgba(255,138,61,.4);color:var(--text)}
+.evt-type{grid-column:1;grid-row:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evt-time{grid-column:1;grid-row:2;color:var(--dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evt-status{grid-column:2;grid-row:1 / span 2;width:8px;height:8px;border-radius:50%}
+.status-200{background:var(--green)}
+.status-500{background:var(--red)}
+.status-401{background:var(--amber)}
+.status-timeout{background:var(--dim)}
+.mock-list-more{margin:auto 0 0;padding:.7rem .45rem .2rem;color:var(--dim);font-size:11px}
+.mock-detail{padding:.9rem 1rem 1rem;display:flex;flex-direction:column;gap:.85rem;min-width:0}
+.detail-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap}
+.detail-title{font-weight:700;color:var(--text);font-size:13px}
+.detail-id{color:var(--dim)}
+.panel-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin:0 0 .4rem}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.2rem .9rem;margin:0}
+.kv dt{color:var(--dim)}
+.kv dd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.json{margin:0;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;padding:.7rem .85rem;overflow:auto;line-height:1.5;color:var(--muted);font-family:inherit;font-size:inherit;transition:border-color .15s,box-shadow .15s}
+.json.editing{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,138,61,.2);outline:none}
+.j-key{color:#9ccfff}.j-str{color:#b5e48c}.j-num{color:#ffb86b}.j-bool{color:#f7a1ff}.j-null{color:var(--dim)}
+.attempts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.attempts li{display:flex;flex-wrap:wrap;gap:.2rem .6rem;align-items:baseline;padding:.32rem 0;border-bottom:1px dashed var(--border)}
+.attempts li:last-child{border-bottom:0}
+.attempts li.new{animation:rise .3s ease-out}
+.att-time{color:var(--dim)}
+.att-target{color:var(--text)}
+.att-code{font-weight:700}
+.att-code.ok{color:var(--green)}.att-code.bad{color:var(--red)}.att-code.warn{color:var(--amber)}.att-code.muted{color:var(--dim)}
+.att-note{color:var(--dim)}
+.mock-actions{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;padding-top:.75rem;border-top:1px solid var(--border);margin-top:auto}
+.mock-actions-label{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-left:.2rem}
+.mbtn{font:inherit;font-size:12px;padding:.42rem .62rem;border-radius:7px;border:1px solid var(--border-strong);background:rgba(255,255,255,.03);color:var(--text);cursor:pointer;transition:background-color .15s,border-color .15s}
+.mbtn:hover{background:rgba(255,255,255,.08)}
+.mbtn-primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+.mbtn-primary:hover{background:var(--accent-strong)}
+.mbtn-danger{color:var(--red);border-color:rgba(255,107,107,.35)}
+.mbtn-danger:hover{background:rgba(255,107,107,.1)}
+.mock-toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%) translateY(6px);background:#0b1118;border:1px solid var(--border-strong);padding:.5rem .85rem;border-radius:8px;color:var(--text);font-size:12px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;max-width:calc(100% - 2rem);overflow:hidden;text-overflow:ellipsis;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.mock-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.mock-caption{margin:.9rem 0 0;color:var(--dim);font-size:.85rem;text-align:center}
+@media (max-width:640px){
+  .mock-body{grid-template-columns:1fr}
+  .mock-list{border-right:0;border-bottom:1px solid var(--border)}
+  .evt-list{flex-direction:row;overflow-x:auto;padding-bottom:.25rem}
+  .evt{min-width:168px}
+  .mock-list-more{display:none}
+  .mock-chrome .tag{display:none}
+}
+
+/* Providers strip */
+.providers{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg-elev);padding:1.4rem 0}
+.providers-inner{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}
+.providers-label{margin:0;color:var(--dim);font-size:.85rem;font-weight:600;letter-spacing:.02em;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:0;padding:0}
+.chips li{font-family:var(--mono);font-size:.78rem;color:var(--muted);padding:.35rem .7rem;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.02)}
+
+/* Sections */
+.section{padding:6rem 0}
+.section-alt{background:var(--bg-elev);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.section-head{max-width:46rem;margin-bottom:3.2rem}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 .9rem;font-weight:600}
+h2{font-size:clamp(1.85rem,3.4vw,2.6rem);line-height:1.12;letter-spacing:-.026em;margin:0 0 1rem;font-weight:750}
+.section-head p{color:var(--muted);font-size:1.08rem;margin:0}
+@media (max-width:700px){.section{padding:4.25rem 0}.section-head{margin-bottom:2.25rem}}
+
+/* Steps */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.2rem;list-style:none;margin:0;padding:0;counter-reset:step}
+.step{position:relative;padding:1.5rem 1.4rem;border:1px solid var(--border);border-radius:var(--radius);background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01));display:flex;flex-direction:column}
+.step-num{font-family:var(--mono);color:var(--accent);font-size:.8rem;font-weight:700;margin-bottom:1.1rem;display:flex;align-items:center;gap:.7rem}
+.step-num::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,rgba(255,138,61,.55),transparent)}
+.step h3{margin:0 0 .55rem;font-size:1.1rem;letter-spacing:-.012em;line-height:1.3}
+.step p{margin:0;color:var(--muted);font-size:.95rem}
+.step-code{display:block;margin-top:1.1rem;font-family:var(--mono);font-size:.76rem;color:var(--cyan);background:rgba(0,0,0,.35);border:1px solid var(--border);padding:.5rem .7rem;border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:960px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.steps{grid-template-columns:1fr}}
+
+/* Features */
+.features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.2rem}
+.feature{padding:1.6rem 1.5rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);transition:border-color .2s}
+.feature:hover{border-color:rgba(255,138,61,.35)}
+.feature-icon{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;background:rgba(255,138,61,.12);color:var(--accent);margin-bottom:1.15rem}
+.feature h3{margin:0 0 .5rem;font-size:1.08rem;letter-spacing:-.01em}
+.feature p{margin:0;color:var(--muted);font-size:.95rem}
+@media (max-width:960px){.features{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.features{grid-template-columns:1fr}}
+
+/* Split (snippets) */
+.split{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:3.5rem;align-items:center}
+.split .section-head{margin-bottom:1.5rem}
+.check-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.75rem;color:var(--muted)}
+.check-list li{display:flex;gap:.7rem;align-items:flex-start}
+.check-list svg{flex:none;margin-top:.2rem;color:var(--green)}
+.check-list.later svg{color:var(--dim)}
+.code-window{background:#0b1118;border:1px solid var(--border-strong);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);min-width:0}
+.code-bar{display:flex;align-items:center;gap:.5rem;padding:.55rem .6rem;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.code-tabs{display:flex;gap:.25rem;flex-wrap:wrap}
+.code-tab{font:inherit;font-size:.85rem;font-weight:500;padding:.45rem .8rem;border-radius:8px;border:1px solid transparent;background:none;color:var(--muted);cursor:pointer;transition:background-color .15s,color .15s}
+.code-tab:hover{color:var(--text)}
+.code-tab[aria-selected="true"]{background:rgba(255,255,255,.07);color:var(--text);border-color:var(--border)}
+.code-copy{margin-left:auto;font:inherit;font-size:.8rem;font-weight:600;padding:.4rem .7rem;border-radius:8px;border:1px solid var(--border-strong);background:rgba(255,255,255,.03);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:.4rem}
+.code-copy:hover{background:rgba(255,255,255,.08)}
+.code-panel pre{margin:0;padding:1.15rem 1.25rem;overflow:auto;font-family:var(--mono);font-size:12.5px;line-height:1.6;color:#d3dbe4;tab-size:4;max-height:520px}
+.code-panel[hidden]{display:none}
+.tok-c{color:#6b7f93;font-style:italic}
+.tok-k{color:#c792ea}
+.tok-s{color:#b5e48c}
+.tok-f{color:#82aaff}
+.tok-n{color:#ffb86b}
+.tok-t{color:#7fdbca}
+.code-foot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:.65rem 1.25rem;border-top:1px solid var(--border);color:var(--dim);font-size:.78rem;font-family:var(--mono)}
+.code-foot .ok{color:var(--green)}
+@media (max-width:960px){.split{grid-template-columns:1fr;gap:2.5rem}}
+
+/* Team */
+.team-grid{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:1.5rem;align-items:stretch}
+.team-card{padding:1.9rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)}
+.team-card .role{font-family:var(--mono);font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:0 0 .6rem}
+.team-card h3{margin:0 0 .6rem;font-size:1.3rem;letter-spacing:-.015em}
+.team-card p{margin:0;color:var(--muted)}
+.team-card ul{margin:1.1rem 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.7rem;color:var(--muted);font-size:.95rem}
+.team-card li{display:flex;gap:.7rem;align-items:flex-start}
+.team-card li svg{flex:none;margin-top:.2rem;color:var(--accent)}
+.team-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;color:var(--dim);font-family:var(--mono);font-size:.78rem;padding:.5rem 0}
+.team-link .line{width:1px;flex:1;background:linear-gradient(180deg,transparent,rgba(255,138,61,.7),transparent)}
+.session-pill{padding:.5rem .85rem;border-radius:999px;border:1px solid rgba(255,138,61,.45);background:rgba(255,138,61,.08);color:var(--accent);white-space:nowrap;display:inline-flex;align-items:center;gap:.45rem}
+.team-note{margin-top:1.5rem;padding:1.2rem 1.4rem;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.02);color:var(--muted);display:flex;gap:1rem;align-items:flex-start}
+.team-note svg{flex:none;color:var(--accent);margin-top:.15rem}
+.team-note p{margin:0}
+.team-note strong{color:var(--text)}
+@media (max-width:900px){
+  .team-grid{grid-template-columns:1fr}
+  .team-link{flex-direction:row}
+  .team-link .line{height:1px;width:auto;background:linear-gradient(90deg,transparent,rgba(255,138,61,.7),transparent)}
+}
+
+/* Beta scope */
+.scope{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.scope-card{padding:1.7rem 1.6rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)}
+.scope-card h3{display:flex;align-items:center;gap:.65rem;margin:0 0 1.1rem;font-size:1.08rem}
+.scope-card h3 svg{color:var(--green)}
+.scope-card.later h3 svg{color:var(--dim)}
+.scope-card.later{background:transparent;border-style:dashed}
+.scope-card p.small{margin:1.1rem 0 0;color:var(--dim);font-size:.88rem}
+.scope-note{margin-top:1.2rem;padding:1.4rem 1.6rem;border-radius:var(--radius);border:1px solid rgba(255,138,61,.3);background:linear-gradient(90deg,rgba(255,138,61,.08),transparent 60%);display:flex;gap:1.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.scope-note h3{margin:0 0 .35rem;font-size:1.05rem}
+.scope-note p{margin:0;color:var(--muted);max-width:44rem}
+@media (max-width:760px){.scope{grid-template-columns:1fr}}
+
+/* FAQ */
+.faq{max-width:48rem}
+.faq details{border-bottom:1px solid var(--border)}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.15rem 0;font-weight:600;font-size:1.05rem;letter-spacing:-.005em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:hover{color:var(--accent-strong)}
+.faq summary .chev{flex:none;color:var(--dim);transition:transform .2s}
+.faq details[open] summary .chev{transform:rotate(45deg);color:var(--accent)}
+.faq .answer{color:var(--muted);margin:0;padding:0 2.5rem 1.3rem 0;max-width:44rem}
+
+/* CTA */
+.cta{padding:5rem 0 6.5rem}
+.cta-box{position:relative;overflow:hidden;border-radius:24px;border:1px solid var(--border-strong);background:radial-gradient(900px 420px at 15% 0%,rgba(255,138,61,.2),transparent 65%),radial-gradient(600px 400px at 100% 100%,rgba(111,214,234,.08),transparent 70%),var(--surface);padding:3.5rem;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:3.5rem}
+.cta-box::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.5px);background-size:26px 26px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 70%);mask-image:linear-gradient(180deg,#000,transparent 70%);pointer-events:none}
+.cta-box>*{position:relative}
+.cta-copy h2{margin-bottom:.9rem}
+.cta-copy p{color:var(--muted);margin:0}
+.next-steps{margin:1.8rem 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.9rem}
+.next-steps li{display:flex;gap:.85rem;align-items:flex-start;color:var(--muted);font-size:.95rem}
+.next-steps .n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--accent);border:1px solid rgba(255,138,61,.45);background:rgba(255,138,61,.1)}
+.cta-form{display:grid;gap:1.1rem;align-content:start}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.cta-form label,.cta-form legend{display:block;font-size:.9rem;font-weight:600;margin-bottom:.45rem;color:var(--text)}
+.cta-form .optional{color:var(--dim);font-weight:500}
+select.input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a6b4c3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .9rem center;padding-right:2.6rem;cursor:pointer}
+select.input option{background:var(--surface);color:var(--text)}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+.pills{display:flex;flex-wrap:wrap;gap:.5rem}
+.pill{position:relative;cursor:pointer;margin:0;display:inline-block}
+.pill input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.pill span{display:inline-block;padding:.5rem .9rem;border-radius:999px;border:1px solid var(--border-strong);color:var(--muted);font-size:.9rem;font-weight:500;transition:border-color .15s,background-color .15s,color .15s}
+.pill:hover span{border-color:rgba(255,255,255,.3)}
+.pill input:checked+span{border-color:var(--accent);color:var(--text);background:rgba(255,138,61,.14)}
+.pill input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.check{display:flex;gap:.7rem;align-items:flex-start;cursor:pointer;color:var(--muted);font-size:.92rem;margin:0;font-weight:400}
+.check input{margin:.2rem 0 0;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.cta-form .btn{justify-self:start}
+.fine-print{color:var(--dim);font-size:.82rem;margin:0}
+@media (max-width:900px){.cta-box{grid-template-columns:1fr;padding:2.5rem;gap:2.5rem}}
+@media (max-width:560px){.cta-box{padding:1.75rem;border-radius:18px}.form-row{grid-template-columns:1fr}.cta-form .btn{justify-self:stretch}}
+
+/* Footer */
+.site-footer{border-top:1px solid var(--border);padding:2.75rem 0 3rem;color:var(--dim);font-size:.9rem;background:var(--bg-elev)}
+.footer-inner{display:flex;flex-wrap:wrap;justify-content:space-between;gap:1.75rem;align-items:flex-start}
+.footer-brand{max-width:22rem}
+.footer-brand p{margin:.8rem 0 0;color:var(--dim)}
+.footer-nav{display:flex;flex-wrap:wrap;gap:1.1rem 1.5rem;margin:0;padding:0;list-style:none}
+.footer-nav a{color:var(--muted);text-decoration:none}
+.footer-nav a:hover{color:var(--text)}
+.footer-bottom{margin-top:2.25rem;padding-top:1.5rem;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem;align-items:center}
+.footer-bottom p{margin:0}
+.status-pill{display:inline-flex;align-items:center;gap:.5rem;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--border-strong);font-family:var(--mono);font-size:.75rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="logo" href="#top" aria-label="Patchbay Cloud — back to top">
+      <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="9" fill="#141c26" stroke="rgba(255,255,255,0.16)"/>
+        <path d="M10 10 C 10 23, 22 9, 22 22" fill="none" stroke="#ff8a3d" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="10" cy="10" r="3.4" fill="#0a0e13" stroke="#ff8a3d" stroke-width="2.2"/>
+        <circle cx="22" cy="22" r="3.4" fill="#0a0e13" stroke="#3ddc97" stroke-width="2.2"/>
+      </svg>
+      <span>Patchbay <span class="light">Cloud</span></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#snippets">Snippets</a>
+      <a href="#beta">Beta scope</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="#waitlist">Join the waitlist</a>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <svg class="hero-cables" viewBox="0 0 1200 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="cable-a" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#ff8a3d" stop-opacity="0"/>
+          <stop offset=".5" stop-color="#ff8a3d" stop-opacity=".55"/>
+          <stop offset="1" stop-color="#ff8a3d" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="cable-b" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#3ddc97" stop-opacity="0"/>
+          <stop offset=".5" stop-color="#3ddc97" stop-opacity=".4"/>
+          <stop offset="1" stop-color="#3ddc97" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="M-40 610 C 260 610, 330 300, 640 330 S 980 520, 1260 400" fill="none" stroke="url(#cable-a)" stroke-width="2"/>
+      <path d="M-40 680 C 300 680, 400 430, 720 450 S 1020 590, 1260 500" fill="none" stroke="url(#cable-b)" stroke-width="2"/>
+    </svg>
+
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="badge"><span class="dot" aria-hidden="true"></span> Private beta · Waitlist open</p>
+        <h1 id="hero-title">Debug webhooks <span class="hl">before</span> they touch production.</h1>
+        <p class="lead">Patchbay Cloud gives your team temporary endpoints that catch real webhook events — so you can inspect, replay, rewrite and deliberately break them, then ship handlers you've already proven work.</p>
+
+        <div class="form-wrap">
+          <form class="waitlist-form" data-waitlist novalidate action="#waitlist" method="post">
+            <div class="inline-form">
+              <div class="field">
+                <label class="visually-hidden" for="hero-email">Work email</label>
+                <input class="input" id="hero-email" type="email" name="email" placeholder="you@company.com" autocomplete="email" inputmode="email" required aria-describedby="hero-email-error hero-note">
+              </div>
+              <button class="btn btn-primary" type="submit">Request early access</button>
+            </div>
+            <p class="field-error" id="hero-email-error" data-error aria-live="polite"></p>
+            <p class="form-note" id="hero-note">Invites go out in small batches. No spam — just your invite and occasional beta updates.</p>
+          </form>
+          <div class="form-success" data-success hidden tabindex="-1" role="status">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+            <p><strong>You're on the list.</strong> We'll email <span data-success-email></span> when your invite is ready.</p>
+          </div>
+        </div>
+
+        <ul class="hero-points">
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Any HTTP webhook provider</li>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Common signing methods verified</li>
+          <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Share sessions with support</li>
+        </ul>
+      </div>
+
+      <figure class="hero-visual">
+        <div class="mock" data-mock>
+          <div class="mock-chrome">
+            <div class="mock-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="mock-url">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span>https://in.patchbay.cloud/e/<b>7f3k2a</b></span>
+            </div>
+            <span class="tag tag-muted">temporary</span>
+            <span class="live"><span class="dot" aria-hidden="true"></span>Listening</span>
+          </div>
+
+          <div class="mock-body">
+            <div class="mock-list">
+              <div class="mock-list-head"><span>Events</span><span class="tag tag-muted">16</span></div>
+              <div class="evt-list">
+                <button type="button" class="evt" data-index="0" aria-current="true">
+                  <span class="evt-type">payment.succeeded</span>
+                  <span class="evt-time">14:02:11 · evt_01J8KQ2M</span>
+                  <span class="evt-status status-200" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="evt" data-index="1">
+                  <span class="evt-type">payment.failed</span>
+                  <span class="evt-time">14:02:48 · evt_01J8KQ3T</span>
+                  <span class="evt-status status-500" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="evt" data-index="2">
+                  <span class="evt-type">refund.created</span>
+                  <span class="evt-time">14:03:05 · evt_01J8KQ4C</span>
+                  <span class="evt-status status-401" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="evt" data-index="3">
+                  <span class="evt-type">payment.succeeded</span>
+                  <span class="evt-time">14:03:22 · evt_01J8KQ5A</span>
+                  <span class="evt-status status-timeout" aria-hidden="true"></span>
+                </button>
+              </div>
+              <p class="mock-list-more">+12 earlier · all verified</p>
+            </div>
+
+            <div class="mock-detail">
+              <div class="detail-head">
+                <div><span class="detail-title" data-evt-type>payment.succeeded</span> <span class="detail-id" data-evt-id>evt_01J8KQ2M</span></div>
+                <span class="tag tag-green" data-evt-sig>Signature verified</span>
+              </div>
+
+              <div>
+                <p class="panel-label">Headers</p>
+                <dl class="kv" data-evt-headers>
+                  <dt>content-type</dt><dd>application/json</dd>
+                  <dt>x-signature-256</dt><dd>sha256=8f3a1c…9d21e</dd>
+                  <dt>x-delivery-id</dt><dd>d_7c1d9e2f</dd>
+                  <dt>user-agent</dt><dd>acme-webhooks/2.1</dd>
+                </dl>
+              </div>
+
+              <div>
+                <p class="panel-label">Body</p>
+                <pre class="json" data-evt-body tabindex="0">{
+  <span class="j-key">"id"</span>: <span class="j-str">"evt_01J8KQ2M"</span>,
+  <span class="j-key">"type"</span>: <span class="j-str">"payment.succeeded"</span>,
+  <span class="j-key">"created"</span>: <span class="j-num">1727791331</span>,
+  <span class="j-key">"data"</span>: {
+    <span class="j-key">"payment_id"</span>: <span class="j-str">"pay_4X9kL2"</span>,
+    <span class="j-key">"amount"</span>: <span class="j-num">12900</span>,
+    <span class="j-key">"currency"</span>: <span class="j-str">"usd"</span>,
+    <span class="j-key">"customer"</span>: <span class="j-str">"cus_82HsQ1"</span>
+  }
+}</pre>
+              </div>
+
+              <div>
+                <p class="panel-label">Deliveries &amp; replays</p>
+                <ul class="attempts" data-evt-attempts>
+                  <li><span class="att-time">14:02:11</span><span class="att-target">provider → e/7f3k2a</span><span class="att-code ok">200</span><span class="att-note">received · 12 ms</span></li>
+                  <li><span class="att-time">14:04:37</span><span class="att-target">→ localhost:4000/webhooks</span><span class="att-code ok">200</span><span class="att-note">84 ms · replay</span></li>
+                </ul>
+              </div>
+
+              <div class="mock-actions">
+                <button type="button" class="mbtn mbtn-primary" data-action="replay">Replay → localhost</button>
+                <button type="button" class="mbtn" data-action="edit">Edit payload</button>
+                <span class="mock-actions-label">Break it:</span>
+                <button type="button" class="mbtn mbtn-danger" data-action="badsig">Bad signature</button>
+                <button type="button" class="mbtn mbtn-danger" data-action="dupe">Duplicate ×3</button>
+                <button type="button" class="mbtn mbtn-danger" data-action="timeout">Timeout</button>
+                <button type="button" class="mbtn" data-action="share">Share session</button>
+              </div>
+            </div>
+          </div>
+          <div class="mock-toast" data-toast role="status"></div>
+        </div>
+        <figcaption class="mock-caption">Interactive preview — select an event, replay it, or break it.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===================== PROVIDERS ===================== -->
+  <section class="providers" aria-label="Compatible webhook sources">
+    <div class="container providers-inner">
+      <p class="providers-label">Works with any webhook that speaks HTTP</p>
+      <ul class="chips">
+        <li>Payments &amp; billing</li>
+        <li>Source control</li>
+        <li>CI/CD</li>
+        <li>Commerce &amp; orders</li>
+        <li>Messaging</li>
+        <li>Identity</li>
+        <li>Your own services</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== HOW IT WORKS ===================== -->
+  <section class="section" id="how-it-works" aria-labelledby="how-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">How it works</p>
+        <h2 id="how-title">From first event to production-ready handler — without touching production.</h2>
+        <p>Point a provider at a temporary endpoint, watch what it really sends, and iterate until your handler survives everything you can throw at it.</p>
+      </div>
+      <ol class="steps">
+        <li class="step">
+          <div class="step-num">01</div>
+          <h3>Spin up a temporary endpoint</h3>
+          <p>Create a unique HTTPS URL in one click and paste it into any provider's webhook settings. No deploys, no tunnels, no edits to your production config.</p>
+          <code class="step-code">https://in.patchbay.cloud/e/7f3k2a</code>
+        </li>
+        <li class="step">
+          <div class="step-num">02</div>
+          <h3>Capture and inspect everything</h3>
+          <p>Every delivery is stored with full headers, the raw body, timing and a signature check — so you see what the provider actually sends, not what the docs say it sends.</p>
+        </li>
+        <li class="step">
+          <div class="step-num">03</div>
+          <h3>Replay, rewrite and break it</h3>
+          <p>Re-send captured events to a local or staging service, edit payloads to cover edge cases, and simulate timeouts, duplicates and bad signatures on demand.</p>
+        </li>
+        <li class="step">
+          <div class="step-num">04</div>
+          <h3>Ship the handler, share the trail</h3>
+          <p>Generate a handler snippet for the exact event types you captured, with verification wired in. Share the session so support sees what engineering saw.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================== FEATURES ===================== -->
+  <section class="section section-alt" id="features" aria-labelledby="features-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Features</p>
+        <h2 id="features-title">Everything between “the provider sent it” and “we handled it correctly.”</h2>
+        <p>Webhook bugs hide in the gap between documentation and reality. Patchbay Cloud puts the real events in front of you and gives you the tools to poke at them.</p>
+      </div>
+      <div class="features">
+        <article class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11" r="7"/><circle cx="12" cy="11" r="2.5"/><path d="M12 18v4"/></svg></div>
+          <h3>Temporary endpoints</h3>
+          <p>Disposable HTTPS URLs that receive and store every webhook delivery. Create one per integration, per branch or per bug report, and tear it down when you're done.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/><path d="M8.5 11h5"/></svg></div>
+          <h3>Full-fidelity inspection</h3>
+          <p>Headers, query string, raw and parsed body, timing and the result of signature verification — for every event, searchable by type, ID or time.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3.2-6.9"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg></div>
+          <h3>Replay &amp; payload editing</h3>
+          <p>Re-deliver any captured event to any target. Change a field, swap an ID, or send the same event ten times to prove your handler is idempotent.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg></div>
+          <h3>Failure scenarios</h3>
+          <p>Simulate timeouts, duplicate deliveries, out-of-order events and invalid signatures on demand — before a provider's retry storm does it for you.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="3"/><path d="M15.5 15.5a5.5 5.5 0 0 1 6 4.5"/></svg></div>
+          <h3>Shared histories &amp; sessions</h3>
+          <p>Event histories and live debugging sessions belong to your workspace, so a “the webhook never arrived” ticket links straight to the evidence — for support and engineering alike.</p>
+        </article>
+        <article class="feature">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-6 6 6 6"/><path d="M16 6l6 6-6 6"/><path d="M14 3l-4 18"/></svg></div>
+          <h3>Generated code snippets</h3>
+          <p>Turn captured events into handler code with signature verification wired in, covering exactly the event types you've received. Node.js, Python and Go to start.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SNIPPETS ===================== -->
+  <section class="section" id="snippets" aria-labelledby="snippets-title">
+    <div class="container split">
+      <div>
+        <div class="section-head">
+          <p class="eyebrow">Generated code</p>
+          <h2 id="snippets-title">Handlers generated from real events, not sample docs.</h2>
+          <p>Pick a captured event and your stack. Patchbay Cloud writes a handler that verifies the signature it actually saw, parses the payload it actually received, and stubs a branch for every event type in your history. Copy, paste, keep going.</p>
+        </div>
+        <ul class="check-list">
+          <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Verification for the signing method your provider really uses — with constant-time comparison.</span></li>
+          <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>A case for every event type you've captured, annotated with how often you've seen it.</span></li>
+          <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Node.js, Python and Go in the private beta; more languages and frameworks to follow.</span></li>
+        </ul>
+      </div>
+
+      <div class="code-window">
+        <div class="code-bar">
+          <div class="code-tabs" role="tablist" aria-label="Snippet language">
+            <button type="button" class="code-tab" role="tab" id="tab-node" aria-selected="true" aria-controls="panel-node">Node.js · Express</button>
+            <button type="button" class="code-tab" role="tab" id="tab-py" aria-selected="false" aria-controls="panel-py" tabindex="-1">Python · FastAPI</button>
+            <button type="button" class="code-tab" role="tab" id="tab-go" aria-selected="false" aria-controls="panel-go" tabindex="-1">Go · net/http</button>
+          </div>
+          <button type="button" class="code-copy" data-copy>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+            <span data-copy-label>Copy</span>
+          </button>
+          <span class="visually-hidden" role="status" data-copy-status></span>
+        </div>
+
+        <div class="code-panel" role="tabpanel" id="panel-node" aria-labelledby="tab-node">
+<pre tabindex="0"><code><span class="tok-c">// Generated by Patchbay Cloud from endpoint 7f3k2a · 16 events · 3 types</span>
+<span class="tok-k">import</span> express <span class="tok-k">from</span> <span class="tok-s">"express"</span>;
+<span class="tok-k">import</span> { createHmac, timingSafeEqual } <span class="tok-k">from</span> <span class="tok-s">"node:crypto"</span>;
+
+<span class="tok-k">const</span> app = <span class="tok-f">express</span>();
+<span class="tok-k">const</span> SECRET = process.env.WEBHOOK_SECRET;
+
+app.<span class="tok-f">post</span>(<span class="tok-s">"/webhooks/payments"</span>, express.<span class="tok-f">raw</span>({ type: <span class="tok-s">"application/json"</span> }), (req, res) =&gt; {
+  <span class="tok-c">// Captured as X-Signature-256: sha256=&lt;hex&gt; — HMAC-SHA256 over the raw body</span>
+  <span class="tok-k">const</span> expected = <span class="tok-f">createHmac</span>(<span class="tok-s">"sha256"</span>, SECRET).<span class="tok-f">update</span>(req.body).<span class="tok-f">digest</span>(<span class="tok-s">"hex"</span>);
+  <span class="tok-k">const</span> given = <span class="tok-f">String</span>(req.<span class="tok-f">get</span>(<span class="tok-s">"X-Signature-256"</span>) ?? <span class="tok-s">""</span>).<span class="tok-f">replace</span>(<span class="tok-s">"sha256="</span>, <span class="tok-s">""</span>);
+  <span class="tok-k">if</span> (given.length !== expected.length ||
+      !<span class="tok-f">timingSafeEqual</span>(Buffer.<span class="tok-f">from</span>(given), Buffer.<span class="tok-f">from</span>(expected))) {
+    <span class="tok-k">return</span> res.<span class="tok-f">status</span>(<span class="tok-n">401</span>).<span class="tok-f">send</span>(<span class="tok-s">"invalid signature"</span>);
+  }
+
+  <span class="tok-k">const</span> event = JSON.<span class="tok-f">parse</span>(req.body);
+  <span class="tok-k">switch</span> (event.type) {
+    <span class="tok-k">case</span> <span class="tok-s">"payment.succeeded"</span>: <span class="tok-c">// seen 12× in this session</span>
+      <span class="tok-c">// TODO: mark order for event.data.payment_id as paid</span>
+      <span class="tok-k">break</span>;
+    <span class="tok-k">case</span> <span class="tok-s">"payment.failed"</span>:    <span class="tok-c">// seen 3× — note: data.customer can be null</span>
+      <span class="tok-c">// TODO: notify customer if present</span>
+      <span class="tok-k">break</span>;
+    <span class="tok-k">case</span> <span class="tok-s">"refund.created"</span>:    <span class="tok-c">// seen 1×</span>
+      <span class="tok-k">break</span>;
+  }
+  res.<span class="tok-f">sendStatus</span>(<span class="tok-n">200</span>); <span class="tok-c">// ack quickly; do the real work asynchronously</span>
+});</code></pre>
+        </div>
+
+        <div class="code-panel" role="tabpanel" id="panel-py" aria-labelledby="tab-py" hidden>
+<pre tabindex="0"><code><span class="tok-c"># Generated by Patchbay Cloud from endpoint 7f3k2a · 16 events · 3 types</span>
+<span class="tok-k">import</span> hmac, hashlib, os
+<span class="tok-k">from</span> fastapi <span class="tok-k">import</span> FastAPI, Header, HTTPException, Request
+
+app = <span class="tok-f">FastAPI</span>()
+SECRET = os.environ[<span class="tok-s">"WEBHOOK_SECRET"</span>].<span class="tok-f">encode</span>()
+
+<span class="tok-t">@app.post</span>(<span class="tok-s">"/webhooks/payments"</span>)
+<span class="tok-k">async def</span> <span class="tok-f">payments_webhook</span>(request: Request, x_signature_256: str = <span class="tok-f">Header</span>(...)):
+    body = <span class="tok-k">await</span> request.<span class="tok-f">body</span>()
+    <span class="tok-c"># Captured as X-Signature-256: sha256=&lt;hex&gt; — HMAC-SHA256 over the raw body</span>
+    expected = hmac.<span class="tok-f">new</span>(SECRET, body, hashlib.sha256).<span class="tok-f">hexdigest</span>()
+    given = x_signature_256.<span class="tok-f">removeprefix</span>(<span class="tok-s">"sha256="</span>)
+    <span class="tok-k">if not</span> hmac.<span class="tok-f">compare_digest</span>(given, expected):
+        <span class="tok-k">raise</span> <span class="tok-f">HTTPException</span>(status_code=<span class="tok-n">401</span>, detail=<span class="tok-s">"invalid signature"</span>)
+
+    event = <span class="tok-k">await</span> request.<span class="tok-f">json</span>()
+    <span class="tok-k">match</span> event[<span class="tok-s">"type"</span>]:
+        <span class="tok-k">case</span> <span class="tok-s">"payment.succeeded"</span>:  <span class="tok-c"># seen 12× in this session</span>
+            ...  <span class="tok-c"># TODO: mark order for event["data"]["payment_id"] as paid</span>
+        <span class="tok-k">case</span> <span class="tok-s">"payment.failed"</span>:     <span class="tok-c"># seen 3× — note: data.customer can be None</span>
+            ...  <span class="tok-c"># TODO: notify customer if present</span>
+        <span class="tok-k">case</span> <span class="tok-s">"refund.created"</span>:     <span class="tok-c"># seen 1×</span>
+            ...
+    <span class="tok-k">return</span> {<span class="tok-s">"ok"</span>: <span class="tok-k">True</span>}  <span class="tok-c"># ack quickly; do the real work asynchronously</span></code></pre>
+        </div>
+
+        <div class="code-panel" role="tabpanel" id="panel-go" aria-labelledby="tab-go" hidden>
+<pre tabindex="0"><code><span class="tok-c">// Generated by Patchbay Cloud from endpoint 7f3k2a · 16 events · 3 types</span>
+<span class="tok-k">func</span> <span class="tok-f">paymentsWebhook</span>(w http.ResponseWriter, r *http.Request) {
+    body, err := io.<span class="tok-f">ReadAll</span>(io.<span class="tok-f">LimitReader</span>(r.Body, <span class="tok-n">1</span>&lt;&lt;<span class="tok-n">20</span>))
+    <span class="tok-k">if</span> err != <span class="tok-k">nil</span> {
+        http.<span class="tok-f">Error</span>(w, <span class="tok-s">"bad request"</span>, http.StatusBadRequest)
+        <span class="tok-k">return</span>
+    }
+
+    <span class="tok-c">// Captured as X-Signature-256: sha256=&lt;hex&gt; — HMAC-SHA256 over the raw body</span>
+    mac := hmac.<span class="tok-f">New</span>(sha256.New, []<span class="tok-t">byte</span>(os.<span class="tok-f">Getenv</span>(<span class="tok-s">"WEBHOOK_SECRET"</span>)))
+    mac.<span class="tok-f">Write</span>(body)
+    expected := hex.<span class="tok-f">EncodeToString</span>(mac.<span class="tok-f">Sum</span>(<span class="tok-k">nil</span>))
+    given := strings.<span class="tok-f">TrimPrefix</span>(r.Header.<span class="tok-f">Get</span>(<span class="tok-s">"X-Signature-256"</span>), <span class="tok-s">"sha256="</span>)
+    <span class="tok-k">if</span> !hmac.<span class="tok-f">Equal</span>([]<span class="tok-t">byte</span>(given), []<span class="tok-t">byte</span>(expected)) {
+        http.<span class="tok-f">Error</span>(w, <span class="tok-s">"invalid signature"</span>, http.StatusUnauthorized)
+        <span class="tok-k">return</span>
+    }
+
+    <span class="tok-k">var</span> event <span class="tok-k">struct</span> {
+        Type <span class="tok-t">string</span> <span class="tok-s">`json:"type"`</span>
+    }
+    <span class="tok-k">if</span> err := json.<span class="tok-f">Unmarshal</span>(body, &amp;event); err != <span class="tok-k">nil</span> {
+        http.<span class="tok-f">Error</span>(w, <span class="tok-s">"bad json"</span>, http.StatusBadRequest)
+        <span class="tok-k">return</span>
+    }
+
+    <span class="tok-k">switch</span> event.Type {
+    <span class="tok-k">case</span> <span class="tok-s">"payment.succeeded"</span>: <span class="tok-c">// seen 12× in this session</span>
+        <span class="tok-c">// TODO: mark order as paid</span>
+    <span class="tok-k">case</span> <span class="tok-s">"payment.failed"</span>: <span class="tok-c">// seen 3× — note: data.customer can be null</span>
+        <span class="tok-c">// TODO: notify customer if present</span>
+    <span class="tok-k">case</span> <span class="tok-s">"refund.created"</span>: <span class="tok-c">// seen 1×</span>
+    }
+    w.<span class="tok-f">WriteHeader</span>(http.StatusOK) <span class="tok-c">// ack quickly; do the real work asynchronously</span>
+}</code></pre>
+        </div>
+
+        <div class="code-foot">
+          <span>endpoint 7f3k2a · 16 events · 3 types · HMAC-SHA256</span>
+          <span class="ok">✓ verified against 16/16 deliveries</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TEAMS ===================== -->
+  <section class="section section-alt" id="teams" aria-labelledby="teams-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Engineering + Support</p>
+        <h2 id="teams-title">Built for the whole team, not just whoever is on call.</h2>
+        <p>Webhook problems land on support first and engineering second. Patchbay Cloud gives both sides the same event history and the same debugging session, so nothing gets lost in translation.</p>
+      </div>
+      <div class="team-grid">
+        <article class="team-card">
+          <p class="role">For engineering</p>
+          <h3>Reproduce the real thing</h3>
+          <p>Stop hand-writing fixtures from documentation. Work from the exact events your provider sent.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span>Replay the event a customer hit against a fix running on your laptop — as many times as it takes.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span>Prove signature verification, idempotency and ordering assumptions before the first production delivery.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span>Generate the handler from the events you've seen, then keep the session as living documentation.</span></li>
+          </ul>
+        </article>
+
+        <div class="team-link" aria-hidden="true">
+          <span class="line"></span>
+          <span class="session-pill">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1"/><path d="M14 10a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1"/></svg>
+            shared session
+          </span>
+          <span class="line"></span>
+        </div>
+
+        <article class="team-card">
+          <p class="role">For support</p>
+          <h3>Answer with evidence</h3>
+          <p>“The webhook never arrived” becomes a link to the delivery, the response and every retry — or proof it was never sent.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span>Search a customer's event history by ID, event type or time window.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span>See every delivery attempt, response code and replay in one timeline.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><span>Hand engineering a link to the session — not a screenshot of a log.</span></li>
+          </ul>
+        </article>
+      </div>
+      <div class="team-note">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
+        <p><strong>One shared history.</strong> Event histories and debugging sessions live in your workspace and are visible to engineering and support alike — with the same headers, payloads, attempts and replays for everyone.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BETA SCOPE ===================== -->
+  <section class="section" id="beta" aria-labelledby="beta-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Private beta scope</p>
+        <h2 id="beta-title">What's in the first beta — and what isn't yet.</h2>
+        <p>We're keeping the initial release deliberately focused so we can get the core loop right with a small group of teams. Here's exactly what to expect.</p>
+      </div>
+      <div class="scope">
+        <div class="scope-card">
+          <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3.5v6c0 5-3.5 8.5-8 10.5-4.5-2-8-5.5-8-10.5v-6L12 2z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Included in the private beta</h3>
+          <ul class="check-list">
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><strong>HTTP and HTTPS webhooks</strong> from any provider or internal service.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><strong>Common signing methods</strong> — HMAC-SHA256 and HMAC-SHA1 header signatures, timestamped signatures with tolerance windows, and shared-secret tokens.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Temporary endpoints with full request capture and search.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Replay to any target, payload editing and failure simulation.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Shared event histories and debugging sessions for your whole workspace.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Generated handler snippets for Node.js, Python and Go.</span></li>
+          </ul>
+        </div>
+        <div class="scope-card later">
+          <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Not in the first beta</h3>
+          <ul class="check-list later">
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Non-HTTP event transports such as message queues and streaming protocols.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Less common or provider-specific signing schemes — tell us which ones you need when you join.</span></li>
+            <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Additional snippet languages and frameworks beyond Node.js, Python and Go.</span></li>
+          </ul>
+          <p class="small">Beta participants shape this list. We'll expand scope as teams tell us what they're missing.</p>
+        </div>
+      </div>
+      <div class="scope-note">
+        <div>
+          <h3>Who we're looking for</h3>
+          <p>Teams building or maintaining webhook integrations over HTTP who can give candid feedback every couple of weeks — small product squads and platform teams alike. If that sounds like you, we'd love to have you in.</p>
+        </div>
+        <a class="btn btn-ghost" href="#waitlist">Join the waitlist <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FAQ ===================== -->
+  <section class="section section-alt" id="faq" aria-labelledby="faq-title">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">FAQ</p>
+        <h2 id="faq-title">Questions teams ask before joining.</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Does Patchbay Cloud sit in front of my production endpoints?<svg class="chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></summary>
+          <p class="answer">No. Patchbay Cloud creates temporary endpoints that you point providers at while you build and debug. Your production configuration doesn't change until you decide to switch the destination URL over — and by then you've already seen every event type and edge case the provider sends.</p>
+        </details>
+        <details>
+          <summary>Which webhook providers does it work with?<svg class="chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></summary>
+          <p class="answer">Any service that delivers webhooks over HTTP or HTTPS — payment processors, source-control and CI platforms, commerce platforms, messaging APIs, or your own internal services. During the private beta, signature verification covers common signing methods such as HMAC-based header signatures and timestamped signatures. If your provider uses something unusual, tell us when you join the waitlist.</p>
+        </details>
+        <details>
+          <summary>Can I replay events to my local machine?<svg class="chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></summary>
+          <p class="answer">Yes. Replay any captured event to any target URL — a staging environment, or a local server exposed through the tunnel you already use. Edit the payload first to test a variation, or replay it several times to check that your handler is idempotent.</p>
+        </details>
+        <details>
+          <summary>How do shared sessions work between engineering and support?<svg class="chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></summary>
+          <p class="answer">Every temporary endpoint keeps an event history that your whole workspace can browse. Support can find the exact delivery a customer is asking about — by ID, type or time — and share a link to the event or to a live debugging session. Engineering opens the link and sees the same headers, payload, attempts and replays. No screenshots, no copy-pasted logs.</p>
+        </details>
+        <details>
+          <summary>What happens to the data I capture?<svg class="chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></summary>
+          <p class="answer">Webhook payloads often contain sensitive information, so endpoints are temporary by design and their histories are scoped to your workspace. You can delete an endpoint and everything it captured at any time. We'll share full data-handling details with beta participants before their first session.</p>
+        </details>
+        <details>
+          <summary>When will I get access, and what does it cost?<svg class="chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></summary>
+          <p class="answer">We're inviting teams in small batches so we can work closely with each one; joining the waitlist early and telling us what you're integrating helps us prioritize. The private beta is free for participating teams, and beta teams will hear about pricing before general availability.</p>
+        </details>
+        <details>
+          <summary>What do you expect from beta participants?<svg class="chev" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></summary>
+          <p class="answer">Honest feedback. We'll check in every few weeks, ask what broke and what's missing, and shape the roadmap — especially signing methods and transports — around what participating teams actually need.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WAITLIST ===================== -->
+  <section class="cta" id="waitlist" aria-labelledby="waitlist-title">
+    <div class="container">
+      <div class="cta-box">
+        <div class="cta-copy">
+          <p class="eyebrow">Private beta</p>
+          <h2 id="waitlist-title">Join the waitlist</h2>
+          <p>Tell us a little about what you're integrating and we'll reach out when a spot opens. Invites include a workspace for your whole team — engineering and support.</p>
+          <ol class="next-steps">
+            <li><span class="n">1</span><span>You'll get a confirmation email right away.</span></li>
+            <li><span class="n">2</span><span>We invite teams in small batches and prioritize active webhook integrations.</span></li>
+            <li><span class="n">3</span><span>Your invite comes with a short onboarding session and a direct line to the team.</span></li>
+          </ol>
+        </div>
+
+        <div class="form-wrap">
+          <form class="cta-form" data-waitlist novalidate action="#waitlist" method="post">
+            <div>
+              <label for="wl-email">Work email</label>
+              <input class="input" id="wl-email" type="email" name="email" placeholder="you@company.com" autocomplete="email" inputmode="email" required aria-describedby="wl-email-error">
+              <p class="field-error" id="wl-email-error" data-error aria-live="polite"></p>
+            </div>
+            <div class="form-row">
+              <div>
+                <label for="wl-providers">Providers or services you'll connect <span class="optional">(optional)</span></label>
+                <input class="input" id="wl-providers" type="text" name="providers" placeholder="e.g. payments, git hosting, internal">
+              </div>
+              <div>
+                <label for="wl-usecase">What will you test first? <span class="optional">(optional)</span></label>
+                <select class="input" id="wl-usecase" name="usecase">
+                  <option value="">Choose one</option>
+                  <option value="payments">Payment &amp; billing webhooks</option>
+                  <option value="scm">Source control &amp; CI events</option>
+                  <option value="commerce">Commerce &amp; order events</option>
+                  <option value="messaging">Messaging &amp; notifications</option>
+                  <option value="internal">Internal service-to-service webhooks</option>
+                  <option value="other">Something else</option>
+                </select>
+              </div>
+            </div>
+            <fieldset>
+              <legend>Team size <span class="optional">(optional)</span></legend>
+              <div class="pills">
+                <label class="pill"><input type="radio" name="team" value="1"><span>Just me</span></label>
+                <label class="pill"><input type="radio" name="team" value="2-10"><span>2–10</span></label>
+                <label class="pill"><input type="radio" name="team" value="11-50"><span>11–50</span></label>
+                <label class="pill"><input type="radio" name="team" value="51+"><span>51+</span></label>
+              </div>
+            </fieldset>
+            <label class="check"><input type="checkbox" name="feedback" value="yes"><span>We can share feedback with the Patchbay team every few weeks during the beta.</span></label>
+            <button class="btn btn-primary" type="submit">Request an invite</button>
+            <p class="fine-print">By joining you agree to receive emails about the Patchbay Cloud beta. Unsubscribe any time.</p>
+          </form>
+          <div class="form-success" data-success hidden tabindex="-1" role="status">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+            <p><strong>Thanks — you're on the waitlist.</strong> We'll email <span data-success-email></span> when a spot opens. In the meantime, bring your support team along: the invite covers your whole workspace.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="#top">
+          <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="1" y="1" width="30" height="30" rx="9" fill="#141c26" stroke="rgba(255,255,255,0.16)"/>
+            <path d="M10 10 C 10 23, 22 9, 22 22" fill="none" stroke="#ff8a3d" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="10" cy="10" r="3.4" fill="#0a0e13" stroke="#ff8a3d" stroke-width="2.2"/>
+            <circle cx="22" cy="22" r="3.4" fill="#0a0e13" stroke="#3ddc97" stroke-width="2.2"/>
+          </svg>
+          <span>Patchbay <span class="light">Cloud</span></span>
+        </a>
+        <p>Test and debug webhook integrations before connecting them to production systems.</p>
+      </div>
+      <nav aria-label="Footer">
+        <ul class="footer-nav">
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#snippets">Snippets</a></li>
+          <li><a href="#teams">For teams</a></li>
+          <li><a href="#beta">Beta scope</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#waitlist">Waitlist</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 Patchbay Cloud. All rights reserved.</p>
+      <span class="status-pill"><span class="dot" aria-hidden="true"></span>status: private beta · waitlist open</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  /* ---------------- Waitlist forms ---------------- */
+  var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  Array.prototype.forEach.call(document.querySelectorAll('form[data-waitlist]'), function (form) {
+    var email = form.querySelector('input[type="email"]');
+    var error = form.querySelector('[data-error]');
+    var wrap = form.parentElement;
+    var success = wrap ? wrap.querySelector('[data-success]') : null;
+
+    function clearError() {
+      if (error) { error.textContent = ''; }
+      email.removeAttribute('aria-invalid');
+    }
+
+    email.addEventListener('input', function () { if (error && error.textContent) { clearError(); } });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var value = email.value.trim();
+      if (!value) {
+        if (error) { error.textContent = 'Please enter your work email so we can send your invite.'; }
+        email.setAttribute('aria-invalid', 'true');
+        email.focus();
+        return;
+      }
+      if (!emailRe.test(value)) {
+        if (error) { error.textContent = 'That email address doesn\u2019t look right \u2014 please check it.'; }
+        email.setAttribute('aria-invalid', 'true');
+        email.focus();
+        return;
+      }
+      clearError();
+      if (success) {
+        var target = success.querySelector('[data-success-email]');
+        if (target) { target.textContent = value; }
+        form.hidden = true;
+        success.hidden = false;
+        success.focus();
+      }
+    });
+  });
+
+  /* ---------------- Snippet tabs ---------------- */
+  var tablist = document.querySelector('[role="tablist"]');
+  if (tablist) {
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+    var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
+
+    function activate(i, focus) {
+      tabs.forEach(function (t, j) {
+        var on = i === j;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        if (panels[j]) { panels[j].hidden = !on; }
+      });
+      if (focus) { tabs[i].focus(); }
+    }
+
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { activate(i, false); });
+      t.addEventListener('keydown', function (e) {
+        var n = null;
+        if (e.key === 'ArrowRight') { n = (i + 1) % tabs.length; }
+        else if (e.key === 'ArrowLeft') { n = (i - 1 + tabs.length) % tabs.length; }
+        else if (e.key === 'Home') { n = 0; }
+        else if (e.key === 'End') { n = tabs.length - 1; }
+        if (n !== null) { e.preventDefault(); activate(n, true); }
+      });
+    });
+  }
+
+  var copyBtn = document.querySelector('[data-copy]');
+  if (copyBtn) {
+    var copyLabel = copyBtn.querySelector('[data-copy-label]');
+    var copyStatus = document.querySelector('[data-copy-status]');
+    var copyTimer;
+    copyBtn.addEventListener('click', function () {
+      var pre = document.querySelector('.code-panel:not([hidden]) pre');
+      var text = pre ? pre.textContent : '';
+      var done = function () {
+        if (copyLabel) { copyLabel.textContent = 'Copied'; }
+        if (copyStatus) { copyStatus.textContent = 'Snippet copied to clipboard'; }
+        clearTimeout(copyTimer);
+        copyTimer = setTimeout(function () {
+          if (copyLabel) { copyLabel.textContent = 'Copy'; }
+          if (copyStatus) { copyStatus.textContent = ''; }
+        }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        done();
+      }
+    });
+  }
+
+  /* ---------------- Interactive product preview ---------------- */
+  var mock = document.querySelector('[data-mock]');
+  if (mock) {
+    var data = [
+      {
+        id: 'evt_01J8KQ2M', type: 'payment.succeeded', sig: true,
+        headers: { 'content-type': 'application/json', 'x-signature-256': 'sha256=8f3a1c\u20269d21e', 'x-delivery-id': 'd_7c1d9e2f', 'user-agent': 'acme-webhooks/2.1' },
+        body: { id: 'evt_01J8KQ2M', type: 'payment.succeeded', created: 1727791331, data: { payment_id: 'pay_4X9kL2', amount: 12900, currency: 'usd', customer: 'cus_82HsQ1' } },
+        attempts: [
+          { time: '14:02:11', target: 'provider \u2192 e/7f3k2a', status: 200, note: 'received \u00b7 12 ms' },
+          { time: '14:04:37', target: '\u2192 localhost:4000/webhooks', status: 200, note: '84 ms \u00b7 replay' }
+        ]
+      },
+      {
+        id: 'evt_01J8KQ3T', type: 'payment.failed', sig: true,
+        headers: { 'content-type': 'application/json', 'x-signature-256': 'sha256=41be07\u2026c0aa4', 'x-delivery-id': 'd_7c1da3b0', 'user-agent': 'acme-webhooks/2.1' },
+        body: { id: 'evt_01J8KQ3T', type: 'payment.failed', created: 1727791368, data: { payment_id: 'pay_7BnP0w', amount: 4900, currency: 'usd', customer: null, failure_code: 'card_declined' } },
+        attempts: [
+          { time: '14:02:48', target: 'provider \u2192 e/7f3k2a', status: 200, note: 'received \u00b7 9 ms' },
+          { time: '14:04:52', target: '\u2192 localhost:4000/webhooks', status: 500, note: "TypeError: Cannot read properties of null (reading 'id')" }
+        ]
+      },
+      {
+        id: 'evt_01J8KQ4C', type: 'refund.created', sig: false,
+        headers: { 'content-type': 'application/json', 'x-signature-256': 'sha256=e2d9f0\u202677b13', 'x-delivery-id': 'd_7c1db71c', 'user-agent': 'acme-webhooks/2.1' },
+        body: { id: 'evt_01J8KQ4C', type: 'refund.created', created: 1727791385, data: { refund_id: 're_2MkV8a', payment_id: 'pay_4X9kL2', amount: 12900, reason: 'requested_by_customer' } },
+        attempts: [
+          { time: '14:03:05', target: 'provider \u2192 e/7f3k2a', status: 200, note: 'received \u00b7 11 ms \u00b7 signed with a different secret (test-mode key?)' },
+          { time: '14:05:10', target: '\u2192 localhost:4000/webhooks', status: 401, note: 'handler rejected signature \u2014 as it should' }
+        ]
+      },
+      {
+        id: 'evt_01J8KQ5A', type: 'payment.succeeded', sig: true,
+        headers: { 'content-type': 'application/json', 'x-signature-256': 'sha256=0c5f8a\u202631e9d', 'x-delivery-id': 'd_7c1dc44e', 'user-agent': 'acme-webhooks/2.1' },
+        body: { id: 'evt_01J8KQ5A', type: 'payment.succeeded', created: 1727791402, data: { payment_id: 'pay_9QzT1e', amount: 25800, currency: 'eur', customer: 'cus_11LmA9' } },
+        attempts: [
+          { time: '14:03:22', target: 'provider \u2192 e/7f3k2a', status: 200, note: 'received \u00b7 10 ms' },
+          { time: '14:05:31', target: '\u2192 localhost:4000/webhooks', status: 'timeout', note: 'no response after 10 s' }
+        ]
+      }
+    ];
+
+    var listBtns = Array.prototype.slice.call(mock.querySelectorAll('.evt'));
+    var titleEl = mock.querySelector('[data-evt-type]');
+    var idEl = mock.querySelector('[data-evt-id]');
+    var sigEl = mock.querySelector('[data-evt-sig]');
+    var headersEl = mock.querySelector('[data-evt-headers]');
+    var bodyEl = mock.querySelector('[data-evt-body]');
+    var attemptsEl = mock.querySelector('[data-evt-attempts]');
+    var toast = mock.querySelector('[data-toast]');
+    var editBtn = mock.querySelector('[data-action="edit"]');
+    var current = 0;
+    var toastTimer;
+
+    function fmt(v, ind) {
+      var pad = '  '.repeat(ind);
+      if (v === null) { return '<span class="j-null">null</span>'; }
+      if (typeof v === 'string') { return '<span class="j-str">"' + esc(v) + '"</span>'; }
+      if (typeof v === 'number') { return '<span class="j-num">' + v + '</span>'; }
+      if (typeof v === 'boolean') { return '<span class="j-bool">' + v + '</span>'; }
+      if (Array.isArray(v)) {
+        if (!v.length) { return '[]'; }
+        return '[\n' + v.map(function (x, i) {
+          return pad + '  ' + fmt(x, ind + 1) + (i < v.length - 1 ? ',' : '');
+        }).join('\n') + '\n' + pad + ']';
+      }
+      var keys = Object.keys(v);
+      if (!keys.length) { return '{}'; }
+      return '{\n' + keys.map(function (k, i) {
+        return pad + '  <span class="j-key">"' + esc(k) + '"</span>: ' + fmt(v[k], ind + 1) + (i < keys.length - 1 ? ',' : '');
+      }).join('\n') + '\n' + pad + '}';
+    }
+
+    function now() {
+      var d = new Date();
+      return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function (n) { return String(n).padStart(2, '0'); }).join(':');
+    }
+
+    function row(a) {
+      var li = document.createElement('li');
+      var cls = a.status === 200 ? 'ok' : a.status === 'timeout' ? 'muted' : a.status === 401 ? 'warn' : 'bad';
+      li.innerHTML =
+        '<span class="att-time">' + esc(a.time) + '</span>' +
+        '<span class="att-target">' + esc(a.target) + '</span>' +
+        '<span class="att-code ' + cls + '">' + esc(a.status) + '</span>' +
+        (a.note ? '<span class="att-note">' + esc(a.note) + '</span>' : '');
+      return li;
+    }
+
+    function stopEditing() {
+      bodyEl.contentEditable = 'false';
+      bodyEl.classList.remove('editing');
+      if (editBtn) { editBtn.textContent = 'Edit payload'; }
+    }
+
+    function render(i) {
+      current = i;
+      var ev = data[i];
+      listBtns.forEach(function (b, j) {
+        if (i === j) { b.setAttribute('aria-current', 'true'); } else { b.removeAttribute('aria-current'); }
+      });
+      titleEl.textContent = ev.type;
+      idEl.textContent = ev.id;
+      sigEl.textContent = ev.sig ? 'Signature verified' : 'Signature mismatch';
+      sigEl.className = 'tag ' + (ev.sig ? 'tag-green' : 'tag-amber');
+      headersEl.innerHTML = Object.keys(ev.headers).map(function (k) {
+        return '<dt>' + esc(k) + '</dt><dd>' + esc(ev.headers[k]) + '</dd>';
+      }).join('');
+      bodyEl.innerHTML = fmt(ev.body, 0);
+      stopEditing();
+      attemptsEl.innerHTML = '';
+      ev.attempts.forEach(function (a) { attemptsEl.appendChild(row(a)); });
+    }
+
+    function show(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2400);
+    }
+
+    function add(a) {
+      var li = row(a);
+      li.classList.add('new');
+      attemptsEl.appendChild(li);
+    }
+
+    function ms(min, max) { return (min + Math.floor(Math.random() * (max - min))) + ' ms'; }
+
+    listBtns.forEach(function (b, i) {
+      b.addEventListener('click', function () { render(i); });
+    });
+
+    Array.prototype.forEach.call(mock.querySelectorAll('[data-action]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var ev = data[current];
+        var target = '\u2192 localhost:4000/webhooks';
+        switch (btn.getAttribute('data-action')) {
+          case 'replay':
+            add({ time: now(), target: target, status: 200, note: ms(60, 130) + ' \u00b7 replay' });
+            show('Replayed ' + ev.type + ' to localhost:4000 \u2014 200 OK');
+            break;
+          case 'edit':
+            if (bodyEl.isContentEditable) {
+              stopEditing();
+              show('Edited payload saved for this session \u2014 replay to send it');
+            } else {
+              bodyEl.contentEditable = 'true';
+              bodyEl.classList.add('editing');
+              btn.textContent = 'Done editing';
+              bodyEl.focus();
+              show('Payload is editable \u2014 change a field, then replay');
+            }
+            break;
+          case 'badsig':
+            add({ time: now(), target: target, status: 401, note: 'tampered signature rejected by handler \u2014 good' });
+            show('Replayed with an invalid signature');
+            break;
+          case 'dupe':
+            add({ time: now(), target: target, status: 200, note: ms(60, 110) + ' \u00b7 duplicate 1/3' });
+            add({ time: now(), target: target, status: 200, note: ms(8, 20) + ' \u00b7 duplicate 2/3 \u00b7 idempotent' });
+            add({ time: now(), target: target, status: 200, note: ms(8, 20) + ' \u00b7 duplicate 3/3 \u00b7 idempotent' });
+            show('Sent 3 duplicate deliveries \u2014 handler stayed idempotent');
+            break;
+          case 'timeout':
+            add({ time: now(), target: target, status: 'timeout', note: 'no response after 10 s \u00b7 provider would retry with backoff' });
+            show('Simulated a 10 s timeout');
+            break;
+          case 'share':
+            show('Session link ready \u2014 anyone in your workspace can open it');
+            break;
+        }
+      });
+    });
+
+    render(0);
+  }
+})();
+</script>
+</body>
+</html>

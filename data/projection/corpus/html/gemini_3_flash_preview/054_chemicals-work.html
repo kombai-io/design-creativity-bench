@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemFlow Pro | Batch Verification Portal</title>
+    <style>
+        :root {
+            /* Colors - High Contrast Industrial Theme */
+            --c-bg-page: #050505;
+            --c-bg-panel: #121214;
+            --c-bg-surface: #1c1c1e;
+            --c-bg-active: #2c2c2e;
+            --c-border: #3a3a3c;
+            --c-accent: #ffd60a;
+            --c-accent-hover: #ffcc00;
+            --c-text-primary: #ffffff;
+            --c-text-secondary: #a1a1aa;
+            --c-text-muted: #71717a;
+            --c-status-pass: #32d74b;
+            --c-status-fail: #ff453a;
+            --c-status-warn: #ff9f0a;
+            --c-overlay: rgba(0, 0, 0, 0.85);
+
+            /* Typography */
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --fs-h1: 1.5rem;
+            --fs-h2: 1.125rem;
+            --fs-body: 0.9375rem;
+            --fs-small: 0.8125rem;
+            --fs-tiny: 0.6875rem;
+            --fw-bold: 700;
+            --fw-medium: 500;
+            --fw-regular: 400;
+
+            /* Spacing */
+            --s-px: 1px;
+            --s-1: 0.25rem;
+            --s-2: 0.5rem;
+            --s-3: 0.75rem;
+            --s-4: 1rem;
+            --s-5: 1.5rem;
+            --s-6: 2rem;
+            --s-sidebar: 64px;
+            --s-list: 320px;
+
+            /* Decoration */
+            --br-radius: 4px;
+            --sh-soft: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--c-bg-page);
+            color: var(--c-text-primary);
+            font-family: var(--font-main);
+            font-size: var(--fs-body);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Layout */
+        .app-shell {
+            display: grid;
+            grid-template-columns: var(--s-sidebar) var(--s-list) 1fr;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Pane 1: Navigation */
+        .nav-pane {
+            background-color: var(--c-bg-page);
+            border-right: var(--s-px) solid var(--c-border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: var(--s-5);
+            gap: var(--s-6);
+        }
+
+        .nav-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--br-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--c-text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-icon.active {
+            color: var(--c-accent);
+            background: var(--c-bg-surface);
+        }
+
+        .nav-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Pane 2: Queue List */
+        .list-pane {
+            background-color: var(--c-bg-panel);
+            border-right: var(--s-px) solid var(--c-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pane-header {
+            padding: var(--s-4);
+            border-bottom: var(--s-px) solid var(--c-border);
+        }
+
+        .pane-title {
+            font-size: var(--fs-h2);
+            font-weight: var(--fw-bold);
+            margin-bottom: var(--s-2);
+        }
+
+        .queue-stats {
+            font-size: var(--fs-tiny);
+            color: var(--c-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .batch-list {
+            flex: 1;
+            overflow-y: auto;
+            role: listbox;
+        }
+
+        .batch-item {
+            padding: var(--s-4);
+            border-bottom: var(--s-px) solid var(--c-border);
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .batch-item:hover {
+            background-color: var(--c-bg-surface);
+        }
+
+        .batch-item.selected {
+            background-color: var(--c-bg-active);
+            border-left: 4px solid var(--c-accent);
+        }
+
+        .batch-item-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--s-1);
+        }
+
+        .batch-id {
+            font-weight: var(--fw-bold);
+            color: var(--c-accent);
+        }
+
+        .batch-time {
+            font-size: var(--fs-tiny);
+            color: var(--c-text-muted);
+        }
+
+        .batch-name {
+            font-size: var(--fs-small);
+            margin-bottom: var(--s-2);
+            display: block;
+        }
+
+        .batch-status-strip {
+            display: flex;
+            gap: var(--s-1);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .dot-pass { background-color: var(--c-status-pass); }
+        .dot-fail { background-color: var(--c-status-fail); }
+        .dot-warn { background-color: var(--c-status-warn); }
+
+        .compare-checkbox {
+            position: absolute;
+            right: var(--s-4);
+            bottom: var(--s-4);
+            accent-color: var(--c-accent);
+        }
+
+        /* Pane 3: Detail Panel */
+        .detail-pane {
+            background-color: var(--c-bg-page);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .detail-header {
+            padding: var(--s-5);
+            background-color: var(--c-bg-panel);
+            border-bottom: var(--s-px) solid var(--c-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .detail-body {
+            padding: var(--s-6);
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--s-6);
+        }
+
+        .section-card {
+            background-color: var(--c-bg-panel);
+            border: var(--s-px) solid var(--c-border);
+            border-radius: var(--br-radius);
+            padding: var(--s-5);
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .section-title {
+            font-size: var(--fs-tiny);
+            color: var(--c-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--s-4);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Numbers and Charts */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--s-4);
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: var(--fs-tiny);
+            color: var(--c-text-muted);
+        }
+
+        .stat-value {
+            font-size: var(--fs-h1);
+            font-weight: var(--fw-bold);
+            margin-top: var(--s-1);
+        }
+
+        .stat-unit {
+            font-size: var(--fs-small);
+            color: var(--c-text-muted);
+            margin-left: var(--s-1);
+        }
+
+        .mini-chart {
+            height: 60px;
+            width: 100%;
+            background: linear-gradient(0deg, var(--c-bg-surface) 0%, transparent 100%);
+            margin-top: var(--s-3);
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .chart-bar {
+            background-color: var(--c-accent);
+            flex: 1;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--fs-small);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: var(--s-2);
+            border-bottom: var(--s-px) solid var(--c-border);
+            color: var(--c-text-muted);
+            font-weight: var(--fw-medium);
+        }
+
+        .data-table td {
+            padding: var(--s-2);
+            border-bottom: var(--s-px) solid var(--c-border);
+        }
+
+        /* Comparison View */
+        .comparison-view {
+            display: none;
+            padding: var(--s-6);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--s-4);
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .compare-column {
+            background: var(--c-bg-panel);
+            border: var(--s-px) solid var(--c-accent);
+            border-radius: var(--br-radius);
+            padding: var(--s-4);
+        }
+
+        .compare-active .detail-body { display: none; }
+        .compare-active .comparison-view { display: grid; }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: var(--s-3);
+        }
+
+        .btn {
+            padding: var(--s-3) var(--s-5);
+            border-radius: var(--br-radius);
+            font-weight: var(--fw-bold);
+            cursor: pointer;
+            border: none;
+            text-transform: uppercase;
+            font-size: var(--fs-tiny);
+            letter-spacing: 0.05em;
+        }
+
+        .btn-primary { background: var(--c-accent); color: var(--c-bg-page); }
+        .btn-secondary { background: var(--c-bg-surface); color: var(--c-text-primary); border: var(--s-px) solid var(--c-border); }
+        .btn-danger { background: var(--c-status-fail); color: var(--c-text-primary); }
+
+        /* Indicators */
+        .badge {
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: var(--fs-tiny);
+            font-weight: var(--fw-bold);
+        }
+        .badge-pass { background: rgba(50, 215, 75, 0.2); color: var(--c-status-pass); }
+        .badge-fail { background: rgba(255, 69, 58, 0.2); color: var(--c-status-fail); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--c-bg-page); }
+        ::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <!-- PANE 1: NAVIGATION -->
+        <nav class="nav-pane" role="navigation" aria-label="Main Navigation">
+            <div class="nav-icon active" title="Work Queue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+            </div>
+            <div class="nav-icon" title="Analytics">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            </div>
+            <div class="nav-icon" title="Chemical Registry">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.638.319a4 4 0 01-2.583.344l-1.454-.29a2 2 0 01-1.536-1.536l-.29-1.454a4 4 0 00-.344-2.583l-.319-.638a6 6 0 01-.517-3.86l.477-2.387a2 2 0 01.547-1.022M12 12l9 9m-9-9l-9 9m9-9V3"/></svg>
+            </div>
+            <div class="nav-icon" title="Safety Logs">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+        </nav>
+
+        <!-- PANE 2: LIST -->
+        <main class="list-pane" role="region" aria-label="Batch Queue">
+            <header class="pane-header">
+                <h1 class="pane-title">Review Queue</h1>
+                <div class="queue-stats">14 Pend. • 3 High Priority</div>
+            </header>
+            <div class="batch-list" id="batchList">
+                <!-- Item 1 -->
+                <div class="batch-item selected" onclick="selectBatch(this)" data-id="XC-4429">
+                    <div class="batch-item-meta">
+                        <span class="batch-id">#XC-4429</span>
+                        <span class="batch-time">14:02</span>
+                    </div>
+                    <span class="batch-name">Poly-Methyl Pre-Mix (A2)</span>
+                    <div class="batch-status-strip">
+                        <div class="status-dot dot-pass"></div>
+                        <div class="status-dot dot-pass"></div>
+                        <div class="status-dot dot-warn"></div>
+                    </div>
+                    <input type="checkbox" class="compare-checkbox" onclick="toggleCompare(event, 'XC-4429')">
+                </div>
+                <!-- Item 2 -->
+                <div class="batch-item" onclick="selectBatch(this)" data-id="XC-4430">
+                    <div class="batch-item-meta">
+                        <span class="batch-id">#XC-4430</span>
+                        <span class="batch-time">14:15</span>
+                    </div>
+                    <span class="batch-name">Sulfuric Acid 98% Conc.</span>
+                    <div class="batch-status-strip">
+                        <div class="status-dot dot-pass"></div>
+                        <div class="status-dot dot-pass"></div>
+                        <div class="status-dot dot-pass"></div>
+                    </div>
+                    <input type="checkbox" class="compare-checkbox" onclick="toggleCompare(event, 'XC-4430')">
+                </div>
+                <!-- Item 3 -->
+                <div class="batch-item" onclick="selectBatch(this)" data-id="XC-4431">
+                    <div class="batch-item-meta">
+                        <span class="batch-id">#XC-4431</span>
+                        <span class="batch-time">14:48</span>
+                    </div>
+                    <span class="batch-name">Ethylene Glycol Catalyst</span>
+                    <div class="batch-status-strip">
+                        <div class="status-dot dot-fail"></div>
+                        <div class="status-dot dot-pass"></div>
+                        <div class="status-dot dot-warn"></div>
+                    </div>
+                    <input type="checkbox" class="compare-checkbox" onclick="toggleCompare(event, 'XC-4431')">
+                </div>
+                <!-- Item 4 -->
+                <div class="batch-item" onclick="selectBatch(this)" data-id="XC-4432">
+                    <div class="batch-item-meta">
+                        <span class="batch-id">#XC-4432</span>
+                        <span class="batch-time">15:10</span>
+                    </div>
+                    <span class="batch-name">Silicone Sealant Base V4</span>
+                    <div class="batch-status-strip">
+                        <div class="status-dot dot-pass"></div>
+                        <div class="status-dot dot-pass"></div>
+                        <div class="status-dot dot-pass"></div>
+                    </div>
+                    <input type="checkbox" class="compare-checkbox" onclick="toggleCompare(event, 'XC-4432')">
+                </div>
+            </div>
+        </main>
+
+        <!-- PANE 3: DETAIL -->
+        <section class="detail-pane" id="detailPane">
+            <header class="detail-header">
+                <div>
+                    <h2 id="detailTitle" style="font-size: var(--fs-h1);">Batch #XC-4429 Analysis</h2>
+                    <p style="color: var(--c-text-muted); font-size: var(--fs-small);">Created: Oct 24, 2023 • Station: Reactor 04</p>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary">Flag</button>
+                    <button class="btn btn-primary" onclick="approveBatch()">Approve Batch</button>
+                </div>
+            </header>
+
+            <div class="detail-body">
+                <!-- Section 1: Core Metrics -->
+                <div class="section-card full-width">
+                    <div class="section-title">Critical Composition Metrics <span class="badge badge-pass">NOMINAL</span></div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <span class="stat-label">Purity</span>
+                            <span class="stat-value">99.92<span class="stat-unit">%</span></span>
+                            <div class="mini-chart">
+                                <div class="chart-bar" style="height: 80%;"></div>
+                                <div class="chart-bar" style="height: 85%;"></div>
+                                <div class="chart-bar" style="height: 90%;"></div>
+                                <div class="chart-bar" style="height: 88%;"></div>
+                                <div class="chart-bar" style="height: 92%;"></div>
+                                <div class="chart-bar" style="height: 99%;"></div>
+                            </div>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Viscosity</span>
+                            <span class="stat-value">14.2<span class="stat-unit">mPa·s</span></span>
+                            <div class="mini-chart">
+                                <div class="chart-bar" style="height: 60%;"></div>
+                                <div class="chart-bar" style="height: 62%;"></div>
+                                <div class="chart-bar" style="height: 58%;"></div>
+                                <div class="chart-bar" style="height: 65%;"></div>
+                                <div class="chart-bar" style="height: 63%;"></div>
+                                <div class="chart-bar" style="height: 70%;"></div>
+                            </div>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">pH Level</span>
+                            <span class="stat-value">7.04<span class="stat-unit">pH</span></span>
+                            <div class="mini-chart">
+                                <div class="chart-bar" style="height: 40%;"></div>
+                                <div class="chart-bar" style="height: 42%;"></div>
+                                <div class="chart-bar" style="height: 41%;"></div>
+                                <div class="chart-bar" style="height: 43%;"></div>
+                                <div class="chart-bar" style="height: 42%;"></div>
+                                <div class="chart-bar" style="height: 45%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Physical Properties -->
+                <div class="section-card">
+                    <div class="section-title">Physical Constants</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Property</th>
+                                <th>Result</th>
+                                <th>Dev.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Flash Point</td><td>182.4°C</td><td style="color:var(--c-status-pass)">+0.2</td></tr>
+                            <tr><td>Density</td><td>1.042 g/cm³</td><td>0.000</td></tr>
+                            <tr><td>Refractive Index</td><td>1.4421</td><td style="color:var(--c-status-fail)">-0.02</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Section 3: Impurities -->
+                <div class="section-card">
+                    <div class="section-title">Impurity Profile</div>
+                    <div style="display: flex; flex-direction: column; gap: var(--s-3);">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; font-size:var(--fs-tiny); margin-bottom:4px">
+                                <span>Moisture Content</span>
+                                <span>0.02% / 0.05% Max</span>
+                            </div>
+                            <div style="height:4px; width:100%; background:var(--c-bg-surface); border-radius:2px">
+                                <div style="height:100%; width:40%; background:var(--c-status-pass); border-radius:2px"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; font-size:var(--fs-tiny); margin-bottom:4px">
+                                <span>Particulates (ISO 4406)</span>
+                                <span>14/12/9 / 18/16/13 Max</span>
+                            </div>
+                            <div style="height:4px; width:100%; background:var(--c-bg-surface); border-radius:2px">
+                                <div style="height:100%; width:70%; background:var(--c-status-warn); border-radius:2px"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Thermal Stability -->
+                <div class="section-card full-width">
+                    <div class="section-title">Stability Curve (Exothermic Analysis)</div>
+                    <div style="height: 120px; border-left: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); position: relative; margin-top: var(--s-4);">
+                        <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" style="overflow: visible;">
+                            <path d="M0 80 Q 25 75, 50 50 T 100 10" fill="none" stroke="var(--c-accent)" stroke-width="2" />
+                            <line x1="0" y1="40" x2="100" y2="40" stroke="var(--c-status-fail)" stroke-dasharray="4" stroke-width="1" />
+                        </svg>
+                        <span style="position:absolute; right: 0; top: 35px; font-size: var(--fs-tiny); color: var(--c-status-fail);">Critical Threshold (120°C)</span>
+                    </div>
+                </div>
+
+                <!-- Section 5: Regulatory -->
+                <div class="section-card">
+                    <div class="section-title">Compliance Checklist</div>
+                    <ul style="list-style: none; font-size: var(--fs-small);">
+                        <li style="margin-bottom: var(--s-2); display: flex; align-items: center; gap: var(--s-2);">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--c-status-pass)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                            REACH Annex XVII Compliant
+                        </li>
+                        <li style="margin-bottom: var(--s-2); display: flex; align-items: center; gap: var(--s-2);">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--c-status-pass)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                            SDS Documentation Attached
+                        </li>
+                        <li style="margin-bottom: var(--s-2); display: flex; align-items: center; gap: var(--s-2);">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--c-status-warn)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                            GHS Labeling Verification Pending
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Section 6: Audit Trail -->
+                <div class="section-card">
+                    <div class="section-title">Personnel Logs</div>
+                    <div style="font-size: var(--fs-tiny);">
+                        <div style="margin-bottom: var(--s-2); padding-bottom: var(--s-2); border-bottom: 1px solid var(--c-bg-surface);">
+                            <strong>13:45</strong> - Sample extracted by <strong>K. Hoffman</strong> (Lab-A)
+                        </div>
+                        <div style="margin-bottom: var(--s-2); padding-bottom: var(--s-2); border-bottom: 1px solid var(--c-bg-surface);">
+                            <strong>14:02</strong> - Auto-Analysis completed (Unit-7)
+                        </div>
+                        <div>
+                            <strong>14:05</strong> - Review flagged by System (Viscosity Variance)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 7: Storage Instructions -->
+                <div class="section-card full-width">
+                    <div class="section-title">Storage & Handling</div>
+                    <p style="font-size: var(--fs-small); line-height: 1.4;">Store in a cool, well-ventilated place. Keep container tightly closed. <strong>Oxidizer Category 2</strong>. Do not store near flammable liquids or reducing agents. Optimal shelf life is 18 months from manufacturing date if kept at 15-25°C.</p>
+                </div>
+            </div>
+
+            <!-- Comparison View Overlay -->
+            <div class="comparison-view" id="comparisonView">
+                <!-- Content generated via JS -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const compareList = new Set();
+        const batches = {
+            'XC-4429': { name: 'Poly-Methyl Pre-Mix (A2)', purity: '99.92%', pH: '7.04', status: 'PASS' },
+            'XC-4430': { name: 'Sulfuric Acid 98% Conc.', purity: '98.15%', pH: '0.12', status: 'PASS' },
+            'XC-4431': { name: 'Ethylene Glycol Catalyst', purity: '94.20%', pH: '6.85', status: 'FAIL' },
+            'XC-4432': { name: 'Silicone Sealant Base V4', purity: '99.99%', pH: '7.20', status: 'PASS' }
+        };
+
+        function selectBatch(element) {
+            document.querySelectorAll('.batch-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            
+            const id = element.dataset.id;
+            const batch = batches[id];
+            document.getElementById('detailTitle').innerText = `Batch #${id} Analysis`;
+            // In a real app, we'd update all the stats here.
+        }
+
+        function toggleCompare(event, id) {
+            event.stopPropagation();
+            if (event.target.checked) {
+                compareList.add(id);
+            } else {
+                compareList.delete(id);
+            }
+
+            const pane = document.getElementById('detailPane');
+            const compView = document.getElementById('comparisonView');
+
+            if (compareList.size >= 2) {
+                pane.classList.add('compare-active');
+                renderComparison();
+            } else {
+                pane.classList.remove('compare-active');
+            }
+        }
+
+        function renderComparison() {
+            const compView = document.getElementById('comparisonView');
+            compView.innerHTML = '';
+            
+            compareList.forEach(id => {
+                const b = batches[id];
+                const col = document.createElement('div');
+                col.className = 'compare-column';
+                col.innerHTML = `
+                    <h3 style="color:var(--c-accent); margin-bottom:var(--s-4)">Batch #${id}</h3>
+                    <div style="margin-bottom:var(--s-4)">
+                        <label style="font-size:var(--fs-tiny); color:var(--c-text-muted)">PRODUCT</label>
+                        <div style="font-weight:bold">${b.name}</div>
+                    </div>
+                    <div style="margin-bottom:var(--s-4)">
+                        <label style="font-size:var(--fs-tiny); color:var(--c-text-muted)">PURITY</label>
+                        <div style="font-size:var(--fs-h1)">${b.purity}</div>
+                    </div>
+                    <div style="margin-bottom:var(--s-4)">
+                        <label style="font-size:var(--fs-tiny); color:var(--c-text-muted)">PH LEVEL</label>
+                        <div style="font-size:var(--fs-h2)">${b.pH}</div>
+                    </div>
+                    <div style="margin-bottom:var(--s-4)">
+                        <label style="font-size:var(--fs-tiny); color:var(--c-text-muted)">STATUS</label>
+                        <div class="badge ${b.status === 'PASS' ? 'badge-pass' : 'badge-fail'}">${b.status}</div>
+                    </div>
+                    <table class="data-table">
+                        <tr><td>Trace Metals</td><td>&lt;5ppm</td></tr>
+                        <tr><td>Inhibitor Level</td><td>125ppm</td></tr>
+                        <tr><td>Volatiles</td><td>0.12%</td></tr>
+                    </table>
+                `;
+                compView.appendChild(col);
+            });
+        }
+
+        function approveBatch() {
+            alert('Batch verification signature recorded. Inventory system updated.');
+        }
+    </script>
+</body>
+</html>

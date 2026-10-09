@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fieldline Repair — Dispatch</title>
+<style>
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --line:#e3e8ef; --line2:#eef2f6;
+  --ink:#17222e; --muted:#5c6774; --faint:#8a94a1;
+  --accent:#0e7a46; --accent-soft:#e6f3ec; --accent-ink:#0b5c36;
+  --amber:#b45309; --amber-soft:#fdf3e5; --amber-line:#e7c9a2;
+  --red:#c8261b; --red-soft:#fdeceb; --red-line:#f2c1bd;
+  --indigo:#4338ca; --purple:#8b3dd8;
+  --lane:#f7f9fb; --hour:78px; /* 60min * 1.3px */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);overflow:hidden}
+button{font:inherit;cursor:pointer;border:none;background:none}
+button:disabled{cursor:not-allowed;opacity:.55}
+
+.app{display:grid;grid-template-columns:212px 1fr;height:100vh;min-width:1240px}
+
+/* ---------- side nav ---------- */
+.nav{background:#132018;color:#cfe0d6;display:flex;flex-direction:column}
+.nav .logo{display:flex;align-items:center;gap:10px;padding:18px 16px 16px;border-bottom:1px solid #22392c}
+.nav .logo .mark{width:32px;height:32px;border-radius:9px;background:#1ea75f;display:grid;place-items:center;color:#fff;flex:none}
+.nav .logo b{color:#fff;font-size:15px;letter-spacing:.2px}
+.nav .logo small{display:block;color:#7fa190;font-size:11px;font-weight:400}
+.nav-items{padding:10px 8px;display:flex;flex-direction:column;gap:2px;flex:1}
+.nav-items a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:#a9bfb1;text-decoration:none;font-weight:500;font-size:13px}
+.nav-items a:hover{background:#1c2f24;color:#fff}
+.nav-items a.active{background:#1ea75f;color:#fff}
+.nav-items a .kbd{margin-left:auto;font-size:10px;color:#6f8a7c;border:1px solid #2c4636;border-radius:4px;padding:1px 5px}
+.nav-foot{padding:12px 16px;border-top:1px solid #22392c;color:#7fa190;font-size:11px;line-height:1.6}
+.nav-foot b{color:#cfe0d6}
+
+/* ---------- chrome ---------- */
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.topbar h1{font-size:17px;font-weight:700}
+.topbar .date{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:6px}
+.topbar .spacer{flex:1}
+.search{display:flex;align-items:center;gap:8px;background:#f2f5f8;border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--faint);width:250px;font-size:13px}
+.search input{border:none;background:none;outline:none;flex:1;font:inherit;color:var(--ink)}
+.icon-btn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--muted);position:relative}
+.icon-btn:hover{background:#f2f5f8}
+.icon-btn .dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--red)}
+.me{display:flex;align-items:center;gap:9px}
+.me .av{width:32px;height:32px;border-radius:50%;background:var(--indigo);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+.me .who{line-height:1.2}
+.me .who b{font-size:13px}
+.me .who small{color:var(--faint);font-size:11px}
+
+.statbar{display:flex;gap:10px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
+.stat{display:flex;align-items:center;gap:9px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:#fbfcfd;white-space:nowrap}
+.stat .n{font-size:17px;font-weight:800}
+.stat .l{font-size:12px;color:var(--muted)}
+.stat.good .n{color:var(--accent)}
+.stat.warn .n{color:var(--amber)}
+.stat.bad .n{color:var(--red)}
+.stat .util{width:70px;height:6px;border-radius:4px;background:#e6ebf1;overflow:hidden}
+.stat .util i{display:block;height:100%;background:var(--accent);border-radius:4px}
+
+/* ---------- workspace ---------- */
+.workspace{flex:1;display:grid;grid-template-columns:258px minmax(0,1fr) 356px;min-height:0}
+.rail{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto}
+.insight{border-left:1px solid var(--line);background:var(--panel);overflow-y:auto;display:flex;flex-direction:column}
+.sect-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between}
+.count-badge{background:var(--red);color:#fff;border-radius:9px;font-size:11px;padding:1px 7px;font-weight:700}
+.count-badge.zero{background:var(--accent)}
+
+/* tech rail */
+.tech-row{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);cursor:pointer}
+.tech-row:hover{background:#f6f9fb}
+.tech-row.sel{background:var(--accent-soft)}
+.tech-row .av{width:34px;height:34px;border-radius:50%;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.tech-row .nm{font-weight:700;font-size:13px}
+.tech-row .meta{font-size:11px;color:var(--muted)}
+.tech-row .jobs{font-size:11px;color:var(--faint);margin-top:2px}
+.utilbar{height:5px;background:#e8edf2;border-radius:3px;margin-top:6px;overflow:hidden}
+.utilbar i{display:block;height:100%;border-radius:3px}
+.tech-flag{color:var(--amber);font-size:11px;margin-top:3px;display:flex;align-items:center;gap:4px}
+.rail-note{margin:12px;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;color:var(--muted);font-size:11.5px;background:#fbfcfd}
+
+/* ---------- timeline board ---------- */
+.board-wrap{display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.board-scroll{flex:1;overflow:auto;position:relative}
+.board-inner{min-width:calc(222px + 942px)}
+.hrow{display:flex;position:sticky;top:0;background:var(--panel);z-index:5;border-bottom:1px solid var(--line)}
+.hrow .corner{width:222px;flex:none;position:sticky;left:0;background:var(--panel);border-right:1px solid var(--line);padding:9px 14px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;z-index:6}
+.hrow .axis{position:relative;height:34px;flex:1}
+.hrow .axis span{position:absolute;top:10px;font-size:11px;color:var(--faint);transform:translateX(-50%)}
+.row{display:flex;border-bottom:1px solid var(--line)}
+.row-head{width:222px;flex:none;position:sticky;left:0;background:var(--panel);border-right:1px solid var(--line);padding:8px 12px;z-index:4}
+.row-head .r1{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13px}
+.row-head .r1 .av{width:22px;height:22px;border-radius:50%;color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex:none}
+.row-head .r1 .warn-ic{margin-left:auto;color:var(--amber)}
+.row-head .r2{font-size:11px;color:var(--muted);margin-top:2px}
+.lane{position:relative;height:66px;flex:1;background:var(--lane);
+  background-image:linear-gradient(to right,var(--line2) 1px,transparent 1px);background-size:var(--hour) 100%}
+.shift-band{position:absolute;top:0;bottom:0;background:#fff;border-left:1px solid var(--line2);border-right:1px solid var(--line2)}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:2}
+.nowline::after{content:"Now 07:24";position:absolute;top:2px;left:4px;font-size:10px;color:var(--red);white-space:nowrap}
+
+.block{position:absolute;top:7px;bottom:7px;border-radius:8px;padding:6px 9px 6px 10px;overflow:hidden;cursor:pointer;font-size:11px;line-height:1.3;z-index:3;border-left:4px solid;box-shadow:0 1px 2px rgba(23,34,46,.06)}
+.block:hover{filter:brightness(.985)}
+.block.p-standard{background:#f0f5f9;border-left-color:#64748b}
+.block.p-high{background:#fdf3e7;border-left-color:#d97706}
+.block.p-urgent{background:#fdeceb;border-left-color:#d92d20}
+.block.sel{outline:2px solid var(--accent);outline-offset:1px}
+.block.mismatch{outline:2px dashed var(--amber);outline-offset:-3px}
+.block .b-top{display:flex;align-items:center;gap:6px;margin-bottom:1px}
+.block .b-time{font-weight:700;font-size:11px;color:var(--ink)}
+.block .b-tag{font-size:9.5px;font-weight:800;padding:0 5px;border-radius:5px;letter-spacing:.03em}
+.b-tag.over{background:#f6d8b4;color:#7c3f04}
+.b-tag.mism{background:#f6d8b4;color:#7c3f04}
+.b-tag.sms{background:#dbe7f7;color:#28457c;display:inline-flex;align-items:center;gap:3px}
+.block .b-title{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.block .b-sub{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.block .b-loc{color:var(--faint);font-size:10.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.risk-ext{position:absolute;top:9px;bottom:9px;z-index:1;border-radius:0 8px 8px 0;
+  background:repeating-linear-gradient(135deg,rgba(217,119,6,.28) 0 6px,rgba(217,119,6,.08) 6px 12px);border:1px dashed var(--amber-line);border-left:none}
+.travel{position:absolute;top:50%;transform:translateY(-50%);z-index:2;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.travel.ok{background:#e8f4ec;color:var(--accent-ink)}
+.travel.bad{background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)}
+.legend{display:flex;gap:14px;align-items:center;padding:8px 16px;border-top:1px solid var(--line);background:var(--panel);font-size:11px;color:var(--muted);flex-wrap:wrap}
+.legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* ---------- insight / alerts ---------- */
+.alerts{display:flex;flex-direction:column;gap:10px;padding:0 14px 14px}
+.acard{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}
+.acard.urgent{border-color:var(--red-line);background:#fffafa}
+.acard.high{border-color:var(--amber-line);background:#fffdf9}
+.a-sev{font-size:10px;font-weight:800;letter-spacing:.07em;padding:2px 7px;border-radius:5px;display:inline-block}
+.sev-urgent{background:var(--red-soft);color:var(--red)}
+.sev-high{background:var(--amber-soft);color:var(--amber)}
+.acard h4{font-size:13.5px;margin:8px 0 4px}
+.acard p{font-size:12px;color:var(--muted);margin-bottom:6px}
+.acard .hint{font-size:12px;color:var(--accent-ink);background:var(--accent-soft);border-radius:8px;padding:7px 9px;margin:6px 0}
+.acard .opts{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.opt{border:1px solid var(--line);border-radius:9px;padding:8px 10px;text-align:left;background:#fbfcfd}
+.opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+.opt b{font-size:12px;display:block}
+.opt small{color:var(--muted)}
+.a-actions{display:flex;gap:8px;margin-top:9px}
+.btn{background:var(--accent);color:#fff;font-weight:700;font-size:12.5px;border-radius:8px;padding:7px 12px}
+.btn:hover{background:#0c6a3d}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:#f2f5f8}
+.btn.danger{background:var(--red)}
+.btn.danger:hover{background:#ad1f16}
+.btn.sm{padding:5px 10px;font-size:12px}
+.clear-state{margin:4px 14px 16px;border:1px solid #cfe6d8;background:var(--accent-soft);color:var(--accent-ink);border-radius:12px;padding:14px;display:flex;gap:10px;align-items:flex-start;font-size:12.5px}
+
+/* ---------- detail panel ---------- */
+.detail{border-top:1px solid var(--line);padding:0 14px 20px;flex:1;overflow-y:auto}
+.d-top{display:flex;align-items:center;gap:8px;padding-top:14px}
+.d-id{font-size:12px;font-weight:800;color:var(--faint);letter-spacing:.04em}
+.chip{font-size:10px;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:6px}
+.chip.urgent{background:var(--red-soft);color:var(--red)}
+.chip.high{background:var(--amber-soft);color:var(--amber)}
+.chip.standard{background:#eef2f6;color:#54637a}
+.chip.ok{background:var(--accent-soft);color:var(--accent-ink)}
+.chip.warn{background:var(--amber-soft);color:var(--amber)}
+.d-close{margin-left:auto;color:var(--faint)}
+.detail h3{font-size:16px;margin:6px 0 2px}
+.d-problem{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.kv{display:grid;grid-template-columns:96px 1fr;row-gap:7px;column-gap:10px;font-size:12.5px;border-top:1px solid var(--line2);padding-top:10px}
+.kv dt{color:var(--faint);font-size:11.5px}
+.kv dd{font-weight:600}
+.d-box{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:12px;background:#fbfcfd}
+.d-box h5{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.d-box .rowline{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+.d-box .rowline span:first-child{color:var(--muted)}
+.d-box .rowline span:last-child{font-weight:600;text-align:right}
+.tech-card{display:flex;gap:10px;align-items:flex-start}
+.tech-card .av{width:34px;height:34px;border-radius:50%;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;flex:none}
+.tech-card .tc-meta{font-size:11.5px;color:var(--muted);line-height:1.5}
+.tech-card .tc-meta b{color:var(--ink);font-size:12.5px;display:block}
+.fits{list-style:none;margin-top:4px}
+.fits li{display:flex;align-items:flex-start;gap:7px;font-size:12px;padding:3px 0}
+.fits li .ok{color:var(--accent);font-weight:800}
+.fits li .no{color:var(--red);font-weight:800}
+.fits li .lbl{color:var(--muted)}
+.fits li .note{color:var(--amber);font-size:11.5px}
+.travel-note{font-size:12px;margin-top:10px;color:var(--muted);background:#f3f7fa;border-radius:8px;padding:8px 10px;display:flex;gap:8px}
+.d-actions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.d-actions .btn{width:100%}
+
+/* ---------- modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(15,25,35,.45);display:grid;place-items:center;z-index:50}
+.modal{width:620px;max-height:86vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(10,20,30,.3)}
+.modal header{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.modal header h3{font-size:15px}
+.modal header p{font-size:12px;color:var(--muted);margin-top:2px}
+.modal header .x{margin-left:auto}
+.modal .body{padding:14px 18px 18px}
+.cand{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:10px;display:flex;gap:12px}
+.cand.best{border-color:var(--accent);background:#f4faf6}
+.cand .av{width:38px;height:38px;border-radius:50%;color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center;flex:none}
+.cand .cd-body{flex:1;min-width:0}
+.cand .cd-top{display:flex;align-items:baseline;gap:8px}
+.cand .cd-top b{font-size:13.5px}
+.cand .cd-top small{color:var(--faint);font-size:11.5px}
+.best-tag{font-size:10px;font-weight:800;background:var(--accent);color:#fff;padding:1px 6px;border-radius:5px}
+.cand .cd-fit{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.fit-chip{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px;display:inline-flex;align-items:center;gap:4px}
+.fit-chip.ok{background:var(--accent-soft);color:var(--accent-ink)}
+.fit-chip.no{background:var(--red-soft);color:var(--red)}
+.fit-chip.warn{background:var(--amber-soft);color:var(--amber)}
+.cand .cd-when{font-size:11.5px;color:var(--muted);margin-top:6px}
+.cand .cd-act{align-self:center}
+
+/* toast */
+.toasts{position:fixed;bottom:20px;right:22px;display:flex;flex-direction:column;gap:9px;z-index:60}
+.toast{background:#132018;color:#eaf4ee;border-radius:10px;padding:11px 14px;font-size:12.5px;box-shadow:0 10px 30px rgba(10,20,30,.35);display:flex;gap:9px;max-width:380px;animation:tin .25s ease}
+.toast .t-ic{color:#3ecf8e;flex:none;margin-top:1px}
+.toast small{display:block;color:#9db8a9;font-size:11px;margin-top:2px}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+svg{flex:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="logo">
+      <span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a5 5 0 0 0 6.6 6.6l-9.4 9.4a2 2 0 0 1-2.8 0l-3.8-3.8a2 2 0 0 1 0-2.8z"/><path d="M3.5 3.5l4 4"/></svg></span>
+      <div><b>Fieldline</b><small>Repair ops</small></div>
+    </div>
+    <div class="nav-items">
+      <a href="#" class="active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Dispatch board <span class="kbd">D</span></a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Appointments</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Customers</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 12l7-3v8l-7 3-7-3-7 3V6l7 3 7-3z"/></svg>Technicians</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 8l-9-5-9 5v9l9 5 9-5V8z"/><path d="M3.3 8L12 13l8.7-5M12 22V13"/></svg>Parts inventory</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>Reports</a>
+      <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-2.94l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 10 4.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
+    </div>
+    <div class="nav-foot">Coverage hours<br><b>Today · 07:00 – 19:00</b><br>5 vans on the road</div>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1>Dispatch board</h1>
+        <div class="date"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Wednesday, June 12 · Northside Appliance Service · Zone map v14</div>
+      </div>
+      <div class="spacer"></div>
+      <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input placeholder="Search customer, job #, address…"></label>
+      <button class="icon-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="dot"></span></button>
+      <div class="me"><div class="av">DK</div><div class="who"><b>Dana Kessler</b><br><small>Dispatcher</small></div></div>
+    </header>
+
+    <div class="statbar" id="stats"></div>
+
+    <div class="workspace">
+      <aside class="rail" id="rail"></aside>
+      <section class="board-wrap">
+        <div class="board-scroll" id="boardScroll">
+          <div class="board-inner" id="board"></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw" style="background:#f0f5f9;border-left:3px solid #64748b"></i>Standard job</span>
+          <span><i class="sw" style="background:#fdf3e7;border-left:3px solid #d97706"></i>High priority</span>
+          <span><i class="sw" style="background:#fdeceb;border-left:3px solid #d92d20"></i>Urgent</span>
+          <span><i class="sw" style="background:repeating-linear-gradient(135deg,#e5a04b55 0 4px,#e5a04b18 4px 8px);border:1px dashed #d97706"></i>Runs-long risk</span>
+          <span><i class="sw" style="background:#fff;border:2px dashed #d97706"></i>Brand/skill conflict</span>
+          <span><i class="sw" style="background:#e8f4ec"></i>→ drive time between stops</span>
+        </div>
+      </section>
+      <aside class="insight">
+        <div class="sect-title" id="alertTitle">Needs attention</div>
+        <div class="alerts" id="alerts"></div>
+        <div class="detail" id="detail"></div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<div id="modalRoot"></div>
+
+<script>
+/* ============================ data ============================ */
+const DAY_START=420, DAY_END=1140, PPM=1.3, NOW=444;
+
+const TRAVEL={"Eastgate|North Ridge":24,"Downtown|North Ridge":28,"North Ridge|South Point":35,"North Ridge|West Hills":32,"Downtown|Eastgate":12,"Eastgate|South Point":26,"Eastgate|West Hills":30,"Downtown|South Point":15,"Downtown|West Hills":22,"South Point|West Hills":28};
+function travelMin(a,b){if(a===b)return 9;return TRAVEL[[a,b].sort().join("|")]||20;}
+
+const techs=[
+ {id:"marcus",name:"Marcus Delgado",van:"Van 1",hours:[420,960],areas:["North Ridge"],skills:["Refrigeration","Dishwashers","Compressor systems","Ice makers"],certs:["EPA 608"],brands:["GE","Whirlpool","Bosch"],color:"#0e7a46"},
+ {id:"priya",name:"Priya Nair",van:"Van 2",hours:[480,1020],areas:["Eastgate","Downtown"],skills:["Dishwashers","Washers & dryers"],certs:["EPA 608","Electrical L2"],brands:["Bosch","LG","Samsung","Whirlpool"],color:"#4338ca"},
+ {id:"theo",name:"Theo Brandt",van:"Van 3",hours:[540,1080],areas:["South Point"],skills:["Refrigeration","Freezers","Ranges & ovens","HVAC"],certs:["EPA 608"],brands:["GE","LG","Kenmore","Samsung"],color:"#b45309"},
+ {id:"dana",name:"Dana Whitfield",van:"Van 4",hours:[450,990],areas:["West Hills"],skills:["Ranges & ovens","Microwaves","Gas lines"],certs:["Gas Appliance Cert","EPA 608"],brands:["Whirlpool","KitchenAid","GE"],color:"#0e7490"},
+ {id:"amara",name:"Amara Osei",van:"Van 5",hours:[600,1140],areas:["Downtown","Eastgate"],skills:["Washers & dryers","Dishwashers"],certs:[],brands:["Maytag","LG","Samsung","Whirlpool"],color:"#8b3dd8"},
+];
+const SKILL={Refrigerator:"Refrigeration",Freezer:"Freezers",Dishwasher:"Dishwashers",Washer:"Washers & dryers",Dryer:"Washers & dryers",Range:"Ranges & ovens","Wall oven":"Ranges & ovens",Microwave:"Microwaves"};
+const PARTS={"Compressor start relay":["Van 3"],"Drain pump":["Van 2"],"Gas valve kit":["Van 4"],"Bake element":["Depot"],"Dryer belt":["Van 5"]};
+const VANEQ={"Van 3":["Refrigerant scale","Manifold gauge set"],"Van 4":["Combustion analyzer"]};
+
+const appts=[
+ {id:"AR-2009",tech:"marcus",customer:"Luis & Marta Okafor",phone:"(555) 014-1180",addr:"412 Cobbler Ln",area:"North Ridge",window:[480,600],start:480,dur:75,appliance:"Refrigerator",brand:"GE",problem:"Ice maker overflowing into bin",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2011",tech:"marcus",customer:"Gina Halvorsen",phone:"(555) 014-2264",addr:"9 Windrow Ct",area:"North Ridge",window:[630,750],start:630,dur:120,appliance:"Refrigerator",brand:"Bosch",problem:"Compressor failure — unit not cooling",priority:"High",parts:["Compressor start relay"],equip:"Manifold gauge set",risk:45,riskNote:"Tech called in: compressor bolts seized, +45 min likely.",notified:true},
+ {id:"AR-2018",tech:"marcus",customer:"Ben Cho",phone:"(555) 014-3391",addr:"77 Calder St",area:"North Ridge",window:[780,900],start:780,dur:75,appliance:"Dishwasher",brand:"Whirlpool",problem:"Leak under the door gasket",priority:"Standard",parts:[],equip:"",notified:false},
+ {id:"AR-2021",tech:"priya",customer:"Sofia Rennick",phone:"(555) 014-7710",addr:"31 Harbor Ave",area:"Downtown",window:[510,630],start:510,dur:80,appliance:"Washer",brand:"LG",problem:"No spin cycle, drum free-spins",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2025",tech:"priya",customer:"Hollis Grey",phone:"(555) 014-0182",addr:"560 Fell St",area:"Eastgate",window:[660,750],start:660,dur:75,appliance:"Dishwasher",brand:"Bosch",problem:"E24 error — not draining",priority:"High",parts:["Drain pump"],equip:"",notified:true},
+ {id:"AR-2030",tech:"priya",customer:"Yuna Park",phone:"(555) 014-6055",addr:"18 Ashby Rd",area:"Downtown",window:[840,960],start:840,dur:70,appliance:"Washer",brand:"Samsung",problem:"Door lock failure, won't start",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2016",tech:"theo",customer:"Cora Winslow",phone:"(555) 014-4408",addr:"2 Lantern Row",area:"South Point",window:[540,660],start:540,dur:90,appliance:"Freezer",brand:"GE",problem:"Frost buildup, door seal suspect",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2022",tech:"theo",customer:"Ray Mbutu",phone:"(555) 014-9017",addr:"203 Fenwick Blvd",area:"Eastgate",window:[720,840],start:720,dur:60,appliance:"Washer",brand:"Whirlpool",problem:"Agitator stripped, loud grinding",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2028",tech:"theo",customer:"Ines Delacroix",phone:"(555) 014-2255",addr:"40 Pier Walk",area:"South Point",window:[900,1020],start:900,dur:80,appliance:"Range",brand:"Kenmore",problem:"Oven not heating past 220°",priority:"Standard",parts:["Bake element"],equip:"",notified:true},
+ {id:"AR-2007",tech:"dana",customer:"Pete Farrow",phone:"(555) 014-6633",addr:"88 Ridgeline Dr",area:"West Hills",window:[450,570],start:450,dur:90,appliance:"Range",brand:"KitchenAid",problem:"Gas smell near oven — safety visit",priority:"High",parts:["Gas valve kit"],equip:"Combustion analyzer",cert:"Gas Appliance Cert",notified:true},
+ {id:"AR-2019",tech:"dana",customer:"Alma Reyes",phone:"(555) 014-8842",addr:"15 Saddleback Rd",area:"West Hills",window:[660,780],start:660,dur:75,appliance:"Wall oven",brand:"GE",problem:"Gas oven won't ignite",priority:"Standard",parts:[],equip:"Combustion analyzer",notified:true},
+ {id:"AR-2031",tech:"dana",customer:"Grace Tan",phone:"(555) 014-3357",addr:"62 Quarry Ln",area:"West Hills",window:[870,990],start:870,dur:60,appliance:"Microwave",brand:"Whirlpool",problem:"Runs but doesn't heat",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2033",tech:"amara",customer:"Nate Kirby",phone:"(555) 014-5511",addr:"9 Foundry St",area:"Downtown",window:[600,720],start:600,dur:70,appliance:"Dryer",brand:"Maytag",problem:"Long dry times, weak airflow",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2036",tech:"amara",customer:"Viv Ostrom",phone:"(555) 014-7704",addr:"31 Larkspur Ave",area:"Eastgate",window:[810,930],start:810,dur:65,appliance:"Dryer",brand:"LG",problem:"Drum not turning",priority:"Standard",parts:["Dryer belt"],equip:"",notified:true},
+ {id:"AR-2040",tech:"amara",customer:"Sam Kwon",phone:"(555) 014-1166",addr:"7 Cypress Ct",area:"Downtown",window:[990,1110],start:990,dur:75,appliance:"Dishwasher",brand:"Samsung",problem:"Standing water after cycle",priority:"Standard",parts:[],equip:"",notified:true},
+ {id:"AR-2043",tech:null,customer:"Mei Chen",phone:"(555) 014-2281",addr:"88 Lantern Way",area:"South Point",window:[990,1110],start:null,dur:75,appliance:"Refrigerator",brand:"Samsung",problem:"Not cooling — food spoiling, stayed home from work",priority:"Urgent",parts:["Compressor start relay"],equip:"Refrigerant scale",cert:"EPA 608",source:"Call-in 07:12 · same-day urgent",notified:false},
+];
+
+let state={selected:"AR-2043",assignedNote:{}};
+
+/* ============================ helpers ============================ */
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const fmt=m=>pad(Math.floor(m/60))+":"+pad(m%60);
+const techOf=id=>techs.find(t=>t.id===id);
+const apptOf=id=>appts.find(a=>a.id===id);
+const apptsOf=tid=>appts.filter(a=>a.tech===tid).sort((a,b)=>(a.start??0)-(b.start??0));
+const av=name=>name.split(" ").map(w=>w[0]).join("").slice(0,2);
+const ck='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+const cx='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+const pin='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+const van='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6h13v10H1zM14 9h4l4 4v3h-8z"/><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>';
+const warnIc='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
+
+function partStatus(part,vanId){
+  const loc=PARTS[part]||[];
+  if(loc.includes(vanId))return{ok:true,note:"in "+vanId};
+  if(loc.includes("Depot"))return{ok:true,warn:true,note:"depot pickup (+20 min)"};
+  return{ok:false,note:"not stocked"};
+}
+function fitRows(appt,t){
+  const rows=[];
+  rows.push({label:"Skill — "+(SKILL[appt.appliance]||"General"),ok:t.skills.includes(SKILL[appt.appliance]||"")});
+  rows.push({label:"Brand — "+appt.brand+" authorized",ok:t.brands.includes(appt.brand)});
+  if(appt.cert)rows.push({label:"Certification — "+appt.cert,ok:t.certs.includes(appt.cert)});
+  appt.parts.forEach(p=>{const s=partStatus(p,t.van);rows.push({label:"Part — "+p,ok:s.ok,warn:s.warn,note:s.note});});
+  if(appt.equip)rows.push({label:"Equipment — "+appt.equip,ok:(VANEQ[t.van]||[]).includes(appt.equip)});
+  rows.push({label:"Service area — "+appt.area,ok:t.areas.includes(appt.area)});
+  return rows;
+}
+function placement(appt,t){
+  const list=apptsOf(t.id).filter(a=>a.id!==appt.id&&a.start!=null&&a.start<appt.window[1]);
+  let earliest=t.hours[0],from=null;
+  if(list.length){const prev=list[list.length-1];
+    const end=prev.start+prev.dur+(prev.risk&&!prev.resolved?prev.risk:0);
+    earliest=Math.max(earliest,end+travelMin(prev.area,appt.area));from=prev;}
+  const start=Math.max(appt.window[0],earliest);
+  const end=start+appt.dur;
+  const ok=end<=appt.window[1]&&end<=t.hours[1];
+  return{start,end,ok,from};
+}
+function utilized(t){
+  const list=apptsOf(t.id);let mins=list.reduce((s,a)=>s+a.dur,0);
+  for(let i=1;i<list.length;i++)mins+=travelMin(list[i-1].area,list[i].area);
+  return Math.min(1,mins/(t.hours[1]-t.hours[0]));
+}
+function activeAlerts(){
+  const out=[];
+  const un=appts.find(a=>a.tech===null);
+  if(un)out.push({type:"unassigned",appt:un});
+  const risky=appts.find(a=>a.risk&&!a.resolved);
+  if(risky)out.push({type:"overrun",appt:risky});
+  appts.forEach(a=>{if(a.tech&&!a.mismatchOk){
+    const t=techOf(a.tech);
+    if(t&&!t.brands.includes(a.brand))out.push({type:"mismatch",appt:a});
+  }});
+  return out;
+}
+
+/* ============================ render ============================ */
+function renderStats(){
+  const confirmed=appts.filter(a=>a.tech).length;
+  const al=activeAlerts();
+  const un=appts.filter(a=>!a.tech).length;
+  const partsN=new Set(appts.flatMap(a=>a.parts)).size;
+  const util=Math.round(techs.reduce((s,t)=>s+utilized(t),0)/techs.length*100);
+  $("stats").innerHTML=`
+   <div class="stat good"><span class="n">${confirmed}</span><span class="l">confirmed jobs<br>across 5 techs</span></div>
+   <div class="stat ${un?"bad":"good"}"><span class="n">${un}</span><span class="l">unassigned<br>urgent request</span></div>
+   <div class="stat ${al.length?"warn":"good"}"><span class="n">${al.length}</span><span class="l">scheduling alerts<br>need a decision</span></div>
+   <div class="stat good"><div><div style="font-size:17px;font-weight:800">${util}%</div><div class="util"><i style="width:${util}%"></i></div></div><span class="l">capacity booked<br>incl. drive time</span></div>
+   <div class="stat"><span class="n">${partsN}</span><span class="l">parts to stage<br>1 depot pickup</span></div>
+   <div class="stat"><span class="n">07:24</span><span class="l">now · all vans<br>checked in on time</span></div>`;
+}
+
+function renderRail(){
+  $("rail").innerHTML=`<div class="sect-title">Technicians</div>`+techs.map(t=>{
+    const list=apptsOf(t.id);
+    const hasIssue=list.some(a=>a.risk&&!a.resolved||(a.tech&&!techOf(a.tech).brands.includes(a.brand)&&!a.mismatchOk));
+    const u=utilized(t);
+    return `<div class="tech-row" data-tech="${t.id}">
+      <div class="av" style="background:${t.color}">${av(t.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="nm">${t.name}</div>
+        <div class="meta">${fmt(t.hours[0])}–${fmt(t.hours[1])} · ${t.areas.join(", ")}</div>
+        <div class="jobs">${van.outerHTML?"":""}${list.length} job${list.length>1?"s":""} · ${t.van} · ${t.certs.length?t.certs.join(", "):"no special certs"}</div>
+        <div class="utilbar"><i style="width:${Math.round(u*100)}%;background:${u>.85?"#d97706":t.color}"></i></div>
+        ${hasIssue?`<div class="tech-flag">${warnIc} check alerts</div>`:""}
+      </div>
+    </div>`;
+  }).join("")+`
+  <div class="rail-note"><b>Skills on the road today:</b> refrigeration · dishwashers · washers &amp; dryers · ranges &amp; ovens · microwaves. EPA 608 on 3 vans; gas cert on Van 4 only.</div>`;
+  document.querySelectorAll(".tech-row").forEach(el=>el.onclick=()=>{
+    const lane=document.querySelector(`[data-lane="${el.dataset.tech}"]`);
+    if(lane)lane.scrollIntoView({behavior:"smooth",block:"nearest"});
+  });
+}
+
+function renderBoard(){
+  const hours=[];for(let h=420;h<=DAY_END;h+=60)hours.push(h);
+  const width=(DAY_END-DAY_START)*PPM;
+  let html=`<div class="hrow"><div class="corner">Technician</div><div class="axis">${
+    hours.map(h=>`<span style="left:${(h-DAY_START)*PPM+24}px">${fmt(h)}</span>`).join("")}</div></div>`;
+  for(const t of techs){
+    const list=apptsOf(t.id);
+    const laneBits=[`<div class="shift-band" style="left:${(t.hours[0]-DAY_START)*PPM}px;width:${(t.hours[1]-t.hours[0])*PPM}px"></div>`,
+      `<div class="nowline" style="left:${(NOW-DAY_START)*PPM}px"></div>`];
+    // risk extension overlay
+    list.forEach(a=>{if(a.risk&&!a.resolved){
+      const l=(a.start+a.dur-DAY_START)*PPM;
+      laneBits.push(`<div class="risk-ext" style="left:${l}px;width:${a.risk*PPM}px"></div>`);
+    }});
+    // travel chips
+    for(let i=1;i<list.length;i++){
+      const p=list[i-1],n=list[i];
+      const end=p.start+p.dur+(p.risk&&!p.resolved?0:0);
+      const gap=n.start-end,need=travelMin(p.area,n.area);
+      const l=(end-DAY_START)*PPM,w=Math.max(0,(gap-6)*PPM);
+      laneBits.push(`<div class="travel ${gap>=need?"ok":"bad"}" style="left:${l+3}px">→ ${need} min${gap<need?` · only ${gap} free`:""}</div>`);
+    }
+    // blocks
+    list.forEach(a=>{
+      if(a.start==null)return;
+      const l=(a.start-DAY_START)*PPM,w=a.dur*PPM;
+      const mismatch=a.tech&&!techOf(a.tech).brands.includes(a.brand);
+      const tags=[];
+      if(a.risk&&!a.resolved)tags.push(`<span class="b-tag over">+${a.risk} min risk</span>`);
+      if(mismatch)tags.push(`<span class="b-tag mism">${cx} ${a.brand} not authorized</span>`);
+      if(a.notified)tags.push(`<span class="b-tag sms">${ck} SMS sent</span>`);
+      laneBits.push(`<div class="block p-${a.priority.toLowerCase()} ${state.selected===a.id?"sel":""} ${mismatch?"mismatch":""}" id="blk-${a.id}"
+        data-appt="${a.id}" style="left:${l}px;width:${w}px">
+        <div class="b-top"><span class="b-time">${fmt(a.start)}–${fmt(a.start+a.dur)}</span>${tags.join("")}</div>
+        <div class="b-title">${a.customer}</div>
+        <div class="b-sub">${a.appliance} · ${a.brand}</div>
+        <div class="b-loc">${pin} ${a.addr}, ${a.area}</div>
+      </div>`);
+    });
+    const hasIssue=list.some(a=>(a.risk&&!a.resolved)||(a.tech&&!techOf(a.tech).brands.includes(a.brand)&&!a.mismatchOk));
+    html+=`<div class="row" data-lane="${t.id}">
+      <div class="row-head">
+        <div class="r1"><span class="av" style="background:${t.color}">${av(t.name)}</span>${t.name}${hasIssue?`<span class="warn-ic">${warnIc}</span>`:""}</div>
+        <div class="r2">${fmt(t.hours[0])}–${fmt(t.hours[1])} shift · ${t.van}</div>
+        <div class="r2">${t.areas.join(", ")} · ${t.brands.length} brands</div>
+      </div>
+      <div class="lane" style="width:${width}px">${laneBits.join("")}</div>
+    </div>`;
+  }
+  $("board").innerHTML=html;
+  document.querySelectorAll(".block").forEach(el=>el.onclick=()=>select(el.dataset.appt,false));
+}
+
+function renderAlerts(){
+  const al=activeAlerts();
+  $("alertTitle").innerHTML=`Needs attention <span class="count-badge ${al.length?"":"zero"}">${al.length}</span>`;
+  if(!al.length){
+    $("alerts").innerHTML=`<div class="clear-state"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7a46" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
+      <div><b>You're all caught up.</b><br>${appts.filter(a=>a.tech).length} jobs confirmed, no capacity conflicts and every customer notified of today's plan.</div></div>`;
+    return;
+  }
+  $("alerts").innerHTML=al.map(a=>{
+    const j=a.appt;
+    if(a.type==="unassigned"){
+      const best=techs.map(t=>({t,p:placement(j,t),rows:fitRows(j,t)})).find(x=>x.p.ok&&x.rows.every(r=>r.ok));
+      return `<div class="acard urgent">
+        <span class="a-sev sev-urgent">URGENT · UNASSIGNED</span>
+        <h4>${j.customer} — ${j.appliance.toLowerCase()} not cooling (${j.id})</h4>
+        <p>Window ${fmt(j.window[0])}–${fmt(j.window[1])} · ${j.area} · ~${j.dur} min · reported ${j.source}. Needs ${j.parts.join(", ")}, ${j.cert} and a ${j.equip.toLowerCase()}.</p>
+        <div class="hint">${ck} ${best?`${best.t.name} fits every requirement — arrive ${fmt(best.p.start)}, done by ${fmt(best.p.end)}.`:"No technician fits — consider overtime."}</div>
+        <div class="a-actions"><button class="btn" onclick="openAssign('${j.id}')">Assign technician…</button><button class="btn ghost" onclick="select('${j.id}',true)">View details</button></div>
+      </div>`;
+    }
+    if(a.type==="overrun"){
+      const next=apptsOf(j.tech).find(x=>x.start>j.start);
+      return `<div class="acard high">
+        <span class="a-sev sev-high">RUNNING LONG</span>
+        <h4>${j.id} — ${j.customer} compressor job trending +${j.risk} min</h4>
+        <p>${j.riskNote} As planned it ends ${fmt(j.start+j.dur)}; the slip would land at <b>${fmt(j.start+j.dur+j.risk)}</b>, past ${next.customer}'s ${fmt(next.start)} window (${next.id}, ${next.addr}).</p>
+        <div class="opts">
+          <button class="opt" onclick="resolveOverrun('A')"><b>Option A — keep jobs with Marcus</b><small>Slide ${next.id} to 13:45, still inside its 13:00–15:00 window · 1 customer notified of new arrival</small></button>
+          <button class="opt" onclick="resolveOverrun('B')"><b>Option B — hand ${next.id} to Priya Nair</b><small>Priya arrives 13:00 as planned; her 14:00 job slides to 15:00 · 2 customers notified (arrival + technician change)</small></button>
+        </div>
+      </div>`;
+    }
+    return `<div class="acard high">
+      <span class="a-sev sev-high">ASSIGNMENT CONFLICT</span>
+      <h4>${j.id} — ${techOf(j.tech).name} isn't authorized for ${j.brand}</h4>
+      <p>${j.customer}'s ${j.appliance.toLowerCase()} at ${fmt(j.start)} is booked to ${techOf(j.tech).name}, whose brand list covers ${techOf(j.tech).brands.join(", ")}. Warranty requires an authorized tech.</p>
+      <div class="hint">${ck} Amara Osei covers ${j.brand} and washers — slot fits between her stops with a 12-minute drive.</div>
+      <div class="a-actions"><button class="btn" onclick="fixMismatch()">Reassign to Amara Osei</button><button class="btn ghost" onclick="select('${j.id}',true)">View job</button></div>
+    </div>`;
+  }).join("");
+}
+
+function renderDetail(){
+  const j=apptOf(state.selected);
+  if(!j){$("detail").innerHTML="";return;}
+  const t=j.tech?techOf(j.tech):null;
+  const rows=t?fitRows(j,t):[];
+  const list=t?apptsOf(t.id):[];
+  const idx=list.findIndex(x=>x.id===j.id);
+  const prev=idx>0?list[idx-1]:null;
+  const next=idx>=0&&idx<list.length-1?list[idx+1]:null;
+  const mismatch=t&&!t.brands.includes(j.brand);
+  $("detail").innerHTML=`
+   <div class="sect-title">Job detail</div>
+   <div class="d-top"><span class="d-id">${j.id}</span>
+     <span class="chip ${j.priority.toLowerCase()}">${j.priority}</span>
+     ${mismatch?`<span class="chip warn">${cx} brand conflict</span>`:`<span class="chip ok">${ck} fit verified</span>`}
+     ${j.risk&&!j.resolved?`<span class="chip warn">runs-long risk</span>`:""}
+   </div>
+   <h3>${j.customer}</h3>
+   <div class="d-problem">${j.problem} · contact ${j.phone}${j.tech===null?" · SMS preferred":""}</div>
+   <dl class="kv">
+     <dt>Window</dt><dd>${fmt(j.window[0])}–${fmt(j.window[1])}</dd>
+     <dt>Scheduled</dt><dd>${j.start!=null?fmt(j.start)+"–"+fmt(j.start+j.dur):"— not on the board yet"}</dd>
+     <dt>Duration</dt><dd>${j.dur} min expected${j.risk&&!j.resolved?` · trending +${j.risk}`:""}</dd>
+     <dt>Appliance</dt><dd>${j.appliance} · ${j.brand}</dd>
+     <dt>Address</dt><dd>${j.addr}, ${j.area}</dd>
+     <dt>Priority</dt><dd>${j.priority}${j.source?" · "+j.source:""}</dd>
+   </dl>
+   ${(j.parts.length||j.equip||j.cert)?`<div class="d-box"><h5>${van.outerHTML?"":""}Parts, tools & requirements</h5>
+     ${j.parts.map(p=>`<div class="rowline"><span>Replacement part</span><span>${p} — ${partStatus(p,t?t.van:"—").note}</span></div>`).join("")}
+     ${j.equip?`<div class="rowline"><span>Diagnostic equipment</span><span>${j.equip}</span></div>`:""}
+     ${j.cert?`<div class="rowline"><span>Required certification</span><span>${j.cert}</span></div>`:""}
+   </div>`:""}
+   ${t?`<div class="d-box"><h5>Assigned technician</h5>
+     <div class="tech-card"><div class="av" style="background:${t.color}">${av(t.name)}</div>
+       <div><div class="tc-meta"><b>${t.name} · ${t.van}</b>
+       Shift ${fmt(t.hours[0])}–${fmt(t.hours[1])} · ${t.areas.join(", ")}<br>
+       ${t.skills.join(" · ")}<br>Authorized: ${t.brands.join(", ")}${t.certs.length?" · "+t.certs.join(", "):""}</div></div></div>
+     <ul class="fits">${rows.map(r=>`<li><span class="${r.ok?"ok":"no"}">${r.ok?ck:cx}</span><span class="lbl">${r.label}</span>${r.note?`<span class="note">${r.note}</span>`:""}</li>`).join("")}</ul>
+     ${prev?`<div class="travel-note">${van.outerHTML?"":""}Drive in: ${travelMin(prev.area,j.area)} min from ${prev.id} (${prev.customer}, ${prev.area})</div>`:""}
+     ${next?`<div class="travel-note">Drive out: ${travelMin(j.area,next.area)} min to ${next.id} (${next.customer}, ${next.area}) — next stop ${fmt(next.start)}</div>`:""}
+   </div>`:`<div class="d-box"><h5>Assigned technician</h5><div class="tc-meta" style="color:var(--muted);font-size:12.5px">Nobody yet. This urgent request needs refrigeration skills, ${j.brand} authorization, ${j.cert} and a start-relay in the van.</div></div>`}
+   <div class="d-actions">
+     ${!j.tech?`<button class="btn" onclick="openAssign('${j.id}')">Find a technician for this job…</button>`:""}
+     ${j.risk&&!j.resolved?`<button class="btn danger" onclick="resolveOverrun('A')">Option A — extend &amp; slide next job</button>
+       <button class="btn ghost" onclick="resolveOverrun('B')">Option B — reassign ${"AR-2018"} to Priya</button>`:""}
+     <button class="btn ghost" onclick="notify('${j.id}')">${j.notified?"Re-send customer SMS":"Notify customer by SMS"}</button>
+     ${j.tech?`<button class="btn ghost" onclick="select('AR-2043',true)">Back to urgent request</button>`:""}
+   </div>`;
+}
+
+function renderAll(){renderStats();renderRail();renderBoard();renderAlerts();renderDetail();}
+
+/* ============================ actions ============================ */
+function select(id,scroll){
+  state.selected=id;renderBoard();renderDetail();
+  if(scroll){const el=$("blk-"+id);if(el)el.scrollIntoView({behavior:"smooth",block:"center",inline:"center"});}
+}
+function toast(msg,sub){
+  const el=document.createElement("div");el.className="toast";
+  el.innerHTML=`<span class="t-ic">${ck}</span><div>${msg}${sub?`<small>${sub}</small>`:""}</div>`;
+  $("toasts").appendChild(el);setTimeout(()=>el.remove(),5200);
+}
+function notify(id){
+  const j=apptOf(id);j.notified=true;renderBoard();renderDetail();renderRail();
+  toast(`SMS sent to ${j.customer} (${j.phone})`,`${j.id}: ${j.start!=null?fmt(j.start)+" arrival":"assignment update"}${j.tech?" · "+techOf(j.tech).name:""} · replies route to dispatcher`);
+}
+function openAssign(id){
+  const j=apptOf(id);
+  const cands=techs.map(t=>{const p=placement(j,t),rows=fitRows(j,t);
+    return{t,p,rows,ok:p.ok&&rows.every(r=>r.ok)};});
+  const bestIdx=cands.findIndex(c=>c.ok);
+  const rowsHtml=c=>c.rows.map(r=>`<span class="fit-chip ${r.ok?(r.warn?"warn":"ok"):"no"}">${r.ok?ck:cx} ${r.label.split(" — ")[0]}${r.note?` · ${r.note}`:""}</span>`).join("");
+  $("modalRoot").innerHTML=`<div class="overlay" id="ov">
+   <div class="modal">
+     <header><div><h3>Assign ${j.id} — ${j.customer}</h3>
+       <p>Urgent · window ${fmt(j.window[0])}–${fmt(j.window[1])} · ${j.dur} min · ${j.addr}, ${j.area} · needs ${j.parts.join(", ")}, ${j.cert}</p></div>
+       <button class="x icon-btn" onclick="closeModal()">${cx.replace('width="12" height="12"','width="16" height="16"')}</button></header>
+     <div class="body">${cands.map((c,i)=>`
+       <div class="cand ${i===bestIdx?"best":""}">
+         <div class="av" style="background:${c.t.color}">${av(c.t.name)}</div>
+         <div class="cd-body">
+           <div class="cd-top"><b>${c.t.name}</b><small>${c.t.van} · ${c.t.areas.join(", ")} · shift ${fmt(c.t.hours[0])}–${fmt(c.t.hours[1])}${i===bestIdx?' <span class="best-tag">BEST FIT</span>':""}</small></div>
+           <div class="cd-fit">${rowsHtml(c)}</div>
+           <div class="cd-when">${c.from?`Drive ${travelMin(c.from.area,j.area)} min from ${c.from.id} (${c.from.area}) · `:""}arrive ${fmt(c.p.start)}, done ${fmt(c.p.end)}${c.p.ok?(c.p.end<=c.t.hours[1]?"":" · overtime"):" · outside window or shift"}</div>
+         </div>
+         <div class="cd-act"><button class="btn sm" ${c.ok?"":"disabled"} onclick="doAssign('${j.id}','${c.t.id}')">Assign</button></div>
+       </div>`).join("")}
+       <p style="font-size:11.5px;color:var(--faint);margin-top:2px">Assigning notifies the customer by SMS with the technician's name, photo and arrival window.</p>
+     </div>
+   </div></div>`;
+  $("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeModal();});
+}
+function closeModal(){$("modalRoot").innerHTML="";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+function doAssign(id,tid){
+  const j=apptOf(id),t=techOf(tid),p=placement(j,t);
+  j.tech=tid;j.start=p.start;j.notified=true;
+  closeModal();renderAll();
+  toast(`${j.id} assigned to ${t.name}`,`${j.customer} gets an SMS: technician ${t.name} arriving ${fmt(j.start)}–${fmt(j.start+j.dur)} · window kept`);
+}
+function resolveOverrun(opt){
+  const j=apptOf("AR-2011"),next=apptOf("AR-2018");
+  j.resolved=opt;
+  if(opt==="A"){
+    next.start=825;next.notified=true;
+    toast("AR-2011 extended by 45 min","Marcus stays on Halvorsen until 13:15 · Ben Cho notified: new arrival 13:45–15:00, same technician");
+  }else{
+    next.tech="priya";next.start=780;next.notified=true;
+    const park=apptOf("AR-2030");park.start=900;park.notified=true;
+    toast("AR-2018 reassigned to Priya Nair","Ben Cho notified of technician change (13:00 arrival) · Yuna Park notified of 15:00 arrival");
+  }
+  renderAll();
+}
+function fixMismatch(){
+  const j=apptOf("AR-2022");
+  j.tech="amara";j.notified=true;
+  renderAll();
+  toast("AR-2022 reassigned to Amara Osei","Ray Mbutu notified of technician change · 12-min drive from Viv Ostrom keeps the 12:00 window");
+}
+
+renderAll();
+</script>
+</body>
+</html>

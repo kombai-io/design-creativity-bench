@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX Athletics — Customer Claims Audit Trail</title>
+<style>
+:root {
+  --color-charcoal-deep: #1e1e2f;
+  --color-charcoal-mid: #2a2a3d;
+  --color-charcoal-light: #353549;
+  --color-teal-dark: #0d3b3b;
+  --color-teal-primary: #14777c;
+  --color-teal-bright: #1abfb9;
+  --color-teal-pale: #b8eded;
+  --color-amber-primary: #d4952a;
+  --color-amber-bright: #f0b830;
+  --color-amber-pale: #fdf0d4;
+  --color-rose-primary: #b8405e;
+  --color-rose-pale: #f5d5db;
+  --color-slate-text: #c8c8d4;
+  --color-slate-muted: #7a7a8e;
+  --color-white: #f0f0f4;
+  --color-green-accent: #4aab6e;
+  --color-orange-warn: #cc7a20;
+
+  --font-heading: Georgia, 'Times New Roman', serif;
+  --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+
+  --size-xs: 0.625rem;
+  --size-sm: 0.75rem;
+  --size-base: 0.875rem;
+  --size-md: 1rem;
+  --size-lg: 1.125rem;
+  --size-xl: 1.375rem;
+  --size-2xl: 1.75rem;
+  --size-3xl: 2.25rem;
+
+  --space-xxs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  --radius-none: 0;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --shadow-glow-teal: 0 0 12px rgba(206,191,185,0.15);
+  --shadow-glow-amber: 0 0 16px rgba(240,184,48,0.2);
+
+  --border-thin: 1px;
+  --border-thick: 2px;
+  --border-style: solid;
+  --border-color: var(--color-charcoal-light);
+
+  --z-toast: 9999;
+  --z-overlay: 9000;
+  --z-header: 100;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: var(--size-md); }
+
+body {
+  background: var(--color-charcoal-deep);
+  color: var(--color-slate-text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ─── HEADER / NAV BAR ─── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: var(--color-charcoal-mid);
+  border-bottom: var(--border-thick) var(--border-style) var(--color-teal-primary);
+  padding: var(--space-sm) var(--space-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.header-brand svg { flex-shrink: 0; }
+
+.header-title {
+  font-family: var(--font-heading);
+  font-size: var(--size-xl);
+  color: var(--color-white);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.header-subtitle {
+  font-size: var(--size-xs);
+  color: var(--color-slate-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.header-nav {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.nav-btn {
+  background: transparent;
+  color: var(--color-slate-muted);
+  border: none;
+  padding: var(--space-xs) var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--size-sm);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nav-btn:hover, .nav-btn.active {
+  color: var(--color-white);
+  background: var(--color-charcoal-light);
+}
+
+.nav-btn.active {
+  border-bottom: var(--border-thick) var(--border-style) var(--color-teal-bright);
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--size-sm);
+  color: var(--color-slate-muted);
+}
+
+.header-meta .audit-badge {
+  background: var(--color-teal-dark);
+  color: var(--color-teal-pale);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+/* ─── TOOLBAR / FILTERS ─── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-charcoal-mid);
+  border-bottom: var(--border-thin) var(--border-style) var(--color-border);
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--color-charcoal-deep);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xs) var(--space-sm);
+  gap: var(--space-xs);
+  flex: 1;
+  max-width: 32rem;
+}
+
+.search-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: var(--size-sm);
+  outline: none;
+  padding: 0 var(--space-xs);
+}
+
+.search-box input::placeholder { color: var(--color-slate-muted); }
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  padding: var(--space-xxs) var(--space-sm);
+  background: var(--color-charcoal-deep);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  border-radius: var(--radius-full);
+  color: var(--color-slate-muted);
+  font-size: var(--size-xs);
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-chip:hover { border-color: var(--color-teal-primary); color: var(--color-teal-pale); }
+.filter-chip.active { background: var(--color-teal-dark); border-color: var(--color-teal-primary); color: var(--color-teal-pale); }
+
+.result-count {
+  margin-left: auto;
+  font-size: var(--size-sm);
+  color: var(--color-slate-muted);
+}
+
+.result-count strong { color: var(--color-amber-primary); }
+
+/* ─── MAIN LAYOUT ─── */
+.main-container {
+  display: grid;
+  grid-template-columns: 1fr 32rem;
+  gap: 0;
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: calc(100vh - 10rem);
+}
+
+.feed-panel {
+  padding: var(--space-lg) var(--space-xl);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-charcoal-light) transparent;
+}
+
+.sidebar-panel {
+  background: var(--color-charcoal-mid);
+  border-left: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  padding: var(--space-lg) var(--space-lg);
+  overflow-y: auto;
+  max-height: calc(100vh - 10rem);
+}
+
+/* ─── SECTION HEADINGS ─── */
+.section-heading {
+  font-family: var(--font-heading);
+  font-size: var(--size-lg);
+  color: var(--color-white);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-bottom: var(--space-xs);
+  border-bottom: var(--border-thick) var(--border-style) var(--color-teal-primary);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.section-heading svg { flex-shrink: 0; }
+
+.sub-section-label {
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-amber-primary);
+  margin-bottom: var(--space-sm);
+  margin-top: var(--space-xl);
+}
+
+/* ─── TIMELINE FEED CARDS ─── */
+.timeline-item {
+  position: relative;
+  padding-left: var(--space-2xl);
+  padding-bottom: var(--space-lg);
+}
+
+.timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.55rem;
+  top: 1.8rem;
+  bottom: 0;
+  width: var(--border-thin);
+  background: var(--color-charcoal-light);
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  width: var(--space-lg);
+  height: var(--space-lg);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--size-xs);
+  color: var(--color-white);
+  font-weight: 700;
+}
+
+.timeline-marker.complaint { background: var(--color-rose-primary); }
+.timeline-marker.resolution { background: var(--color-green-accent); }
+.timeline-marker.review { background: var(--color-amber-primary); }
+.timeline-marker.message { background: var(--color-teal-primary); }
+.timeline-marker.evidence { background: var(--color-orange-warn); }
+
+.feed-card {
+  background: var(--color-charcoal-mid);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  transition: box-shadow 0.2s;
+}
+
+.feed-card:hover {
+  box-shadow: var(--shadow-glow-teal);
+  border-color: var(--color-teal-primary);
+}
+
+.feed-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-sm);
+  gap: var(--space-sm);
+}
+
+.feed-card-id {
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  color: var(--color-teal-bright);
+  background: var(--color-teal-dark);
+  padding: var(--space-xxs) var(--space-xs);
+  border-radius: var(--radius-sm);
+}
+
+.feed-card-status {
+  font-size: var(--size-xs);
+  padding: var(--space-xxs) var(--space-xs);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.status-open { background: var(--color-rose-pale); color: var(--color-rose-primary); }
+.status-under-review { background: var(--color-amber-pale); color: var(--color-amber-primary); }
+.status-resolved { background: #d4ecd9; color: var(--color-green-accent); }
+.status-closed { background: #d4d4dc; color: var(--color-slate-muted); }
+
+.feed-card-title {
+  font-family: var(--font-heading);
+  font-size: var(--size-md);
+  color: var(--color-white);
+  margin-bottom: var(--space-xs);
+}
+
+.feed-card-body {
+  font-size: var(--size-sm);
+  color: var(--color-slate-text);
+  line-height: 1.5;
+  margin-bottom: var(--space-sm);
+}
+
+.feed-card-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--size-xs);
+  color: var(--color-slate-muted);
+  flex-wrap: wrap;
+}
+
+.feed-card-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+}
+
+.feed-card-footer svg { flex-shrink: 0; }
+
+/* ─── REPLY THREADS INSIDE FEED ─── */
+.reply-thread {
+  margin-top: var(--space-sm);
+  padding-left: var(--space-md);
+  border-left: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+}
+
+.reply-item {
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-xs);
+  background: var(--color-charcoal-deep);
+  border-radius: var(--radius-sm);
+  font-size: var(--size-sm);
+}
+
+.reply-author {
+  font-weight: 600;
+  color: var(--color-teal-bright);
+  font-size: var(--size-xs);
+}
+
+.reply-time {
+  color: var(--color-slate-muted);
+  font-size: var(--size-xs);
+  margin-left: var(--space-xs);
+}
+
+.reply-tag {
+  display: inline-block;
+  font-size: var(--size-xs);
+  padding: 0.125em 0.4em;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-xs);
+  background: var(--color-teal-dark);
+  color: var(--color-teal-pale);
+}
+
+/* ─── DATA TABLES ─── */
+.data-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: var(--space-lg);
+  border-radius: var(--radius-md);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--size-sm);
+}
+
+.data-table thead {
+  background: var(--color-charcoal-light);
+}
+
+.data-table th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-teal-pale);
+  font-weight: 600;
+  border-bottom: var(--border-thick) var(--border-style) var(--color-teal-primary);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  color: var(--color-slate-text);
+  vertical-align: top;
+}
+
+.data-table tbody tr:hover {
+  background: var(--color-charcoal-light);
+}
+
+.data-table .mono-cell {
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  color: var(--color-teal-bright);
+}
+
+.data-table .status-cell {
+  font-weight: 600;
+  font-size: var(--size-xs);
+}
+
+.data-table .amount-cell {
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  color: var(--color-amber-primary);
+  text-align: right;
+}
+
+/* ─── SIDEBAR WIDGETS ─── */
+.widget {
+  background: var(--color-charcoal-deep);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+  overflow: hidden;
+}
+
+.widget-header {
+  background: var(--color-charcoal-light);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-teal-pale);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.widget-body {
+  padding: var(--space-md);
+}
+
+.provenance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) 0;
+  border-bottom: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  font-size: var(--size-sm);
+}
+
+.provenance-row:last-child { border-bottom: none; }
+.provenance-key { color: var(--color-slate-muted); }
+.provenance-val { color: var(--color-white); font-family: var(--font-mono); font-size: var(--size-xs); }
+
+/* ─── STATS ROW ─── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.stat-card {
+  background: var(--color-charcoal-mid);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  text-align: center;
+}
+
+.stat-value {
+  font-family: var(--font-heading);
+  font-size: var(--size-2xl);
+  color: var(--color-white);
+  line-height: 1.2;
+}
+
+.stat-value.amber { color: var(--color-amber-primary); }
+.stat-value.teal { color: var(--color-teal-bright); }
+.stat-value.rose { color: var(--color-rose-primary); }
+.stat-value.green { color: var(--color-green-accent); }
+
+.stat-label {
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate-muted);
+  margin-top: var(--space-xxs);
+}
+
+/* ─── TOAST ─── */
+.toast-container {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--color-charcoal-mid);
+  border: var(--border-thick) var(--border-style) var(--color-teal-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-width: 22rem;
+  animation: toast-in 0.4s ease-out;
+  max-width: 28rem;
+}
+
+.toast.warning { border-color: var(--color-amber-primary); box-shadow: var(--shadow-glow-amber); }
+.toast.error { border-color: var(--color-rose-primary); }
+
+.toast-icon {
+  flex-shrink: 0;
+  margin-top: var(--space-xxs);
+}
+
+.toast-body { flex: 1; }
+
+.toast-title {
+  font-weight: 700;
+  font-size: var(--size-sm);
+  color: var(--color-white);
+  margin-bottom: var(--space-xxs);
+}
+
+.toast-message {
+  font-size: var(--size-xs);
+  color: var(--color-slate-text);
+  line-height: 1.4;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--color-slate-muted);
+  cursor: pointer;
+  padding: var(--space-xxs);
+  flex-shrink: 0;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(1rem) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-1rem) scale(0.96); }
+}
+
+/* ─── TAB PANELS ─── */
+.tab-controls {
+  display: flex;
+  gap: 0;
+  margin-bottom: var(--space-lg);
+  border-bottom: var(--border-thick) var(--border-style) var(--color-charcoal-light);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-slate-muted);
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-body);
+  font-size: var(--size-sm);
+  cursor: pointer;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 0.2s;
+}
+
+.tab-btn:hover { color: var(--color-slate-text); }
+.tab-btn[aria-selected="true"] {
+  color: var(--color-teal-bright);
+}
+.tab-btn[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: calc(-1 * var(--border-thick));
+  left: 0;
+  right: 0;
+  height: var(--border-thick);
+  background: var(--color-teal-bright);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel[aria-hidden="false"] {
+  display: block;
+}
+
+/* ─── PARTICIPANT AVATAR GRID ─── */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-sm);
+}
+
+.avatar-person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--color-charcoal-deep);
+  border-radius: var(--radius-md);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+}
+
+.avatar-circle {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--size-sm);
+  color: var(--color-white);
+  flex-shrink: 0;
+}
+
+.avatar-name {
+  font-size: var(--size-sm);
+  color: var(--color-white);
+  font-weight: 600;
+}
+
+.avatar-role {
+  font-size: var(--size-xs);
+  color: var(--color-slate-muted);
+}
+
+/* ─── EVIDENCE BADGES ─── */
+.evidence-strip {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  margin-top: var(--space-xs);
+}
+
+.evidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  font-size: var(--size-xs);
+  padding: var(--space-xxs) var(--space-sm);
+  background: var(--color-charcoal-deep);
+  border: var(--border-thin) var(--border-style) var(--color-charcoal-light);
+  border-radius: var(--radius-full);
+  color: var(--color-slate-muted);
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 0.5rem; height: 0.5rem; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-charcoal-light); border-radius: var(--radius-full); }
+</style>
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<header class="header">
+  <div class="header-brand">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="15" stroke="#14777c" stroke-width="2"/>
+      <path d="M10 22 L16 8 L22 22" stroke="#f0b830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="17" x2="20" y2="17" stroke="#b8eded" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="16" cy="13" r="1.5" fill="#1abfb9"/>
+    </svg>
+    <div>
+      <div class="header-title">APEX Athletics</div>
+      <div class="header-subtitle">Customer Claims &amp; Provenance Audit</div>
+    </div>
+  </div>
+  <nav class="header-nav" role="tablist" aria-label="Main sections">
+    <button class="nav-btn active" role="tab" aria-selected="true" aria-controls="panel-feed" id="tab-feed">Audit Feed</button>
+    <button class="nav-btn" role="tab" aria-selected="false" aria-controls="panel-claims" id="tab-claims">Claims Data</button>
+    <button class="nav-btn" role="tab" aria-selected="false" aria-controls="panel-evidence" id="tab-evidence">Evidence Log</button>
+    <button class="nav-btn" role="tab" aria-selected="false" aria-controls="panel-summary" id="tab-summary">Summary</button>
+  </nav>
+  <div class="header-meta">
+    <span class="audit-badge">⚖ Certified Auditor Session</span>
+    <span>ID: AUD-2025-03-1278</span>
+  </div>
+</header>
+
+<!-- ════════ TOOLBAR ════════ -->
+<div class="toolbar">
+  <div class="search-box">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#7a7a8e" stroke-width="1.5"/><line x1="11" y1="11" x2="15" y2="15" stroke="#7a7a8e" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <input type="text" placeholder="Search by case ID, name, category, or keyword…" aria-label="Search audit records">
+  </div>
+  <button class="filter-chip active" onclick="this.classList.toggle('active')">All Statuses</button>
+  <button class="filter-chip" onclick="this.classList.toggle('active')">Open</button>
+  <button class="filter-chip" onclick="this.classList.toggle('active')">Under Review</button>
+  <button class="filter-chip" onclick="this.classList.toggle('active')">Resolved</button>
+  <button class="filter-chip" onclick="this.classList.toggle('active')">High Priority</button>
+  <button class="filter-chip" onclick="this.classList.toggle('active')">Financial Claims</button>
+  <span class="result-count">Showing <strong>38</strong> of <strong>127</strong> records</span>
+</div>
+
+<!-- ════════ MAIN ════════ -->
+<main class="main-container">
+
+  <!-- ────── FEED PANEL ────── -->
+  <section class="feed-panel" aria-label="Audit feed timeline">
+
+    <!-- Section 1: Key Metrics Summary -->
+    <div class="sub-section-label">Periodic Overview — Q1 2025 Audit Window</div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value rose">12</div><div class="stat-label">Active Complaints</div></div>
+      <div class="stat-card"><div class="stat-value amber">34</div><div class="stat-label">Under Review</div></div>
+      <div class="stat-card"><div class="stat-value green">89</div><div class="stat-label">Resolved This Quarter</div></div>
+      <div class="stat-card"><div class="stat-value teal">$2.4M</div><div class="stat-label">Total Disbursed</div></div>
+      <div class="stat-card"><div class="stat-value">71</div><div class="stat-label">Avg Days to Close</div></div>
+    </div>
+
+    <h2 class="section-heading">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="3" stroke="#1abfb9" stroke-width="1.5"/><line x1="2" y1="7" x2="18" y2="7" stroke="#1abfb9" stroke-width="1.5"/><line x1="6" y1="2" x2="6" y2="18" stroke="#1abfb9" stroke-width="1.5"/></svg>
+      Recent Activity Timeline
+    </h2>
+
+    <!-- Timeline Item 1 — Complaint -->
+    <div class="timeline-item">
+      <div class="timeline-marker complaint" title="Complaint">!</div>
+      <div class="feed-card">
+        <div class="feed-card-header">
+          <span class="feed-card-id">AAX-2025-0847</span>
+          <span class="feed-card-status status-open">Open</span>
+        </div>
+        <h3 class="feed-card-title">Season Ticket Refund Denial — Mercedes-Benz Superdome Package</h3>
+        <p class="feed-card-body">Marcus Delgado filed a formal complaint on 2025-03-08 regarding APEX's refusal to refund $3,200 for his premium-tier season ticket suite after the NFL season was shortened by two games due to lockout negotiations. He cites clause 4(b)(iii) of the Customer Benefits Agreement. The account team has not responded within the 10-business-day SLA window.</p>
+        <div class="feed-card-footer">
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="2.5" stroke="#7a7a8e" stroke-width="1"/><path d="M2 10.5 C2 8 4 6.5 6 6.5 C8 6.5 10 8 10 10.5" stroke="#7a7a8e" stroke-width="1" fill="none"/></svg> Marcus Delgado · Category: Financial Refund</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#7a7a8e" stroke-width="1"/><path d="M6 3V6.5L8.5 8" stroke="#7a7a8e" stroke-width="1" stroke-linecap="round"/></svg> Mar 8, 2025 09:14 CST</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3H10V9H2Z" stroke="#7a7a8e" stroke-width="1" fill="none"/><line x1="2" y1="6" x2="10" y2="6" stroke="#7a7a8e" stroke-width="1"/></svg> 4 follow-up replies</span>
+        </div>
+        <div class="reply-thread">
+          <div class="reply-item">
+            <span class="reply-author">Sarah Chen, Tier-2 Support</span><span class="reply-time">Mar 10 14:32</span>
+            <p>Escalated to compliance review per escalation matrix §3.1. Requesting original contract PDF from Document Repository.</p>
+          </div>
+          <div class="reply-item">
+            <span class="reply-author">James Whitfield, Legal Ops</span><span class="reply-time">Mar 11 10:05</span><span class="reply-tag">legal</span>
+            <p>Reviewed clause 4(b)(iii). Language supports partial refund but disputes are capped at 60% under current policy. Recommend offering $1,920 settlement.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Item 2 — Evidence Upload -->
+    <div class="timeline-item">
+      <div class="timeline-marker evidence" title="Evidence Added">📎</div>
+      <div class="feed-card">
+        <div class="feed-card-header">
+          <span class="feed-card-id">EVD-2025-1102</span>
+          <span class="feed-card-status status-under-review">Under Review</span>
+        </div>
+        <h3 class="feed-card-title">Invoice Discrepancy — Apex Stadium Merchandise Fulfilment Q1</h3>
+        <p class="feed-card-body">Billing department flagged $8,400 discrepancy in invoice submitted by vendor SportSphere Inc. (PO# SS-7741). Original purchase order was for $42,000 across 6,000 units. Final invoice shows $50,400 with no amended PO documentation attached. Three matching purchase orders were retrieved from procurement database on 2025-03-06.</p>
+        <div class="evidence-strip">
+          <span class="evidence-badge"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="1" width="8" height="8" rx="1" stroke="#7a7a8e" stroke-width="1"/><text x="5" y="7" text-anchor="middle" fill="#7a7a8e" font-size="5.5">$</text></svg> Invoice SS-INV-99021</span>
+          <span class="evidence-badge"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="1" width="8" height="8" rx="1" stroke="#7a7a8e" stroke-width="1"/><text x="5" y="7" text-anchor="middle" fill="#7a7a8e" font-size="5">P</text></svg> PO# SS-7741</span>
+          <span class="evidence-badge"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 4 L5 7 L8 3" stroke="#7a7a8e" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Verified against ledger</span>
+        </div>
+        <div class="feed-card-footer">
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="2" width="8" height="8" rx="1.5" stroke="#7a7a8e" stroke-width="1"/><circle cx="6" cy="5.5" r="1.5" stroke="#7a7a8e" stroke-width="1"/><path d="M3.5 9 C3.5 7.5 4.5 6.5 6 6.5 C7.5 6.5 8.5 7.5 8.5 9" stroke="#7a7a8e" stroke-width="1"/></svg> Priya Mehta, Procurement</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#7a7a8e" stroke-width="1"/><path d="M6 3V6.5L8.5 8" stroke="#7a7a8e" stroke-width="1" stroke-linecap="round"/></svg> Mar 6, 2025 16:48 CST</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Item 3 — Resolution -->
+    <div class="timeline-item">
+      <div class="timeline-marker resolution" title="Resolution">✓</div>
+      <div class="feed-card">
+        <div class="feed-card-header">
+          <span class="feed-card-id">RSO-2025-0631</span>
+          <span class="feed-card-status status-resolved">Resolved</span>
+        </div>
+        <h3 class="feed-card-title">Accessibility Accommodation — Youth Football Camp at Meridian Park</h3>
+        <p class="feed-card-body">Case resolved. The Rodriguez family was provided with wheelchairs and a dedicated viewing platform at Meridian Park youth football camp on 2025-03-01, four days after their original request on 2025-02-25. Compensation package includes a complimentary season pass and written apology from VP of Fan Experience. Root cause: accommodation queue backlog attributed to staff shortages during peak registration period.</p>
+        <div class="feed-card-footer">
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="2.5" stroke="#7a7a8e" stroke-width="1"/><path d="M2 10.5 C2 8 4 6.5 6 6.5 C8 6.5 10 8 10 10.5" stroke="#7a7a8e" stroke-width="1" fill="none"/></svg> Elena Rodriguez</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#7a7a8e" stroke-width="1"/><path d="M6 3V6.5L8.5 8" stroke="#7a7a8e" stroke-width="1" stroke-linecap="round"/></svg> Resolved Mar 1, 2025</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="2" width="8" height="8" rx="1.5" stroke="#7a7a8e" stroke-width="1"/><line x1="2" y1="6" x2="10" y2="6" stroke="#7a7a8e" stroke-width="1"/></svg> Compliant with ADA Title III</span>
+        </div>
+        <div class="reply-thread">
+          <div class="reply-item">
+            <span class="reply-author">Kevin Okafor, Accessibility Coordinator</span><span class="reply-time">Mar 1 11:20</span>
+            <p>Equipment deployed and verified. Photo log and signature receipt archived under file AAX-2025-0631-EQ.</p>
+            <span class="reply-tag">verified</span>
+          </div>
+          <div class="reply-item">
+            <span class="reply-author">Diana Vasquez, Compliance Officer</span><span class="reply-time">Mar 1 14:55</span>
+            <p>Final sign-off. Case meets all resolution criteria. Closing ticket with full audit trail preserved.</p>
+            <span class="reply-tag">final-approved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Item 4 — Review Flag -->
+    <div class="timeline-item">
+      <div class="timeline-marker review" title="Audit Flag">⚠</div>
+      <div class="feed-card">
+        <div class="feed-card-header">
+          <span class="feed-card-id">FLG-2025-0299</span>
+          <span class="feed-card-status status-open">Open</span>
+        </div>
+        <h3 class="feed-card-title">Repeat Offender: Unauthorized Ticket Resales on ApexTix Platform</h3>
+        <p class="feed-card-body">Automated monitoring detected 17 resales through third-party platforms (StubHub, SeatGeek) linked to account holder account APTX-44710 (Jordan Bellweather) between 2025-02-15 and 2025-03-05. Violates Terms of Service Section 8.2 — "No resale above face value." Total value estimated at $12,800. Account suspended pending investigation. Jordan Bellweather has appealed via email on 2025-03-04 citing good faith and mistaken identity with a similarly-named user.</p>
+        <div class="feed-card-footer">
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="2" width="8" height="8" rx="1.5" stroke="#7a7a8e" stroke-width="1"/><circle cx="6" cy="5.5" r="1.5" stroke="#7a7a8e" stroke-width="1"/><path d="M3.5 9 C3.5 7.5 4.5 6.5 6 6.5 C7.5 6.5 8.5 7.5 8.5 9" stroke="#7a7a8e" stroke-width="1"/></svg> Jordan Bellweather · Automated Flag</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#7a7a8e" stroke-width="1"/><path d="M6 3V6.5L8.5 8" stroke="#7a7a8e" stroke-width="1" stroke-linecap="round"/></svg> Feb 15 – Mar 5, 2025</span>
+          <span style="color: var(--color-rose-primary); font-weight: 600;">17 transactions flagged</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Item 5 — Message Exchange -->
+    <div class="timeline-item">
+      <div class="timeline-marker message" title="Correspondence">💬</div>
+      <div class="feed-card">
+        <div class="feed-card-header">
+          <span class="feed-card-id">MSG-2025-3340</span>
+          <span class="feed-card-status status-under-review">Under Review</span>
+        </div>
+        <h3 class="feed-card-title">Group Booking Dispute — Corporate Event at National Arena</h3>
+        <p class="feed-card-body">TechNova Solutions reserved 42 boxes for the March 2 playoff game at National Arena ($18,900 deposit paid). On 2025-02-28, the arena announced the game was moved to March 14 due to a scheduling conflict, but TechNova was notified only via mass email on March 3 — well outside the 72-hour advance notice provision. TechNova demands full refund plus relocation costs for their client entertainment event. Their legal counsel has been engaged.</p>
+        <div class="feed-card-footer">
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="2.5" stroke="#7a7a8e" stroke-width="1"/><path d="M2 10.5 C2 8 4 6.5 6 6.5 C8 6.5 10 8 10 10.5" stroke="#7a7a8e" stroke-width="1" fill="none"/></svg> Rachel Alvarado, TechNova Corp</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#7a7a8e" stroke-width="1"/><path d="M6 3V6.5L8.5 8" stroke="#7a7a8e" stroke-width="1" stroke-linecap="round"/></svg> Mar 3, 2025 08:00 EST</span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3H10V9H2Z" stroke="#7a7a8e" stroke-width="1" fill="none"/><line x1="2" y1="6" x2="10" y2="6" stroke="#7a7a8e" stroke-width="1"/></svg> 7 correspondence entries</span>
+        </div>
+        <div class="reply-thread">
+          <div class="reply-item">
+            <span class="reply-author">Tomáš Novák, Group Sales</span><span class="reply-time">Mar 3 15:20</span>
+            <p>Client called directly. Offered credit voucher worth $22,000 for future bookings + 2 VIP game passes. Client declined, demanded cash refund.</p>
+          </div>
+          <div class="reply-item">
+            <span class="reply-author">Lisa Park, Legal Counsel</span><span class="reply-time">Mar 5 09:44</span><span class="reply-tag">pending-legal</span>
+            <p>Drafting response referencing force majeure clause. Need confirmation on whether venue contract provides indemnity in scheduling-change scenarios. Pending response from Arena Operations.</p>
+          </div>
+          <div class="reply-item">
+            <span class="reply-author">Rachel Alvarado</span><span class="reply-time">Mar 6 10:11</span>
+            <p>Received your draft response. We are not accepting further delay. Our CEO expects resolution by 2025-03-10 or we proceed to small claims court. Attachment: demand letter.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Tabular Data Tables -->
+    <div class="sub-section-label">Detailed Records</div>
+    <h2 class="section-heading">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#1abfb9" stroke-width="1.5"/><line x1="3" y1="8" x2="17" y2="8" stroke="#1abfb9" stroke-width="1.5"/><line x1="9" y1="8" x2="9" y2="17" stroke="#1abfb9" stroke-width="1.5"/></svg>
+      Financial Claims Ledger
+    </h2>
+
+    <div class="data-table-wrapper">
+      <table class="data-table" aria-label="Financial claims ledger with columns for ID, claimant, date, amount, status, and responsible party">
+        <thead>
+          <tr>
+            <th scope="col">Claim ID</th>
+            <th scope="col">Claimant</th>
+            <th scope="col">Date Filed</th>
+            <th scope="col">Category</th>
+            <th scope="col">Amount Claimed</th>
+            <th scope="col">Disposition</th>
+            <th scope="col">Assigned To</th>
+            <th scope="col">Days Elapsed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono-cell">CLM-2025-0142</td>
+            <td>Marcus Delgado</td>
+            <td>2025-03-08</td>
+            <td>Ticket Refund</td>
+            <td class="amount-cell">$3,200.00</td>
+            <td class="status-cell" style="color: var(--color-rose-primary);">● Open</td>
+            <td>James Whitfield</td>
+            <td>5</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0139</td>
+            <td>Rachel Alvarado</td>
+            <td>2025-03-03</td>
+            <td>Event Rescheduling</td>
+            <td class="amount-cell">$18,900.00</td>
+            <td class="status-cell" style="color: var(--color-amber-primary);">● Under Review</td>
+            <td>Lisa Park</td>
+            <td>10</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0137</td>
+            <td>Elena Rodriguez</td>
+            <td>2025-02-25</td>
+            <td>Accessibility</td>
+            <td class="amount-cell">$0.00</td>
+            <td class="status-cell" style="color: var(--color-green-accent);">● Resolved</td>
+            <td>Kevin Okafor</td>
+            <td>16</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0135</td>
+            <td>David Okoro</td>
+            <td>2025-02-22</td>
+            <td>Merchandise Quality</td>
+            <td class="amount-cell">$485.50</td>
+            <td class="status-cell" style="color: var(--color-green-accent);">● Resolved</td>
+            <td>Amara Singh</td>
+            <td>19</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0133</td>
+            <td>Natasha Kowalski</td>
+            <td>2025-02-20</td>
+            <td>Parking Damage</td>
+            <td class="amount-cell">$2,750.00</td>
+            <td class="status-cell" style="color: var(--color-amber-primary);">● Under Review</td>
+            <td>Henrik Voss</td>
+            <td>21</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0128</td>
+            <td>Cameron Nguyen</td>
+            <td>2025-02-18</td>
+            <td>Concession Refund</td>
+            <td class="amount-cell">$142.00</td>
+            <td class="status-cell" style="color: var(--color-green-accent);">● Resolved</td>
+            <td>Sarah Chen</td>
+            <td>23</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0126</td>
+            <td>Theron Price</td>
+            <td>2025-02-16</td>
+            <td>Premium Seating Misalignment</td>
+            <td class="amount-cell">$6,100.00</td>
+            <td class="status-cell" style="color: var(--color-green-accent);">● Resolved</td>
+            <td>Tomáš Novák</td>
+            <td>25</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0121</td>
+            <td>Isla McPherson</td>
+            <td>2025-02-14</td>
+            <td>Hospitality Suite Breach</td>
+            <td class="amount-cell">$9,500.00</td>
+            <td class="status-cell" style="color: var(--color-amber-primary);">● Under Review</td>
+            <td>James Whitfield</td>
+            <td>27</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0118</td>
+            <td>Abdi Hassan</td>
+            <td>2025-02-11</td>
+            <td>Youth Program Injury</td>
+            <td class="amount-cell">$15,000.00</td>
+            <td class="status-cell" style="color: var(--color-amber-primary);">● Under Review</td>
+            <td>Lisa Park</td>
+            <td>30</td>
+          </tr>
+          <tr>
+            <td class="mono-cell">CLM-2025-0115</td>
+            <td>Greta Lindström</td>
+            <td>2025-02-09</td>
+            <td>Duplicate Charges</td>
+            <td class="amount-cell">$320.00</td>
+            <td class="status-cell" style="color: var(--color-green-accent);">● Resolved</td>
+            <td>Amara Singh</td>
+            <td>32</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="section-heading">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 6H17M3 10H17M3 14H12" stroke="#1abfb9" stroke-width="1.5" stroke-linecap="round"/><circle cx="15" cy="14" r="2" stroke="#1abfb9" stroke-width="1.5" fill="none"/></svg>
+      Participant Roster &amp; Responsibilities
+    </h2>
+
+    <div class="avatar-grid">
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-teal-primary);">JC</div>
+        <div><div class="avatar-name">James Whitfield</div><div class="avatar-role">Senior Legal Advisor — Claims Division</div></div>
+      </div>
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-amber-primary);">LP</div>
+        <div><div class="avatar-name">Lisa Park</div><div class="avatar-role">Corporate Counsel — External Relations</div></div>
+      </div>
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-rose-primary);">SC</div>
+        <div><div class="avatar-name">Sarah Chen</div><div class="avatar-role">Tier-2 Support Lead</div></div>
+      </div>
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-green-accent);">KO</div>
+        <div><div class="avatar-name">Kevin Okafor</div><div class="avatar-role">Accessibility &amp; Inclusion Coordinator</div></div>
+      </div>
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-orange-warn);">TN</div>
+        <div><div class="avatar-name">Tomáš Novák</div><div class="avatar-role">Group Sales &amp; Hospitality Manager</div></div>
+      </div>
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-teal-bright);">AS</div>
+        <div><div class="avatar-name">Amara Singh</div><div class="avatar-role">Retail Operations Specialist</div></div>
+      </div>
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-charcoal-mid); border: var(--border-thin) var(--border-style) var(--color-charcoal-light);">HV</div>
+        <div><div class="avatar-name">Henrik Voss</div><div class="avatar-role">Facilities Risk Assessor</div></div>
+      </div>
+      <div class="avatar-person">
+        <div class="avatar-circle" style="background: var(--color-slate-muted);">DV</div>
+        <div><div class="avatar-name">Diana Vasquez</div><div class="avatar-role">Chief Compliance Officer</div></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ────── SIDEBAR PANEL ────── -->
+  <aside class="sidebar-panel" aria-label="Additional context panels">
+
+    <div class="sub-section-label">Provenance Metadata</div>
+    <h2 class="section-heading" style="font-size: var(--size-md); margin-bottom: var(--space-md);">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L11 7H17L12 10.5L14 16L9 12.5L4 16L6 10.5L1 7H7L9 2Z" stroke="#f0b830" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+      Audit Context
+    </h2>
+
+    <!-- Widget: Provenance -->
+    <div class="widget">
+      <div class="widget-header">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#1abfb9" stroke-width="1.2"/><circle cx="7" cy="7" r="2" stroke="#1abfb9" stroke-width="1"/></svg>
+        Record Origin
+      </div>
+      <div class="widget-body">
+        <div class="provenance-row"><span class="provenance-key">Dataset Source</span><span class="provenance-val">CRM v4.2.1</span></div>
+        <div class="provenance-row"><span class="provenance-key">Last Sync</span><span class="provenance-val">2025-03-13 02:14 UTC</span></div>
+        <div class="provenance-row"><span class="provenance-key">Retention Policy</span><span class="provenance-val">7 years, immutable</span></div>
+        <div class="provenance-row"><span class="provenance-key">Hash Checksum</span><span class="provenance-val">SHA-256 …a8f3c</span></div>
+        <div class="provenance-row"><span class="provenance-key">Data Classification</span><span class="provenance-val">Confidential — PII</span></div>
+        <div class="provenance-row"><span class="provenance-key">Regulatory Framework</span><span class="provenance-val">GDPR / CCPA / ADA</span></div>
+      </div>
+    </div>
+
+    <!-- Widget: SLA Tracking -->
+    <div class="widget">
+      <div class="widget-header">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#1abfb9" stroke-width="1.2"/><path d="M7 4V7.5L9.5 9" stroke="#1abfb9" stroke-width="1.2" stroke-linecap="round"/></svg>
+        SLA Performance — Current
+      </div>
+      <div class="widget-body">
+        <div class="provenance-row"><span class="provenance-key">Avg. Response Time</span><span class="provenance-val">3.2 hrs</span></div>
+        <div class="provenance-row"><span class="provenance-key">First-Contact Resolve</span><span class="provenance-val">34%</span></div>
+        <div class="provenance-row"><span class="provenance-key">SLA Breaches (MTD)</span><span class="provenance-val" style="color: var(--color-rose-primary);">7</span></div>
+        <div class="provenance-row"><span class="provenance-key">On-Time Resolution</span><span class="provenance-val" style="color: var(--color-green-accent);">89.2%</span></div>
+        <div class="provenance-row"><span class="provenance-key">Max Tolerated Latency</span><span class="provenance-val">10 business days</span></div>
+      </div>
+    </div>
+
+    <!-- Widget: Categories Breakdown -->
+    <div class="widget">
+      <div class="widget-header">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="4" height="4" rx="0.8" stroke="#1abfb9" stroke-width="1"/><rect x="8" y="2" width="4" height="4" rx="0.8" stroke="#1abfb9" stroke-width="1"/><rect x="2" y="8" width="4" height="4" rx="0.8" stroke="#1abfb9" stroke-width="1"/><rect x="8" y="8" width="4" height="4" rx="0.8" stroke="#1abfb9" stroke-width="1"/></svg>
+        Complaint Distribution
+      </div>
+      <div class="widget-body" style="padding: var(--space-sm);">
+        <div class="data-table-wrapper" style="margin-bottom: 0; border: none;">
+          <table class="data-table" style="font-size: var(--size-xs);" aria-label="Complaint category breakdown">
+            <thead>
+              <tr><th scope="col">Category</th><th scope="col" style="text-align:right;">Count</th><th scope="col" style="text-align:right;">Share</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Financial Refunds</td><td style="text-align:right;" class="mono-cell">18</td><td style="text-align:right;">47%</td></tr>
+              <tr><td>Event Scheduling</td><td style="text-align:right;" class="mono-cell">7</td><td style="text-align:right;">18%</td></tr>
+              <tr><td>Merchandise / Retail</td><td style="text-align:right;" class="mono-cell">6</td><td style="text-align:right;">16%</td></tr>
+              <tr><td>Facility &amp; Safety</td><td style="text-align:right;" class="mono-cell">4</td><td style="text-align:right;">11%</td></tr>
+              <tr><td>Accessibility</td><td style="text-align:right;" class="mono-cell">2</td><td style="text-align:right;">5%</td></tr>
+              <tr><td>Other</td><td style="text-align:right;" class="mono-cell">1</td><td style="text-align:right;">3%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Widget: Related Documents -->
+    <div class="widget">
+      <div class="widget-header">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 1H9L12 4V11H4V1Z" stroke="#1abfb9" stroke-width="1.2" stroke-linejoin="round"/><line x1="9" y1="1" x2="9" y2="4" stroke="#1abfb9" stroke-width="1.2"/><line x1="3" y1="6" x2="11" y2="6" stroke="#1abfb9" stroke-width="1"/></svg>
+        Linked Documents
+      </div>
+      <div class="widget-body">
+        <div class="provenance-row"><span class="provenance-key">Contracts &amp; Agreements</span><span class="provenance-val">24 files</span></div>
+        <div class="provenance-row"><span class="provenance-key">Email Correspondence</span><span class="provenance-val">156 threads</span></div>
+        <div class="provenance-row"><span class="provenance-key">Invoices &amp; Receipts</span><span class="provenance-val">89 attachments</span></div>
+        <div class="provenance-row"><span class="provenance-key">Internal Memos</span><span class="provenance-val">12 documents</span></div>
+        <div class="provenance-row"><span class="provenance-key">Photo / Media Evidence</span><span class="provenance-val">34 items</span></div>
+      </div>
+    </div>
+
+  </aside>
+
+</main>
+
+<!-- ════════ TOAST CONTAINER ════════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+(function() {
+  // ─── Tab Navigation ───
+  const tabs = document.querySelectorAll('.nav-btn');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // ─── Toast System ───
+  const container = document.getElementById('toastContainer');
+
+  function showToast(title, message, type, duration) {
+    type = type || 'info';
+    duration = duration || 8000;
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type !== 'info' ? ' ' + type : '');
+
+    const iconColor = type === 'warning' ? '#f0b830' : type === 'error' ? '#b8405e' : '#1abfb9';
+    const iconSVG = type === 'warning'
+      ? '<polygon points="7,1 2,11 12,11" fill="none" stroke="' + iconColor + '" stroke-width="1.2" stroke-linejoin="round"/>' +
+        '<line x1="7" y1="4.5" x2="7" y2="7.5" stroke="' + iconColor + '" stroke-width="1.3" stroke-linecap="round"/>' +
+        '<circle cx="7" cy="9.5" r="0.6" fill="' + iconColor + '"/>'
+      : type === 'error'
+      ? '<line x1="4" y1="4" x2="10" y2="10" stroke="' + iconColor + '" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<line x1="10" y1="4" x2="4" y2="10" stroke="' + iconColor + '" stroke-width="1.5" stroke-linecap="round"/>'
+      : '<polyline points="3,7 6,10 11,4" fill="none" stroke="' + iconColor + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+
+    toast.innerHTML =
+      '<div class="toast-icon"><svg width="20" height="20" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="none" stroke="' + iconColor + '" stroke-width="1.2"/>' + iconSVG + '</svg></div>' +
+      '<div class="toast-body">' +
+        '<div class="toast-title">' + title + '</div>' +
+        '<div class="toast-message">' + message + '</div>' +
+      '</div>' +
+      '<button class="toast-close" aria-label="Dismiss notification"><svg width="14" height="14" viewBox="0 0 14 14"><line x1="3" y1="3" x2="11" y2="11" stroke="#7a7a8e" stroke-width="1.2" stroke-linecap="round"/><line x1="11" y1="3" x2="3" y2="11" stroke="#7a7a8e" stroke-width="1.2" stroke-linecap="round"/></svg></button>';
+
+    toast.querySelector('.toast-close').addEventListener('click', () => dismissToast(toast));
+    container.appendChild(toast);
+    setTimeout(() => dismissToast(toast), duration);
+  }
+
+  function dismissToast(el) {
+    if (!el.parentNode) return;
+    el.style.animation = 'toast-out 0.3s ease-in forwards';
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+  }
+
+  // Show three staggered notifications
+  setTimeout(() => showToast(
+    'SLA Breach Detected',
+    'Ticket AAX-2025-0847 (Delgado refund) has exceeded the 10-business-day response window by 1 day. Escalation required.',
+    'warning', 12000
+  ), 2000);
+
+  setTimeout(() => showToast(
+    'New Evidence Received',
+    'Document "Invoice SS-INV-99021.pdf" uploaded for EVD-2025-1102. SHA-256 hash verified against procurement ledger.',
+    'info', 10000
+  ), 5000);
+
+  setTimeout(() => showToast(
+    'Compliance Milestone',
+    'Case RS0-2025-0631 has passed external audit verification. All accessibility standards met — ADA Title III certified.',
+    'success', 8000
+  ), 8000);
+
+})();
+</script>
+</body>
+</html>

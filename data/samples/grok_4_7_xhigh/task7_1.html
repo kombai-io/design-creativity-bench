@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works — Branchglass</title>
+<meta name="description" content="Branchglass connects to your repository and cloud account, creates an isolated production-like preview for every pull request, shares a URL with the team, updates it on each commit, and removes it when the pull request is merged or closed.">
+<meta name="theme-color" content="#0e1412">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230e1412'/%3E%3Cpath d='M16 4 L28 16 L16 28 L4 16 Z' fill='none' stroke='%23d6f25c' stroke-width='1.6'/%3E%3Cpath d='M16 10 L22 16 L16 22 L10 16 Z' fill='%23d6f25c'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0e1412;
+    --ink: #eef3ef;
+    --muted: #a9bbb3;
+    --soft: #d5e3dc;
+    --line: rgba(238, 243, 239, 0.12);
+    --lime: #d6f25c;
+    --aqua: #8ee0cb;
+    --amber: #f0b429;
+    --cream: #f3efe4;
+    --cream-ink: #1b2420;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+    --mono: "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", ui-monospace, Menlo, Consolas, monospace;
+    --max: 1120px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink);
+    background:
+      radial-gradient(820px 440px at 100% -8%, rgba(214, 242, 92, 0.07), transparent 52%),
+      var(--bg);
+    text-rendering: optimizeLegibility;
+    color-scheme: dark;
+    accent-color: var(--lime);
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(238, 243, 239, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(238, 243, 239, 0.035) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse at 70% 0%, #000 12%, transparent 68%);
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 40;
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--lime), var(--aqua) 42%, transparent 78%);
+  }
+  h1, h2, h3, p, ul, ol, figure, blockquote, dl, dd { margin: 0; }
+  ul, ol { padding: 0; }
+  button, input { font: inherit; color: inherit; }
+  a { color: inherit; }
+  img { max-width: 100%; }
+  ::selection { background: var(--lime); color: #14210c; }
+  :focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .skip {
+    position: absolute;
+    left: 12px;
+    top: -48px;
+    z-index: 50;
+    background: var(--lime);
+    color: #14210c;
+    padding: 8px 12px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .skip:focus { top: 12px; }
+  .site-header, main, .site-footer { position: relative; z-index: 1; }
+  .wrap {
+    width: min(var(--max), calc(100% - 40px));
+    margin-inline: auto;
+  }
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding-top: 3px;
+    background: rgba(14, 20, 18, 0.86);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+  }
+  .site-header .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+    min-height: 64px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    font-size: 18px;
+  }
+  .brand .glass { color: var(--lime); font-weight: 600; }
+  .mark { display: block; flex: none; }
+  .nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+  .nav a {
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .nav a:hover { color: var(--ink); }
+  .nav a[aria-current="page"] {
+    color: var(--ink);
+    box-shadow: inset 0 -2px 0 var(--lime);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-size: 14px;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--lime); color: #14210c; font-weight: 650; }
+  .btn-primary:hover { background: #e5ff86; }
+  .btn-ghost { border-color: rgba(238, 243, 239, 0.22); color: var(--ink); background: transparent; }
+  .btn-ghost:hover { border-color: var(--lime); }
+  .btn-tiny {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn-tiny:hover { border-color: var(--lime); }
+  .btn-ink {
+    background: var(--cream-ink);
+    color: var(--cream);
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn-ink:hover { background: #2a3832; }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 12px;
+  }
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 48px;
+    align-items: center;
+    padding: 72px 0 12px;
+  }
+  .intro > * { min-width: 0; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(34px, 5.6vw, 68px);
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+    text-wrap: balance;
+  }
+  .deck {
+    margin-top: 18px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(20px, 2.2vw, 26px);
+    line-height: 1.25;
+    color: var(--cream);
+    text-wrap: balance;
+  }
+  .lead {
+    margin-top: 18px;
+    max-width: 42rem;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--soft);
+  }
+  .intro-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .proof {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pass-wrap { display: flex; justify-content: flex-end; }
+  .pass {
+    width: min(100%, 420px);
+    background: var(--cream);
+    color: var(--cream-ink);
+    border-radius: 16px;
+    padding: 22px 22px 16px;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  }
+  .pass-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed rgba(27, 36, 32, 0.28);
+  }
+  .pass-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .stamp {
+    position: absolute;
+    right: 22px;
+    top: 78px;
+    transform: rotate(-8deg);
+    border: 1.5px solid rgba(27, 36, 32, 0.45);
+    color: rgba(27, 36, 32, 0.62);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    padding: 4px 7px;
+    border-radius: 3px;
+  }
+  .pass-repo {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5e6d66;
+  }
+  .pass-title {
+    font-family: var(--serif);
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 500;
+    margin: 6px 88px 14px 0;
+    text-wrap: balance;
+  }
+  .pass .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #5e6d66;
+  }
+  .url-line {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: rgba(27, 36, 32, 0.06);
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin: 6px 0 10px;
+    overflow-wrap: anywhere;
+  }
+  .pass-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .pass a { color: var(--cream-ink); font-size: 13px; }
+  .pass-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(27, 36, 32, 0.22);
+  }
+  .pass-grid strong { display: block; font-size: 13px; margin-top: 4px; }
+  .pass-grid span { display: block; font-size: 12px; color: #5e6d66; margin-top: 2px; }
+  .pass-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #5e6d66;
+  }
+  .metrics {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: 48px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .metrics li { padding: 22px 18px 20px 0; }
+  .metrics li + li { padding-left: 18px; border-left: 1px solid var(--line); }
+  .metrics strong {
+    display: block;
+    font-family: var(--serif);
+    font-size: clamp(32px, 4vw, 42px);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .metrics span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+  .metrics-note { margin-top: 12px; color: var(--muted); font-size: 13px; }
+  .block { padding: 64px 0; border-top: 1px solid var(--line); }
+  .block, .access, .step { scroll-margin-top: 88px; }
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+  .section-head h2, .access h2, .subhead {
+    font-family: var(--serif);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+  .section-head h2, .access h2 { font-size: clamp(32px, 4vw, 48px); }
+  .section-aside { max-width: 280px; color: var(--muted); font-size: 14px; text-align: right; }
+  .loop {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 36px;
+    align-items: start;
+  }
+  .loop > * { min-width: 0; }
+  .loop-index { position: sticky; top: 88px; }
+  .loop-index ol { list-style: none; }
+  .loop-index a {
+    display: flex;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--muted);
+    padding: 8px 0 8px 12px;
+    border-left: 2px solid transparent;
+  }
+  .loop-index a span { font-family: var(--mono); font-size: 12px; color: var(--lime); }
+  .loop-index a.on, .loop-index a:hover { color: var(--ink); border-left-color: var(--lime); }
+  .index-note {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+    flex: none;
+    margin-top: 6px;
+  }
+  .status-dot.live { color: var(--lime); background: var(--lime); }
+  .steps { list-style: none; }
+  .step { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px 12px; padding-bottom: 8px; }
+  .step + .step { border-top: 1px solid var(--line); padding-top: 28px; margin-top: 20px; }
+  .step-no {
+    font-family: var(--serif);
+    font-size: 28px;
+    color: var(--lime);
+    line-height: 1;
+  }
+  .step h3 {
+    font-family: var(--serif);
+    font-size: clamp(24px, 3vw, 30px);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .step-body > p { max-width: 65ch; color: var(--soft); margin-bottom: 10px; }
+  .fine { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .step a, .timeline a, .fine a { color: var(--lime); }
+  .evidence, .mono-url, .url-line, code, .conn span { overflow-wrap: anywhere; }
+  .evidence {
+    margin-top: 12px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #d5e6dc;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .conn { list-style: none; margin-top: 12px; border-bottom: 1px solid var(--line); }
+  .conn li {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .conn b {
+    font-weight: 650;
+    color: #c6ee8a;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .isos {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .iso {
+    border: 1px dashed rgba(238, 243, 239, 0.22);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .iso span {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .iso strong { display: block; font-family: var(--mono); font-size: 12px; margin: 6px 0 4px; font-weight: 500; }
+  .iso em { font-style: normal; font-size: 12px; color: var(--muted); }
+  .iso-live {
+    border-style: solid;
+    border-color: rgba(214, 242, 92, 0.4);
+    background: rgba(214, 242, 92, 0.05);
+  }
+  .iso-live em { color: #c6ee8a; }
+  .gh {
+    margin-top: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .gh-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .bot { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; }
+  .bot i {
+    font-style: normal;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-grid;
+    place-items: center;
+    background: var(--lime);
+    color: #14210c;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .gh-body { padding: 14px; }
+  .gh-body p { color: var(--soft); }
+  .gh-body .mono-url { margin: 8px 0; }
+  .comment-meta { list-style: none; margin-top: 8px; }
+  .comment-meta li {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding: 3px 0;
+  }
+  .mono-url {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--lime);
+  }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 36px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .split article { padding: 26px 26px 22px; }
+  .split article + article {
+    border-left: 1px solid var(--line);
+    background: rgba(214, 242, 92, 0.045);
+  }
+  .split h3 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .split ul { margin-top: 8px; padding-left: 18px; }
+  .split li { margin: 8px 0; color: var(--soft); }
+  .split .who { color: var(--muted); font-size: 13px; }
+  .ws-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .ws-layout > * { min-width: 0; }
+  .ws-row {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+  }
+  .ws-row:hover { border-color: rgba(238, 243, 239, 0.28); }
+  .ws-row:has(input:checked) {
+    border-color: rgba(214, 242, 92, 0.55);
+    background: rgba(214, 242, 92, 0.06);
+  }
+  .ws-row input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+  }
+  .ws-row:focus-within { outline: 2px solid var(--lime); outline-offset: 2px; }
+  .row-top, .pass-actions, .detail-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+  }
+  .row-title { display: block; font-weight: 650; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .row-meta { color: var(--muted); font-size: 13px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+  }
+  .pill .status-dot { margin-top: 0; }
+  .pill-ready { color: #c6ee8a; }
+  .pill-updating { color: var(--amber); }
+  .pill-updating .status-dot { animation: pulse 1.3s ease-in-out infinite; }
+  .pill-removed { color: var(--muted); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .detail { display: none; }
+  #detail-1842 { display: block; }
+  .workspace:has(#pr1836:checked) .detail,
+  .workspace:has(#pr1831:checked) .detail { display: none; }
+  .workspace:has(#pr1836:checked) #detail-1836,
+  .workspace:has(#pr1831:checked) #detail-1831 { display: block; }
+  .detail {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 18px 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  }
+  .detail h3 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 8px 0 4px;
+  }
+  .detail .btn-tiny { margin: 4px 0 14px; }
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 18px;
+  }
+  .meta dt {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .meta dd { margin-top: 3px; font-size: 14px; overflow-wrap: anywhere; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin-top: 14px; }
+  .chips li {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--soft);
+  }
+  .chips li.warn { color: var(--amber); border-color: rgba(240, 180, 41, 0.45); }
+  .bar-h {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .bar-h span { display: block; height: 100%; background: var(--amber); border-radius: inherit; }
+  .ops {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 28px;
+    margin-top: 36px;
+    align-items: start;
+  }
+  .ops > * { min-width: 0; }
+  .chart-card, .table-card {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .chart-total {
+    font-family: var(--serif);
+    font-size: 36px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .chart-total span { font-family: var(--sans); font-size: 14px; color: var(--muted); letter-spacing: 0; }
+  .chart {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .bar { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+  .bar b { font-family: var(--mono); font-size: 11px; font-weight: 550; }
+  .bar-track { height: 120px; width: 100%; display: flex; align-items: flex-end; }
+  .bar-track i {
+    display: block;
+    width: 100%;
+    background: rgba(142, 224, 203, 0.38);
+    border-radius: 4px 4px 0 0;
+  }
+  .bar.today .bar-track i { background: var(--lime); }
+  .bar em { font-style: normal; font-size: 11px; color: var(--muted); text-align: center; line-height: 1.25; }
+  .subhead { font-size: 26px; margin-bottom: 4px; }
+  .table-scroll { overflow-x: auto; margin-top: 12px; }
+  table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
+  td small { display: block; color: var(--muted); font-family: var(--mono); font-size: 12px; margin-top: 2px; }
+  .timeline { list-style: none; margin-top: 8px; }
+  .timeline li {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 14px;
+    padding-bottom: 18px;
+  }
+  .timeline time { font-family: var(--mono); font-size: 13px; color: var(--lime); }
+  .timeline h3 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .timeline p { color: var(--soft); max-width: 68ch; }
+  .quote { margin-top: 12px; padding: 4px 0 8px 16px; border-left: 2px solid var(--lime); }
+  .quote blockquote {
+    font-family: var(--serif);
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.25;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .quote figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; }
+  .people {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .person {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 14px 16px;
+  }
+  .person strong { display: block; letter-spacing: -0.01em; }
+  .person .role { color: var(--muted); font-size: 13px; margin: 2px 0 8px; }
+  .person p { font-size: 14px; color: var(--soft); }
+  .access {
+    margin: 8px 0 72px;
+    padding: 32px;
+    border-radius: 20px;
+    border: 1px solid rgba(214, 242, 92, 0.28);
+    background: linear-gradient(180deg, rgba(214, 242, 92, 0.08), rgba(255, 255, 255, 0.02));
+  }
+  .access p { max-width: 62ch; color: var(--soft); margin-top: 12px; }
+  .setup { list-style: none; margin-top: 18px; display: grid; gap: 8px; }
+  .setup li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; }
+  .setup b { font-family: var(--mono); color: var(--lime); font-weight: 550; }
+  .access-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .site-footer { border-top: 1px solid var(--line); padding: 28px 0 40px; }
+  .foot-grid { display: grid; gap: 12px; }
+  .brand-foot { font-family: var(--serif); font-size: 22px; }
+  .foot-grid nav { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .foot-grid nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+  .foot-grid nav a:hover { color: var(--ink); }
+  .status-line { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+  .status-line .status-dot { margin-top: 0; }
+  @media (max-width: 900px) {
+    .intro, .loop, .ws-layout, .ops, .split { grid-template-columns: 1fr; }
+    .pass-wrap { justify-content: flex-start; }
+    .loop-index { position: static; }
+    .loop-index ol { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; }
+    .loop-index a { border-left: 0; border-bottom: 2px solid transparent; white-space: nowrap; padding: 6px 8px; }
+    .loop-index a.on { border-bottom-color: var(--lime); }
+    .section-aside { text-align: left; }
+    .split article + article { border-left: 0; border-top: 1px solid var(--line); }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .metrics li + li { border-left: 0; }
+    .metrics li:nth-child(odd) { padding-left: 0; }
+    .metrics li:nth-child(even) { border-left: 1px solid var(--line); }
+    .metrics li { border-bottom: 1px solid var(--line); }
+  }
+  @media (max-width: 640px) {
+    .wrap { width: min(var(--max), calc(100% - 28px)); }
+    .intro { padding-top: 36px; }
+    .step { grid-template-columns: 40px minmax(0, 1fr); }
+    .isos, .pass-grid, .meta, .metrics { grid-template-columns: 1fr; }
+    .metrics li:nth-child(even) { border-left: 0; padding-left: 0; }
+    .conn li { grid-template-columns: 1fr; gap: 2px; }
+    .section-head { flex-direction: column; align-items: start; }
+    .access { padding: 22px; }
+    .timeline li { grid-template-columns: 64px minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#how">Skip to how it works</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#how" aria-label="Branchglass home">
+      <svg class="mark" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 3.5 28 16 16 28.5 4 16Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M16 9.5 22.2 16 16 22.5 9.8 16Z" fill="#d6f25c"/>
+      </svg>
+      <span>Branch<span class="glass">glass</span></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#how" aria-current="page">How it works</a>
+      <a href="#loop">The loop</a>
+      <a href="#previews">Workspace</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#access">Access</a>
+      <a class="btn btn-primary" href="#access">Request access</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <section id="how" aria-labelledby="how-title">
+    <div class="wrap">
+      <header class="intro">
+        <div class="intro-copy">
+          <p class="kicker">How it works</p>
+          <h1 id="how-title">Open a pull request.<br>Get a private production.</h1>
+          <p class="deck">Close it, and the environment is already gone.</p>
+          <p class="lead">Branchglass fits the review you already run. It connects to the code repository and the cloud account. Opening a pull request creates an isolated preview with production-like configuration and safe test data. Developers, designers, and reviewers get a shareable URL. New commits automatically update that environment. Merge or close, and Branchglass removes it.</p>
+          <div class="intro-actions">
+            <a class="btn btn-primary" href="#loop">See the six steps</a>
+            <a class="btn btn-ghost" href="#previews">View a live workspace</a>
+          </div>
+          <p class="proof">Northline checkout · Wednesday 18 Mar 2026, 14:32 UTC · 3 open · last teardown 51s</p>
+        </div>
+        <div class="pass-wrap">
+          <article class="pass" aria-label="Preview pass for pull request 1842">
+            <div class="stamp" aria-hidden="true">UNTIL MERGE</div>
+            <div class="pass-top">
+              <span class="pass-kicker">Branchglass</span>
+              <span class="pass-kicker">Preview pass</span>
+            </div>
+            <p class="pass-repo">Northline / checkout · PR #1842</p>
+            <h2 class="pass-title">Reduce checkout p95 by caching tax quotes</h2>
+            <p class="label">Shareable URL</p>
+            <p class="url-line">pr-1842.northline.branchglass.app</p>
+            <div class="pass-actions">
+              <button type="button" class="btn-ink" data-copy="https://pr-1842.northline.branchglass.app">Copy URL</button>
+              <a href="#previews">Open in the workspace</a>
+            </div>
+            <div class="pass-grid">
+              <div>
+                <p class="label">Safe test data</p>
+                <strong>orders-anon-2026-03-17</strong>
+                <span>1,204,883 orders · PII replaced</span>
+              </div>
+              <div>
+                <p class="label">Production-like config</p>
+                <strong>release 2026.03.18</strong>
+                <span>preview secrets · tax_quote_cache=on</span>
+              </div>
+            </div>
+            <div class="pass-foot">
+              <span>Build bg-1842-17 · updated 14:28 UTC</span>
+              <span>Void on merge or close</span>
+            </div>
+          </article>
+        </div>
+      </header>
+      <ul class="metrics" aria-label="Northline results for the last 30 days">
+        <li><strong>4m 38s</strong><span>Median time from pull request open to first URL</span></li>
+        <li><strong>216</strong><span>Preview environments created, 17 Feb–18 Mar 2026</span></li>
+        <li><strong>47s</strong><span>Median teardown after merge or close</span></li>
+        <li><strong>3</strong><span>Open in northline/checkout right now</span></li>
+      </ul>
+      <p class="metrics-note">Northline org · last 30 days through 18 Mar 2026 · 213 removed, 3 still open · preview spend $1,836.00 · $8.50 average · 0 writes to production databases.</p>
+
+      <section class="block" id="loop" aria-labelledby="loop-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">01 — The loop</p>
+            <h2 id="loop-title">From a pull request to a URL, then back to nothing.</h2>
+          </div>
+          <p class="section-aside">Six steps. The team only does the first connection by hand. Every later pull request runs the rest.</p>
+        </div>
+        <div class="loop">
+          <aside class="loop-index">
+            <ol>
+              <li><a class="on" href="#step-connect"><span>01</span> Connect</a></li>
+              <li><a href="#step-trigger"><span>02</span> Trigger</a></li>
+              <li><a href="#step-config"><span>03</span> Configure</a></li>
+              <li><a href="#step-share"><span>04</span> Share</a></li>
+              <li><a href="#step-refresh"><span>05</span> Refresh</a></li>
+              <li><a href="#step-remove"><span>06</span> Remove</a></li>
+            </ol>
+            <p class="index-note"><span class="status-dot live" aria-hidden="true"></span><span>3 open in checkout<br>1 updating · 14:32 UTC</span></p>
+          </aside>
+          <ol class="steps">
+            <li class="step" id="step-connect">
+              <div class="step-no">01</div>
+              <div class="step-body">
+                <h3>Connect the repository and the cloud account.</h3>
+                <p>Branchglass installs on the code host and assumes a scoped role in the cloud account. It reads service definitions and production configuration so later previews can mirror them. It does not deploy into production. Northline did this once, on 12 Mar, and has not edited the role since.</p>
+                <ul class="conn">
+                  <li><span>GitHub</span><span>northline org · checkout, web, invoicing</span><b>Connected</b></li>
+                  <li><span>AWS</span><span>482193770216 · role branchglass-preview</span><b>Connected</b></li>
+                  <li><span>Slack</span><span>#checkout-reviews · 18 members</span><b>Connected</b></li>
+                </ul>
+                <p class="fine">GitLab and Google Cloud are supported. This workspace does not use them. External ID nl-7f3a-22c1. Installed by Priya Nair, 12 Mar 2026, 16:22 UTC. The role may touch only resources tagged branchglass:preview. Production VPC 10.8.0.0/16 is an explicit deny.</p>
+              </div>
+            </li>
+            <li class="step" id="step-trigger">
+              <div class="step-no">02</div>
+              <div class="step-body">
+                <h3>Opening a pull request starts an isolated environment.</h3>
+                <p>A pull_request.opened webhook is the trigger. Branchglass allocates a preview that does not share a network, database, queue, or hostname with production, or with any other pull request. Nobody files a platform ticket, and nobody waits on a shared staging slot.</p>
+                <pre class="evidence">14:02:11  pull_request.opened   northline/checkout#1842
+14:02:11  branch                perf/tax-cache → main
+14:02:13  vpc allocated         10.42.184.0/24   us-east-1
+14:02:40  boot                  helm release checkout-prod
+14:06:48  healthy               build bg-1842-16
+14:07:02  url posted            pr-1842.northline.branchglass.app</pre>
+                <div class="isos" aria-label="Isolation between production and two previews">
+                  <div class="iso iso-prod">
+                    <span>Production</span>
+                    <strong>10.8.0.0/16</strong>
+                    <em>Untouched</em>
+                  </div>
+                  <div class="iso iso-live">
+                    <span>PR #1842</span>
+                    <strong>10.42.184.0/24</strong>
+                    <em>Isolated</em>
+                  </div>
+                  <div class="iso iso-live">
+                    <span>PR #1836</span>
+                    <strong>10.42.183.0/24</strong>
+                    <em>Isolated</em>
+                  </div>
+                </div>
+                <p class="fine">No route from a preview to production. No route from one preview to another. #1842 reached a URL in 4 minutes 51 seconds, next to the 4m 38s median.</p>
+              </div>
+            </li>
+            <li class="step" id="step-config">
+              <div class="step-no">03</div>
+              <div class="step-body">
+                <h3>Production-like configuration. Safe test data.</h3>
+                <p>The environment mirrors the current production release, then applies the branch. Service versions, feature-flag defaults, and resource sizes come from release 2026.03.18. Secrets come from the preview vault, not from production. Data is a sanitized snapshot: real shape, replaced identifiers, edge cases kept.</p>
+                <pre class="evidence">config     release 2026.03.18
+secrets    preview/checkout/*     prod vault denied
+snapshot   orders-anon-2026-03-17
+size       38 GB · 1,204,883 orders
+kept       2,416 failed ACH rows for retry tests
+replaced   emails, card numbers, bank accounts
+override   tax_quote_cache=on inside vpc 10.42.184.0/24 only</pre>
+                <p class="fine">The branch change is the only intentional drift. For #1842, that is the tax-quote cache. Production flags are otherwise copied, not invented.</p>
+              </div>
+            </li>
+            <li class="step" id="step-share">
+              <div class="step-no">04</div>
+              <div class="step-body">
+                <h3>Developers, designers, and reviewers get one URL.</h3>
+                <p>The same link is commented on the pull request and posted to Slack. The author checks a metric, a designer opens it on a review call, a reviewer replays a failure. There is no second environment to keep in sync, and no cloud-console login to hand out.</p>
+                <div class="gh">
+                  <div class="gh-head">
+                    <span class="bot"><i aria-hidden="true">bg</i> branchglass</span>
+                    <time datetime="2026-03-18T14:07:02Z">commented 14:07 UTC</time>
+                  </div>
+                  <div class="gh-body">
+                    <p><strong>Preview ready</strong> · build bg-1842-16</p>
+                    <p class="mono-url">https://pr-1842.northline.branchglass.app</p>
+                    <ul class="comment-meta">
+                      <li>Services · web, checkout-api, tax, payments-sandbox, receipts, worker</li>
+                      <li>Data · orders-anon-2026-03-17</li>
+                      <li>Config · release 2026.03.18 · preview vault</li>
+                      <li>Removed · when #1842 is merged or closed</li>
+                    </ul>
+                  </div>
+                </div>
+                <p class="fine">Also posted to #checkout-reviews at 14:07 UTC. Opened so far by Mateo Ruiz (author), Leo Park (14:11), and Maya Chen (14:30). Amina Rahman’s design review is on the sibling URL for #1836.</p>
+              </div>
+            </li>
+            <li class="step" id="step-refresh">
+              <div class="step-no">05</div>
+              <div class="step-body">
+                <h3>New commits automatically update the environment.</h3>
+                <p>A push to the branch rebuilds what changed and keeps the URL. Reviewers refresh. They do not hunt for a new link, and they do not reseed a database. A case found before the fix is still there after it.</p>
+                <div class="gh">
+                  <div class="gh-head">
+                    <span class="bot"><i aria-hidden="true">bg</i> branchglass</span>
+                    <time datetime="2026-03-18T14:28:16Z">updated 14:28 UTC</time>
+                  </div>
+                  <div class="gh-body">
+                    <p><strong>Environment updated</strong> · build bg-1842-17 · same URL</p>
+                    <ul class="comment-meta">
+                      <li>14:22:09 · Mateo pushed f3c91aa · “tighten cache TTL”</li>
+                      <li>Rebuilt · checkout-api, web</li>
+                      <li>Kept · database, hostname, VPC 10.42.184.0/24</li>
+                      <li>Serving · https://pr-1842.northline.branchglass.app</li>
+                    </ul>
+                  </div>
+                </div>
+                <p class="fine">#1831 is mid-update right now: commit 9ab31d0 at 14:29, rebuild bg-1831-9, ETA 14:36. The URL still serves bg-1831-8 until the new build is healthy.</p>
+              </div>
+            </li>
+            <li class="step" id="step-remove">
+              <div class="step-no">06</div>
+              <div class="step-body">
+                <h3>Merge or close, and the environment is removed.</h3>
+                <p>When the pull request is merged or closed, Branchglass deletes the preview network, the DNS record, and the data volume. A forgotten branch does not keep billing. Across Northline’s last 30 days, that teardown took a median of 47 seconds. 213 of 216 environments are already gone. The other three are the open reviews below.</p>
+                <pre class="evidence">11:02:03  pull_request.closed   checkout#1818  merged by Maya Chen
+11:02:06  draining              build bg-1818-3
+11:02:22  deleted dns           pr-1818.northline.branchglass.app
+11:02:37  deleted volume        orders preview for #1818
+11:02:51  deleted vpc           10.42.181.0/24
+          teardown              51s · hostname no longer resolves</pre>
+                <p class="fine">Leo Park refreshed the old URL at 11:04 and confirmed it was gone. <a href="#teardowns">Latest teardowns are in the log.</a></p>
+              </div>
+            </li>
+          </ol>
+        </div>
+        <p class="fine" style="margin-top:28px">The review does not change shape. Branchglass takes the environment work out of it.</p>
+        <div class="split">
+          <article>
+            <p class="who">What your team still does</p>
+            <h3>Your review, unchanged</h3>
+            <ul>
+              <li>Open the pull request in GitHub the way you already do.</li>
+              <li>Test on the URL Branchglass comments onto that pull request.</li>
+              <li>Push follow-up commits to the same branch.</li>
+              <li>Merge or close when the review is finished.</li>
+            </ul>
+          </article>
+          <article>
+            <p class="who">What Branchglass does around it</p>
+            <h3>The environment, handled</h3>
+            <ul>
+              <li>Creates the isolated preview from the open webhook.</li>
+              <li>Loads production-like config and safe test data.</li>
+              <li>Holds the URL steady and updates it on each push.</li>
+              <li>Removes the environment on merge or close.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="block" id="previews" aria-labelledby="preview-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">02 — Workspace</p>
+            <h2 id="preview-title">Three previews open in checkout.</h2>
+          </div>
+          <p class="section-aside">northline/checkout · us-east-1 · Wednesday 18 Mar 2026, 14:32 UTC. All three org-wide open previews are in this repo.</p>
+        </div>
+        <div class="workspace">
+          <div class="ws-layout">
+            <div class="ws-list" role="radiogroup" aria-label="Open checkout environments">
+              <label class="ws-row">
+                <input type="radio" name="env" id="pr1842" checked>
+                <span class="row-top"><span class="pill pill-ready"><i class="status-dot" aria-hidden="true"></i> Ready</span><span class="row-meta">Updated 14:28</span></span>
+                <span class="row-title">#1842 · Reduce checkout p95 by caching tax quotes</span>
+                <span class="row-meta">perf/tax-cache · Mateo Ruiz · bg-1842-17</span>
+              </label>
+              <label class="ws-row">
+                <input type="radio" name="env" id="pr1836">
+                <span class="row-top"><span class="pill pill-ready"><i class="status-dot" aria-hidden="true"></i> Ready</span><span class="row-meta">Updated 13:05</span></span>
+                <span class="row-title">#1836 · Invoice PDF layout v3</span>
+                <span class="row-meta">design/invoice-v3 · Amina Rahman · bg-1836-4</span>
+              </label>
+              <label class="ws-row">
+                <input type="radio" name="env" id="pr1831">
+                <span class="row-top"><span class="pill pill-updating"><i class="status-dot" aria-hidden="true"></i> Updating</span><span class="row-meta">ETA 14:36</span></span>
+                <span class="row-title">#1831 · ACH retry window for failed debits</span>
+                <span class="row-meta">fix/ach-retry · Priya Nair · rebuilding bg-1831-9</span>
+              </label>
+            </div>
+            <div class="ws-details">
+              <article class="detail" id="detail-1842">
+                <div class="detail-top">
+                  <span class="pill pill-ready"><i class="status-dot" aria-hidden="true"></i> Ready</span>
+                  <span class="fine">Running 30 min · $0.38</span>
+                </div>
+                <h3>PR #1842 is on build 17</h3>
+                <p class="mono-url">https://pr-1842.northline.branchglass.app</p>
+                <button type="button" class="btn btn-tiny" data-copy="https://pr-1842.northline.branchglass.app">Copy URL</button>
+                <dl class="meta">
+                  <div><dt>Author</dt><dd>Mateo Ruiz</dd></div>
+                  <div><dt>Branch</dt><dd>perf/tax-cache → main @ c4e91ab</dd></div>
+                  <div><dt>Network</dt><dd>VPC 10.42.184.0/24 · us-east-1</dd></div>
+                  <div><dt>Data</dt><dd>orders-anon-2026-03-17 · 38 GB</dd></div>
+                  <div><dt>Config</dt><dd>release 2026.03.18 · preview vault</dd></div>
+                  <div><dt>Branch override</dt><dd>tax_quote_cache=on in this VPC only</dd></div>
+                  <div><dt>Review</dt><dd>Leo Park since 14:11 · Maya Chen since 14:30 · no approval yet</dd></div>
+                  <div><dt>Cost tag</dt><dd>branchglass:preview=1842</dd></div>
+                  <div><dt>Expires</dt><dd>When #1842 is merged or closed</dd></div>
+                  <div><dt>Comment</dt><dd>Posted 14:07 · edited 14:28</dd></div>
+                </dl>
+                <ul class="chips">
+                  <li>web · healthy</li>
+                  <li>checkout-api · healthy</li>
+                  <li>tax · healthy</li>
+                  <li>payments-sandbox · healthy</li>
+                  <li>receipts · healthy</li>
+                  <li>worker · healthy</li>
+                </ul>
+                <pre class="evidence">14:02:11  opened     perf/tax-cache
+14:07:02  ready      bg-1842-16  url posted
+14:22:09  push       f3c91aa  tighten cache TTL
+14:28:16  ready      bg-1842-17  url unchanged</pre>
+              </article>
+              <article class="detail" id="detail-1836">
+                <div class="detail-top">
+                  <span class="pill pill-ready"><i class="status-dot" aria-hidden="true"></i> Ready</span>
+                  <span class="fine">Running 2h 44m · $1.22</span>
+                </div>
+                <h3>PR #1836 is waiting on re-review</h3>
+                <p class="mono-url">https://pr-1836.northline.branchglass.app</p>
+                <button type="button" class="btn btn-tiny" data-copy="https://pr-1836.northline.branchglass.app">Copy URL</button>
+                <dl class="meta">
+                  <div><dt>Author</dt><dd>Amina Rahman, product design</dd></div>
+                  <div><dt>Branch</dt><dd>design/invoice-v3</dd></div>
+                  <div><dt>Network</dt><dd>VPC 10.42.183.0/24 · us-east-1</dd></div>
+                  <div><dt>Data</dt><dd>orders-anon-2026-03-17 plus template pack invoice-templates-v3</dd></div>
+                  <div><dt>Config</dt><dd>release 2026.03.18 · preview secrets</dd></div>
+                  <div><dt>Review</dt><dd>Jonah Abebe requested footer-total changes at 12:40. Fix is in bg-1836-4.</dd></div>
+                  <div><dt>Design check</dt><dd>390px width and print preview, 13:12 UTC</dd></div>
+                  <div><dt>Also posted</dt><dd>#design-reviews and the pull request</dd></div>
+                  <div><dt>Cost tag</dt><dd>branchglass:preview=1836</dd></div>
+                  <div><dt>Expires</dt><dd>When #1836 is merged or closed</dd></div>
+                </dl>
+                <ul class="chips">
+                  <li>web · healthy</li>
+                  <li>checkout-api · healthy</li>
+                  <li>tax · healthy</li>
+                  <li>payments-sandbox · healthy</li>
+                  <li>receipts · healthy</li>
+                  <li>worker · healthy</li>
+                </ul>
+                <pre class="evidence">11:48:02  opened     design/invoice-v3
+11:54:18  ready      bg-1836-3
+12:40:11  review     changes requested · footer totals
+12:58:44  push       e20ab91
+13:05:09  ready      bg-1836-4  same URL</pre>
+              </article>
+              <article class="detail" id="detail-1831">
+                <div class="detail-top">
+                  <span class="pill pill-updating"><i class="status-dot" aria-hidden="true"></i> Updating</span>
+                  <span class="fine">Running 4h 17m · $1.86</span>
+                </div>
+                <h3>PR #1831 is rebuilding two services</h3>
+                <p class="mono-url">https://pr-1831.northline.branchglass.app</p>
+                <button type="button" class="btn btn-tiny" data-copy="https://pr-1831.northline.branchglass.app">Copy URL</button>
+                <p class="fine">Rebuild bg-1831-9 · 4 of 6 services healthy · ETA 14:36 UTC. URL still serves bg-1831-8 until swap.</p>
+                <div class="bar-h" role="img" aria-label="4 of 6 services healthy"><span style="width:66.6%"></span></div>
+                <dl class="meta" style="margin-top:14px">
+                  <div><dt>Author</dt><dd>Priya Nair</dd></div>
+                  <div><dt>Branch</dt><dd>fix/ach-retry</dd></div>
+                  <div><dt>Commit</dt><dd>9ab31d0 · pushed 14:29 UTC</dd></div>
+                  <div><dt>Network</dt><dd>VPC 10.42.131.0/24 · us-east-1</dd></div>
+                  <div><dt>Data</dt><dd>Same snapshot · 2,416 sanitized failed debits available</dd></div>
+                  <div><dt>Config</dt><dd>release 2026.03.18 · retry window from the branch</dd></div>
+                  <div><dt>Reviewer</dt><dd>Leo Park · assigned, waiting on build 9</dd></div>
+                  <div><dt>Cost tag</dt><dd>branchglass:preview=1831</dd></div>
+                  <div><dt>Expires</dt><dd>When #1831 is merged or closed</dd></div>
+                  <div><dt>Previous build</dt><dd>bg-1831-8 still serving the URL</dd></div>
+                </dl>
+                <ul class="chips">
+                  <li>web · healthy</li>
+                  <li>checkout-api · healthy</li>
+                  <li>tax · healthy</li>
+                  <li>receipts · healthy</li>
+                  <li class="warn">payments-sandbox · rebuilding</li>
+                  <li class="warn">worker · rebuilding</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </div>
+        <div class="ops" id="teardowns">
+          <div class="chart-card">
+            <p class="kicker">Created</p>
+            <p class="chart-total">52 <span>in 7 days · all repos</span></p>
+            <div class="chart" role="img" aria-label="Previews created per day, 12 to 18 March 2026. Thursday 8, Friday 11, Saturday 9, Sunday 3, Monday 2, Tuesday 12, Wednesday 7 and still in progress. Total 52. Peak was Tuesday with 12.">
+              <div class="bar"><b>8</b><div class="bar-track"><i style="height:67%"></i></div><em>Thu<br>12</em></div>
+              <div class="bar"><b>11</b><div class="bar-track"><i style="height:92%"></i></div><em>Fri<br>13</em></div>
+              <div class="bar"><b>9</b><div class="bar-track"><i style="height:75%"></i></div><em>Sat<br>14</em></div>
+              <div class="bar"><b>3</b><div class="bar-track"><i style="height:25%"></i></div><em>Sun<br>15</em></div>
+              <div class="bar"><b>2</b><div class="bar-track"><i style="height:17%"></i></div><em>Mon<br>16</em></div>
+              <div class="bar" title="Peak day, 12 previews"><b>12</b><div class="bar-track"><i style="height:100%"></i></div><em>Tue<br>17</em></div>
+              <div class="bar today"><b>7</b><div class="bar-track"><i style="height:58%"></i></div><em>Wed<br>18</em></div>
+            </div>
+            <p class="fine">Wednesday is partial, counted through 14:32 UTC. Peak was Tuesday, 12 previews. About 7.2 a day over the last 30 days, which held 216.</p>
+          </div>
+          <div class="table-card">
+            <h3 class="subhead">Latest teardowns</h3>
+            <p class="fine">All Northline repos. Each row deleted its VPC, DNS record, and preview volume after merge or close.</p>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Pull request</th>
+                    <th scope="col">Repo</th>
+                    <th scope="col">How it ended</th>
+                    <th scope="col">Removed</th>
+                    <th scope="col" class="num">Teardown</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>#1818<small>fix/split-round</small></td>
+                    <td>checkout</td>
+                    <td>Merged by Maya Chen</td>
+                    <td>18 Mar · 11:02:51 UTC</td>
+                    <td class="num">51s</td>
+                  </tr>
+                  <tr>
+                    <td>#1804<small>chore/drop-flag</small></td>
+                    <td>checkout</td>
+                    <td>Closed by Leo Park · approach dropped</td>
+                    <td>18 Mar · 09:40:38 UTC</td>
+                    <td class="num">38s</td>
+                  </tr>
+                  <tr>
+                    <td>#1772<small>feat/nav-search</small></td>
+                    <td>web</td>
+                    <td>Merged by Jonah Abebe</td>
+                    <td>18 Mar · 08:16:44 UTC</td>
+                    <td class="num">44s</td>
+                  </tr>
+                  <tr>
+                    <td>#1766<small>fix/tax-pdf</small></td>
+                    <td>invoicing</td>
+                    <td>Merged by Priya Nair</td>
+                    <td>17 Mar · 19:03:02 UTC</td>
+                    <td class="num">62s</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="workflow" aria-labelledby="flow-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">03 — The day</p>
+            <h2 id="flow-title">A pull request, from open to gone.</h2>
+          </div>
+          <p class="section-aside">#1818 · checkout · this morning. The full loop, in the order the team actually worked.</p>
+        </div>
+        <ol class="timeline">
+          <li>
+            <time datetime="2026-03-18T08:40:00Z">08:40</time>
+            <div>
+              <h3>Jonah opens the pull request</h3>
+              <p>PR #1818, branch fix/split-round, against main. No staging reservation, no platform ticket. Branchglass receives pull_request.opened.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-03-18T08:46:00Z">08:46</time>
+            <div>
+              <h3>The URL is on the pull request</h3>
+              <p>pr-1818.northline.branchglass.app is live on build bg-1818-2. Snapshot orders-anon-2026-03-17. Jonah checks split tender SO-181844 before asking for review.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-03-18T09:12:00Z">09:12</time>
+            <div>
+              <h3>Leo reviews on the URL, not a screenshot</h3>
+              <p>He replays the same sanitized order, catches a rounding miss on the second tender, and requests a change in GitHub. The preview stays up while Jonah edits.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-03-18T09:44:00Z">09:44</time>
+            <div>
+              <h3>The push updates the same environment</h3>
+              <p>Jonah pushed b71c0de at 09:38. Build bg-1818-3 is healthy six minutes later. The hostname did not change. The database was kept, so SO-181844 is still there for the re-check.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-03-18T10:20:00Z">10:20</time>
+            <div>
+              <h3>Maya approves from the preview</h3>
+              <p>She confirms the rounding fix on the URL, then approves. Design did not need this one. When they do, they use the same kind of link — Amina is on #1836 this afternoon.</p>
+            </div>
+          </li>
+          <li>
+            <time datetime="2026-03-18T11:02:00Z">11:02</time>
+            <div>
+              <h3>Merge. Then the environment is removed.</h3>
+              <p>Maya merges at 11:02:03. At 11:02:51 the VPC, DNS record, and volume are gone — 51 seconds. Leo refreshes at 11:04. The hostname no longer resolves. <a href="#teardowns">It is the first row in today’s teardown log.</a></p>
+            </div>
+          </li>
+        </ol>
+        <figure class="quote">
+          <blockquote>We stopped reserving staging. The URL on the pull request is the review.</blockquote>
+          <figcaption>Priya Nair, staff engineer, Northline · platform note, 16 Mar 2026</figcaption>
+        </figure>
+        <h3 class="subhead" style="margin-top:36px">Who has a URL open right now</h3>
+        <p class="fine">14:32 UTC · the three environments still running in checkout.</p>
+        <div class="people">
+          <article class="person">
+            <strong>Mateo Ruiz</strong>
+            <p class="role">Author · developer · #1842</p>
+            <p>Watching tax-quote cache hit rate. 0.94 in preview logs on build bg-1842-17.</p>
+          </article>
+          <article class="person">
+            <strong>Maya Chen</strong>
+            <p class="role">Reviewer · #1842</p>
+            <p>Walking sanitized order SO-184220 through checkout. Opened the URL at 14:30. Has not approved yet.</p>
+          </article>
+          <article class="person">
+            <strong>Leo Park</strong>
+            <p class="role">Reviewer · #1842 and #1831</p>
+            <p>Checking the new VPCs have no route to production 10.8.0.0/16 before he signs off.</p>
+          </article>
+          <article class="person">
+            <strong>Amina Rahman</strong>
+            <p class="role">Author · designer · #1836</p>
+            <p>Invoice PDF checked at 390px and in print preview on build bg-1836-4. Link also sits in #design-reviews.</p>
+          </article>
+          <article class="person">
+            <strong>Jonah Abebe</strong>
+            <p class="role">Reviewer · #1836</p>
+            <p>Footer-totals fix is up. Re-review is queued. The environment is still ready at the same URL.</p>
+          </article>
+          <article class="person">
+            <strong>Priya Nair</strong>
+            <p class="role">Author · developer · #1831</p>
+            <p>Waiting on rebuild bg-1831-9 to exercise 2,416 sanitized failed debits. URL still serves build 8.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="access" id="access" aria-labelledby="access-title">
+        <p class="kicker">Start</p>
+        <h2 id="access-title">The next pull request can have a URL.</h2>
+        <p>Connect a repository and a cloud account once. After that, the loop runs itself. Northline’s workspace accepted webhooks 18 minutes after Priya started the install on 12 Mar, at 16:31 UTC. The first real preview followed that afternoon on PR #1744.</p>
+        <ol class="setup">
+          <li><b>01</b><span>Install Branchglass on the GitHub org and choose the repos. Northline selected checkout, web, and invoicing.</span></li>
+          <li><b>02</b><span>Create the cloud role from the template. Northline’s external ID is nl-7f3a-22c1. Production VPC access stays denied.</span></li>
+          <li><b>03</b><span>Open a pull request. The isolated environment, safe data, shareable URL, commit updates, and teardown follow without another ticket.</span></li>
+        </ol>
+        <div class="access-actions">
+          <a class="btn btn-primary" href="#loop">Walk the loop</a>
+          <a class="btn btn-ghost" href="#previews">Inspect the workspace</a>
+          <a class="btn btn-ghost" href="#teardowns">See a teardown</a>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+<footer class="site-footer">
+  <div class="wrap foot-grid">
+    <p class="brand-foot">Branchglass</p>
+    <p>Temporary, production-like cloud environments for every pull request.</p>
+    <nav aria-label="Footer">
+      <a href="#how">How it works</a>
+      <a href="#loop">The loop</a>
+      <a href="#previews">Workspace</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#access">Access</a>
+    </nav>
+    <p class="status-line"><span class="status-dot live" aria-hidden="true"></span> Preview control plane operational · us-east-1 and eu-central-1 · 99.98% over the last 30 days · incident-free since 2 Feb 2026</p>
+    <p class="fine">© 2026 Branchglass, Inc. · San Francisco</p>
+  </div>
+</footer>
+<script>
+(function () {
+  var links = document.querySelectorAll(".loop-index a");
+  var steps = document.querySelectorAll(".step");
+  links.forEach(function (link) {
+    link.addEventListener("click", function () {
+      links.forEach(function (other) { other.classList.remove("on"); });
+      link.classList.add("on");
+    });
+  });
+  if ("IntersectionObserver" in window && steps.length) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        links.forEach(function (link) {
+          link.classList.toggle("on", link.getAttribute("href") === "#" + entry.target.id);
+        });
+      });
+    }, { rootMargin: "-45% 0px -45% 0px", threshold: 0.01 });
+    steps.forEach(function (step) { io.observe(step); });
+  }
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var value = btn.getAttribute("data-copy");
+      var label = btn.textContent;
+      function done(text) {
+        btn.textContent = text;
+        setTimeout(function () { btn.textContent = label; }, 1400);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(function () { done("Copied"); }, function () { done("Copy failed"); });
+      } else {
+        done("Copy failed");
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

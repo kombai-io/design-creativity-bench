@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fieldline HVAC — Dispatch Console</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#EDF1F6; --card:#FFFFFF; --ink:#0F1E2E; --muted:#64748B; --muted2:#94A3B8;
+--line:#E2E8F0; --line2:#CBD5E1;
+--teal:#0E9F8A; --teal-d:#0B7D6D; --teal-bg:#E6F7F3;
+--navy:#0F1E2E; --navy2:#172C44;
+--red:#DC2626; --red-bg:#FEF2F2; --red-line:#FECACA;
+--amber:#D97706; --amber-bg:#FFFBEB; --amber-line:#FDE68A;
+--green:#059669; --green-bg:#ECFDF5;
+--blue:#2563EB; --blue-bg:#EFF6FF;
+--violet:#7C3AED;
+--radius:12px; --shadow:0 1px 2px rgba(15,30,46,.06),0 4px 16px rgba(15,30,46,.06);
+--shadow2:0 8px 28px rgba(15,30,46,.14);
+}
+html,body{height:100%}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:8px;border:2px solid var(--bg)}
+::-webkit-scrollbar-track{background:transparent}
+.app{display:grid;grid-template-rows:56px 1fr;height:100vh}
+/* TOPBAR */
+.topbar{background:var(--navy);color:#E2E8F0;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid #1E3A56;z-index:50}
+.brand{display:flex;align-items:center;gap:10px;min-width:228px}
+.logo-mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#0E9F8A,#0EA5E9);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-name{font-weight:800;font-size:15px;letter-spacing:-.2px;color:#fff;line-height:1}
+.brand-name span{color:#5EEAD4}
+.brand-sub{font-size:9.5px;letter-spacing:1.6px;color:#7BA0BE;font-weight:700;margin-top:2px}
+.search{flex:1;max-width:520px;margin:0 auto;display:flex;align-items:center;background:#1A3350;border:1px solid #2A4A6B;border-radius:8px;padding:7px 12px;gap:8px;color:#8AA8C2}
+.search input{background:transparent;border:0;outline:0;color:#E2E8F0;width:100%;font-size:13px}
+.search input::placeholder{color:#6B8AA6}
+.search kbd{background:#0F1E2E;border:1px solid #2A4A6B;border-radius:5px;font-size:11px;padding:1px 6px;color:#8AA8C2}
+.top-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.live-pill{display:flex;align-items:center;gap:8px;background:#13283F;border:1px solid #2A4A6B;border-radius:999px;padding:6px 12px;font-size:12.5px;color:#D6E6F2}
+.dot-live{width:8px;height:8px;border-radius:50%;background:#34D399;box-shadow:0 0 0 4px rgba(52,211,153,.18);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(52,211,153,.18)}50%{box-shadow:0 0 0 7px rgba(52,211,153,.08)}}
+.weather{background:rgba(217,119,6,.15);border:1px solid rgba(217,119,6,.35);color:#FCD34D;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600}
+.icon-btn{width:34px;height:34px;border-radius:8px;background:transparent;border:1px solid #2A4A6B;color:#B9D0E4;display:flex;align-items:center;justify-content:center;position:relative}
+.icon-btn:hover{background:#1A3350}
+.badge-n{position:absolute;top:-6px;right:-6px;background:#DC2626;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;border:2px solid var(--navy)}
+.user-chip{display:flex;align-items:center;gap:9px;padding:4px 4px 4px 4px}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#EF4444);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.user-meta{line-height:1.15}
+.user-meta b{display:block;font-size:12.5px;color:#fff}
+.user-meta span{font-size:11px;color:#7BA0BE}
+/* BODY */
+.body{display:grid;grid-template-columns:224px 1fr;min-height:0}
+/* SIDEBAR */
+.sidebar{background:var(--navy);color:#B9D0E4;display:flex;flex-direction:column;padding:14px 10px 12px;overflow-y:auto}
+.nav-sec{font-size:10px;letter-spacing:1.4px;font-weight:800;color:#5B7A96;padding:10px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:500;color:#B9D0E4;border:0;background:transparent;width:100%;text-align:left}
+.nav-item svg{flex-shrink:0;opacity:.9}
+.nav-item:hover{background:#172C44;color:#fff}
+.nav-item.active{background:#0E9F8A;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(14,159,138,.35)}
+.nav-item .count{margin-left:auto;background:#1A3350;border:1px solid #2A4A6B;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;color:#D6E6F2}
+.nav-item.active .count{background:rgba(255,255,255,.22);border-color:transparent;color:#fff}
+.nav-item .warn{background:#DC2626;color:#fff;border:0}
+.side-card{background:#13283F;border:1px solid #26425F;border-radius:10px;padding:12px;margin:10px 4px 0}
+.side-card h4{font-size:12px;color:#fff;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.side-card p{font-size:11.5px;color:#8AA8C2;line-height:1.5}
+.progress{height:6px;background:#0F1E2E;border-radius:4px;margin:8px 0;overflow:hidden}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,#0E9F8A,#34D399);border-radius:4px}
+.side-link{font-size:11.5px;color:#5EEAD4;font-weight:600;text-decoration:none}
+.side-link:hover{text-decoration:underline}
+.side-foot{margin-top:auto;padding:10px 8px 2px;font-size:11px;color:#5B7A96}
+/* MAIN */
+.main{overflow-y:auto;padding:18px 20px 28px;min-width:0}
+.pagehead{display:flex;align-items:flex-start;gap:16px;margin-bottom:14px}
+.crumb{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.2px}
+.crumb b{color:var(--teal-d)}
+.pagehead h1{font-size:22px;letter-spacing:-.5px;font-weight:800;margin:2px 0 4px}
+.pagehead h1 span{font-weight:400;color:var(--muted)}
+.sub{font-size:12.5px;color:var(--muted)}
+.sub strong{color:var(--ink)}
+.head-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.btn{border-radius:8px;font-size:13px;font-weight:700;padding:9px 14px;border:1px solid var(--line2);background:#fff;color:var(--ink);display:inline-flex;align-items:center;gap:7px;transition:.15s}
+.btn:hover{border-color:#94A3B8;transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-primary:hover{background:var(--teal-d);border-color:var(--teal-d)}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-sm{padding:6px 10px;font-size:12px}
+.capacity-pill{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;box-shadow:var(--shadow)}
+.capacity-pill .bar{width:70px;height:6px;background:#E2E8F0;border-radius:4px;overflow:hidden}
+.capacity-pill .bar i{display:block;height:100%;width:87%;background:linear-gradient(90deg,#F59E0B,#DC2626)}
+/* KPIS */
+.kpis{display:grid;grid-template-columns:1.1fr 1.2fr 1.2fr 1.1fr;gap:12px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi-top{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.8px;color:var(--muted);text-transform:uppercase}
+.kpi-top .ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-val{font-size:26px;font-weight:800;letter-spacing:-.8px;margin:6px 0 2px}
+.kpi-val small{font-size:13px;font-weight:600;color:var(--muted)}
+.kpi-sub{font-size:12px;color:var(--muted)}
+.kpi-sub strong{color:var(--ink)}
+.kpi.critical{background:linear-gradient(180deg,#FFF5F5,#fff);border-color:var(--red-line)}
+.kpi.critical .kpi-val{color:var(--red)}
+.kpi.amber{background:linear-gradient(180deg,#FFFBEB,#fff);border-color:var(--amber-line)}
+.mini-bar{height:6px;background:#E2E8F0;border-radius:4px;overflow:hidden;margin-top:8px;display:flex}
+.mini-bar i{display:block;height:100%}
+/* ALERTS */
+.alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.alert{background:#fff;border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:10px 12px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
+.alert.crit{border-left-color:var(--red);background:#FFF5F5;border-color:#FECACA}
+.alert-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alert.crit .alert-ico{background:#FEE2E2;color:#DC2626}
+.alert.warn .alert-ico{background:#FEF3C7;color:#B45309}
+.alert b{font-size:13px}
+.alert p{font-size:12px;color:#475569;margin-top:1px}
+.alert p strong{color:var(--ink)}
+.alert-actions{margin-left:auto;display:flex;gap:8px;flex-shrink:0;align-items:center}
+.link-btn{background:transparent;border:0;color:var(--muted);font-size:12px;font-weight:600;padding:6px 8px}
+.link-btn:hover{color:var(--ink);text-decoration:underline}
+/* WORKSPACE */
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 368px;gap:12px;align-items:start;margin-bottom:12px}
+/* SCHEDULE CARD */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-head{padding:13px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card-head h3{font-size:14px;font-weight:800}
+.card-head .hint{font-size:11.5px;color:var(--muted)}
+.view-toggle{display:flex;background:#F1F5F9;border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.view-toggle button{border:0;background:transparent;font-size:12px;font-weight:700;padding:5px 12px;border-radius:6px;color:var(--muted)}
+.view-toggle button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.date-nav{display:flex;align-items:center;gap:6px;margin-left:auto}
+.date-nav button{width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:#fff;font-weight:800;color:var(--muted)}
+.date-nav button:hover{border-color:var(--teal);color:var(--teal-d)}
+.date-label{font-size:13px;font-weight:800;padding:4px 8px;background:#F1F5F9;border-radius:7px;border:1px solid var(--line)}
+.today-btn{font-size:11px;font-weight:800;color:var(--teal-d);background:var(--teal-bg);border:1px solid #99F6E4;border-radius:7px;padding:5px 9px}
+.filters{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:center;flex-wrap:wrap;background:#F8FAFC}
+.f-pill{border:1px solid var(--line2);background:#fff;border-radius:999px;font-size:11.5px;font-weight:700;padding:5px 11px;color:#475569;display:inline-flex;align-items:center;gap:6px}
+.f-pill .pd{width:8px;height:8px;border-radius:50%}
+.f-pill:hover{border-color:var(--ink)}
+.f-pill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.f-select{margin-left:auto;font-size:12px;font-weight:600;border:1px solid var(--line2);border-radius:7px;padding:6px 8px;background:#fff;color:#334155}
+.legend{display:flex;gap:12px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:11px;color:var(--muted);flex-wrap:wrap;background:#fff}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.lg{width:12px;height:12px;border-radius:3px;display:inline-block}
+/* UNASSIGNED */
+.unassigned-wrap{padding:12px 14px 4px;background:linear-gradient(180deg,#FFF5F5, #fff 70%)}
+.u-label{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.u-label .pulse{width:9px;height:9px;border-radius:50%;background:var(--red);animation:pulse2 1.4s infinite}
+@keyframes pulse2{0%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}70%{box-shadow:0 0 0 8px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+.u-card{border:1.5px solid #FCA5A5;background:#fff;border-radius:10px;padding:12px;display:flex;gap:12px;box-shadow:0 4px 16px rgba(220,38,38,.1)}
+.u-main{flex:1;min-width:0}
+.u-top{display:flex;gap:8px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
+.prio{font-size:10px;font-weight:800;letter-spacing:.7px;border-radius:5px;padding:3px 7px}
+.prio.critical{background:var(--red);color:#fff}
+.prio.high{background:#F97316;color:#fff}
+.prio.medium{background:#EAB308;color:#fff}
+.prio.low{background:#10B981;color:#fff}
+.job-id{font-size:11px;color:var(--muted);font-weight:700;font-family:ui-monospace,Menlo,Consolas,monospace}
+.u-title{font-size:14px;font-weight:800}
+.u-meta{font-size:12px;color:#475569;margin:4px 0 8px;display:flex;gap:10px;flex-wrap:wrap}
+.u-meta span{display:inline-flex;align-items:center;gap:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px;border:1px solid var(--line2);background:#F8FAFC;color:#334155;display:inline-flex;align-items:center;gap:5px}
+.chip.req{border-color:#FCA5A5;background:#FEF2F2;color:#991B1B}
+.chip.tool{border-color:#BFDBFE;background:#EFF6FF;color:#1D4ED8}
+.suggest{display:flex;gap:8px;align-items:center;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:8px;padding:8px 10px;flex-wrap:wrap}
+.suggest small{font-size:11px;color:var(--muted);font-weight:700}
+.sug{	display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:700}
+.sug .pct{font-size:11px;font-weight:800;color:var(--teal-d);background:var(--teal-bg);border-radius:5px;padding:2px 6px}
+.sug button{border:0;background:var(--ink);color:#fff;font-size:11px;font-weight:800;border-radius:6px;padding:5px 9px}
+.sug button:hover{background:var(--teal-d)}
+.u-actions{display:flex;flex-direction:column;gap:8px;justify-content:center;flex-shrink:0}
+/* TIMELINE */
+.timeline{padding:0 0 10px}
+.t-head{display:grid;grid-template-columns:210px 1fr;border-bottom:1px solid var(--line);background:#F8FAFC;position:sticky;top:0;z-index:5}
+.t-corner{padding:9px 12px;font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--muted);border-right:1px solid var(--line)}
+.t-hours{display:grid;grid-template-columns:repeat(11,1fr);font-size:10.5px;font-weight:700;color:var(--muted)}
+.t-hours div{padding:9px 0;text-align:left;border-left:1px dashed #E2E8F0;padding-left:6px}
+.t-row{display:grid;grid-template-columns:210px 1fr;border-bottom:1px solid #F1F5F9;min-height:74px}
+.t-row:last-child{border-bottom:0}
+.tech-cell{padding:10px 12px;border-right:1px solid var(--line);display:flex;gap:9px;align-items:flex-start;background:#fff}
+.t-avatar{width:32px;height:32px;border-radius:50%;font-size:11px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tech-cell b{font-size:12.5px;display:block;line-height:1.2}
+.tech-cell .role{font-size:11px;color:var(--muted)}
+.tech-pills{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.tp{font-size:10px;font-weight:700;background:#F1F5F9;border:1px solid var(--line);border-radius:5px;padding:2px 6px;color:#475569}
+.tp.hours{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}
+.load{height:4px;background:#E2E8F0;border-radius:3px;margin-top:6px;overflow:hidden}
+.load i{display:block;height:100%;border-radius:3px}
+.lane{position:relative;background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/11 - 1px),#F1F5F9 calc(100%/11 - 1px),#F1F5F9 calc(100%/11));min-height:74px;cursor:default}
+.lane .shift-shade{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,#F8FAFC,#F8FAFC 6px,#F1F5F9 6px,#F1F5F9 12px);opacity:.9;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.job{position:absolute;top:10px;height:54px;border-radius:8px;border:1.5px solid;background:#fff;padding:6px 8px;overflow:hidden;cursor:pointer;transition:.15s;box-shadow:0 1px 4px rgba(15,30,46,.1);min-width:40px}
+.job:hover{transform:translateY(-1px);box-shadow:var(--shadow2);z-index:10}
+.job.sel{outline:3px solid rgba(14,159,138,.35);z-index:9}
+.job .j-top{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;white-space:nowrap}
+.job .j-title{font-size:11.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;margin-top:1px}
+.job .j-sub{font-size:10px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job.low{border-color:#6EE7B7;background:linear-gradient(180deg,#ECFDF5,#fff)}
+.job.medium{border-color:#FCD34D;background:linear-gradient(180deg,#FFFBEB,#fff)}
+.job.high{border-color:#FDBA74;background:linear-gradient(180deg,#FFF7ED,#fff)}
+.job.critical{border-color:#FCA5A5;background:linear-gradient(180deg,#FEF2F2,#fff)}
+.job.risk{border-style:dashed;border-width:2px}
+.job.overtime{box-shadow:inset 0 0 0 1px #DC2626,0 1px 4px rgba(220,38,38,.2)}
+.job .flag{font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;letter-spacing:.3px}
+.flag.over{background:#DC2626;color:#fff}
+.flag.trav{background:#0F1E2E;color:#fff}
+.flag.rest{background:#7C3AED;color:#fff}
+.flag.two{background:#2563EB;color:#fff}
+.flag.cert{background:#B45309;color:#fff}
+.flag.ot{background:#DC2626;color:#fff}
+.travel-pill{position:absolute;top:26px;height:22px;border-radius:999px;background:#0F1E2E;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 8px;white-space:nowrap;opacity:.92}
+.travel-pill.long{background:#B45309}
+.now-line{position:absolute;top:0;bottom:0;width:2px;background:#0E9F8A;z-index:8;pointer-events:none}
+.now-line::before{content:'8:42 AM now';position:absolute;top:-1px;left:-32px;background:#0E9F8A;color:#fff;font-size:9px;font-weight:800;border-radius:4px;padding:2px 6px;white-space:nowrap}
+/* LIST VIEW */
+.list-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.list-table th{text-align:left;font-size:11px;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;padding:10px 12px;border-bottom:1px solid var(--line);background:#F8FAFC}
+.list-table td{padding:10px 12px;border-bottom:1px solid #F1F5F9;vertical-align:top}
+.list-table tr:hover td{background:#F8FAFC}
+.list-table tr.sel td{background:var(--teal-bg)}
+/* INSPECTOR */
+.inspector{position:sticky;top:0;max-height:calc(100vh - 150px);overflow-y:auto}
+.insp-head{padding:13px 14px;border-bottom:1px solid var(--line);background:#F8FAFC}
+.insp-head-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.insp-head h2{font-size:14.5px;font-weight:800;line-height:1.3}
+.insp-tabs{display:flex;gap:4px;background:#EDEFF3;border-radius:8px;padding:3px;margin-top:10px}
+.insp-tabs button{flex:1;border:0;background:transparent;font-size:12px;font-weight:700;padding:6px;border-radius:6px;color:var(--muted)}
+.insp-tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.insp-body{padding:14px}
+.status-banner{border-radius:8px;padding:9px 11px;font-size:12px;font-weight:700;margin-bottom:12px;display:flex;gap:8px;align-items:center}
+.status-banner.critical{background:#FEF2F2;border:1px solid #FECACA;color:#991B1B}
+.status-banner.risk{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.status-banner.ok{background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.detail{background:#F8FAFC;border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.detail.full{grid-column:1 / -1}
+.detail label{font-size:10px;font-weight:800;letter-spacing:.7px;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:3px}
+.detail .v{font-size:12.5px;font-weight:700}
+.detail .s{font-size:11.5px;color:#475569;margin-top:2px}
+.problem-box{background:#fff;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:8px;padding:9px 10px;font-size:12.5px;color:#334155;font-style:italic;margin-bottom:12px}
+.req-sec{margin-bottom:12px}
+.req-sec h5{font-size:11px;font-weight:800;letter-spacing:.7px;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+.req-row{display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px}
+.req-row .ri{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800}
+.access-box{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:10px;font-size:12px;margin-bottom:12px}
+.access-box b{color:#92400E}
+.access-box ul{margin:6px 0 0 16px;color:#78350F}
+.crew-opt{display:flex;gap:9px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-bottom:7px;background:#fff}
+.crew-opt.sel{border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,159,138,.12)}
+.crew-opt .mini-av{width:30px;height:30px;border-radius:50%;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.crew-opt small{color:var(--muted);font-size:11px}
+.match{margin-left:auto;text-align:right;flex-shrink:0}
+.match b{font-size:13px;color:var(--teal-d)}
+.match-bar{width:70px;height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;margin-top:3px}
+.match-bar i{display:block;height:100%;background:var(--teal)}
+.insp-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.insp-actions .full{grid-column:1 / -1}
+.time-shift{display:flex;gap:6px;align-items:center;background:#F8FAFC;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;font-weight:700}
+.time-shift button{border:1px solid var(--line2);background:#fff;border-radius:6px;font-size:11px;font-weight:800;padding:5px 9px}
+.time-shift button:hover{border-color:var(--teal);color:var(--teal-d)}
+/* BOTTOM */
+.bottomgrid{display:grid;grid-template-columns:1.55fr 1fr;gap:12px}
+.table-wrap{overflow-x:auto}
+.tech-table{width:100%;border-collapse:collapse;font-size:12px;min-width:640px}
+.tech-table th{text-align:left;font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);background:#F8FAFC}
+.tech-table td{padding:10px 12px;border-bottom:1px solid #F1F5F9;vertical-align:top}
+.tech-table tr:last-child td{border-bottom:0}
+.cert-pill{display:inline-block;font-size:10.5px;font-weight:700;background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;border-radius:5px;padding:2px 6px;margin:1px 2px 1px 0;white-space:nowrap}
+.sys{font-size:11px;color:#475569}
+.status-dot{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700}
+.sd{width:8px;height:8px;border-radius:50%}
+.parts-grid{display:grid;grid-template-columns:1fr;gap:0}
+.part-row{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid #F1F5F9;font-size:12.5px}
+.part-row:last-child{border-bottom:0}
+.stock{margin-left:auto;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;flex-shrink:0}
+.stock.ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
+.stock.low{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+.stock.warn{background:#FFFBEB;color:#92400E;border:1px solid #FDE68A}
+.toast-wrap{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:100;max-width:360px}
+.toast{background:var(--navy);color:#E2E8F0;border-radius:10px;padding:12px 14px;font-size:13px;box-shadow:var(--shadow2);display:flex;gap:10px;align-items:flex-start;border:1px solid #2A4A6B;animation:slidein .25s ease}
+@keyframes slidein{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.toast b{color:#fff}
+@media(max-width:1280px){.workspace{grid-template-columns:1fr}.inspector{position:static;max-height:none}.bottomgrid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<!-- TOPBAR -->
+<header class="topbar">
+<div class="brand">
+<div class="logo-mark" aria-hidden="true">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12L12 2.5C14.5 2.5 16.7 4.5 17.3 7L12 12Z" fill="#fff" opacity=".95"/><path d="M12 12L21.5 12C21.5 14.5 19.5 16.7 17 17.3L12 12Z" fill="#fff" opacity=".75"/><path d="M12 12L12 21.5C9.5 21.5 7.3 19.5 6.7 17L12 12Z" fill="#fff" opacity=".95"/><path d="M12 12L2.5 12C2.5 9.5 4.5 7.3 7 6.7L12 12Z" fill="#fff" opacity=".75"/><circle cx="12" cy="12" r="2.2" fill="#0F1E2E"/></svg>
+</div>
+<div><div class="brand-name">Fieldline <span>HVAC</span></div><div class="brand-sub">DISPATCH CONSOLE</div></div>
+</div>
+<div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="globalSearch" placeholder="Search jobs, sites, technicians, addresses…" aria-label="Search"><kbd>⌘K</kbd></div>
+<div class="top-right">
+<div class="live-pill"><span class="dot-live"></span><span id="clock">Thu, Sep 4 • 8:42 AM</span></div>
+<div class="weather">▲ 91°F • Heat advisory</div>
+<button class="icon-btn" aria-label="Notifications">🔔<span class="badge-n">3</span></button>
+<button class="icon-btn" aria-label="Help">?</button>
+<div class="user-chip"><div class="avatar">DR</div><div class="user-meta"><b>Dana Rivera</b><span>Dispatcher • Shift A</span></div><span style="color:#5B7A96">▾</span></div>
+</div>
+</header>
+
+<div class="body">
+<!-- SIDEBAR -->
+<aside class="sidebar" aria-label="Primary">
+<div class="nav-sec">SCHEDULING</div>
+<button class="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Schedule</button>
+<button class="nav-item" onclick="toast('Map view','Live traffic overlay for I-35 &amp; Hwy 71 coming in this demo.')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-5-2V4l5 2 6-2 5 2v14l-5-2-6 2zM9 6v14M15 4v14"/></svg>Map &amp; traffic</button>
+<button class="nav-item" onclick="toast('Calendar','Week view is available to managers.')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Calendar</button>
+<div class="nav-sec">MANAGE</div>
+<button class="nav-item" onclick="document.getElementById('techCard').scrollIntoView({behavior:'smooth'})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Technicians<span class="count">5</span></button>
+<button class="nav-item" onclick="toast('Customers','128 commercial sites • 14 with restricted access.')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Customers &amp; sites</button>
+<button class="nav-item" onclick="document.getElementById('partsCard').scrollIntoView({behavior:'smooth'})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Parts &amp; trucks<span class="count warn">!</span></button>
+<button class="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Quotes &amp; jobs</button>
+<div class="nav-sec">SYSTEM</div>
+<button class="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Reports</button>
+<button class="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</button>
+
+<div class="side-card"><h4>◉ Day-shift coverage</h4><p><strong style="color:#fff">4 / 5 on shift</strong> • S. Kim PTO<br>Capacity 87% • 1.1h buffer left</p><div class="progress"><i style="width:80%"></i></div><a class="side-link" href="#" onclick="return false">View PTO calendar →</a></div>
+<div class="side-card" style="border-color:rgba(220,38,38,.4)"><h4 style="color:#FCA5A5">⚠ Truck stock alert</h4><p>Truck 12 low on R-514A (2 lbs). Warehouse has 24 lbs — dispatch runner?</p><div style="margin-top:8px"><a class="side-link" href="#" onclick="return false">Open inventory →</a></div></div>
+<div class="side-foot">Fieldline v4.2 • Data synced 2m ago<br>Traffic: I-35 moderate • 84°F</div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+<div class="pagehead">
+<div><div class="crumb">Dispatch / <b>Thursday schedule</b></div>
+<h1>Thursday's Workday <span>— Sep 4, 2026</span></h1>
+<div class="sub"><strong>12 site visits</strong> across 4 zones • <strong>18.5h</strong> wrench time + <strong>3.2h</strong> travel • <strong style="color:#DC2626">1 critical unassigned</strong> • Heat wave demand +18%</div>
+</div>
+<div class="head-actions">
+<div class="capacity-pill"><span>Capacity 87%</span><span class="bar"><i></i></span><span style="color:#DC2626">▲ strain</span></div>
+<button class="btn" onclick="optimize()">✦ Auto-optimize</button>
+<button class="btn" onclick="toast('Export','Day sheet PDF queued for print.')">⇪ Export</button>
+<button class="btn btn-primary" onclick="toast('New visit','New visit form — address, window &amp; requirements.')">+ New site visit</button>
+</div>
+</div>
+
+<!-- KPIS -->
+<section class="kpis" aria-label="Key metrics">
+<div class="kpi"><div class="kpi-top"><span class="ico" style="background:#EFF6FF">📅</span>Scheduled visits</div><div class="kpi-val">12 <small>/ 5 techs</small></div><div class="kpi-sub"><strong id="kpiAssigned">10 assigned</strong> • 1 unassigned • 2 need 2 techs</div><div class="mini-bar"><i style="width:55%;background:#0E9F8A"></i><i style="width:25%;background:#F59E0B"></i><i style="width:12%;background:#DC2626"></i><i style="width:8%;background:#E2E8F0"></i></div></div>
+<div class="kpi critical"><div class="kpi-top"><span class="ico" style="background:#FEE2E2">🚨</span><span style="color:#DC2626">Unassigned • Critical</span></div><div class="kpi-val">1</div><div class="kpi-sub"><strong>City General ICU</strong> — chiller trip, 78°F &amp; rising • Window NOW–12PM</div></div>
+<div class="kpi amber"><div class="kpi-top"><span class="ico" style="background:#FEF3C7">⚠</span>At-risk assignments</div><div class="kpi-val">4</div><div class="kpi-sub">1 overrun • 1 overtime • 1 travel crunch • 1 cert gap</div></div>
+<div class="kpi"><div class="kpi-top"><span class="ico" style="background:#ECFDF5">⏱</span>Utilization &amp; travel</div><div class="kpi-val">87% <small>avg</small></div><div class="kpi-sub"><strong>3.2h</strong> travel • 1.1h buffer • 2 techs &gt; 8.5h</div><div class="mini-bar" id="utilBar"><i style="width:30%;background:#0E9F8A"></i><i style="width:25%;background:#0EA5E9"></i><i style="width:20%;background:#F59E0B"></i><i style="width:12%;background:#DC2626"></i></div></div>
+</section>
+
+<!-- ALERTS -->
+<section class="alerts" id="alerts">
+<div class="alert crit" id="alert-emergency"><div class="alert-ico">🚨</div><div><b>EMERGENCY UNASSIGNED — City General Hospital ICU chiller down (JB-2874)</b><p>78°F and rising • Needs <strong>2 techs + EPA Universal &amp; Chiller cert</strong> • Thermal camera at shop (20m fetch) • Only Maria + Priya qualified and both committed.</p></div><div class="alert-actions"><button class="btn btn-danger btn-sm" onclick="selectJob('JB-2874')">Assign crew now</button><button class="link-btn" onclick="dismissAlert('alert-emergency')">Dismiss</button></div></div>
+<div class="alert warn" id="alert-overrun"><div class="alert-ico">⏳</div><div><b>OVERRUN RISK 82% — Riverside Galleria chiller repair (JB-2852) likely +60 min</b><p>Leak + low charge on Trane CVHE • R-514A low stock • Will push <strong>Grand Plaza (JB-2871) late</strong> unless split or moved.</p></div><div class="alert-actions"><button class="btn btn-sm" onclick="selectJob('JB-2852')">View repair</button><button class="link-btn" onclick="dismissAlert('alert-overrun')">Snooze</button></div></div>
+<div class="alert warn" id="alert-cap"><div class="alert-ico">👷</div><div><b>CAPACITY STRAIN — Overtime + certification + travel crunch</b><p>Maria to <strong>16:30 (+60m OT)</strong> for hangar • Luis solo on exhaust (apprentice) • Derek <strong>42m North→South</strong> dash with 18m buffer.</p></div><div class="alert-actions"><button class="btn btn-sm" onclick="document.getElementById('techCard').scrollIntoView({behavior:'smooth'})">Review crew</button><button class="link-btn" onclick="dismissAlert('alert-cap')">Acknowledge</button></div></div>
+</section>
+
+<div class="workspace">
+<!-- SCHEDULE -->
+<section class="card" aria-label="Schedule">
+<div class="card-head"><h3>Technician schedule</h3><span class="hint">7 AM – 6 PM • 5 techs • travel shown in dark</span>
+<div class="view-toggle" role="tablist"><button id="btnTimeline" class="on" onclick="setView('timeline')">Timeline</button><button id="btnList" onclick="setView('list')">List</button></div>
+<div class="date-nav"><button aria-label="Previous day">‹</button><span class="date-label">Thu, Sep 4</span><button aria-label="Next day">›</button><button class="today-btn">Today</button></div>
+</div>
+<div class="filters" id="filters"><button class="f-pill on" data-f="all">All</button><button class="f-pill" data-f="critical"><span class="pd" style="background:#DC2626"></span>Critical</button><button class="f-pill" data-f="high"><span class="pd" style="background:#F97316"></span>High</button><button class="f-pill" data-f="medium"><span class="pd" style="background:#EAB308"></span>Medium</button><button class="f-pill" data-f="low"><span class="pd" style="background:#10B981"></span>Low</button>
+<select class="f-select" id="zoneFilter" aria-label="Territory filter"><option value="all">All territories</option><option>North</option><option>Central</option><option>South</option><option>West</option><option>East</option></select>
+</div>
+<div class="legend"><span><i class="lg" style="background:#fff;border:1.5px solid #0E9F8A"></i> Confirmed</span><span><i class="lg" style="background:#fff;border:2px dashed #D97706"></i> At-risk / overrun</span><span><i class="lg" style="background:#0F1E2E"></i> Travel time</span><span><i class="lg" style="background:#7C3AED"></i> Restricted access</span><span><i class="lg" style="background:#DC2626"></i> Critical / OT</span><span style="margin-left:auto">⏱ Durations include setup + safety check</span></div>
+
+<div class="unassigned-wrap" id="unassignedWrap"><div class="u-label"><span class="pulse"></span>UNASSIGNED QUEUE (1) — REQUIRES ACTION</div>
+<div id="unassignedList"></div>
+</div>
+
+<div class="timeline" id="timelineView">
+<div class="t-head"><div class="t-corner">TECHNICIAN ↓ &nbsp;•&nbsp; TIME →</div><div class="t-hours"><div>7a</div><div>8a</div><div>9a</div><div>10a</div><div>11a</div><div>12p</div><div>1p</div><div>2p</div><div>3p</div><div>4p</div><div>5p</div></div></div>
+<div id="timelineBody"></div>
+</div>
+<div id="listView" style="display:none"></div>
+</section>
+
+<!-- INSPECTOR -->
+<aside class="card inspector" id="inspector" aria-label="Visit details"></aside>
+</div>
+
+<div class="bottomgrid">
+<section class="card" id="techCard"><div class="card-head"><h3>Technicians &amp; capacity</h3><span class="hint">Working hours • territories • certifications • commercial systems</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;color:#059669;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:999px;padding:4px 10px">● 4 on shift • 1 on job + travel</span></div>
+<div class="table-wrap"><table class="tech-table"><thead><tr><th>Technician</th><th>Hours today</th><th>Territory</th><th>Certifications</th><th>Systems qualified</th><th>Load</th><th>Status</th></tr></thead><tbody id="techBody"></tbody></table></div>
+</section>
+
+<section class="card" id="partsCard"><div class="card-head"><h3>Parts, tools &amp; site access</h3><span class="hint">What could block today</span></div>
+<div class="parts-grid">
+<div class="part-row"><span style="font-size:16px">🧰</span><div><b>R-514A refrigerant</b><div style="font-size:11.5px;color:#64748B">Riverside chiller needs ~8 lbs • Truck 12 has 2 lbs • Warehouse 24 lbs</div></div><span class="stock low">LOW — fetch</span></div>
+<div class="part-row"><span style="font-size:16px">🔧</span><div><b>York contactor + fuses kit</b><div style="font-size:11.5px;color:#64748B">Hospital ICU • On Truck 7 with Maria ✓</div></div><span class="stock ok">ON TRUCK</span></div>
+<div class="part-row"><span style="font-size:16px">🌀</span><div><b>15T compressor + crane</b><div style="font-size:11.5px;color:#64748B">Airport hangar • Crane booked 2:30p • Recovery unit w/ James</div></div><span class="stock ok">READY</span></div>
+<div class="part-row"><span style="font-size:16px">📷</span><div><b>Thermal camera + leak detector</b><div style="font-size:11.5px;color:#64748B">Leak kit w/ Priya • Thermal cam at shop — 20m fetch for ICU</div></div><span class="stock warn">AT SHOP</span></div>
+<div class="part-row"><span style="font-size:16px">🔥</span><div><b>Combustion analyzer</b><div style="font-size:11.5px;color:#64748B">Checked out to Derek for Harborview boiler ✓</div></div><span class="stock ok">W/ DEREK</span></div>
+<div class="part-row"><span style="font-size:16px">🔒</span><div><b>Restricted access today</b><div style="font-size:11.5px;color:#64748B">Bank 10a–2p + escort (S. Chen) • Hotel service entry 9–11a • ICU badge + no shutdown 11a–1p</div></div><span class="stock warn">3 SITES</span></div>
+</div>
+</section>
+</div>
+<div style="margin-top:12px;font-size:11.5px;color:#94A3B8;display:flex;gap:12px"><span>Fieldline HVAC • Dispatch console v4.2</span><span>•</span><span>Service windows in local time (CDT)</span><span>•</span><span>Overtime threshold 8.5h • Travel uses live traffic</span><span style="margin-left:auto">Last optimized 7:58 AM by D. Rivera</span></div>
+</main>
+</div>
+</div>
+<div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+<script>
+const DAY_START=420, DAY_END=1080, DAY_SPAN=DAY_END-DAY_START;
+const TECHS=[
+{id:'maria',name:'Maria Santos',init:'MS',role:'Senior Lead',color:'#0E9F8A',hours:[420,930],hoursLbl:'7:00a–3:30p',terr:'North + Central',certs:['EPA 608 Universal','NATE Core','OSHA 30'],systems:'Rooftop RTU • Chiller • VRF',status:'On shift',statusC:'#059669'},
+{id:'derek',name:'Derek Wu',init:'DW',role:'Journeyman',color:'#0EA5E9',hours:[450,960],hoursLbl:'7:30a–4:00p',terr:'West + Central',certs:['EPA 608 II','NATE Air Dist.'],systems:'RTU • Make-up Air • Refrigeration',status:'On shift',statusC:'#059669'},
+{id:'james',name:'James Carter',init:'JC',role:'Journeyman',color:'#7C3AED',hours:[480,990],hoursLbl:'8:00a–4:30p',terr:'Central + East',certs:['EPA 608 II','BMS Controls'],systems:'RTU • Split DX • VRF • Exhaust',status:'On shift',statusC:'#059669'},
+{id:'luis',name:'Luis Ortega',init:'LO',role:'Apprentice',color:'#F59E0B',hours:[480,960],hoursLbl:'8:00a–4:00p',terr:'Central',certs:['EPA 608 I (supervised)'],systems:'RTU (PM only) • Filters',status:'Supervised',statusC:'#D97706'},
+{id:'priya',name:'Priya Desai',init:'PD',role:'Chiller Specialist',color:'#EC4899',hours:[540,1050],hoursLbl:'9:00a–5:30p',terr:'South + Central',certs:['EPA 608 Universal','Trane Chiller','Low-GWP'],systems:'Chiller • Boiler/Hydronic • BMS',status:'On shift',statusC:'#059669'}
+];
+let JOBS=[
+{id:'JB-2874',title:'City General Hospital — ICU Wing',site:'ICU chiller trip',addr:'2100 Medical Plaza, Central',zone:'Central',start:510,dur:120,win:'ASAP – 12:00 PM',winS:510,winE:720,prio:'critical',equip:'York YK 400T Chiller + ISO AHU',problem:'“Chiller tripped at 6:10a, ICU at 78°F and rising. Two ORs diverting. Need cooling restored before noon surgeries.” — Facilities, R. Alvarez',techs:[],needs:2,status:'unassigned',flags:['two','restricted'],certNeed:'EPA Universal + Chiller cert',parts:'Contactor kit ✓ (Truck 7) • R-514A ⚠ low',tools:'Thermal camera (at shop — 20m fetch) + manifold',access:'Badge + escort • No shutdown 11a–1p (surgeries)',contact:'Dr. R. Alvarez (onsite) • 555-0142 — must be present',travelFrom:'14m from shop'},
+{id:'JB-2847',title:'Northgate Logistics Warehouse',site:'Make-up Air PM',addr:'77 Industrial Pkwy, North',zone:'North',start:450,dur:60,win:'7:30 – 10:30 AM',winS:450,winE:630,prio:'low',equip:'Greenheck MAU-2 • Gas-fired',problem:'Quarterly planned maintenance: filters, belts, gas pressure + CO check.',techs:['derek'],needs:1,status:'confirmed',flags:[],certNeed:'EPA 608 II',parts:'Filters + belt (on truck)',tools:'Standard PM kit',access:'Gate code 4410 • Dock 4',contact:'J. Moss • 555-0188',travelAfter:42,travelNote:'42m North → South cross-town'},
+{id:'JB-2841',title:'Meridian Office Park — Bldg A',site:'Rooftop PM',addr:'1250 Meridian Blvd, North',zone:'North',start:480,dur:90,win:'8:00 – 11:00 AM',winS:480,winE:660,prio:'low',equip:'Carrier 15T RTU-4 • RTU-5',problem:'Planned maintenance: coils, filters, economizer + thermostat calibration (12 zones).',techs:['maria'],needs:1,status:'confirmed',flags:[],certNeed:'NATE Core',parts:'Filters (in stock, Truck 7)',tools:'Coil cleaner + gauges',access:'Roof key in lockbox 221',contact:'Prop. mgr L. Tran • 555-0119',travelAfter:18},
+{id:'JB-2852',title:'Riverside Galleria Mall',site:'Chiller leak repair',addr:'88 Riverside Dr, West',zone:'West',start:540,dur:150,win:'8:30 AM – 12:00 PM',winS:510,winE:720,prio:'high',equip:'Trane CVHE Chiller 320T',problem:'Low-charge alarm + suspected refrigerant leak. Running at 60% — mall warming. Prior leak at same joint (Mar).',techs:['priya'],needs:1,status:'risk',over:'82% overrun — likely +60 min (210m total)',flags:['over'],certNeed:'Trane Chiller + Low-GWP',parts:'R-514A ~8 lbs ⚠ (only 2 on truck) • Gaskets ✓',tools:'Leak detector + recovery unit',access:'Chiller plant • Parking garage L2',contact:'Ops D. Ford • 555-0161',travelAfter:20},
+{id:'JB-2858',title:'Northgate Cold Storage',site:'Walk-in refrigeration',addr:'79 Industrial Pkwy, North',zone:'North',start:600,dur:80,win:'9:30 AM – 12:00 PM',winS:570,winE:720,prio:'high',equip:'Copeland condensing unit + evap',problem:'Walk-in at 28°F (should be 0°F). Product at risk. Ice on evap coil — defrost + charge check.',techs:['maria'],needs:1,status:'confirmed',flags:[],certNeed:'EPA Universal',parts:'Defrost timer + refrigerant ✓',tools:'Sup Temp probes',access:'Side door • Escort after 10a',contact:'S. Okafor • 555-0133',travelAfter:25},
+{id:'JB-2855',title:'Harborview Hotel — East Wing',site:'Boiler no-heat (2 techs)',addr:'600 Harbor Way, South',zone:'South',start:570,dur:120,win:'9:00 AM – 12:00 PM',winS:540,winE:720,prio:'high',equip:'Lochinvar Boiler + AHU-3',problem:'“No heat/hot water east wing, 40 rooms cold. Guests comped.” Combustion fault code. Needs 2 techs for boiler + air-side.',techs:['derek','luis'],needs:2,status:'confirmed',flags:['two','restricted'],certNeed:'Hydronic / Combustion',parts:'Igniter + flame sensor ✓',tools:'Combustion analyzer (w/ Derek)',access:'Service entry 9–11a only • Contact must be present',contact:'Eng. P. Novak (onsite) • 555-0177 — required',travelAfter:30},
+{id:'JB-2859',title:'First National Bank — Data Hall',site:'CRAC inspection',addr:'400 Commerce St, Central',zone:'Central',start:630,dur:60,win:'10:00 AM – 2:00 PM',winS:600,winE:840,prio:'medium',equip:'Liebert CRAC-2 + VRF backup',problem:'Planned inspection: data-hall temp/humidity + failover test. Cannot interrupt trading floor cooling.',techs:['james'],needs:1,status:'confirmed',flags:['restricted'],certNeed:'BMS Controls',parts:'None — inspection',tools:'BMS tablet + hygrometer',access:'RESTRICTED 10a–2p • Escort S. Chen • No photos',contact:'S. Chen (escort) • 555-0120 — must be present',travelAfter:18},
+{id:'JB-2861',title:'Downtown Courthouse',site:'VRF fault',addr:'200 Justice Way, Central',zone:'Central',start:750,dur:90,win:'12:00 – 3:00 PM',winS:720,winE:900,prio:'medium',equip:'Daikin VRF • 14 fan coils',problem:'Fault U4 on 3rd floor — comm error. Courtrooms 70→76°F. Needs BMS trace + branch-box check.',techs:['james'],needs:1,status:'confirmed',flags:[],certNeed:'VRF + BMS',parts:'Comm wire + fuses ✓',tools:'Manifold + BMS tablet',access:'Screening 15m • 12–1p quiet hours',contact:'Clerk M. Boyd • 555-0155',travelAfter:28},
+{id:'JB-2864',title:'Westside Labs — Exhaust',site:'Fume exhaust PM',addr:'940 Research Ct, West',zone:'West',start:780,dur:60,win:'1:00 – 3:00 PM',winS:780,winE:900,prio:'low',equip:'Twin City exhaust + controls',problem:'Planned PM: belt, bearings, airflow verification for lab safety sign-off.',techs:['luis'],needs:1,status:'risk',over:'Cert gap — apprentice solo (needs review)',flags:['cert'],certNeed:'Air distribution (supervised)',parts:'Belt + filters ✓',tools:'Anemometer',access:'Lab safety glasses • Check-in EHS',contact:'EHS K. Lin • 555-0191',travelAfter:15},
+{id:'JB-2866',title:'Parkview Senior Living',site:'Rooftop PM',addr:'310 Parkview Ave, North',zone:'North',start:810,dur:90,win:'1:00 – 4:00 PM',winS:780,winE:960,prio:'low',equip:'Lennox 10T RTU-1/2',problem:'Planned maintenance: filters + economizer + resident-room temp complaints (2 rooms).',techs:['maria'],needs:1,status:'confirmed',flags:[],certNeed:'NATE Core',parts:'Filters ✓',tools:'Standard PM kit',access:'Notify front desk • Low-noise 1–3p',contact:'Dir. H. Wells • 555-0149',travelAfter:20},
+{id:'JB-2869',title:'Airport Cargo Hangar 3',site:'Compressor swap (2 techs)',addr:'Cargo Rd Gate 5, East',zone:'East',start:870,dur:120,win:'2:00 – 5:00 PM',winS:840,winE:1020,prio:'high',equip:'Carrier 20T RTU — compressor',problem:'Locked compressor, no cool in sort hall. Crane + recovery + braze. Needs 2 techs, 120m + testing.',techs:['james','maria'],needs:2,status:'risk',over:'Overtime — Maria to 4:30p (+60m past 3:30p shift)',flags:['two','ot'],certNeed:'EPA Universal + braze',parts:'Compressor ✓ (warehouse) • Drier ✓',tools:'Recovery unit + crane (booked 2:30p)',access:'SIDA badges • Gate 5 escort 2:15p',contact:'Ops T. Reed • 555-0182',travelAfter:0},
+{id:'JB-2871',title:'Grand Plaza Retail',site:'Split DX no-cool',addr:'500 Grand Ave, South',zone:'South',start:900,dur:60,win:'2:30 – 5:00 PM',winS:870,winE:1020,prio:'medium',equip:'Trane Split DX 7.5T',problem:'“Store 82°F, customers leaving.” Capacitor suspected. Quick fix if Riverside overrun doesn’t cascade.',techs:['priya'],needs:1,status:'confirmed',flags:[],certNeed:'EPA 608 II',parts:'Capacitor + contactor ✓',tools:'Multimeter + gauges',access:'Roof via freight elevator',contact:'Mgr A. Diaz • 555-0112',travelAfter:0}
+];
+let selectedId='JB-2874', filterPrio='all', filterZone='all', view='timeline';
+const pct=m=>((m-DAY_START)/DAY_SPAN*100);
+const durPct=d=>d/DAY_SPAN*100;
+const fmt=m=>{let h=Math.floor(m/60),mm=m%60,ap=h>=12?'PM':'AM',h12=h%12||12;return h12+':'+String(mm).padStart(2,'0')+' '+ap};
+const fmtS=m=>{let h=Math.floor(m/60),mm=m%60,ap=h>=12?'p':'a',h12=h%12||12;return h12+(mm?':'+String(mm).padStart(2,'0'):'')+ap};
+
+function techLoad(id){return JOBS.filter(j=>j.techs.includes(id)).reduce((s,j)=>s+j.dur,0)}
+function toast(title,msg){const w=document.getElementById('toasts');const d=document.createElement('div');d.className='toast';d.innerHTML='<div style="font-size:18px">✓</div><div><b>'+title+'</b><div style="color:#9FB3C8;font-size:12.5px;margin-top:2px">'+msg+'</div></div>';w.appendChild(d);setTimeout(()=>{d.style.opacity='0';d.style.transition='.3s';setTimeout(()=>d.remove(),350)},4200)}
+function dismissAlert(id){document.getElementById(id).style.display='none';toast('Alert updated','Dispatcher acknowledged the warning. Logged to shift notes.')}
+function optimize(){toast('Routes optimized','Re-sequenced 4 stops — saved ~28m travel. Derek buffer +14m. No window violations.');}
+function setView(v){view=v;document.getElementById('btnTimeline').classList.toggle('on',v==='timeline');document.getElementById('btnList').classList.toggle('on',v==='list');document.getElementById('timelineView').style.display=v==='timeline'?'':'none';document.getElementById('listView').style.display=v==='list'?'':'none';if(v==='list')renderList()}
+
+document.querySelectorAll('.f-pill').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.f-pill').forEach(x=>x.classList.remove('on'));b.classList.add('on');filterPrio=b.dataset.f;renderTimeline();if(view==='list')renderList()}));
+document.getElementById('zoneFilter').addEventListener('change',e=>{filterZone=e.target.value;renderTimeline();if(view==='list')renderList()});
+document.getElementById('globalSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.job').forEach(j=>{const t=j.dataset.search||'';j.style.opacity=(!q||t.includes(q))?'1':'.18'})});
+
+function jobVisible(j){if(filterPrio!=='all'&&j.prio!==filterPrio)return false;if(filterZone!=='all'&&j.zone!==filterZone)return false;return true}
+
+function renderUnassigned(){
+const box=document.getElementById('unassignedList');
+const un=JOBS.filter(j=>j.techs.length<j.needs || j.status==='unassigned');
+if(!un.length){document.getElementById('unassignedWrap').style.display='none';return}
+document.getElementById('unassignedWrap').style.display='';
+box.innerHTML=un.map(j=>`
+<div class="u-card" style="${j.id===selectedId?'outline:3px solid rgba(220,38,38,.28)':''}" onclick="selectJob('${j.id}')">
+<div class="u-main">
+<div class="u-top"><span class="prio ${j.prio}">${j.prio==='critical'?'CRITICAL P1':j.prio.toUpperCase()+' '+(j.prio==='high'?'P2':j.prio==='medium'?'P3':'P4')}</span><span class="job-id">${j.id}</span><span class="job-id">⏱ ${j.win}</span><span class="job-id">◷ ${j.dur}m est</span><span class="job-id">👥 ${j.techs.length}/${j.needs} techs</span></div>
+<div class="u-title">${j.title} — ${j.site}</div>
+<div class="u-meta"><span>📍 ${j.addr}</span><span>❄ ${j.equip}</span><span>🚗 ${j.travelFrom||''}</span></div>
+<div class="chips"><span class="chip req">🎓 ${j.certNeed}</span><span class="chip req">🧰 ${j.parts.split('•')[0]}</span><span class="chip tool">🔬 ${j.tools.split('+')[0]}</span><span class="chip">🔒 ${j.access.split('•')[0]}</span></div>
+<div class="suggest"><small>BEST AVAILABLE →</small>
+<div class="sug"><span>MS</span><span class="pct">92%</span><button onclick="event.stopPropagation();assign('${j.id}','maria')">Assign</button></div>
+<div class="sug"><span>PD</span><span class="pct">88%</span><button onclick="event.stopPropagation();assign('${j.id}','priya')">Assign</button></div>
+<div class="sug"><span>DW</span><span class="pct">46% cert</span><button onclick="event.stopPropagation();assign('${j.id}','derek')">Assign</button></div>
+</div>
+</div>
+<div class="u-actions"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();selectJob('${j.id}')">Open details</button><button class="btn btn-sm" onclick="event.stopPropagation();toast('Crew search','Checking certs, hours &amp; traffic for 5 techs…')">Find crew</button></div>
+</div>`).join('');
+}
+
+function renderTimeline(){
+const body=document.getElementById('timelineBody');
+body.innerHTML=TECHS.map(t=>{
+const myJobs=JOBS.filter(j=>j.techs.includes(t.id)).sort((a,b)=>a.start-b.start);
+const offL=pct(t.hours[0]), offR=100-pct(t.hours[1]);
+let blocks='',travels='';
+myJobs.forEach(j=>{
+const vis=jobVisible(j);
+const l=pct(j.start),w=durPct(j.dur);
+const flags=[];
+if(j.over&&j.id!=='JB-2858')flags.push('<span class="flag over">◷ RISK</span>');
+if(j.flags.includes('restricted'))flags.push('<span class="flag rest">🔒</span>');
+if(j.needs>1)flags.push('<span class="flag two">×'+j.techs.length+'/'+j.needs+'</span>');
+if(j.flags.includes('cert'))flags.push('<span class="flag cert">CERT?</span>');
+if(j.flags.includes('ot')&&t.id==='maria')flags.push('<span class="flag ot">OT</span>');
+blocks+=`<div class="job ${j.prio} ${j.status==='risk'?'risk':''} ${selectedId===j.id?'sel':''}" style="left:${l}%;width:${Math.max(w,7.5)}%;${vis?'':'opacity:.15;filter:grayscale(1)'}" data-search="${(j.title+j.addr+j.id+j.site).toLowerCase()}" onclick="selectJob('${j.id}')" title="${j.id} • ${fmt(j.start)}–${fmt(j.start+j.dur)} • ${j.title}">
+<div class="j-top"><span>${fmtS(j.start)}–${fmtS(j.start+j.dur)}</span>${flags.join('')}</div>
+<div class="j-title">${j.title.split('—')[0].trim()} • ${j.site}</div>
+<div class="j-sub">${j.addr.split(',')[0]} • ${j.dur}m</div></div>`;
+if(j.travelAfter){const tl=pct(j.start+j.dur),tw=durPct(j.travelAfter);const long=j.travelAfter>=30;
+travels+=`<div class="travel-pill ${long?'long':''}" style="left:${tl}%;width:${Math.max(tw,5)}%" title="Travel ${j.travelAfter}m${j.travelNote?' — '+j.travelNote:''}">⇄ ${j.travelAfter}m</div>`}
+});
+const loadH=(techLoad(t.id)/60).toFixed(1);
+const cap=Math.min(100,techLoad(t.id)/((t.hours[1]-t.hours[0])/60)*100+18);
+const capC=cap>90?'#DC2626':cap>75?'#D97706':'#0E9F8A';
+return `<div class="t-row"><div class="tech-cell"><div class="t-avatar" style="background:${t.color}">${t.init}</div>
+<div style="min-width:0;flex:1"><b>${t.name}</b><span class="role">${t.role}</span>
+<div class="tech-pills"><span class="tp hours">${t.hoursLbl}</span><span class="tp">${t.terr}</span></div>
+<div class="load"><i style="width:${cap}%;background:${capC}"></i></div>
+<div style="font-size:10px;color:#64748B;margin-top:2px;font-weight:700">${loadH}h wrench • ${cap.toFixed(0)}% util</div></div>
+<span class="status-dot"><span class="sd" style="background:${t.statusC}"></span></span></div>
+<div class="lane"><div class="shift-shade" style="left:${offL}%;width:${100-offL-offR}%"></div>${travels}${blocks}<div class="now-line" style="left:${pct(522)}%"></div></div></div>`
+}).join('');
+renderUnassigned();renderTechTable();
+}
+
+function renderList(){
+const rows=[...JOBS].sort((a,b)=>a.start-b.start).filter(jobVisible);
+document.getElementById('listView').innerHTML=`<table class="list-table"><thead><tr><th>Time / Window</th><th>Visit</th><th>Priority</th><th>Crew</th><th>Requirements</th><th></th></tr></thead><tbody>${rows.map(j=>`<tr class="${selectedId===j.id?'sel':''}" onclick="selectJob('${j.id}')" style="cursor:pointer"><td style="white-space:nowrap"><b>${j.techs.length?fmt(j.start)+'–'+fmt(j.start+j.dur):'— unassigned —'}</b><div style="font-size:11px;color:#64748B">Window ${j.win} • ${j.dur}m</div></td><td><b>${j.title}</b><div style="font-size:11.5px;color:#475569">${j.site} • ${j.addr}</div><div style="font-size:11px;color:#64748B">${j.equip}</div></td><td><span class="prio ${j.prio}">${j.prio.toUpperCase()}</span>${j.over?'<div style="font-size:11px;color:#B45309;font-weight:700;margin-top:4px">⚠ '+j.over+'</div>':''}</td><td style="font-size:12px;font-weight:700">${j.techs.length?j.techs.map(id=>TECHS.find(t=>t.id===id).name.split(' ')[0]).join(' + '):'<span style="color:#DC2626">Unassigned</span>'}<div style="font-weight:400;color:#64748B;font-size:11px">${j.techs.length}/${j.needs} techs</div></td><td style="font-size:11.5px;color:#475569">${j.certNeed}<br>${j.parts}<br>${j.tools}</td><td><button class="btn btn-sm" onclick="event.stopPropagation();selectJob('${j.id}')">Open</button></td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderTechTable(){
+document.getElementById('techBody').innerHTML=TECHS.map(t=>{
+const mins=techLoad(t.id);const h=(mins/60).toFixed(1);
+let warn='';
+if(t.id==='maria')warn='<div style="font-size:11px;color:#DC2626;font-weight:700">⚠ OT to 4:30p for hangar</div>';
+if(t.id==='luis')warn='<div style="font-size:11px;color:#B45309;font-weight:700">⚠ Solo cert gap (JB-2864)</div>';
+if(t.id==='derek')warn='<div style="font-size:11px;color:#B45309;font-weight:700">⚠ 42m cross-town dash</div>';
+if(t.id==='priya')warn='<div style="font-size:11px;color:#B45309;font-weight:700">⚠ Overrun may cascade</div>';
+return `<tr><td><div style="display:flex;gap:8px;align-items:center"><div class="t-avatar" style="background:${t.color};width:28px;height:28px;font-size:10px">${t.init}</div><div><b>${t.name}</b><div style="font-size:11px;color:#64748B">${t.role}</div></div></div></td>
+<td style="white-space:nowrap;font-weight:700">${t.hoursLbl}<div style="font-weight:400;color:#64748B;font-size:11px">${((t.hours[1]-t.hours[0])/60).toFixed(1)}h shift</div></td>
+<td style="font-size:11.5px;font-weight:700">${t.terr}</td>
+<td>${t.certs.map(c=>'<span class="cert-pill">'+c+'</span>').join('')}</td>
+<td class="sys">${t.systems}</td>
+<td><b>${h}h</b><div class="load" style="width:80px"><i style="width:${Math.min(100,mins/510*100+20)}%;background:${mins>440?'#DC2626':'#0E9F8A'}"></i></div>${warn}</td>
+<td><span class="status-dot"><span class="sd" style="background:${t.statusC}"></span>${t.status}</span></td></tr>`}).join('');
+}
+
+function matchScore(techId,job){
+if(job.id==='JB-2874'){if(techId==='maria')return[92,'Chiller ✓ • Central ✓ • Busy till 3p'];if(techId==='priya')return[88,'Chiller ✓ • Overrun risk'];if(techId==='derek')return[46,'Lacks chiller cert'];if(techId==='james')return[38,'Lacks chiller cert'];return[22,'Apprentice — supervised only']}
+if(job.id==='JB-2852'){if(techId==='priya')return[96,'Trane Chiller ✓ • Assigned'];if(techId==='maria')return[74,'Universal ✓ • North nearby'];return[40,'Cert mismatch']}
+if(job.id==='JB-2864'){if(techId==='james')return[91,'Exhaust ✓ • Free 12–12:30'];if(techId==='luis')return[54,'Needs supervision'];return[60,'Available']}
+return[80,'Hours ✓ • Territory ✓'];
+}
+
+function renderInspector(){
+const j=JOBS.find(x=>x.id===selectedId);
+const el=document.getElementById('inspector');
+const crewNames=j.techs.length?j.techs.map(id=>{const t=TECHS.find(t=>t.id===id);return t.name}).join(' + '):'Unassigned';
+const banner=j.status==='unassigned'?`<div class="status-banner critical">🚨 UNASSIGNED CRITICAL — needs ${j.needs} techs before 12 PM window closes</div>`:j.status==='risk'?`<div class="status-banner risk">⚠ AT RISK — ${j.over||'review assignment, travel or certs'}</div>`:`<div class="status-banner ok">✓ CONFIRMED — ${crewNames} • window &amp; certs check out</div>`;
+const crewOpts=TECHS.map(t=>{
+const[score,why]=matchScore(t.id,j);
+const isSel=j.techs.includes(t.id);
+return `<div class="crew-opt ${isSel?'sel':''}"><div class="mini-av" style="background:${t.color}">${t.init}</div><div><b style="font-size:12.5px">${t.name}</b><div style="font-size:11px;color:#64748B">${t.role} • ${t.hoursLbl}</div><small>${why}</small></div><div class="match"><b>${score}%</b><div class="match-bar"><i style="width:${score}%"></i></div><button class="btn btn-sm" style="margin-top:5px;${isSel?'background:#fff;color:#0B7D6D;border:1px solid #0E9F8A':''}" onclick="assign('${j.id}','${t.id}')">${isSel?'✓ On job':'Assign'}</button></div></div>`}).join('');
+el.innerHTML=`
+<div class="insp-head"><div class="insp-head-top"><span class="prio ${j.prio}">${j.prio==='critical'?'CRITICAL P1':j.prio.toUpperCase()}</span><span class="job-id">${j.id}</span><span style="margin-left:auto;font-size:11px;color:#64748B;font-weight:700">⏱ ${j.dur}m</span></div>
+<h2>${j.title}<br><span style="font-weight:400;color:#64748B;font-size:12.5px">${j.site} • ${j.zone} territory</span></h2>
+<div class="insp-tabs"><button class="on">Overview</button><button onclick="toast('Crew match','Scoring uses certs, territory, hours &amp; live traffic.')">Crew match</button><button onclick="toast('Notes','2 site notes + last visit Mar 12.')">Notes (2)</button></div></div>
+<div class="insp-body">${banner}
+<div class="detail-grid">
+<div class="detail"><label>⌖ Service window</label><div class="v">${j.win}</div><div class="s">${j.techs.length?'Scheduled '+fmt(j.start)+'–'+fmt(j.start+j.dur):'Must start by 10:00 AM'} • ${j.dur}m + 15m setup</div></div>
+<div class="detail"><label>◷ Expected duration</label><div class="v">${j.dur} min ${j.over?'⚠':''}</div><div class="s">${j.over||'On-plan • includes testing'}</div></div>
+<div class="detail full"><label>📍 Address &amp; travel</label><div class="v">${j.addr}</div><div class="s">${j.travelFrom?'🚗 '+j.travelFrom+' • ':''}Travel between sites 15–42m today • <a href="#" onclick="return false" style="color:#0B7D6D;font-weight:700">Open map →</a></div></div>
+<div class="detail full"><label>❄ Equipment type</label><div class="v">${j.equip}</div></div>
+</div>
+<div class="req-sec"><h5>Reported problem</h5><div class="problem-box">${j.problem}</div></div>
+<div class="req-sec"><h5>Crew, parts &amp; diagnostic equipment</h5>
+<div class="req-row"><div class="ri" style="background:#EFF6FF">👥</div><div><b>Crew: ${j.techs.length}/${j.needs} technician${j.needs>1?'s':''}</b><div style="color:#475569;font-size:11.5px">${j.techs.length?crewNames:'No one assigned yet'} • ${j.certNeed}</div></div></div>
+<div class="req-row"><div class="ri" style="background:#FEF2F2">🧰</div><div><b>Parts</b><div style="color:#475569;font-size:11.5px">${j.parts}</div></div></div>
+<div class="req-row"><div class="ri" style="background:#EFF6FF">🔬</div><div><b>Diagnostic equipment</b><div style="color:#475569;font-size:11.5px">${j.tools}</div></div></div>
+</div>
+<div class="access-box"><b>🔒 Access &amp; onsite contact</b><div style="margin-top:4px">${j.access}</div><ul><li>📞 ${j.contact}</li></ul></div>
+<div class="req-sec"><h5>Best crew options (certs • territory • hours • traffic)</h5>${crewOpts}</div>
+<div class="time-shift"><span>Reschedule:</span><button onclick="shift('${j.id}',-30)">−30m</button><button onclick="shift('${j.id}',30)">+30m</button><span style="margin-left:auto;font-size:11px;color:#64748B" id="winCheck">${j.techs.length?'Inside window ✓':'Pick crew to check window'}</span></div>
+<div class="insp-actions"><button class="btn btn-primary full" onclick="assignNext('${j.id}')">⚡ ${j.techs.length<j.needs?'Assign best available crew':'Re-optimize crew'}</button><button class="btn" onclick="toast('Message sent','Texted ${j.techs.length?'crew':'all leads'}: “${j.id} update — confirm ETA.”')">💬 Message</button><button class="btn" onclick="toast('On hold','${j.id} flagged for dispatcher review.')">⋯ More</button></div>
+<div style="margin-top:10px;font-size:11px;color:#94A3B8">Priority ${j.prio.toUpperCase()} • Created 6:14 AM by auto-triage • Heat-wave surge pricing applies • SLA: P1 &lt; 4h</div>
+</div>`;
+}
+
+function selectJob(id){selectedId=id;renderTimeline();if(view==='list')renderList();renderInspector();document.getElementById('inspector').scrollTop=0}
+function assign(jobId,techId){
+const j=JOBS.find(x=>x.id===jobId);
+if(j.techs.includes(techId)){j.techs=j.techs.filter(t=>t!==techId);toast('Unassigned',TECHS.find(t=>t.id===techId).name+' removed from '+jobId+'.')}
+else{
+if(j.techs.length>=j.needs){j.techs=[techId]}else{j.techs.push(techId)}
+if(j.id==='JB-2874'&&j.techs.length===1){j.start=555;j.status='risk';j.over='Partial crew — still needs 1 more tech'}
+else if(j.techs.length>=j.needs){j.status=j.id==='JB-2852'||j.id==='JB-2864'||j.id==='JB-2869'?'risk':'confirmed';if(j.id==='JB-2874'){j.start=555;j.over='Split crew — Maria 9:15a + Derek 9:30a (thermal fetch en route)'}}
+const t=TECHS.find(t=>t.id===techId);
+toast('Crew updated','<b>'+t.name+'</b> → '+jobId+'. Window, cert &amp; travel re-checked.');
+if(jobId==='JB-2874'&&j.techs.length>=j.needs){const a=document.getElementById('alert-emergency');if(a)a.style.display='none'}
+}
+document.getElementById('kpiAssigned').textContent=JOBS.filter(x=>x.techs.length>=x.needs).length+' assigned';
+renderTimeline();if(view==='list')renderList();renderInspector();
+}
+function assignNext(jobId){const j=JOBS.find(x=>x.id===jobId);const order=['maria','priya','derek','james','luis'];for(const t of order){if(!j.techs.includes(t)){assign(jobId,t);break}}}
+function shift(jobId,delta){const j=JOBS.find(x=>x.id===jobId);j.start=Math.max(DAY_START,Math.min(DAY_END-j.dur,j.start+delta));const inside=j.start>=j.winS&& (j.start+j.dur)<=j.winE+30;toast('Rescheduled',jobId+' moved to <b>'+fmt(j.start)+'</b> — '+(inside?'still inside window ✓':'⚠ now outside window, customer approval needed'));renderTimeline();if(view==='list')renderList();renderInspector()}
+
+renderTimeline();renderInspector();
+// live clock tick
+let mins=522;
+setInterval(()=>{mins++;if(mins>=1080)mins=522;const d=new Date(2026,8,4,Math.floor(mins/60),mins%60);let h=d.getHours(),m=String(d.getMinutes()).padStart(2,'0'),ap=h>=12?'PM':'AM',h12=h%12||12;document.getElementById('clock').textContent='Thu, Sep 4 • '+h12+':'+m+' '+ap},60000);
+</script>
+</body>
+</html>

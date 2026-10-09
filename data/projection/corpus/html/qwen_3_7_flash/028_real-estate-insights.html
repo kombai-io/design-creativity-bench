@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian Capital — Portfolio Insight Engine</title>
+<style>
+:root {
+  --color-bg-primary: #1a1c20;
+  --color-bg-secondary: #232529;
+  --color-bg-tertiary: #2b2e33;
+  --color-bg-panel: #25272d;
+  --color-bg-card: #2c2f35;
+  --color-bg-hover: #353940;
+  --color-bg-input: #1e2025;
+  --color-bg-badge: #3a3f47;
+  --color-surface-overlay: rgba(0,0,0,0.6);
+  --color-border-subtle: #3a3d44;
+  --color-border-medium: #4a4e56;
+  --color-border-strong: #5e626b;
+  --color-text-primary: #e8eaed;
+  --color-text-secondary: #b0b5bd;
+  --color-text-tertiary: #7a8190;
+  --color-text-inverse: #1a1c20;
+  --color-accent-1: #c8a45e;
+  --color-accent-2: #6db39f;
+  --color-accent-3: #7e9ec4;
+  --color-accent-4: #c47e7e;
+  --color-accent-5: #a48cc8;
+  --color-success: #5cb88a;
+  --color-warning: #d4a43a;
+  --color-danger: #c45e5e;
+  --color-neutral: #6c7280;
+  --font-family-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'Consolas', 'Monaco', monospace;
+  --font-size-xs: 0.65rem;
+  --font-size-sm: 0.75rem;
+  --font-size-base: 0.85rem;
+  --font-size-md: 0.95rem;
+  --font-size-lg: 1.1rem;
+  --font-size-xl: 1.35rem;
+  --font-size-xxl: 1.6rem;
+  --spacing-none: 0px;
+  --spacing-xxs: 3px;
+  --spacing-xs: 5px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 22px;
+  --spacing-xxl: 30px;
+  --border-radius-sm: 3px;
+  --border-radius-md: 5px;
+  --border-radius-lg: 8px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 3px 8px rgba(0,0,0,0.4);
+  --shadow-lg: 0 6px 18px rgba(0,0,0,0.5);
+  --shadow-xl: 0 10px 30px rgba(0,0,0,0.6);
+  --transition-fast: 120ms ease;
+  --transition-normal: 220ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: var(--font-size-base); }
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ── Workspace Canvas ── */
+.workspace {
+  position: relative;
+  width: 1280px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+  min-height: 100vh;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent calc(var(--spacing-xxl) - 1px), var(--color-border-subtle) calc(var(--spacing-xxl) - 1px), var(--color-border-subtle) calc(var(--spacing-xxl))),
+    repeating-linear-gradient(90deg, transparent, transparent calc(var(--spacing-xxl) - 1px), var(--color-border-subtle) calc(var(--spacing-xxl) - 1px), var(--color-border-subtle) calc(var(--spacing-xxl)));
+  background-color: var(--color-bg-primary);
+  background-blend-mode: overlay;
+  opacity: 0.95;
+}
+
+.canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.canvas-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.canvas-brand-icon {
+  width: 28px; height: 28px;
+  fill: none; stroke: var(--color-accent-1); stroke-width: 2;
+}
+
+.canvas-brand h1 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.canvas-brand span {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.canvas-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.canvas-meta .status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  display: inline-block;
+  margin-right: 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Tab Navigation ── */
+.tab-bar {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-lg);
+  background: var(--color-bg-panel);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  position: relative;
+}
+
+.tab-btn:hover {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-hover);
+}
+
+.tab-btn[aria-selected="true"] {
+  color: var(--color-accent-1);
+  background: var(--color-bg-tertiary);
+  font-weight: 600;
+}
+
+.tab-btn[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: var(--spacing-sm);
+  right: var(--spacing-sm);
+  height: 2px;
+  background: var(--color-accent-1);
+  border-radius: 1px;
+}
+
+.tab-badge {
+  font-size: var(--font-size-xs);
+  padding: 1px var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-bg-badge);
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+}
+
+.tab-btn[aria-selected="true"] .tab-badge {
+  background: var(--color-accent-1);
+  color: var(--color-text-inverse);
+}
+
+/* ── Panels ── */
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+/* ── KPI Row (Six-Pack) ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.kpi-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.kpi-card.accent-gold::before { background: var(--color-accent-1); }
+.kpi-card.accent-green::before { background: var(--color-accent-2); }
+.kpi-card.accent-blue::before { background: var(--color-accent-3); }
+.kpi-card.accent-red::before { background: var(--color-accent-4); }
+.kpi-card.accent-purple::before { background: var(--color-accent-5); }
+.kpi-card.accent-neutral::before { background: var(--color-neutral); }
+
+.kpi-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--spacing-xxs);
+}
+
+.kpi-value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  font-family: var(--font-family-mono);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.kpi-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-top: var(--spacing-xxs);
+}
+
+.kpi-change {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  font-family: var(--font-family-mono);
+  margin-top: var(--spacing-xxs);
+}
+
+.kpi-change.up { color: var(--color-success); }
+.kpi-change.down { color: var(--color-danger); }
+
+/* ── Dense Section ── */
+.dense-section {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.section-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.filter-select {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-xxs) var(--spacing-xs);
+  cursor: pointer;
+}
+
+.filter-select option { background: var(--color-bg-tertiary); }
+
+/* ── Tables ── */
+.data-table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.data-table thead th {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  text-align: left;
+  border-bottom: 2px solid var(--color-border-subtle);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+}
+
+.data-table thead th:hover { color: var(--color-text-secondary); }
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--color-border-subtle);
+  transition: background var(--transition-fast);
+}
+
+.data-table tbody tr:hover { background: var(--color-bg-hover); }
+
+.data-table tbody td {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.data-table .mono {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.data-table .text-right { text-align: right; }
+
+/* ── Status badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.badge-active { background: rgba(92,184,138,0.15); color: var(--color-success); }
+.badge-warning { background: rgba(212,164,58,0.15); color: var(--color-warning); }
+.badge-critical { background: rgba(196,94,94,0.15); color: var(--color-danger); }
+.badge-info { background: rgba(126,158,196,0.15); color: var(--color-accent-3); }
+.badge-neutral { background: var(--color-bg-badge); color: var(--color-text-tertiary); }
+
+/* ── Progress bar ── */
+.progress-track {
+  width: 80px;
+  height: 6px;
+  background: var(--color-bg-input);
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: var(--spacing-xs);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 300ms ease;
+}
+
+.progress-fill.green { background: var(--color-success); }
+.progress-fill.gold { background: var(--color-accent-1); }
+.progress-fill.red { background: var(--color-danger); }
+.progress-fill.blue { background: var(--color-accent-3); }
+
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.pagination-info { font-size: var(--font-size-xs); }
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xxs);
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 var(--spacing-xs);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.page-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-medium);
+}
+
+.page-btn.active {
+  background: var(--color-accent-1);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent-1);
+  font-weight: 700;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-size-control {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.page-size-select {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--border-radius-sm);
+  padding: 2px var(--spacing-xs);
+  cursor: pointer;
+}
+
+.page-size-select option { background: var(--color-bg-tertiary); }
+
+/* ── Two-col grid ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.three-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+/* ── Mini sparkline chart area ── */
+.sparkline-area {
+  height: 40px;
+  position: relative;
+  margin-top: var(--spacing-xs);
+}
+
+/* ── Tooltip / Info popover ── */
+.info-popover {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-xl);
+  max-width: 320px;
+  font-size: var(--font-size-sm);
+}
+
+.info-popover.visible { display: block; }
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--color-border-medium); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+
+/* ── Utility ── */
+.mt-md { margin-top: var(--spacing-md); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.text-muted { color: var(--color-text-tertiary); }
+.text-accent-gold { color: var(--color-accent-1); }
+.text-accent-green { color: var(--color-success); }
+.text-accent-red { color: var(--color-danger); }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+
+/* ── Lease timeline visual ── */
+.timeline-row {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.timeline-label {
+  width: 160px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.timeline-bar-container {
+  flex: 1;
+  height: 18px;
+  background: var(--color-bg-input);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.timeline-segment {
+  position: absolute;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.timeline-date-marker {
+  width: 40px;
+  text-align: right;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ── Comparison bars ── */
+.comparison-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.comparison-label {
+  width: 140px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.comparison-bar-wrap {
+  flex: 1;
+  height: 10px;
+  background: var(--color-bg-input);
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 0 var(--spacing-sm);
+}
+
+.comparison-bar {
+  height: 100%;
+  border-radius: 5px;
+}
+
+.comparison-value {
+  width: 60px;
+  text-align: right;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="workspace" id="workspace">
+
+  <!-- Header -->
+  <header class="canvas-header">
+    <div class="canvas-brand">
+      <svg class="canvas-brand-icon" viewBox="0 0 28 28">
+        <circle cx="14" cy="14" r="12" stroke-dasharray="3 2"/>
+        <circle cx="14" cy="14" r="6" fill="currentColor" opacity="0.15" stroke="none"/>
+        <line x1="14" y1="2" x2="14" y2="8" />
+        <line x1="14" y1="20" x2="14" y2="26" />
+        <line x1="2" y1="14" x2="8" y2="14" />
+        <line x1="20" y1="14" x2="26" y2="14" />
+      </svg>
+      <div>
+        <h1>Meridian Capital</h1>
+        <span>Portfolio Insight Engine v4.2 — Q3 2024</span>
+      </div>
+    </div>
+    <div class="canvas-meta">
+      <span><span class="status-dot"></span>Cached 14:32:07 UTC</span>
+      <span>|</span>
+      <span>247 Assets &middot; $3.82B AUM</span>
+      <span>|</span>
+      <span style="color:var(--color-text-secondary)">Operator: R. Whitfield</span>
+    </div>
+  </header>
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar" role="tablist" aria-label="Primary navigation">
+    <button class="tab-btn" role="tab" aria-selected="true" aria-controls="panel-overview" id="tab-overview">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Portfolio Overview
+      <span class="tab-badge">247</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-market" id="tab-market">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,6 7,8 10,3 13,5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+      Market Intelligence
+      <span class="tab-badge">18</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-leases" id="tab-leases">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><line x1="2" y1="5" x2="12" y2="5" stroke="currentColor" stroke-width="1"/><line x1="2" y1="9" x2="12" y2="9" stroke="currentColor" stroke-width="1"/></svg>
+      Lease Expiries
+      <span class="tab-badge">62</span>
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-assets" id="tab-assets">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polygon points="7,1 13,5 11,13 3,13 1,5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+      Asset Performance
+      <span class="tab-badge">9</span>
+    </button>
+  </nav>
+
+  <!-- ════════════════════════════════════ PANEL: PORTFOLIO OVERVIEW ════════════════════════════════════ -->
+  <section class="panel active" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+
+    <!-- KPI Six-Pack -->
+    <div class="kpi-row">
+      <div class="kpi-card accent-gold">
+        <div class="kpi-label">Gross AUM</div>
+        <div class="kpi-value">$3.82B</div>
+        <div class="kpi-sub">from $3.61B prior quarter</div>
+        <div class="kpi-change up">▲ +5.8% QoQ</div>
+      </div>
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">Weighted Occupancy</div>
+        <div class="kpi-value">87.3%</div>
+        <div class="kpi-sub">across 247 assets</div>
+        <div class="kpi-change up">▲ +1.2pp QoQ</div>
+      </div>
+      <div class="kpi-card accent-blue">
+        <div class="kpi-label">Portfolio IRR</div>
+        <div class="kpi-value">14.2%</div>
+        <div class="kpi-sub">annualized, gross</div>
+        <div class="kpi-change up">▲ +0.8pp YoY</div>
+      </div>
+      <div class="kpi-card accent-red">
+        <div class="kpi-label">Expiring Within 12mo</div>
+        <div class="kpi-value">18.4%</div>
+        <div class="kpi-sub">of total NNN GLA</div>
+        <div class="kpi-change down">▼ -2.1pp from avg</div>
+      </div>
+      <div class="kpi-card accent-purple">
+        <div class="kpi-label">Cap Rate Spread</div>
+        <div class="kpi-value">+110bp</div>
+        <div class="kpi-sub">vs. NCREIF Index</div>
+        <div class="kpi-change up">▲ +15bp QoQ</div>
+      </div>
+      <div class="kpi-card accent-neutral">
+        <div class="kpi-label">Net Operating Income</div>
+        <div class="kpi-value">$241M</div>
+        <div class="kpi-sub">TTM run-rate</div>
+        <div class="kpi-change up">▲ +3.2% YoY</div>
+      </div>
+    </div>
+
+    <!-- Primary dense table: Property register -->
+    <div class="dense-section">
+      <div class="section-header">
+        <span class="section-title">Property Register — All Class A/B/T Distinctions</span>
+        <div class="section-controls">
+          <select class="filter-select" id="regionFilter">
+            <option value="all">All Regions</option>
+            <option value="west">West Coast</option>
+            <option value="midwest">Midwest</option>
+            <option value="southeast">Southeast</option>
+            <option value="northeast">Northeast Corridor</option>
+            <option value="texus">Texas Triangle</option>
+          </select>
+          <select class="filter-select" id="classFilter">
+            <option value="all">All Classes</option>
+            <option value="a">Class A</option>
+            <option value="b">Class B</option>
+            <option value="t">Trophy</option>
+          </select>
+          <select class="filter-select" id="typeFilter">
+            <option value="all">All Types</option>
+            <option value="office">Office</option>
+            <option value="industrial">Industrial</option>
+            <option value="retail">Retail / Mixed Use</option>
+            <option value="multifamily">Multifamily</option>
+            <option value="datacenter">Data Center</option>
+          </select>
+        </div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table" id="propertyTable">
+          <thead>
+            <tr>
+              <th scope="col">Asset ID</th>
+              <th scope="col">Property Name</th>
+              <th scope="col">City / State</th>
+              <th scope="col">Type</th>
+              <th scope="col">Class</th>
+              <th scope="col">GLA (sq ft)</th>
+              <th scope="col">Occupancy</th>
+              <th scope="col">Cap Rate</th>
+              <th scope="col">NOI (TTM)</th>
+              <th scope="col">Acq. Date</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody id="propertyBody">
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-bar">
+        <div class="pagination-info" id="pageInfo">Showing 1–25 of 247 assets</div>
+        <div style="display:flex;align-items:center;gap:var(--spacing-md)">
+          <div class="page-size-control">
+            <label for="pageSizeSelect">Per page:</label>
+            <select class="page-size-select" id="pageSizeSelect">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="pagination-controls" id="paginationControls">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secondary row: Lease rollover heatmap + Top tenant concentration -->
+    <div class="two-col mt-md">
+      <div class="dense-section">
+        <div class="section-header">
+          <span class="section-title">Lease Expiry Timeline — Next 4 Quarters</span>
+        </div>
+        <div style="padding: var(--spacing-md)">
+          <div class="timeline-row">
+            <span class="timeline-label">Amazon.com DC</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:25%;background:var(--color-accent-3)" title="Q4'24: Expiring"></div>
+              <div class="timeline-segment" style="left:25%;width:30%;background:var(--color-success)" title="Renewed 5yr @ 5.8%"></div>
+            </div>
+            <span class="timeline-date-marker">1.2M sf</span>
+          </div>
+          <div class="timeline-row">
+            <span class="timeline-label">Goldman Sachs HQ</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:15%;background:var(--color-accent-4)" title="Q4'24: Critical"></div>
+              <div class="timeline-segment" style="left:15%;width:20%;background:var(--color-accent-1)" title="Renegotiating"></div>
+              <div class="timeline-segment" style="left:35%;width:40%;background:var(--color-success)" title="Extension secured"></div>
+            </div>
+            <span class="timeline-date-marker">820K sf</span>
+          </div>
+          <div class="timeline-row">
+            <span class="timeline-label">Sysco Distribution</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:10%;background:var(--color-accent-1)" title="Q1'25: Warning"></div>
+              <div class="timeline-segment" style="left:10%;width:55%;background:var(--color-success)" title="Renewed 7yr"></div>
+            </div>
+            <span class="timeline-date-marker">2.4M sf</span>
+          </div>
+          <div class="timeline-row">
+            <span class="timeline-label">ProLogis Hub TX</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:45%;background:var(--color-success)" title="Locked to Q2'26"></div>
+            </div>
+            <span class="timeline-date-marker">3.1M sf</span>
+          </div>
+          <div class="timeline-row">
+            <span class="timeline-label">CVS Pharmacy Network</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:8%;background:var(--color-accent-4)" title="Q4'24: 12 stores expire"></div>
+              <div class="timeline-segment" style="left:8%;width:25%;background:var(--color-warning)" title="Partial renewal"></div>
+              <div class="timeline-segment" style="left:33%;width:30%;background:var(--color-accent-1)" title="Q2'25: Negotiating"></div>
+            </div>
+            <span class="timeline-date-marker">186K sf</span>
+          </div>
+          <div class="timeline-row">
+            <span class="timeline-label">WeWork Campus FL</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:100%;background:var(--color-accent-4)" title="Vacated Jun 2024"></div>
+            </div>
+            <span class="timeline-date-marker">410K sf</span>
+          </div>
+          <div class="timeline-row">
+            <span class="timeline-label">Tesla Gigafactory</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:60%;background:var(--color-success)" title="NLL to 2031"></div>
+            </div>
+            <span class="timeline-date-marker">5.8M sf</span>
+          </div>
+          <div class="timeline-row">
+            <span class="timeline-label">FedEx Regional Sort</span>
+            <div class="timeline-bar-container">
+              <div class="timeline-segment" style="left:0;width:20%;background:var(--color-accent-3)" title="Q1'25: Standard expiry"></div>
+              <div class="timeline-segment" style="left:20%;width:50%;background:var(--color-success)" title="Option exercised"></div>
+            </div>
+            <span class="timeline-date-marker">940K sf</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Tenant Concentration -->
+      <div class="dense-section">
+        <div class="section-header">
+          <span class="section-title">Top Tenant Exposure by Portfolio Segment</span>
+        </div>
+        <div style="padding: var(--spacing-md)">
+          <div class="comparison-item">
+            <span class="comparison-label">Amazon (DC & retail)</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:72%;background:var(--color-accent-3)"></div></div>
+            <span class="comparison-value">7.2%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">Goldman Sachs</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:48%;background:var(--color-accent-1)"></div></div>
+            <span class="comparison-value">4.8%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">Sysco Corp</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:42%;background:var(--color-accent-2)"></div></div>
+            <span class="comparison-value">4.2%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">ProLogis Inc</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:38%;background:var(--color-accent-5)"></div></div>
+            <span class="comparison-value">3.8%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">CVS Health</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:32%;background:var(--color-accent-4)"></div></div>
+            <span class="comparison-value">3.2%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">Tesla Inc</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:65%;background:var(--color-success)"></div></div>
+            <span class="comparison-value">6.5%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">FedEx Corp</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:30%;background:var(--color-neutral)"></div></div>
+            <span class="comparison-value">3.0%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">JPMorgan Chase</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:28%;background:var(--color-accent-3)"></div></div>
+            <span class="comparison-value">2.8%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">Microsoft Corp</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:55%;background:var(--color-success)"></div></div>
+            <span class="comparison-value">5.5%</span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-label">UnitedHealth Grp</span>
+            <div class="comparison-bar-wrap"><div class="comparison-bar" style="width:22%;background:var(--color-accent-1)"></div></div>
+            <span class="comparison-value">2.2%</span>
+          </div>
+          <div style="margin-top:var(--spacing-md);padding-top:var(--spacing-md);border-top:1px solid var(--color-border-subtle);display:flex;justify-content:space-between;font-size:var(--font-size-xs);color:var(--color-text-tertiary)">
+            <span>Top 10 tenants represent 40.2% of TTM NOI</span>
+            <span>Threshold: &gt;10% flagged for review</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ════════════════════════════════════ PANEL: MARKET INTELLIGENCE ════════════════════════════════════ -->
+  <section class="panel" id="panel-market" role="tabpanel" aria-labelledby="tab-market">
+    <div class="kpi-row">
+      <div class="kpi-card accent-gold">
+        <div class="kpi-label">National Cap Rate Avg</div>
+        <div class="kpi-value">6.4%</div>
+        <div class="kpi-sub">weighted, all sectors</div>
+        <div class="kpi-change up">▲ +12bp QoQ</div>
+      </div>
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">Office Yield Spread</div>
+        <div class="kpi-value">+210bp</div>
+        <div class="kpi-sub">vs. 10Y Treasury</div>
+        <div class="kpi-change down">▼ -8bp tightening</div>
+      </div>
+      <div class="kpi-card accent-blue">
+        <div class="kpi-label">Industrial Vacancy</div>
+        <div class="kpi-value">4.2%</div>
+        <div class="kpi-sub">national average</div>
+        <div class="kpi-change up">▲ stable</div>
+      </div>
+      <div class="kpi-card accent-red">
+        <div class="kpi-label">Distressed Pipeline</div>
+        <div class="kpi-value">$21.4B</div>
+        <div class="kpi-sub">potential recap events</div>
+        <div class="kpi-change down">▼ +$4.1B QoQ</div>
+      </div>
+      <div class="kpi-card accent-purple">
+        <div class="kpi-label">REIT Alpha Score</div>
+        <div class="kpi-value">73.2</div>
+        <div class="kpi-sub">out of 100 benchmark</div>
+        <div class="kpi-change up">▲ +5pts QoQ</div>
+      </div>
+      <div class="kpi-card accent-neutral">
+        <div class="kpi-label">Transact. Volume (TTM)</div>
+        <div class="kpi-value">$184B</div>
+        <div class="kpi-sub">CBRE / NAIOP tracked</div>
+        <div class="kpi-change down">▼ -18% vs. 2023</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="dense-section">
+        <div class="section-header">
+          <span class="section-title">Market Comparison — Our Portfolio vs. Benchmarks</span>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Metric</th>
+                <th scope="col">Meridian</th>
+                <th scope="col">NCREIF</th>
+                <th scope="col">MSA Index</th>
+                <th scope="col">Delta</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">Yield on Cost</td><td class="mono">7.8%</td><td class="mono">6.4%</td><td class="mono">6.9%</td><td class="mono text-accent-green">+140bp</td></tr>
+              <tr><td class="mono">NOI Growth (TTM)</td><td class="mono">3.2%</td><td class="mono">1.8%</td><td class="mono">2.4%</td><td class="mono text-accent-green">+140bps</td></tr>
+              <tr><td class="mono">Rev PAR Index</td><td class="mono">112</td><td class="mono">100</td><td class="mono">108</td><td class="mono text-accent-green">+4pts</td></tr>
+              <tr><td class="mono">Same-Store NOIG</td><td class="mono">4.1%</td><td class="mono">2.3%</td><td class="mono">3.0%</td><td class="mono text-accent-green">+180bps</td></tr>
+              <tr><td class="mono">EV/EBITDA</td><td class="mono">12.4x</td><td class="mono">14.8x</td><td class="mono">13.6x</td><td class="mono text-accent-red">-2.4x</td></tr>
+              <tr><td class="mono">DSCR Ratio</td><td class="mono">1.82x</td><td class="mono">1.64x</td><td class="mono">1.71x</td><td class="mono text-accent-green">+0.18</td></tr>
+              <tr><td class="mono">LTV Weighted Avg</td><td class="mono">48.2%</td><td class="mono">52.1%</td><td class="mono">50.4%</td><td class="mono text-accent-green">-3.9pp</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dense-section">
+        <div class="section-header">
+          <span class="section-title">Macro Indicator Watchlist</span>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Indicator</th>
+                <th scope="col">Current</th>
+                <th scope="col">Prior</th>
+                <th scope="col">Forecast Q4</th>
+                <th scope="col">Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Federal Funds Rate</td><td class="mono">5.33%</td><td class="mono">5.33%</td><td class="mono">4.75%</td><td><span class="badge badge-warning">⚠ Holding</span></td></tr>
+              <tr><td>10Y Treasury Yield</td><td class="mono">4.28%</td><td class="mono">4.12%</td><td class="mono">3.80%</td><td><span class="badge badge-critical">↑ Rising</span></td></tr>
+              <tr><td>U.S. Unemployment</td><td class="mono">3.8%</td><td class="mono">3.7%</td><td class="mono">4.0%</td><td><span class="badge badge-warning">⠋ Elevated</span></td></tr>
+              <tr><td>CoreLogic HPI MoM</td><td class="mono">+0.4%</td><td class="mono">+0.3%</td><td class="mono">+0.2%</td><td><span class="badge badge-neutral">▸ Normal</span></td></tr>
+              <tr><td>NAHB Housing Index</td><td class="mono">44</td><td class="mono">41</td><td class="mono">48</td><td><span class="badge badge-active">✓ Recovering</span></td></tr>
+              <tr><td>PCE Inflation YoY</td><td class="mono">2.6%</td><td class="mono">2.5%</td><td class="mono">2.2%</td><td><span class="badge badge-info">↓ Targeting 2%</span></td></tr>
+              <tr><td>Commercial Mortgage Defaults</td><td class="mono">$18.2B</td><td class="mono">$14.1B</td><td class="mono">$22.0B</td><td><span class="badge badge-critical">🔴 Escalating</span></td></tr>
+              <tr><td>EIA Oil (WTI Crude)</td><td class="mono">$71.40</td><td class="mono">$69.80</td><td class="mono">$65.00</td><td><span class="badge badge-neutral">▸ Stable</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confidence Intervals Panel -->
+    <div class="dense-section mt-md">
+      <div class="section-header">
+        <span class="section-title">Self-Doubt Analysis — Valuation Confidence Bands (Monte Carlo, 10K Paths)</span>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Asset</th>
+              <th scope="col">Point Estimate ($M)</th>
+              <th scope="col">P10</th>
+              <th scope="col">Median</th>
+              <th scope="col">P90</th>
+              <th scope="col">Uncertainty Band</th>
+              <th scope="col">Skew</th>
+              <th scope="col">Assessment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Harbor Point Tower, LA</td><td class="mono">342.5</td><td class="mono">280.0</td><td class="mono">335.2</td><td class="mono">410.8</td><td>
+              <div class="progress-track"><div class="progress-fill gold" style="width:56%"></div></div></td><td class="mono">−0.31</td><td><span class="badge badge-warning">Moderate skew right</span></td></tr>
+            <tr><td>Metroplex Logistics Hub, DFW</td><td class="mono">518.0</td><td class="mono">470.0</td><td class="mono">515.3</td><td class="mono">560.1</td><td>
+              <div class="progress-track"><div class="progress-fill green" style="width:12%"></div></div></td><td class="mono">−0.08</td><td><span class="badge badge-active">Tight distribution</span></td></tr>
+            <tr><td>Kenmore Square Offices, BOS</td><td class="mono">195.2</td><td class="mono">140.0</td><td class="mono">188.4</td><td class="mono">260.5</td><td>
+              <div class="progress-track"><div class="progress-fill red" style="width:71%"></div></div></td><td class="mono">+0.54</td><td><span class="badge badge-critical">High tail risk</span></td></tr>
+            <tr><td>Sunrise Medical Park, Phoenix</td><td class="mono">276.8</td><td class="mono">245.0</td><td class="mono">274.1</td><td class="mono">310.6</td><td>
+              <div class="progress-track"><div class="progress-fill blue" style="width:14%"></div></div></td><td class="mono">+0.12</td><td><span class="badge badge-info">Near-symmetric</span></td></tr>
+            <tr><td>Pennsylvania Ave Retail Row</td><td class="mono">88.4</td><td class="mono">62.0</td><td class="mono">85.0</td><td class="mono">120.3</td><td>
+              <div class="progress-track"><div class="progress-fill gold" style="width:58%"></div></div></td><td class="mono">+0.28</td><td><span class="badge badge-warning">Right-tail dependent</span></td></tr>
+            <tr><td>Cascade Data Center OR</td><td class="mono">625.0</td><td class="mono">540.0</td><td class="mono">618.2</td><td class="mono">720.4</td><td>
+              <div class="progress-track"><div class="progress-fill green" style="width:18%"></div></div></td><td class="mono">−0.15</td><td><span class="badge badge-active">Well-calibrated</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════ PANEL: LEASE EXPIRIES ════════════════════════════════════ -->
+  <section class="panel" id="panel-leases" role="tabpanel" aria-labelledby="tab-leases">
+    <div class="kpi-row">
+      <div class="kpi-card accent-gold">
+        <div class="kpi-label">Total Leases Expiring 12mo</div>
+        <div class="kpi-value">312</div>
+        <div class="kpi-sub">across 47 assets</div>
+      </div>
+      <div class="kpi-card accent-red">
+        <div class="kpi-label">SF at Risk</div>
+        <div class="kpi-value">4.2M</div>
+        <div class="kpi-sub">of 28.1M total GLA</div>
+      </div>
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">Renewal Rate (YTD)</div>
+        <div class="kpi-value">78.4%</div>
+        <div class="kpi-sub">vol. basis, executed</div>
+        <div class="kpi-change up">▲ +6.2pp vs. FY23</div>
+      </div>
+      <div class="kpi-card accent-blue">
+        <div class="kpi-label">Rent Compression</div>
+        <div class="kpi-value">−3.8%</div>
+        <div class="kpi-sub">new-vs-old blended</div>
+        <div class="kpi-change down">▼ worse by 1.2pp</div>
+      </div>
+      <div class="kpi-card accent-purple">
+        <div class="kpi-label">Tenant Improvement $</div>
+        <div class="kpi-value">$14.2M</div>
+        <div class="kpi-sub">budgeted renewals</div>
+        <div class="kpi-change up">▲ within plan</div>
+      </div>
+      <div class="kpi-card accent-neutral">
+        <div class="kpi-label">Concessions Average</div>
+        <div class="kpi-value">4.2 mo</div>
+        <div class="kpi-sub">free rent equivalent</div>
+        <div class="kpi-change down">▼ +1.1mo QoQ</div>
+      </div>
+    </div>
+
+    <div class="dense-section">
+      <div class="section-header">
+        <span class="section-title">Lease Expiry Register — All Pending Events</span>
+        <div class="section-controls">
+          <select class="filter-select">
+            <option>All Priorities</option>
+            <option>Critical (&lt;90 days)</option>
+            <option>Warning (90–180 days)</option>
+            <option>Monitoring (180–365 days)</option>
+          </select>
+          <select class="filter-select">
+            <option>All Outcomes</option>
+            <option>Renewed</option>
+            <option>Not Renewed</option>
+            <option>Negotiating</option>
+            <option>Vacant</option>
+          </select>
+        </div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table" id="leaseTable">
+          <thead>
+            <tr>
+              <th scope="col">Lease ID</th>
+              <th scope="col">Tenant</th>
+              <th scope="col">Property</th>
+              <th scope="col">City</th>
+              <th scope="col">Expiry Date</th>
+              <th scope="col">Remaining Days</th>
+              <th scope="col">Leased SF</th>
+              <th scope="col">Monthly Rent</th>
+              <th scope="col">Rate ($/sf/yr)</th>
+              <th scope="col">Remaining Term (yr)</th>
+              <th scope="col">Outcome</th>
+              <th scope="col">Priority</th>
+            </tr>
+          </thead>
+          <tbody id="leaseBody">
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-bar">
+        <div class="pagination-info" id="leasePageInfo">Showing 1–25 of 312 leases</div>
+        <div style="display:flex;align-items:center;gap:var(--spacing-md)">
+          <div class="page-size-control">
+            <label for="leasePageSize">Per page:</label>
+            <select class="page-size-select" id="leasePageSize">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="pagination-controls" id="leasePaginationControls">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════ PANEL: ASSET PERFORMANCE ════════════════════════════════════ -->
+  <section class="panel" id="panel-assets" role="tabpanel" aria-labelledby="tab-assets">
+    <div class="kpi-row">
+      <div class="kpi-card accent-gold">
+        <div class="kpi-label">Avg ROIC (12-Mo)</div>
+        <div class="kpi-value">18.4%</div>
+        <div class="kpi-sub">asset-level weighted</div>
+      </div>
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">Outperformers (≥P75)</div>
+        <div class="kpi-value">89</div>
+        <div class="kpi-sub">of 247 assets</div>
+        <div class="kpi-change up">▲ +12 vs. prior year</div>
+      </div>
+      <div class="kpi-card accent-blue">
+        <div class="kpi-label">Avg Cash-on-Cash</div>
+        <div class="kpi-value">8.6%</div>
+        <div class="kpi-sub">post-debt service</div>
+      </div>
+      <div class="kpi-card accent-red">
+        <div class="kpi-label">Underperformers (≤P25)</div>
+        <div class="kpi-value">41</div>
+        <div class="kpi-sub">flagged for action</div>
+        <div class="kpi-change down">▼ +8 vs. prior year</div>
+      </div>
+      <div class="kpi-card accent-purple">
+        <div class="kpi-label">Avg Hold Period</div>
+        <div class="kpi-value">6.2yr</div>
+        <div class="kpi-sub">since acquisition</div>
+      </div>
+      <div class="kpi-card accent-neutral">
+        <div class="kpi-label">Dispo. Candidates</div>
+        <div class="kpi-value">14</div>
+        <div class="kpi-sub">est. $420M exit pool</div>
+      </div>
+    </div>
+
+    <div class="three-col">
+      <div class="dense-section">
+        <div class="section-header">
+          <span class="section-title">Performance Quartile Rankings</span>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Quartile</th>
+                <th scope="col">Count</th>
+                <th scope="col">Avg ROIC</th>
+                <th scope="col">Avg ROI</th>
+                <th scope="col">Representing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="badge badge-active">Q1 Top</span></td><td class="mono">62</td><td class="mono">24.8%</td><td class="mono">31.2%</td><td>32.1%</td></tr>
+              <tr><td><span class="badge badge-info">Q2</span></td><td class="mono">61</td><td class="mono">16.4%</td><td class="mono">21.0%</td><td>24.7%</td></tr>
+              <tr><td><span class="badge badge-neutral">Q3</span></td><td class="mono">62</td><td class="mono">9.1%</td><td class="mono">12.4%</td><td>22.9%</td></tr>
+              <tr><td><span class="badge badge-critical">Q4 Bottom</span></td><td class="mono">62</td><td class="mono">2.3%</td><td class="mono">4.1%</td><td>20.3%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dense-section">
+        <div class="section-header">
+          <span class="section-title">Top 10 Performers by ROIC</span>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Asset</th>
+                <th scope="col">ROIC</th>
+                <th scope="col">NOI Δ</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">1</td><td class="truncate">Cascade DC-OR Bldg 3</td><td class="mono text-accent-green">34.2%</td><td class="mono text-accent-green">+18.4%</td><td><span class="badge badge-active">Hold</span></td></tr>
+              <tr><td class="mono">2</td><td class="truncate">MetroPlas Logistic DFW</td><td class="mono text-accent-green">31.8%</td><td class="mono text-accent-green">+22.1%</td><td><span class="badge badge-active">Hold</span></td></tr>
+              <tr><td class="mono">3</td><td class="truncate">Sunrise MedPk PHX Cmpx</td><td class="mono text-accent-green">28.6%</td><td class="mono text-accent-green">+12.7%</td><td><span class="badge badge-active">Hold</span></td></tr>
+              <tr><td class="mono">4</td><td class="truncate">Riverside Tech Pk AUSTN</td><td class="mono text-accent-green">27.1%</td><td class="mono text-accent-green">+15.3%</td><td><span class="badge badge-active">Hold</span></td></tr>
+              <tr><td class="mono">5</td><td class="truncate">Alameda Industrial SE</td><td class="mono text-accent-green">25.4%</td><td class="mono text-accent-green">+9.8%</td><td><span class="badge badge-active">Hold</span></td></tr>
+              <tr><td class="mono">6</td><td class="truncate">Greenway Office DEN</td><td class="mono text-accent-green">24.2%</td><td class="mono text-accent-green">+6.2%</td><td><span class="badge badge-active">Hold</span></td></tr>
+              <tr><td class="mono">7</td><td class="truncate">PortMiami Warehouse 7</td><td class="mono text-accent-green">23.8%</td><td class="mono text-accent-green">+14.1%</td><td><span class="badge badge-active">Hold</span></td></tr>
+              <tr><td class="mono">8</td><td class="truncate">Maple Street Flats CHI</td><td class="mono text-accent-green">22.6%</td><td class="mono text-accent-green">+8.9%</td><td><span class="badge badge-info">Stabilizing</span></td></tr>
+              <tr><td class="mono">9</td><td class="truncate">Oak Hill Mixed-Use ATL</td><td class="mono text-accent-green">21.4%</td><td class="mono text-accent-green">+11.2%</td><td><span class="badge badge-info">Stabilizing</span></td></tr>
+              <tr><td class="mono">10</td><td class="truncate">Bayfront Residences TAM</td><td class="mono text-accent-green">20.9%</td><td class="mono text-accent-green">+5.4%</td><td><span class="badge badge-info">Stabilizing</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dense-section">
+        <div class="section-header">
+          <span class="section-title">Bottom 10 — At-Risk Assets</span>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Asset</th>
+                <th scope="col">ROIC</th>
+                <th scope="col">NOI Δ</th>
+                <th scope="col">Risk Flag</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">238</td><td class="truncate">Willow Creek Office DET</td><td class="mono text-accent-red">−2.1%</td><td class="mono text-accent-red">−14.3%</td><td><span class="badge badge-critical">Default</span></td></tr>
+              <tr><td class="mono">239</td><td class="truncate">Hudson Yards Retail NY</td><td class="mono text-accent-red">0.4%</td><td class="mono text-accent-red">−8.7%</td><td><span class="badge badge-critical">Refi risk</span></td></tr>
+              <tr><td class="mono">240</td><td class="truncate">PrairieView Mall KS</td><td class="mono text-accent-red">1.1%</td><td class="mono text-accent-red">−11.2%</td><td><span class="badge badge-critical">Structural vac</span></td></tr>
+              <tr><td class="mono">241</td><td class="truncate">Cedar Park Flex DALLAS</td><td class="mono text-accent-red">2.0%</td><td class="mono text-accent-red">−5.4%</td><td><span class="badge badge-warning">Tenant attr.</span></td></tr>
+              <tr><td class="mono">242</td><td class="truncate">Lincoln Sq Strip CHARL</td><td class="mono text-accent-red">2.2%</td><td class="mono text-accent-red">−3.8%</td><td><span class="badge badge-warning">Below debt</span></td></tr>
+              <tr><td class="mono">243</td><td class="truncate">Summit Ridge RV CO</td><td class="mono text-accent-red">2.4%</td><td class="mono text-accent-red">−2.9%</td><td><span class="badge badge-warning">Competition</span></td></tr>
+              <tr><td class="mono">244</td><td class="truncate">Valley Fair Industrial LV</td><td class="mono text-accent-red">2.5%</td><td class="mono text-accent-red">−1.2%</td><td><span class="badge badge-neutral">Watch</span></td></tr>
+              <tr><td class="mono">245</td><td class="truncate">Birchwood Seniors HOUST</td><td class="mono text-accent-red">2.6%</td><td class="mono text-accent-red">−0.8%</td><td><span class="badge badge-neutral">Watch</span></td></tr>
+              <tr><td class="mono">246</td><td class="truncate">Canal St Office MEMPH</td><td class="mono text-accent-red">2.8%</td><td class="mono text-accent-red">−4.1%</td><td><span class="badge badge-warning">Lease rollover</span></td></tr>
+              <tr><td class="mono">247</td><td class="truncate">Fairview Townhomes JACK</td><td class="mono text-accent-red">2.9%</td><td class="mono text-accent-red">−2.3%</td><td><span class="badge badge-neutral">Watch</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Asset-level drilldown table -->
+    <div class="dense-section mt-md">
+      <div class="section-header">
+        <span class="section-title">Full Asset Performance Drilldown — Sorted by ROIC Descending</span>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table" id="performanceTable">
+          <thead>
+            <tr>
+              <th scope="col">Rank</th>
+              <th scope="col">Asset ID</th>
+              <th scope="col">Property Name</th>
+              <th scope="col">Sector</th>
+              <th scope="col">ROIC</th>
+              <th scope="col">Cash-on-Cash</th>
+              <th scope="col">NOI Δ 12m</th>
+              <th scope="col">Val. Δ 12m</th>
+              <th scope="col">Cum. Return</th>
+              <th scope="col">Days since Acq</th>
+              <th scope="col">Strategy</th>
+            </tr>
+          </thead>
+          <tbody id="perfBody">
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-bar">
+        <div class="pagination-info" id="perfPageInfo">Showing 1–25 of 247 assets</div>
+        <div style="display:flex;align-items:center;gap:var(--spacing-md)">
+          <div class="page-size-control">
+            <label for="perfPageSize">Per page:</label>
+            <select class="page-size-select" id="perfPageSize">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="pagination-controls" id="perfPaginationControls">
+          

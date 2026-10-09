@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maya Chen · Candidate Deep-Dive · TalentPulse</title>
+  <style>
+    :root {
+      --ink: #14181f;
+      --slate: #3e4a57;
+      --muted: #6d7884;
+      --faint: #8b95a1;
+      --line: #e6e1d8;
+      --line-strong: #d4cfc4;
+      --paper: #f3efe8;
+      --card: #fffcf7;
+      --sidebar: #12171e;
+      --sidebar-2: #1a212b;
+      --teal: #0b6e6b;
+      --teal-bright: #1aa39a;
+      --teal-soft: #dff3f1;
+      --teal-ink: #084846;
+      --amber: #b86a0d;
+      --amber-soft: #f8ead3;
+      --coral: #c24b3a;
+      --coral-soft: #f8e4e0;
+      --green: #2a7a45;
+      --green-soft: #dcefe3;
+      --navy: #243044;
+      --shadow: 0 1px 2px rgba(20, 24, 31, 0.05), 0 8px 24px rgba(20, 24, 31, 0.04);
+      --radius: 14px;
+      --sans: "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--sans);
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.45;
+      letter-spacing: -0.01em;
+    }
+    button, input, select, textarea { font-family: inherit; font-size: inherit; }
+    button { cursor: pointer; }
+    a { color: var(--teal); }
+    .app {
+      display: grid;
+      grid-template-columns: 248px 1fr;
+      min-height: 100vh;
+    }
+    .sidebar {
+      background: linear-gradient(180deg, var(--sidebar) 0%, #0e1319 100%);
+      color: #c3ccd6;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 18px 12px 24px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #000;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 10px 18px;
+      color: #fff;
+      text-decoration: none;
+    }
+    .brand-mark {
+      width: 32px; height: 32px; flex: none;
+    }
+    .brand-name {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.03em;
+    }
+    .brand-name span { color: var(--teal-bright); }
+    .side-search {
+      margin: 0 8px 16px;
+      background: #0c1117;
+      border: 1px solid #2a3340;
+      border-radius: 8px;
+      color: #9aa6b2;
+      padding: 8px 10px;
+      width: calc(100% - 16px);
+    }
+    .nav-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #6b7682;
+      padding: 8px 12px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: #c3ccd6;
+      text-decoration: none;
+      border: 0;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item svg { flex: none; opacity: 0.85; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-item.active {
+      background: rgba(26, 163, 154, 0.14);
+      color: #7ee0d6;
+    }
+    .pipeline-mini {
+      margin: 6px 8px 14px;
+      background: #0c1117;
+      border: 1px solid #262f3b;
+      border-radius: 10px;
+      padding: 8px;
+    }
+    .pipe-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 7px;
+      color: #9aa6b2;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .pipe-link.active {
+      background: rgba(26,163,154,0.16);
+      color: #d7fffa;
+      font-weight: 600;
+    }
+    .pipe-count {
+      font-variant-numeric: tabular-nums;
+      font-size: 11px;
+      color: #7b8794;
+      background: #1b232e;
+      padding: 1px 7px;
+      border-radius: 99px;
+    }
+    .pipe-link.active .pipe-count { background: #0f4f4c; color: #9af0e8; }
+    .sidebar-foot {
+      margin-top: auto;
+      padding: 12px 8px 0;
+      border-top: 1px solid #262f3b;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-weight: 700; font-size: 12px; color: #fff;
+      flex: none;
+    }
+    .recruiter-meta { font-size: 12px; color: #8b95a1; }
+    .recruiter-meta strong { display: block; color: #e8eef4; font-size: 13px; }
+    .shell { min-width: 0; }
+    .topbar {
+      height: 56px;
+      background: rgba(255,252,247,0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .crumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .crumb a { color: var(--slate); text-decoration: none; }
+    .crumb a:hover { color: var(--teal); }
+    .crumb strong { color: var(--ink); font-weight: 650; }
+    .crumb-sep { opacity: 0.45; }
+    .top-actions { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+    .icon-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      display: grid; place-items: center;
+      color: var(--slate);
+    }
+    .icon-btn:hover { border-color: var(--teal-bright); color: var(--teal); }
+    main { padding: 0 0 48px; }
+    .hero {
+      padding: 22px 28px 8px;
+      background:
+        radial-gradient(900px 180px at 10% -40%, rgba(26,163,154,0.12), transparent 50%),
+        linear-gradient(#fffcf7, #fffcf7);
+      border-bottom: 1px solid var(--line);
+    }
+    .hero-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .identity { display: flex; gap: 16px; min-width: 0; }
+    .cand-avatar {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: linear-gradient(145deg, #0b6e6b, #1a2b4a);
+      color: #fff; display: grid; place-items: center;
+      font-weight: 700; font-size: 22px; letter-spacing: -0.04em;
+      box-shadow: 0 8px 18px rgba(11,110,107,0.25);
+      flex: none;
+    }
+    h1 {
+      font-size: 28px;
+      letter-spacing: -0.04em;
+      font-weight: 720;
+      line-height: 1.1;
+    }
+    .id-sub { color: var(--slate); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+    .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); display: inline-block; }
+    .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .pill {
+      font-size: 11px; font-weight: 650;
+      padding: 3px 8px; border-radius: 99px;
+      background: var(--teal-soft); color: var(--teal-ink);
+    }
+    .pill.warm { background: var(--amber-soft); color: #7a4a08; }
+    .pill.neutral { background: #ece8e0; color: var(--slate); }
+    .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn {
+      border-radius: 9px;
+      border: 1px solid transparent;
+      padding: 8px 12px;
+      font-weight: 650;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: 0.15s ease;
+    }
+    .btn-primary { background: var(--teal); color: #fff; }
+    .btn-primary:hover { background: #095956; }
+    .btn-secondary { background: var(--card); border-color: var(--line-strong); color: var(--ink); }
+    .btn-secondary:hover { border-color: var(--teal); color: var(--teal-ink); }
+    .btn-ghost { background: transparent; color: var(--slate); }
+    .btn-ghost:hover { background: #ece8e0; color: var(--ink); }
+    .cand-id { font-variant-numeric: tabular-nums; color: var(--faint); font-size: 12px; margin-top: 2px; }
+    .stepper {
+      margin: 22px 0 14px;
+      display: flex;
+      align-items: flex-start;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .step {
+      flex: 1;
+      min-width: 110px;
+      position: relative;
+      text-align: center;
+    }
+    .step-rail {
+      display: flex; align-items: center; justify-content: center;
+      position: relative; height: 22px; margin-bottom: 8px;
+    }
+    .step:not(:last-child) .step-rail::after {
+      content: "";
+      position: absolute;
+      left: calc(50% + 14px);
+      right: calc(-50% + 14px);
+      height: 2px;
+      background: var(--line-strong);
+      top: 50%;
+    }
+    .step.done:not(:last-child) .step-rail::after { background: var(--teal); }
+    .step.current:not(:last-child) .step-rail::after {
+      background: linear-gradient(90deg, var(--teal), var(--line-strong));
+    }
+    .node {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--line-strong);
+      position: relative; z-index: 1;
+    }
+    .step.done .node { background: var(--teal); border-color: var(--teal); }
+    .step.current .node {
+      background: #fff; border-color: var(--teal);
+      box-shadow: 0 0 0 4px var(--teal-soft);
+    }
+    .step.current .node::after {
+      content: "";
+      position: absolute; inset: 3px; border-radius: 50%; background: var(--teal);
+    }
+    .step-name { font-size: 11px; font-weight: 650; color: var(--muted); }
+    .step.current .step-name { color: var(--teal-ink); }
+    .step.done .step-name { color: var(--slate); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+      padding: 20px 28px 0;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 18px 18px;
+      min-width: 0;
+    }
+    .span-4 { grid-column: span 4; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+    .card-h {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .linkish {
+      background: none; border: 0; color: var(--teal); font-weight: 650; font-size: 12px; padding: 0;
+    }
+    .linkish:hover { text-decoration: underline; }
+    .kv { display: grid; gap: 12px; }
+    .kv-row { display: grid; grid-template-columns: 118px 1fr; gap: 8px; align-items: start; }
+    .k { color: var(--muted); font-size: 12px; padding-top: 1px; }
+    .v { font-weight: 600; color: var(--ink); }
+    .v a { color: var(--ink); text-decoration: none; }
+    .v a:hover { color: var(--teal); }
+    .meeting {
+      border-top: 3px solid var(--teal);
+      background:
+        linear-gradient(180deg, rgba(223,243,241,0.55), transparent 70px),
+        var(--card);
+    }
+    .when {
+      display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .when h2 { font-size: 20px; letter-spacing: -0.03em; }
+    .countdown {
+      background: var(--amber-soft); color: #7a4a08;
+      font-weight: 700; font-size: 12px;
+      padding: 4px 8px; border-radius: 99px; white-space: nowrap;
+    }
+    .meta-line { color: var(--slate); margin-top: 4px; }
+    .people { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 16px; }
+    .person { display: flex; gap: 10px; align-items: center; }
+    .person .avatar { width: 30px; height: 30px; font-size: 11px; }
+    .person .who { font-weight: 650; }
+    .person .role { color: var(--muted); font-size: 12px; }
+    .meeting-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .timeline { position: relative; display: grid; gap: 0; }
+    .act {
+      display: grid;
+      grid-template-columns: 18px 1fr auto;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      align-items: start;
+    }
+    .act:last-child { border-bottom: 0; }
+    .act-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      margin: 5px auto 0;
+      background: var(--teal);
+    }
+    .act-type {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--teal);
+    }
+    .act-detail { font-weight: 600; }
+    .act-extra { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .act-time { color: var(--faint); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .score { color: var(--green); font-weight: 700; }
+    .task {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .task:last-child { border-bottom: 0; }
+    .task.done .task-title { text-decoration: line-through; color: var(--muted); }
+    .task-title { font-weight: 650; }
+    .task-meta { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+    .pri {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+      text-transform: uppercase; padding: 2px 6px; border-radius: 4px;
+    }
+    .pri-high { background: var(--coral-soft); color: var(--coral); }
+    .pri-med { background: var(--amber-soft); color: var(--amber); }
+    .pri-low { background: #ece8e0; color: var(--slate); }
+    .due { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .due.soon { color: var(--coral); font-weight: 700; }
+    .job {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .job:last-child { border-bottom: 0; }
+    .job-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .job-title { font-weight: 700; letter-spacing: -0.02em; }
+    .match {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      font-size: 13px;
+      color: var(--teal-ink);
+      background: var(--teal-soft);
+      padding: 2px 8px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .job-meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .matchbar {
+      height: 4px; background: #ece8e0; border-radius: 99px; margin-top: 8px; overflow: hidden;
+    }
+    .matchbar > span { display: block; height: 100%; background: var(--teal-bright); border-radius: 99px; }
+    .auth-status {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .status-chip {
+      font-size: 12px; font-weight: 650;
+      padding: 4px 8px; border-radius: 8px;
+      background: var(--green-soft); color: var(--green);
+    }
+    .status-chip.warn { background: var(--amber-soft); color: #7a4a08; }
+    .mini-tl { display: grid; gap: 8px; margin-top: 4px; }
+    .mini-tl-item { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; }
+    .mini-node { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+    .mini-node.future { background: #d4cfc4; }
+    .mini-when { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .dropdown { position: relative; }
+    .menu {
+      display: none;
+      position: absolute;
+      right: 0; top: calc(100% + 6px);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(20,24,31,0.12);
+      min-width: 210px;
+      z-index: 15;
+      padding: 6px;
+    }
+    .menu.open { display: block; }
+    .menu button {
+      width: 100%; text-align: left; background: none; border: 0;
+      padding: 8px 10px; border-radius: 7px; color: var(--ink);
+    }
+    .menu button:hover { background: var(--teal-soft); }
+    dialog {
+      border: 0;
+      border-radius: 16px;
+      padding: 0;
+      width: min(640px, calc(100% - 32px));
+      box-shadow: 0 24px 64px rgba(20,24,31,0.28);
+    }
+    dialog::backdrop { background: rgba(18, 23, 30, 0.55); }
+    .dlg { padding: 20px 22px 22px; }
+    .dlg h3 { font-size: 18px; letter-spacing: -0.03em; margin-bottom: 6px; }
+    .dlg p.help { color: var(--muted); margin-bottom: 16px; }
+    .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    label.field { display: grid; gap: 6px; font-size: 12px; font-weight: 650; color: var(--slate); margin-bottom: 12px; }
+    input[type="text"], input[type="email"], input[type="datetime-local"], select, textarea {
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 500;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .share-box {
+      display: flex; gap: 8px;
+      background: #f3efe8; border-radius: 8px; padding: 8px;
+      margin-bottom: 12px;
+    }
+    .share-box input { flex: 1; background: #fff; }
+    .toast {
+      position: fixed; bottom: 22px; right: 22px;
+      background: var(--ink); color: #fff;
+      padding: 12px 16px; border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      opacity: 0; transform: translateY(8px);
+      pointer-events: none; transition: 0.2s ease; z-index: 50;
+      font-weight: 650;
+    }
+    .toast.show { opacity: 1; transform: none; }
+    .hist-item, .job-full {
+      padding: 12px 0; border-bottom: 1px solid var(--line);
+    }
+    .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .chip {
+      border: 1px solid var(--line-strong); background: #fff;
+      border-radius: 99px; padding: 4px 10px; font-size: 12px; font-weight: 650; color: var(--slate);
+    }
+    .chip.on { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .check {
+      appearance: none; width: 16px; height: 16px; border: 1.5px solid var(--line-strong);
+      border-radius: 4px; margin-top: 2px; background: #fff; display: grid; place-items: center;
+    }
+    .check:checked { background: var(--teal); border-color: var(--teal); }
+    .check:checked::after { content: ""; width: 8px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(0, -1px); }
+    .src { display: inline-flex; align-items: center; gap: 6px; }
+    @media (max-width: 1180px) {
+      .span-4, .span-8 { grid-column: span 12; }
+      .kv-row { grid-template-columns: 100px 1fr; }
+    }
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .hero-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Primary">
+      <a class="brand" href="#top">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#1aa39a"/>
+          <path d="M5 16.5h5.2l1.8-5.2 3.4 10.4 2.4-5.2H27" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="brand-name">Talent<span>Pulse</span></div>
+      </a>
+      <input class="side-search" type="search" placeholder="Search people or jobs" aria-label="Search">
+      <div class="nav-label">Workspace</div>
+      <a class="nav-item" href="#overview">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" href="#jobs">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 5h12v9H2z"/><path d="M5 5V3.5A1.5 1.5 0 0 1 6.5 2h3A1.5 1.5 0 0 1 11 3.5V5"/></svg>
+        Jobs
+      </a>
+      <a class="nav-item active" href="#candidates" aria-current="page">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="5" r="2.4"/><path d="M3 13.5c.6-2.6 2.4-4 5-4s4.4 1.4 5 4"/></svg>
+        Candidates
+      </a>
+      <div class="pipeline-mini" aria-label="Candidate pipeline">
+        <a class="pipe-link" href="#all">All candidates <span class="pipe-count">248</span></a>
+        <a class="pipe-link" href="#new">New <span class="pipe-count">19</span></a>
+        <a class="pipe-link" href="#screen">Screening <span class="pipe-count">34</span></a>
+        <a class="pipe-link active" href="#interviewing">Interviewing <span class="pipe-count">27</span></a>
+        <a class="pipe-link" href="#offer">Offer <span class="pipe-count">6</span></a>
+        <a class="pipe-link" href="#hired">Hired <span class="pipe-count">41</span></a>
+      </div>
+      <a class="nav-item" href="#interviews">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 2v2M10 2v2"/></svg>
+        Interviews
+      </a>
+      <a class="nav-item" href="#analytics">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 13V8M6 13V3M10 13V6M14 13V9"/></svg>
+        Analytics
+      </a>
+      <a class="nav-item" href="#settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="8" r="2"/><path d="M8 2.5v1.5M8 12v1.5M2.5 8H4M12 8h1.5M4 4l1 1M11 11l1 1M12 4l-1 1M5 11l-1 1"/></svg>
+        Settings
+      </a>
+      <div class="sidebar-foot">
+        <div class="avatar" style="background:#3e4a57">AR</div>
+        <div class="recruiter-meta">
+          <strong>Alex Rivera</strong>
+          Tech Recruiter
+        </div>
+      </div>
+    </aside>
+
+    <div class="shell">
+      <header class="topbar">
+        <nav class="crumb" aria-label="Breadcrumb">
+          <a href="#candidates">Candidates</a>
+          <span class="crumb-sep">/</span>
+          <a href="#interviewing">Interviewing</a>
+          <span class="crumb-sep">/</span>
+          <strong>Maya Chen</strong>
+        </nav>
+        <div class="top-actions">
+          <span>Last synced 2 min ago</span>
+          <button class="icon-btn" type="button" aria-label="Notifications" id="notifyBtn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12h8l-1-2V7a3 3 0 0 0-6 0v3z"/><path d="M7 13.5a1.5 1.5 0 0 0 2 0"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero">
+          <div class="hero-row">
+            <div class="identity">
+              <div class="cand-avatar" aria-hidden="true">MC</div>
+              <div>
+                <div class="cand-id">TP-C-18429 · Active candidate</div>
+                <h1>Maya Chen</h1>
+                <div class="id-sub">
+                  <span>Staff / Senior Backend</span>
+                  <span class="dot"></span>
+                  <span>San Francisco, CA</span>
+                  <span class="dot"></span>
+                  <span>Interviewing · Technical</span>
+                </div>
+                <div class="pills">
+                  <span class="pill">Hot prospect</span>
+                  <span class="pill warm">Pulse 86</span>
+                  <span class="pill neutral">Python</span>
+                  <span class="pill neutral">Distributed systems</span>
+                  <span class="pill neutral">Kubernetes</span>
+                  <span class="pill neutral">Go</span>
+                </div>
+              </div>
+            </div>
+            <div class="hero-actions">
+              <button class="btn btn-secondary" type="button" id="shareBtn">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="4" cy="7" r="2"/><circle cx="11" cy="4" r="2"/><circle cx="11" cy="10" r="2"/><path d="M6 6.2 9.2 4.8M6 7.8l3.2 1.4"/></svg>
+                Share profile
+              </button>
+            </div>
+          </div>
+
+          <ol class="stepper" aria-label="Pipeline stage progress">
+            <li class="step done">
+              <div class="step-rail"><span class="node"></span></div>
+              <div class="step-name">Applied</div>
+            </li>
+            <li class="step done">
+              <div class="step-rail"><span class="node"></span></div>
+              <div class="step-name">Recruiter screen</div>
+            </li>
+            <li class="step done">
+              <div class="step-rail"><span class="node"></span></div>
+              <div class="step-name">Hiring manager</div>
+            </li>
+            <li class="step current" aria-current="step">
+              <div class="step-rail"><span class="node"></span></div>
+              <div class="step-name">Technical interview</div>
+            </li>
+            <li class="step">
+              <div class="step-rail"><span class="node"></span></div>
+              <div class="step-name">Onsite loop</div>
+            </li>
+            <li class="step">
+              <div class="step-rail"><span class="node"></span></div>
+              <div class="step-name">Offer</div>
+            </li>
+          </ol>
+        </section>
+
+        <div class="grid">
+          <section class="card span-4" aria-labelledby="basic-h">
+            <div class="card-h"><h2 class="card-title" id="basic-h">Candidate information</h2></div>
+            <div class="kv">
+              <div class="kv-row"><div class="k">Name</div><div class="v">Maya Chen</div></div>
+              <div class="kv-row"><div class="k">Phone</div><div class="v"><a href="tel:+14155550198">+1 (415) 555-0198</a></div></div>
+              <div class="kv-row"><div class="k">Email</div><div class="v"><a href="mailto:maya.chen@pm.me">maya.chen@pm.me</a></div></div>
+              <div class="kv-row">
+                <div class="k">Source</div>
+                <div class="v"><span class="src">LinkedIn Recruiter · sourced by Alex Rivera</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card span-4" aria-labelledby="looking-h">
+            <div class="card-h"><h2 class="card-title" id="looking-h">What they are looking for</h2></div>
+            <div class="kv">
+              <div class="kv-row"><div class="k">Target role</div><div class="v">Staff Backend Engineer, Platform / Infrastructure</div></div>
+              <div class="kv-row"><div class="k">Target salary</div><div class="v">$220,000 – $250,000 base + equity</div></div>
+              <div class="kv-row"><div class="k">Availability</div><div class="v">3-week notice · available 6 Apr 2026</div></div>
+              <div class="kv-row"><div class="k">Work model</div><div class="v">Hybrid (Bay Area) or remote US</div></div>
+            </div>
+          </section>
+
+          <section class="card span-4" aria-labelledby="auth-h">
+            <div class="card-h"><h2 class="card-title" id="auth-h">Work authorization &amp; clearance</h2></div>
+            <div class="auth-status">
+              <span class="status-chip">H-1B transferable</span>
+              <span class="status-chip">BG check clear</span>
+              <span class="status-chip warn">No active clearance</span>
+            </div>
+            <div class="kv">
+              <div class="kv-row"><div class="k">Authorization</div><div class="v">H-1B · employer-sponsored transfer</div></div>
+              <div class="kv-row"><div class="k">Background</div><div class="v">Completed — Clear (22 Jan 2026)</div></div>
+              <div class="kv-row"><div class="k">Clearance</div><div class="v">None active · eligible for Public Trust</div></div>
+            </div>
+            <div class="card-title" style="margin:14px 0 8px">Status timeline</div>
+            <div class="mini-tl">
+              <div class="mini-tl-item"><span class="mini-node"></span><span>H-1B current term started</span><span class="mini-when">15 Aug 2024</span></div>
+              <div class="mini-tl-item"><span class="mini-node"></span><span>Background check cleared</span><span class="mini-when">22 Jan 2026</span></div>
+              <div class="mini-tl-item"><span class="mini-node"></span><span>Next interview</span><span class="mini-when">12 Mar 2026</span></div>
+              <div class="mini-tl-item"><span class="mini-node future"></span><span>Visa expiration</span><span class="mini-when">14 Aug 2027</span></div>
+            </div>
+          </section>
+
+          <section class="card span-8 meeting" aria-labelledby="next-h">
+            <div class="card-h"><h2 class="card-title" id="next-h">Next meeting</h2></div>
+            <div class="when">
+              <div>
+                <h2>Thu 12 Mar 2026 · 2:00–3:30 PM PT</h2>
+                <div class="meta-line">System Design interview · Virtual (Zoom) · 90 minutes</div>
+              </div>
+              <span class="countdown">In 4 days</span>
+            </div>
+            <div class="people">
+              <div class="person">
+                <div class="avatar" style="background:#0b6e6b">PN</div>
+                <div><div class="who">Priya Nair</div><div class="role">Staff Engineer · interviewer</div></div>
+              </div>
+              <div class="person">
+                <div class="avatar" style="background:#243044">JH</div>
+                <div><div class="who">Jordan Hale</div><div class="role">Engineering Manager · interviewer</div></div>
+              </div>
+              <div class="person">
+                <div class="avatar" style="background:#b86a0d">SO</div>
+                <div><div class="who">Sam Okonkwo</div><div class="role">Principal Engineer · interviewer</div></div>
+              </div>
+            </div>
+            <div class="meeting-actions">
+              <button class="btn btn-primary" type="button" id="calBtn">Get calendar invite link</button>
+              <button class="btn btn-secondary" type="button" id="rescheduleBtn">Reschedule next interview</button>
+            </div>
+          </section>
+
+          <section class="card span-4" aria-labelledby="tasks-h">
+            <div class="card-h"><h2 class="card-title" id="tasks-h">Open tasks</h2><span class="pill neutral">4 open</span></div>
+            <div id="taskList">
+              <label class="task">
+                <input class="check" type="checkbox">
+                <div>
+                  <div class="task-title">Send system-design briefing and architecture primer</div>
+                  <div class="task-meta"><span class="pri pri-high">High</span><span class="due soon">Due 10 Mar 2026</span></div>
+                </div>
+              </label>
+              <label class="task">
+                <input class="check" type="checkbox">
+                <div>
+                  <div class="task-title">Align compensation band with Jordan Hale</div>
+                  <div class="task-meta"><span class="pri pri-med">Medium</span><span class="due">Due 11 Mar 2026</span></div>
+                </div>
+              </label>
+              <label class="task">
+                <input class="check" type="checkbox">
+                <div>
+                  <div class="task-title">Confirm Zoom room and recording consent</div>
+                  <div class="task-meta"><span class="pri pri-med">Medium</span><span class="due">Due 12 Mar 2026, 12:00 PM</span></div>
+                </div>
+              </label>
+              <label class="task">
+                <input class="check" type="checkbox">
+                <div>
+                  <div class="task-title">Request two professional references</div>
+                  <div class="task-meta"><span class="pri pri-low">Low</span><span class="due">Due 18 Mar 2026</span></div>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section class="card span-8" aria-labelledby="act-h">
+            <div class="card-h">
+              <h2 class="card-title" id="act-h">Activities</h2>
+              <div style="display:flex;gap:12px;align-items:center">
+                <button class="linkish" type="button" id="fullHistBtn">View full history</button>
+                <div class="dropdown">
+                  <button class="btn btn-secondary" type="button" id="addActBtn">Add action</button>
+                  <div class="menu" id="addMenu" role="menu">
+                    <button type="button" data-act="Call">Log call</button>
+                    <button type="button" data-act="Email">Log email</button>
+                    <button type="button" data-act="Scorecard">Add scorecard</button>
+                    <button type="button" data-act="Assessment">Add assessment result</button>
+                    <button type="button" data-act="Note">Add note</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="timeline">
+              <article class="act">
+                <span class="act-dot"></span>
+                <div>
+                  <div class="act-type">Scorecard</div>
+                  <div class="act-detail">Technical phone screen · overall <span class="score">4.2 / 5 · Hire</span></div>
+                  <div class="act-extra">Priya Nair · strong system thinking, Go + Python depth</div>
+                </div>
+                <time class="act-time" datetime="2026-03-05T16:12">5 Mar, 4:12 PM</time>
+              </article>
+              <article class="act">
+                <span class="act-dot" style="background:#243044"></span>
+                <div>
+                  <div class="act-type" style="color:#243044">Email</div>
+                  <div class="act-detail">Interview confirmation and briefing sent to loop</div>
+                  <div class="act-extra">To Priya Nair, Jordan Hale, Sam Okonkwo</div>
+                </div>
+                <time class="act-time" datetime="2026-03-04T11:06">4 Mar, 11:06 AM</time>
+              </article>
+              <article class="act">
+                <span class="act-dot" style="background:#b86a0d"></span>
+                <div>
+                  <div class="act-type" style="color:#b86a0d">Assessment</div>
+                  <div class="act-detail">Codility backend take-home · 91st percentile</div>
+                  <div class="act-extra">Completed in 68 min · no integrity flags</div>
+                </div>
+                <time class="act-time" datetime="2026-03-03T14:40">3 Mar, 2:40 PM</time>
+              </article>
+              <article class="act">
+                <span class="act-dot" style="background:#0b6e6b"></span>
+                <div>
+                  <div class="act-type">Call</div>
+                  <div class="act-detail">Recruiter screen with Alex Rivera · 32 minutes</div>
+                  <div class="act-extra">Motivation: platform ownership, fewer layers of process</div>
+                </div>
+                <time class="act-time" datetime="2026-02-26T10:15">26 Feb, 10:15 AM</time>
+              </article>
+              <article class="act">
+                <span class="act-dot" style="background:#6d7884"></span>
+                <div>
+                  <div class="act-type" style="color:#6d7884">Email</div>
+                  <div class="act-detail">Candidate follow-up after LinkedIn outreach</div>
+                  <div class="act-extra">Inbound reply · interested in Staff Platform track</div>
+                </div>
+                <time class="act-time" datetime="2026-02-24T09:02">24 Feb, 9:02 AM</time>
+              </article>
+            </div>
+          </section>
+
+          <section class="card span-4" aria-labelledby="jobs-h">
+            <div class="card-h">
+              <h2 class="card-title" id="jobs-h">Matched job requisitions</h2>
+              <button class="linkish" type="button" id="allJobsBtn">View all 8</button>
+            </div>
+            <article class="job">
+              <div class="job-top">
+                <div class="job-title">Staff Backend Engineer, Platform</div>
+                <span class="match">94%</span>
+              </div>
+              <div class="job-meta">Infrastructure · San Francisco / Remote · $200k–$240k</div>
+              <div class="matchbar" aria-hidden="true"><span style="width:94%"></span></div>
+            </article>
+            <article class="job">
+              <div class="job-top">
+                <div class="job-title">Senior Backend Engineer, Payments</div>
+                <span class="match">87%</span>
+              </div>
+              <div class="job-meta">FinTech · New York hybrid · $185k–$220k</div>
+              <div class="matchbar" aria-hidden="true"><span style="width:87%"></span></div>
+            </article>
+            <article class="job">
+              <div class="job-top">
+                <div class="job-title">Principal Engineer, API Platform</div>
+                <span class="match">81%</span>
+              </div>
+              <div class="job-meta">Core Product · Austin / Remote · $230k–$275k</div>
+              <div class="matchbar" aria-hidden="true"><span style="width:81%"></span></div>
+            </article>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="shareDlg" aria-labelledby="shareTitle">
+    <form class="dlg" method="dialog">
+      <h3 id="shareTitle">Share profile</h3>
+      <p class="help">Send Maya Chen’s deep-dive to a hiring partner. View-only by default.</p>
+      <div class="share-box">
+        <input id="shareLink" type="text" readonly value="https://talentpulse.internal/candidates/TP-C-18429">
+        <button class="btn btn-secondary" type="button" id="copyLinkBtn">Copy link</button>
+      </div>
+      <label class="field">Email colleague
+        <input id="shareEmail" type="email" placeholder="name@company.com">
+      </label>
+      <label class="field">Access
+        <select id="shareAccess">
+          <option>View only</option>
+          <option>Comment</option>
+          <option>Full recruiter access</option>
+        </select>
+      </label>
+      <div class="dlg-actions">
+        <button class="btn btn-ghost" value="cancel" type="submit">Cancel</button>
+        <button class="btn btn-primary" id="sendShareBtn" type="button">Send</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="reschedDlg" aria-labelledby="reschedTitle">
+    <form class="dlg" method="dialog">
+      <h3 id="reschedTitle">Reschedule next interview</h3>
+      <p class="help">System Design with Priya Nair, Jordan Hale, and Sam Okonkwo.</p>
+      <label class="field">New date and time
+        <input id="newWhen" type="datetime-local" value="2026-03-12T14:00">
+      </label>
+      <label class="field">Reason (shared with interviewers)
+        <textarea id="reschedReason" placeholder="Candidate conflict, interviewer travel, etc."></textarea>
+      </label>
+      <div class="dlg-actions">
+        <button class="btn btn-ghost" value="cancel" type="submit">Cancel</button>
+        <button class="btn btn-primary" id="confirmResched" type="button">Send new holds</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="histDlg" aria-labelledby="histTitle">
+    <div class="dlg">
+      <h3 id="histTitle">Full activity history</h3>
+      <p class="help">Calls, scorecards, email, and assessments for Maya Chen.</p>
+      <div class="filters" id="histFilters">
+        <button class="chip on" type="button" data-f="All">All</button>
+        <button class="chip" type="button" data-f="Call">Calls</button>
+        <button class="chip" type="button" data-f="Scorecard">Scorecards</button>
+        <button class="chip" type="button" data-f="Email">Emails</button>
+        <button class="chip" type="button" data-f="Assessment">Assessments</button>
+      </div>
+      <div id="histList"></div>
+      <div class="dlg-actions">
+        <button class="btn btn-secondary" type="button" id="closeHist">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="jobsDlg" aria-labelledby="jobsTitle">
+    <div class="dlg">
+      <h3 id="jobsTitle">All matched requisitions</h3>
+      <p class="help">Skill match vs. open roles Maya is eligible for.</p>
+      <div id="jobsList"></div>
+      <div class="dlg-actions">
+        <button class="btn btn-secondary" type="button" id="closeJobs">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="addDlg" aria-labelledby="addTitle">
+    <form class="dlg" method="dialog">
+      <h3 id="addTitle">Add action</h3>
+      <p class="help">Log a new activity on this candidate.</p>
+      <label class="field">Type
+        <select id="actType">
+          <option>Call</option>
+          <option>Email</option>
+          <option>Scorecard</option>
+          <option>Assessment</option>
+          <option>Note</option>
+        </select>
+      </label>
+      <label class="field">Details
+        <textarea id="actDetails" placeholder="What happened?"></textarea>
+      </label>
+      <label class="field">Date and time
+        <input id="actWhen" type="datetime-local" value="2026-03-08T09:30">
+      </label>
+      <div class="dlg-actions">
+        <button class="btn btn-ghost" value="cancel" type="submit">Cancel</button>
+        <button class="btn btn-primary" id="saveAct" type="button">Save activity</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      var toastEl = document.getElementById("toast");
+      var toastTimer;
+      function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2600);
+      }
+
+      function openDlg(id) { document.getElementById(id).showModal(); }
+      function closeDlg(id) { document.getElementById(id).close(); }
+
+      document.getElementById("shareBtn").addEventListener("click", function () { openDlg("shareDlg"); });
+      document.getElementById("rescheduleBtn").addEventListener("click", function () { openDlg("reschedDlg"); });
+      document.getElementById("copyLinkBtn").addEventListener("click", function () {
+        var val = document.getElementById("shareLink").value;
+        if (navigator.clipboard) navigator.clipboard.writeText(val);
+        toast("Profile link copied");
+      });
+      document.getElementById("sendShareBtn").addEventListener("click", function () {
+        var email = document.getElementById("shareEmail").value.trim();
+        if (!email) { toast("Enter a colleague email"); return; }
+        closeDlg("shareDlg");
+        toast("Profile shared with " + email);
+      });
+      document.getElementById("confirmResched").addEventListener("click", function () {
+        var when = document.getElementById("newWhen").value;
+        closeDlg("reschedDlg");
+        toast("Interview holds updated for " + when.replace("T", " "));
+      });
+
+      document.getElementById("calBtn").addEventListener("click", function () {
+        var link = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Maya%20Chen%20%C2%B7%20System%20Design&dates=20260312T210000Z/20260312T223000Z&details=TalentPulse%20interview%20%C2%B7%20Zoom&location=Zoom";
+        if (navigator.clipboard) navigator.clipboard.writeText(link);
+        toast("Calendar invite link copied");
+      });
+
+      document.getElementById("notifyBtn").addEventListener("click", function () {
+        toast("No new alerts for this candidate");
+      });
+
+      document.querySelectorAll("#taskList .check").forEach(function (box) {
+        box.addEventListener("change", function () {
+          box.closest(".task").classList.toggle("done", box.checked);
+          toast(box.checked ? "Task completed" : "Task reopened");
+        });
+      });
+
+      var addBtn = document.getElementById("addActBtn");
+      var addMenu = document.getElementById("addMenu");
+      addBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        addMenu.classList.toggle("open");
+      });
+      document.addEventListener("click", function () { addMenu.classList.remove("open"); });
+      addMenu.querySelectorAll("button").forEach(function (b) {
+        b.addEventListener("click", function () {
+          document.getElementById("actType").value = b.getAttribute("data-act");
+          document.getElementById("addTitle").textContent = "Add " + b.getAttribute("data-act").toLowerCase();
+          addMenu.classList.remove("open");
+          openDlg("addDlg");
+        });
+      });
+      document.getElementById("saveAct").addEventListener("click", function () {
+        var details = document.getElementById("actDetails").value.trim();
+        if (!details) { toast("Add activity details"); return; }
+        closeDlg("addDlg");
+        document.getElementById("actDetails").value = "";
+        toast(document.getElementById("actType").value + " logged");
+      });
+
+      var history = [
+        { t: "Scorecard", d: "Technical phone screen · 4.2 / 5 Hire", extra: "Priya Nair", when: "5 Mar 2026, 4:12 PM" },
+        { t: "Email", d: "Interview confirmation sent to loop", extra: "3 recipients", when: "4 Mar 2026, 11:06 AM" },
+        { t: "Assessment", d: "Codility backend · 91st percentile", extra: "68 minutes", when: "3 Mar 2026, 2:40 PM" },
+        { t: "Note", d: "Comp discussion: 220–250k base is in band for Staff", extra: "Alex Rivera", when: "27 Feb 2026, 4:50 PM" },
+        { t: "Call", d: "Recruiter screen · 32 minutes", extra: "Alex Rivera", when: "26 Feb 2026, 10:15 AM" },
+        { t: "Email", d: "Candidate follow-up after LinkedIn outreach", extra: "Inbound", when: "24 Feb 2026, 9:02 AM" },
+        { t: "Scorecard", d: "Hiring manager screen · 4.0 / 5 Hire", extra: "Jordan Hale", when: "20 Feb 2026, 3:05 PM" },
+        { t: "Call", d: "HM screen debrief", extra: "Jordan Hale, Alex Rivera", when: "20 Feb 2026, 4:00 PM" },
+        { t: "Email", d: "Intro thread from LinkedIn InMail", extra: "Alex Rivera", when: "18 Feb 2026, 8:41 AM" },
+        { t: "Note", d: "Sourced from Staff Backend Boolean on LinkedIn Recruiter", extra: "Alex Rivera", when: "17 Feb 2026, 2:11 PM" }
+      ];
+      var histFilter = "All";
+      function renderHist() {
+        var list = document.getElementById("histList");
+        list.innerHTML = history.filter(function (x) { return histFilter === "All" || x.t === histFilter; }).map(function (x) {
+          return '<article class="hist-item"><div class="act-type">' + x.t + '</div><div class="act-detail">' + x.d + '</div><div class="act-extra">' + x.extra + ' · ' + x.when + '</div></article>';
+        }).join("") || '<p class="help">No activities in this filter.</p>';
+      }
+      document.getElementById("fullHistBtn").addEventListener("click", function () {
+        histFilter = "All";
+        document.querySelectorAll("#histFilters .chip").forEach(function (c) {
+          c.classList.toggle("on", c.getAttribute("data-f") === "All");
+        });
+        renderHist();
+        openDlg("histDlg");
+      });
+      document.getElementById("histFilters").addEventListener("click", function (e) {
+        var b = e.target.closest(".chip");
+        if (!b) return;
+        histFilter = b.getAttribute("data-f");
+        document.querySelectorAll("#histFilters .chip").forEach(function (c) { c.classList.toggle("on", c === b); });
+        renderHist();
+      });
+      document.getElementById("closeHist").addEventListener("click", function () { closeDlg("histDlg"); });
+
+      var jobs = [
+        ["Staff Backend Engineer, Platform", "Infrastructure · San Francisco / Remote · $200k–$240k", 94],
+        ["Senior Backend Engineer, Payments", "FinTech · New York hybrid · $185k–$220k", 87],
+        ["Principal Engineer, API Platform", "Core Product · Austin / Remote · $230k–$275k", 81],
+        ["Staff Engineer, Developer Experience", "Platform · Remote US · $210k–$250k", 79],
+        ["Senior Backend Engineer, Data Infra", "Data · Seattle hybrid · $190k–$230k", 76],
+        ["Staff SRE, Compute", "Infrastructure · San Francisco · $205k–$245k", 72],
+        ["Backend Tech Lead, Identity", "Security · Remote US · $195k–$235k", 68],
+        ["Senior Software Engineer, Growth Platform", "Product · Chicago hybrid · $170k–$205k", 61]
+      ];
+      document.getElementById("allJobsBtn").addEventListener("click", function () {
+        document.getElementById("jobsList").innerHTML = jobs.map(function (j) {
+          return '<article class="job-full"><div class="job-top"><div class="job-title">' + j[0] + '</div><span class="match">' + j[2] + '%</span></div><div class="job-meta">' + j[1] + '</div><div class="matchbar"><span style="width:' + j[2] + '%"></span></div></article>';
+        }).join("");
+        openDlg("jobsDlg");
+      });
+      document.getElementById("closeJobs").addEventListener("click", function () { closeDlg("jobsDlg"); });
+
+      document.querySelectorAll("dialog").forEach(function (d) {
+        d.addEventListener("click", function (e) { if (e.target === d) d.close(); });
+      });
+    })();
+  </script>
+</body>
+</html>

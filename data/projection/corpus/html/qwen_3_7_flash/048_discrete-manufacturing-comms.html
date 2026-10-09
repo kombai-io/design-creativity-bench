@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CableTrack Pro — Route Provenance Audit</title>
+<style>
+:root {
+  --clr-bg-primary: #f5f0eb;
+  --clr-bg-secondary: #ebe4dc;
+  --clr-bg-tertiary: #e3dbd1;
+  --clr-bg-card: #faf7f4;
+  --clr-bg-input: #ffffff;
+  --clr-bg-hover: #f0eadf;
+  --clr-bg-accent: #a0522d;
+  --clr-bg-lock-overlay: rgba(80, 40, 20, 0.82);
+  --clr-border-primary: #c4b5a4;
+  --clr-border-input: #b8a996;
+  --clr-border-focus: #8b4513;
+  --clr-border-section: #d6cdc2;
+  --clr-text-primary: #3e2723;
+  --clr-text-secondary: #5d4037;
+  --clr-text-muted: #795548;
+  --clr-text-on-accent: #fdf6ec;
+  --clr-text-danger: #b71c1c;
+  --clr-text-success: #2e7d32;
+  --clr-accent-primary: #a0522d;
+  --clr-accent-hover: #8b4513;
+  --clr-accent-light: #d4a07a;
+  --clr-highlight: #ffe0b2;
+  --clr-lock-icon: #ffd54f;
+  --shadow-sm: 0 1px 2px rgba(62, 39, 35, 0.08);
+  --shadow-md: 0 2px 8px rgba(62, 39, 35, 0.12);
+  --shadow-lg: 0 4px 16px rgba(62, 39, 35, 0.18);
+  --radius-sm: var(--space-xxs);
+  --radius-md: var(--space-xs);
+  --radius-lg: var(--space-sm);
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+  --font-size-caption: 10px;
+  --font-size-small: 11px;
+  --font-size-base: 13px;
+  --font-size-subheading: 14px;
+  --font-size-heading: 16px;
+  --font-size-title: 20px;
+  --font-size-page-title: 24px;
+  --transition-fast: 100ms ease;
+  --z-base: 1;
+  --z-overlay: 100;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  color: var(--clr-text-primary);
+  background: var(--clr-bg-primary);
+  height: 100vh;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+/* ===== HEADER BAR ===== */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-base);
+  background: var(--clr-text-primary);
+  color: var(--clr-text-on-accent);
+  height: calc(var(--space-xxl) + var(--space-xs));
+  flex-shrink: 0;
+}
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.app-header__logo svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--clr-accent-light);
+}
+.app-header__title {
+  font-size: var(--font-size-title);
+  font-weight: 700;
+  letter-spacing: var(--space-xxs);
+}
+.app-header__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-base);
+  font-size: var(--font-size-small);
+  color: var(--clr-accent-light);
+}
+.app-header__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--clr-accent-primary);
+  padding: var(--space-xxs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: var(--font-size-caption);
+}
+.app-header__status-dot {
+  width: 6px;
+  height: 6px;
+  background: #ff8a65;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ===== THREE-PANE LAYOUT ===== */
+.app-layout {
+  display: grid;
+  grid-template-columns: 220px 300px 1fr;
+  height: calc(100vh - var(--space-xxl));
+}
+
+/* ===== NAV PANE ===== */
+.nav-pane {
+  background: var(--clr-bg-secondary);
+  border-right: var(--space-xxs) solid var(--clr-border-section);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.nav-pane__section {
+  padding: var(--space-sm) var(--space-sm);
+}
+.nav-pane__label {
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--space-xxs);
+  color: var(--clr-text-muted);
+  font-weight: 700;
+  padding: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-xxs);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-subheading);
+  color: var(--clr-text-secondary);
+  transition: background var(--transition-fast);
+  user-select: none;
+}
+.nav-item:hover { background: var(--clr-bg-hover); }
+.nav-item--active {
+  background: var(--clr-accent-primary);
+  color: var(--clr-text-on-accent);
+  font-weight: 600;
+}
+.nav-item__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: currentColor;
+  opacity: 0.7;
+}
+.nav-item--active .nav-item__icon { opacity: 1; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--clr-accent-light);
+  color: var(--clr-text-primary);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.nav-divider {
+  height: 1px;
+  background: var(--clr-border-section);
+  margin: var(--space-sm) var(--space-sm);
+}
+
+/* ===== LIST PANE ===== */
+.list-pane {
+  background: var(--clr-bg-tertiary);
+  border-right: var(--space-xxs) solid var(--clr-border-section);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.list-pane__header {
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--clr-border-section);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.list-pane__title {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+}
+.list-pane__count {
+  font-size: var(--font-size-caption);
+  color: var(--clr-text-muted);
+  background: var(--clr-bg-secondary);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.list-pane__search {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--clr-border-section);
+  flex-shrink: 0;
+}
+.list-pane__search input {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--clr-border-input);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-small);
+  background: var(--clr-bg-input);
+  outline: none;
+  font-family: var(--font-body);
+}
+.list-pane__search input:focus {
+  border-color: var(--clr-border-focus);
+}
+.route-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-xs);
+}
+.route-list-item {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-section);
+  border-radius: var(--radius-md);
+  cursor: grab;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  position: relative;
+}
+.route-list-item:hover {
+  border-color: var(--clr-accent-primary);
+  box-shadow: var(--shadow-sm);
+}
+.route-list-item--selected {
+  border-color: var(--clr-accent-primary);
+  box-shadow: var(--shadow-md);
+  background: var(--clr-highlight);
+}
+.route-list-item--dragging {
+  opacity: 0.5;
+  box-shadow: var(--shadow-lg);
+}
+.drag-handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: grab;
+  padding: var(--space-sm) var(--space-xs);
+  color: var(--clr-text-muted);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+.route-list-item:hover .drag-handle { opacity: 1; }
+.drag-handle-line {
+  width: 12px;
+  height: 2px;
+  background: var(--clr-text-muted);
+  border-radius: 1px;
+}
+.route-info {
+  flex: 1;
+  min-width: 0;
+}
+.route-info__name {
+  font-weight: 600;
+  font-size: var(--font-size-subheading);
+  color: var(--clr-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.route-info__subtitle {
+  font-size: var(--font-size-caption);
+  color: var(--clr-text-muted);
+  margin-top: var(--space-xxs);
+}
+.route-info__tags {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  flex-wrap: wrap;
+}
+.route-tag {
+  font-size: var(--font-size-caption);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+.route-tag--type { background: #e3f2fd; color: #1565c0; }
+.route-tag--priority-high { background: #fce4ec; color: #c62828; }
+.route-tag--priority-med { background: #fff3e0; color: #e65100; }
+.route-tag--encrypted { background: #e8f5e9; color: #2e7d32; }
+.route-tag--locked { background: var(--clr-bg-tertiary); color: var(--clr-text-muted); border: 1px dashed var(--clr-border-primary); }
+.route-status-badge {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  align-self: center;
+  margin-top: 2px;
+}
+.route-status-badge--green { background: var(--clr-text-success); }
+.route-status-badge--amber { background: #f9a825; }
+.route-status-badge--red { background: var(--clr-text-danger); }
+
+/* ===== DETAIL PANE ===== */
+.detail-pane {
+  background: var(--clr-bg-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.detail-pane__header {
+  padding: var(--space-base);
+  border-bottom: 1px solid var(--clr-border-section);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: var(--clr-bg-card);
+}
+.detail-pane__breadcrumb {
+  font-size: var(--font-size-small);
+  color: var(--clr-text-muted);
+}
+.detail-pane__breadcrumb span { color: var(--clr-text-primary); font-weight: 600; }
+.detail-pane__actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+.btn {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--clr-border-input);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.btn--primary {
+  background: var(--clr-accent-primary);
+  color: var(--clr-text-on-accent);
+  border-color: var(--clr-accent-primary);
+}
+.btn--primary:hover { background: var(--clr-accent-hover); }
+.btn--ghost {
+  background: transparent;
+  color: var(--clr-text-secondary);
+}
+.btn--ghost:hover { background: var(--clr-bg-hover); }
+.btn svg { width: 12px; height: 12px; fill: currentColor; }
+
+.detail-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--clr-border-section);
+  padding: 0 var(--space-base);
+  flex-shrink: 0;
+  background: var(--clr-bg-card);
+}
+.detail-tab {
+  padding: var(--space-sm) var(--space-base);
+  font-size: var(--font-size-subheading);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: var(--clr-text-muted);
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  user-select: none;
+}
+.detail-tab:hover { color: var(--clr-text-secondary); }
+.detail-tab--active {
+  color: var(--clr-accent-primary);
+  border-bottom-color: var(--clr-accent-primary);
+  font-weight: 600;
+}
+
+/* TAB PANELS */
+.tab-panel-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.tab-panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-base);
+}
+.tab-panel--active { display: block; }
+
+/* ACCESS DENIED OVERLAY */
+.access-denied-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  text-align: center;
+  position: relative;
+}
+.access-denied-overlay > :not(.access-denied-overlay__lock-icon):first-child {
+  margin-top: 0;
+}
+.access-denied-overlay__lock-icon {
+  margin-bottom: var(--space-lg);
+}
+.access-denied-overlay__lock-icon svg {
+  width: 56px;
+  height: 56px;
+  fill: var(--clr-lock-icon);
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
+}
+.access-denied-overlay__title {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  margin-bottom: var(--space-xs);
+}
+.access-denied-overlay__detail {
+  font-size: var(--font-size-small);
+  color: var(--clr-text-muted);
+  max-width: 340px;
+  margin-bottom: var(--space-lg);
+  line-height: 1.5;
+}
+.access-denied-overlay__info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 340px;
+  margin-bottom: var(--space-lg);
+}
+.info-cell {
+  background: var(--clr-bg-secondary);
+  border: 1px solid var(--clr-border-section);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+}
+.info-cell__label {
+  font-size: var(--font-size-caption);
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--space-xxs);
+  font-weight: 600;
+  margin-bottom: var(--space-xxs);
+}
+.info-cell__value {
+  font-size: var(--font-size-subheading);
+  font-weight: 600;
+  color: var(--clr-text-primary);
+}
+.info-cell__value--danger { color: var(--clr-text-danger); }
+.info-cell__value--mono { font-family: var(--font-mono); font-size: var(--font-size-small); }
+.access-denied-overlay__request-btn {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--clr-accent-primary);
+  color: var(--clr-text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-subheading);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background var(--transition-fast);
+}
+.access-denied-overlay__request-btn:hover { background: var(--clr-accent-hover); }
+.access-denied-overlay__footer-text {
+  margin-top: var(--space-lg);
+  font-size: var(--font-size-caption);
+  color: var(--clr-text-muted);
+  font-style: italic;
+}
+
+/* FORM PANEL (for non-blocked tab) */
+.form-section {
+  margin-bottom: var(--space-lg);
+}
+.form-section__title {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  color: var(--clr-text-primary);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--clr-border-section);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.form-section__title svg {
+  width: 14px;
+  height: 14px;
+  fill: var(--clr-accent-primary);
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+.form-row--3col { grid-template-columns: 1fr 1fr 1fr; }
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+.form-field--full { grid-column: 1 / -1; }
+.form-field__label {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.form-field__req {
+  color: var(--clr-text-danger);
+  font-weight: 700;
+}
+.form-field__provenance {
+  font-size: var(--font-size-caption);
+  color: var(--clr-text-muted);
+  font-weight: 400;
+  font-style: italic;
+}
+.form-field__input,
+.form-field__select,
+.form-field__textarea {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--clr-border-input);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-small);
+  font-family: var(--font-body);
+  background: var(--clr-bg-input);
+  color: var(--clr-text-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+}
+.form-field__input:focus,
+.form-field__select:focus,
+.form-field__textarea:focus {
+  border-color: var(--clr-border-focus);
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.12);
+}
+.form-field__input--disabled,
+.form-field__select--disabled,
+.form-field__textarea--disabled {
+  background: var(--clr-bg-secondary);
+  color: var(--clr-text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.form-field__input--mono { font-family: var(--font-mono); }
+.form-field__textarea { resize: vertical; min-height: 60px; }
+.form-field__select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23795548'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-sm) center;
+  padding-right: 24px;
+}
+.form-field__hint {
+  font-size: var(--font-size-caption);
+  color: var(--clr-text-muted);
+}
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+}
+.form-checkbox input[type="checkbox"] {
+  accent-color: var(--clr-accent-primary);
+  width: 14px;
+  height: 14px;
+}
+.form-checkbox label {
+  font-size: var(--font-size-small);
+  color: var(--clr-text-secondary);
+}
+
+/* TABULAR DATA in provenance */
+.provenance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+.provenance-table thead th {
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--clr-bg-secondary);
+  border-bottom: 2px solid var(--clr-border-section);
+  font-weight: 700;
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--space-xxs);
+  color: var(--clr-text-muted);
+}
+.provenance-table tbody td {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--clr-border-section);
+  vertical-align: top;
+}
+.provenance-table tbody tr:hover { background: var(--clr-bg-hover); }
+.provenance-table__mono { font-family: var(--font-mono); font-size: var(--font-size-caption); }
+
+/* ROUTE MAP CANVAS AREA */
+.route-map {
+  background: var(--clr-bg-secondary);
+  border: 1px solid var(--clr-border-section);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  position: relative;
+  min-height: 180px;
+}
+.route-map__title {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--space-xxs);
+  color: var(--clr-text-muted);
+  margin-bottom: var(--space-sm);
+}
+.route-node {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  margin: var(--space-xs);
+}
+.route-node--source { border-color: var(--clr-text-success); }
+.route-node--dest { border-color: var(--clr-text-danger); }
+.route-node__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.route-node__dot--green { background: var(--clr-text-success); }
+.route-node__dot--red { background: var(--clr-text-danger); }
+.route-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: var(--clr-text-muted);
+  font-size: var(--font-size-heading);
+  margin: 0 var(--space-xs);
+}
+.route-path-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--clr-border-section);
+}
+.route-path-chip {
+  font-size: var(--font-size-caption);
+  background: var(--clr-bg-tertiary);
+  padding: var(--space-xxs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  color: var(--clr-text-secondary);
+}
+
+/* TOAST / MODAL */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: var(--z-overlay);
+  align-items: center;
+  justify-content: center;
+}
+.modal-backdrop--open { display: flex; }
+.modal-dialog {
+  background: var(--clr-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 360px;
+  max-width: 90vw;
+  overflow: hidden;
+}
+.modal-dialog__header {
+  padding: var(--space-base);
+  border-bottom: 1px solid var(--clr-border-section);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-dialog__header h3 {
+  font-size: var(--font-size-heading);
+}
+.modal-dialog__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-xs);
+  color: var(--clr-text-muted);
+  font-size: var(--font-size-subheading);
+}
+.modal-dialog__body {
+  padding: var(--space-base);
+  font-size: var(--font-size-small);
+  color: var(--clr-text-secondary);
+  line-height: 1.5;
+}
+.modal-dialog__footer {
+  padding: var(--space-sm) var(--space-base);
+  border-top: 1px solid var(--clr-border-section);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  background: var(--clr-bg-secondary);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--clr-border-primary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--clr-text-muted); }
+
+/* Drag placeholder */
+.drag-placeholder {
+  border: 2px dashed var(--clr-accent-primary);
+  border-radius: var(--radius-md);
+  min-height: 56px;
+  background: rgba(160, 82, 45, 0.05);
+  margin-bottom: var(--space-xs);
+}
+</style>
+</head>
+<body>
+
+<!-- ===== APP HEADER ===== -->
+<header class="app-header" role="banner">
+  <div class="app-header__brand">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zM13 3h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zM13 13h8v8h-8v-8zm2 2v4h4v-4h-4z"/></svg>
+    <span class="app-header__title">CableTrack Pro</span>
+  </div>
+  <div class="app-header__meta">
+    <div class="app-header__status">
+      <span class="app-header__status-dot"></span>
+      AUDIT MODE ACTIVE
+    </div>
+    <span>Project: STG-Comm-Infra Rev.4</span>
+    <span>Operator: J. Harlow &mdash; Clearance Level 3</span>
+  </div>
+</header>
+
+<!-- ===== THREE-PANE LAYOUT ===== -->
+<div class="app-layout">
+
+  <!-- NAVIGATION PANE -->
+  <nav class="nav-pane" role="navigation" aria-label="Route planning categories">
+    <div class="nav-pane__section">
+      <div class="nav-pane__label">Categories</div>
+      <div class="nav-item nav-item--active" tabindex="0" role="button" aria-current="page">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Cable Routes
+        <span class="nav-badge">12</span>
+      </div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Junction Nodes
+        <span class="nav-badge">7</span>
+      </div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Signal Mapping
+        <span class="nav-badge">5</span>
+      </div>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-pane__section">
+      <div class="nav-pane__label">Topology Zones</div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        Bay A — Harnessing
+        <span class="nav-badge">4</span>
+      </div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        Bay B — Panel Mount
+        <span class="nav-badge">3</span>
+      </div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        Bay C — Enclosure
+        <span class="nav-badge">2</span>
+      </div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        External Runways
+        <span class="nav-badge">3</span>
+      </div>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-pane__section">
+      <div class="nav-pane__label">Compliance</div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        EMI Shield Audit
+      </div>
+      <div class="nav-item" tabindex="0" role="button">
+        <svg class="nav-item__icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        IP Rating Verify
+      </div>
+    </div>
+  </nav>
+
+  <!-- LIST PANE -->
+  <aside class="list-pane" role="complementary" aria-label="Route list">
+    <div class="list-pane__header">
+      <span class="list-pane__title">Active Routes</span>
+      <span class="list-pane__count">12 listed</span>
+    </div>
+    <div class="list-pane__search">
+      <input type="search" placeholder="Filter routes…" aria-label="Search routes" id="routeSearch">
+    </div>
+    <div class="route-list" role="list" aria-label="Draggable route items" id="routeList">
+
+      <div class="route-list-item route-list-item--selected" role="listitem" draggable="true" data-route-id="CRT-0042">
+        <div class="drag-handle" aria-label="Drag to reorder" tabindex="-1">
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+        </div>
+        <div class="route-status-badge route-status-badge--amber"></div>
+        <div class="route-info">
+          <div class="route-info__name">CRT-0042 &mdash; Main Bus Ethernet</div>
+          <div class="route-info__subtitle">Bay A → Junction 7B → PLC Rack M1</div>
+          <div class="route-info__tags">
+            <span class="route-tag route-tag--type">CAT-6A UTP</span>
+            <span class="route-tag route-tag--priority-high">HIGH</span>
+            <span class="route-tag route-tag--encrypted">AES-256</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-list-item" role="listitem" draggable="true" data-route-id="CRT-0043">
+        <div class="drag-handle" aria-label="Drag to reorder" tabindex="-1">
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+        </div>
+        <div class="route-status-badge route-status-badge--green"></div>
+        <div class="route-info">
+          <div class="route-info__name">CRT-0043 — Servo Drive Fiber Link</div>
+          <div class="route-info__subtitle">Conveyor Bay B → Motor Controller FC-14</div>
+          <div class="route-info__tags">
+            <span class="route-tag route-tag--type">OM3 MMF</span>
+            <span class="route-tag route-tag--priority-med">MED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-list-item" role="listitem" draggable="true" data-route-id="CRT-0044">
+        <div class="drag-handle" aria-label="Drag to reorder" tabindex="-1">
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+        </div>
+        <div class="route-status-badge route-status-badge--green"></div>
+        <div class="route-info">
+          <div class="route-info__name">CRT-0044 — Safety I/O Hardwire</div>
+          <div class="route-info__subtitle">Safety Relay Panel SRP-A → E-Stop Network</div>
+          <div class="route-info__tags">
+            <span class="route-tag route-tag--type">SHIELD TW</span>
+            <span class="route-tag route-tag--priority-high">HIGH</span>
+            <span class="route-tag route-tag--locked">LOCKED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-list-item" role="listitem" draggable="true" data-route-id="CRT-0045">
+        <div class="drag-handle" aria-label="Drag to reorder" tabindex="-1">
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+        </div>
+        <div class="route-status-badge route-status-badge--amber"></div>
+        <div class="route-info">
+          <div class="route-info__name">CRT-0045 — Vision System Coaxial</div>
+          <div class="route-info__subtitle">Camera Array VCA → Edge Processor EP-03</div>
+          <div class="route-info__tags">
+            <span class="route-tag route-tag--type">RG-179</span>
+            <span class="route-tag route-tag--priority-med">MED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-list-item" role="listitem" draggable="true" data-route-id="CRT-0046">
+        <div class="drag-handle" aria-label="Drag to reorder" tabindex="-1">
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+        </div>
+        <div class="route-status-badge route-status-badge--red"></div>
+        <div class="route-info">
+          <div class="route-info__name">CRT-0046 — Modbus TCP Segment</div>
+          <div class="route-info__subtitle">SCADA Switch SS-01 → RTU Cluster RUC-12</div>
+          <div class="route-info__tags">
+            <span class="route-tag route-tag--type">CAT-5E STP</span>
+            <span class="route-tag route-tag--priority-high">HIGH</span>
+            <span class="route-tag route-tag--locked">LOCKED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-list-item" role="listitem" draggable="true" data-route-id="CRT-0047">
+        <div class="drag-handle" aria-label="Drag to reorder" tabindex="-1">
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+        </div>
+        <div class="route-status-badge route-status-badge--green"></div>
+        <div class="route-info">
+          <div class="route-info__name">CRT-0047 — Pneumatic Sensor Net</div>
+          <div class="route-info__subtitle">Air Valve Bank AVB-05 → IO-Link Master ML-02</div>
+          <div class="route-info__tags">
+            <span class="route-tag route-tag--type">24V DC SHLD</span>
+            <span class="route-tag route-tag--priority-med">MED</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-list-item" role="listitem" draggable="true" data-route-id="CRT-0048">
+        <div class="drag-handle" aria-label="Drag to reorder" tabindex="-1">
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+          <span class="drag-handle-line"></span>
+        </div>
+        <div class="route-status-badge route-status-badge--amber"></div>
+        <div class="route-info">
+          <div class="route-info__name">CRT-0048 — HMI Display Fiber Patch</div>
+          <div class="route-info__subtitle">Operator Station OS-01 → Control Cabinet CC-04</div>
+          <div class="route-info__tags">
+            <span class="route-tag route-tag--type">OS2 SMF</span>
+            <span class="route-tag route-tag--priority-med">MED</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- DETAIL PANE -->
+  <main class="detail-pane" role="main" aria-label="Route detail panel">
+    <div class="detail-pane__header">
+      <div class="detail-pane__breadcrumb">Routes / Main Bus Ethernet / <span>CRT-0042</span></div>
+      <div class="detail-pane__actions">
+        <button class="btn btn--ghost" aria-label="Export provenance data">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          Export JSON
+        </button>
+        <button class="btn btn--primary" onclick="openAccessRequest()">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Request Access
+        </button>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="detail-tabs" role="tablist" aria-label="Route detail sections">
+      <button class="detail-tab detail-tab--active" role="tab" aria-selected="true" aria-controls="panel-overview" id="tab-overview" tabindex="0">Overview</button>
+      <button class="detail-tab" role="tab" aria-selected="false" aria-controls="panel-provenance" id="tab-provenance" tabindex="-1">Provenance</button>
+      <button class="detail-tab" role="tab" aria-selected="false" aria-controls="panel-physical" id="tab-physical" tabindex="-1">Physical Layout</button>
+      <button class="detail-tab" role="tab" aria-selected="false" aria-controls="panel-specs" id="tab-specs" tabindex="-1">Specifications</button>
+      <button class="detail-tab" role="tab" aria-selected="false" aria-controls="panel-change-log" id="tab-change-log" tabindex="-1">Change Log</button>
+    </div>
+
+    <div class="tab-panel-container">
+
+      <!-- PANEL 1: Overview (ACCESS DENIED) -->
+      <div class="tab-panel tab-panel--active" role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
+        <div class="access-denied-overlay">
+          <div class="access-denied-overlay__lock-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+          </div>
+          <div class="access-denied-overlay__title">Permission Required</div>
+          <div class="access-denied-overlay__detail">
+            You are viewing read-only metadata for route <strong>CRT-0042</strong>. Full route geometry, cable schedule, and termination mapping require <strong>Clearance Level 4</strong> or above. Contact your Infrastructure Auditor to request escalation.
+          </div>
+          <div class="access-denied-overlay__info-grid">
+            <div class="info-cell">
+              <div class="info-cell__label">Current Clearance</div>
+              <div class="info-cell__value info-cell__value--danger">Level 3 — Operator</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Required</div>
+              <div class="info-cell__value info-cell__value--mono">Level 4+ Engineer</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Asset Classification</div>
+              <div class="info-cell__value">Controlled — ITAR §120.11</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Last Audited</div>
+              <div class="info-cell__value info-cell__value--mono">2024-11-28 — K. Ishiguro</div>
+            </div>
+          </div>
+          <button class="access-denied-overlay__request-btn" onclick="openAccessRequest()">Submit Access Escalation</button>
+          <div class="access-denied-overlay__footer-text">Per ISO 27001 Annex A.9.2.6 — all route modifications must pass dual-audit review before deployment.</div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Provenance (READ-ONLY TABLE) -->
+      <div class="tab-panel" role="tabpanel" id="panel-provenance" aria-labelledby="tab-provenance">
+        <div class="form-section">
+          <div class="form-section__title">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Provenance Chain
+          </div>
+          <p style="font-size: var(--font-size-small); color: var(--clr-text-muted); margin-bottom: var(--space-md);">Immutable change history for route CRT-0042. All entries verified by root CA fingerprint.</p>
+          <table class="provenance-table" aria-label="Route provenance audit trail">
+            <thead>
+              <tr>
+                <th scope="col">Timestamp</th>
+                <th scope="col">Actor</th>
+                <th scope="col">Action</th>
+                <th scope="col">Commit Hash</th>
+                <th scope="col">Signed By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="provenance-table__mono">2024-12-01T08:14:22Z</td>
+                <td>M. Vasquez (Lead Engineer)</td>
+                <td>Updated termination map v3.2</td>
+                <td class="provenance-table__mono">a7f3c9…e21d</td>
+                <td>CA-INFRA-04</td>
+              </tr>
+              <tr>
+                <td class="provenance-table__mono">2024-11-28T16:45:01Z</td>
+                <td>K. Ishiguro (Auditor)</td>
+                <td>EMI compliance sign-off</td>
+                <td class="provenance-table__mono">b2d8e1…c49f</td>
+                <td>CA-AUDIT-01</td>
+              </tr>
+              <tr>
+                <td class="provenance-table__mono">2024-11-15T11:20:33Z</td>
+                <td>R. Okonkwo (QA Analyst)</td>
+                <td>Added bend-radius constraints</td>
+                <td class="provenance-table__mono">c9e4d7…a18b</td>
+                <td>CA-QA-02</td>
+              </tr>
+              <tr>
+                <td class="provenance-table__mono">2024-10-22T09:05:17Z</td>
+                <td>T. Lindström (Design Lead)</td>
+                <td>Initial route creation</td>
+                <td class="provenance-table__mono">d1a5f3…b72c</td>
+                <td>CA-DESIGN-01</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-section">
+          <div class="form-section__title">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Compliance Anchors
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field__label">ISO 13849 Category</label>
+              <span class="form-field__value" style="font-family: var(--font-mono); font-size: var(--font-size-small);">Cat. 3 PL-d</span>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">IEC 61508 SIL</label>
+              <span class="form-field__value" style="font-family: var(--font-mono); font-size: var(--font-size-small);">SIL 2</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field__label">Shield Ground Ref</label>
+              <span class="form-field__value" style="font-family: var(--font-mono); font-size: var(--font-size-small);">GND-BUS-Δ @ 0.5 Ω</span>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">Test Certificate ID</label>
+              <span class="form-field__value" style="font-family: var(--font-mono); font-size: var(--font-size-small);">TC-2024-EMC-8847</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: Physical Layout (ACCESS DENIED) -->
+      <div class="tab-panel" role="tabpanel" id="panel-physical" aria-labelledby="tab-physical">
+        <div class="access-denied-overlay">
+          <div class="access-denied-overlay__lock-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+          </div>
+          <div class="access-denied-overlay__title">Restricted View</div>
+          <div class="access-denied-overlay__detail">
+            Physical layout diagrams, conduit routing schematics, and termination cross-sections are classified under <strong>Engineering Drawings — Restricted</strong>. Level 4 clearance required.
+          </div>
+          <div class="access-denied-overlay__info-grid">
+            <div class="info-cell">
+              <div class="info-cell__label">Drawing Revision</div>
+              <div class="info-cell__value info-cell__value--mono">DWG-CRT0042-R7</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Sheet Count</div>
+              <div class="info-cell__value">14 sheets</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">File Size</div>
+              <div class="info-cell__value info-cell__value--mono">48.2 MB PDF/X-4</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Watermark</div>
+              <div class="info-cell__value">CONFIDENTIAL — DLA</div>
+            </div>
+          </div>
+          <button class="access-denied-overlay__request-btn" onclick="openAccessRequest()">Request Diagram Access</button>
+          <div class="access-denied-overlay__footer-text">Unauthorized reproduction of engineering drawings violates NDA Section 7.3 and DoD Contract DFAR 252.204-7012.</div>
+        </div>
+      </div>
+
+      <!-- PANEL 4: Specifications (FORM FIELDS — READ ONLY) -->
+      <div class="tab-panel" role="tabpanel" id="panel-specs" aria-labelledby="tab-specs">
+        <div class="form-section">
+          <div class="form-section__title">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            Cable Specifications
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field__label">Cable Type <span class="form-field__req">*</span></label>
+              <select class="form-field__select form-field__select--disabled" disabled>
+                <option selected>CAT-6A UTP Shielded (Belden 1694A)</option>
+              </select>
+              <span class="form-field__hint">Verified against Bill of Materials BOM-2024-088</span>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">Core Count <span class="form-field__req">*</span></label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="4 pair (8 conductor)">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field__label">Length (approx.)</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="34.6 meters">
+              <span class="form-field__hint">Measured at install — confirmed 2024-10-22</span>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">Min Bend Radius</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="4× OD = 62 mm">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field__label">Max Operating Temp</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="70 °C (dry), 40 °C wet)">
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">Flame Rating</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="UL FT4 / IEC 60332-1">
+            </div>
+          </div>
+          <div class="form-row form-row--3col">
+            <div class="form-field">
+              <label class="form-field__label">Bandwidth</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="500 MHz">
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">Impedance</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="100 ± 15 Ω">
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">Velocity of Prop.</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="0.77 c">
+            </div>
+          </div>
+          <div class="form-row form-field--full">
+            <div class="form-field">
+              <label class="form-field__label">Notes / Deviation Justification</label>
+              <textarea class="form-field__textarea form-field__textarea--disabled" disabled rows="3">No deviations recorded. Installed per drawing DWG-CRT0042-R7, section 3.1. Termination performed using Krone punch-down tool kit KTK-200. Test report attached as TR-CRT0042-V3.pdf.</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section__title">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Safety Parameters
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field__label">Arc Flash Mitigation</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="Fiber-optic isolators at both ends (OptoCoupler OC-550)">
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">Surge Protection</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value">TVS diode array SMCJ33A × 2 per pair">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field__label">Ground Loop Isolation</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="Isolated transformer coupler ISOW7842">
+            </div>
+            <div class="form-field">
+              <label class="form-field__label">ESD Protection Level</label>
+              <input class="form-field__input form-field__input--disabled" disabled type="text" value="IEC 61000-4-2 ±15 kV contact / ±25 kV air">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 5: Change Log (ACCESS DENIED) -->
+      <div class="tab-panel" role="tabpanel" id="panel-change-log" aria-labelledby="tab-change-log">
+        <div class="access-denied-overlay">
+          <div class="access-denied-overlay__lock-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+          </div>
+          <div class="access-denied-overlay__title">Write Lock Active</div>
+          <div class="access-denied-overlay__detail">
+            The change log for this route is write-locked pending the Q4 safety audit closure (<strong>AUD-2024-Q4-089</strong>). No edits can be made until the auditor signs off. See Provenance tab for immutable record of past changes.
+          </div>
+          <div class="access-denied-overlay__info-grid">
+            <div class="info-cell">
+              <div class="info-cell__label">Lock Reason</div>
+              <div class="info-cell__value info-cell__value--danger">Audit Hold — Phase 2</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Auditor</div>
+              <div class="info-cell__value">K. Ishiguro (Senior)</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Estimated Release</div>
+              <div class="info-cell__value">2025-01-15</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Total Lock Duration</div>
+              <div class="info-cell__value">34 days</div>
+            </div>
+          </div>
+          <button class="access-denied-overlay__request-btn" onclick="openAccessRequest()">Notify Auditor of Urgency</button>
+          <div class="access-denied-overlay__footer-text">Emergency unlock requires approval from two independent auditors per SOC 2 Type II control CC7.2.</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<!-- ACCESS REQUEST MODAL -->
+<div class="modal-backdrop" id="accessModal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-dialog">
+    <div class="modal-dialog__header">
+      <h3 id="modal-title">Submit Access Escalation</h3>
+      <button class="modal-dialog__close" onclick="closeAccessRequest()" aria-label="Close dialog">&times;</button>
+    </div>
+    <div class="modal-dialog__body">
+      <p style="margin-bottom: var(--space-md);">You are requesting clearance elevation from <strong>Level 3 (Operator)</strong> to access restricted route assets.</p>
+      <div style="display:flex; flex-direction:column; gap:var(--space-sm);">
+        <div class="form-field">
+          <label class="form-field__label">Justification</label>
+          <select class="form-field__select">
+            <option>Route modification / installation work</option>
+            <option>Diagnostic troubleshooting</option>
+            <option>Compliance verification visit</option>
+            <option>Training demonstration</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-field__label">Supervisor Endorsement</label>
+          <input class="form-field__input" type="text" placeholder="Enter supervisor employee ID…" value="">
+        </div>
+        <div class="form-field">
+          <label class="form-field__label">Business Case</label>
+          <textarea class="form-field__textarea" rows="2" placeholder="Brief description of why access is needed…"></textarea>
+        </div>
+        <div class="form-checkbox">
+          <input type="checkbox" id="agreeTerms" checked>
+          <label for="agreeTerms">I confirm this request complies with ISO 27001 A.9.2.4 access control policy and will be used solely for stated business purposes.</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-dialog__footer">
+      <button class="btn btn--ghost" onclick="closeAccessRequest()">Cancel</button>
+      <button class="btn btn--primary" onclick="submitEscalation()">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// === Tab switching ===
+const tabs = document.querySelectorAll('.detail-tab');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => activateTab(tab));
+  tab.addEventListener('keydown', e => {
+    const tabArray = Array.from(tabs);
+    const idx = tabArray.indexOf(tab);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = tabArray[(idx + 1) % tabArray.length];
+      activateTab(next);
+      next.focus();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = tabArray[(idx - 1 + tabArray.length) % tabArray.length];
+      activateTab(prev);
+      prev.focus();
+    }
+  });
+});
+
+function activateTab(tab) {
+  tabs.forEach(t => {
+    t.classList.remove('detail-tab--active');
+    t.setAttribute('aria-selected', 'false');
+    t.setAttribute('tabindex', '-1');
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('tab-panel--active'));
+  tab.classList.add('detail-tab--active');
+  tab.setAttribute('aria-selected', 'true');
+  tab.setAttribute('tabindex', '0');
+  const panelId = tab.getAttribute('aria-controls');
+  document.getElementById(panelId).classList.add('tab-panel--active');
+}
+
+// === List item selection ===
+const routeItems = document.querySelectorAll('.route-list-item');
+routeItems.forEach(item => {
+  item.addEventListener('click', () => {
+    routeItems.forEach(i => i.classList.remove('route-list-item--selected'));
+    item.classList.add('route-list-item--selected');
+  });
+});
+
+// === Drag and Drop ===
+let draggedItem = null;
+
+routeItems.forEach(item => {
+  item.addEventListener('dragstart', e => {
+    draggedItem = item;
+    item.classList.add('route-list-item--dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', item.dataset.routeId);
+  });
+
+  item.addEventListener('dragend', () => {
+    item.classList.remove('route-list-item--dragging');
+    document.querySelectorAll('.drag-placeholder').forEach(p => p.remove());
+    draggedItem = null;
+  });
+
+  item.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedItem && draggedItem !== item) {
+      const rect = item.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        item.parentNode.insertBefore(draggedItem, item);
+      } else {
+        item.parentNode.insertBefore(draggedItem, item.nextSibling);
+      }
+    }
+  });
+
+  item.addEventListener('drop', e => {
+    e.preventDefault();
+  });
+});
+
+// === Modal ===
+function openAccessRequest() {
+  document.getElementById('accessModal').classList.add('modal-backdrop--open');
+}
+
+function closeAccessRequest() {
+  document.getElementById('accessModal').classList.remove('modal-backdrop--open');
+}
+
+function submitEscalation() {
+  closeAccessRequest();
+}
+
+// Close modal on backdrop click
+document.getElementById('accessModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('accessModal')) closeAccessRequest();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAccessRequest();
+});
+</script>
+</body>
+</html>

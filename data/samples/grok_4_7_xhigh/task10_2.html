@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dispatch Board · Fieldline HVAC</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23e4572e'/%3E%3Cpath d='M7 22h18M9 16h14M12 10h8' stroke='%231c2b24' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1c1915;
+    --muted: #6f675c;
+    --line: #e0d8cc;
+    --paper: #fbf9f5;
+    --sand: #efeae1;
+    --bg: #e6e0d4;
+    --fir: #1c2b24;
+    --vest: #e4572e;
+    --crit: #9d2c2c;
+    --warn: #9a3e12;
+    --ok: #1f6a45;
+    --label: 176px;
+    --track: 1152px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: var(--bg);
+    font: 13px/1.4 "Segoe UI", "Avenir Next", "Helvetica Neue", sans-serif;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2, h3, p, ul, ol { margin: 0; }
+  ul { padding: 0; list-style: none; }
+  ::selection { background: #f0c2ae; }
+  :focus-visible { outline: 2px solid var(--vest); outline-offset: 2px; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); border: 0;
+  }
+  .app { height: 100%; min-width: 1180px; display: flex; }
+
+  .sidebar {
+    width: 252px; flex: 0 0 252px; min-height: 0; overflow: auto;
+    background: linear-gradient(180deg, rgba(228,87,46,0.16), transparent 140px), var(--fir);
+    color: #e8efe9;
+    display: flex; flex-direction: column;
+  }
+  .brand { display: flex; gap: 10px; align-items: center; padding: 14px 12px 10px; }
+  .brand-name { font-weight: 750; letter-spacing: 0.14em; font-size: 14px; }
+  .brand-sub { color: #b7c4bb; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .nav { display: flex; flex-direction: column; padding: 4px 0 8px; }
+  .nav-btn {
+    display: block; width: 100%; text-align: left; background: transparent; border: 0;
+    color: #d5ddd6; padding: 8px 12px; border-left: 3px solid transparent;
+  }
+  .nav-btn.is-on { background: rgba(255,255,255,0.06); border-left-color: var(--vest); color: white; font-weight: 700; }
+  .nav-btn:hover { background: rgba(255,255,255,0.04); }
+  .side-h {
+    margin: 8px 12px 4px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #8aa396;
+  }
+  .tech {
+    display: block; width: 100%; text-align: left; background: transparent; border: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08); color: inherit; padding: 8px 12px;
+  }
+  .tech:hover { background: rgba(255,255,255,0.04); }
+  .tech-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .tech-top b { font-size: 13px; }
+  .pill {
+    font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+    padding: 2px 6px; border-radius: 99px; background: rgba(255,255,255,0.08);
+  }
+  .pill.on { background: #1f6a45; color: white; }
+  .pill.route { background: #9a3e12; color: white; }
+  .pill.yard { background: #3d5248; color: #e8efe9; }
+  .meta, .systems, .warn-line, .ok-line { display: block; font-size: 11px; color: #b7c4bb; margin-top: 2px; }
+  .warn-line { color: #f0c7a0; }
+  .ok-line { color: #b7d7c4; }
+  .certs { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+  .certs i {
+    font-style: normal; font-size: 10px; border: 1px solid rgba(255,255,255,0.2);
+    padding: 1px 5px; border-radius: 99px; color: #d5ddd6;
+  }
+  .load { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+  .bar { display: block; height: 4px; background: rgba(255,255,255,0.12); border-radius: 99px; flex: 1; }
+  .bar > span { display: block; height: 100%; background: #e7efe9; border-radius: 99px; }
+  .bar.warn > span { background: #e0a15a; }
+  .bar.spare > span { background: #8fb9a4; }
+  .load em { font-style: normal; font-size: 11px; color: #d5ddd6; }
+  .sofia {
+    margin: 8px 12px; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05);
+    color: #d5ddd6; font-size: 11px; line-height: 1.35;
+  }
+  .parts { padding: 0 12px 12px; }
+  .parts li {
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 11px;
+  }
+  .parts b { display: block; font-size: 12px; }
+  .parts span { color: #b7c4bb; }
+  .parts .bad b { color: #f0b0a4; }
+  .parts .warn b { color: #f0c7a0; }
+  .side-foot { margin-top: auto; padding: 10px 12px 14px; color: #8aa396; font-size: 11px; }
+
+  .workspace { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--sand); }
+  .top {
+    display: flex; align-items: center; gap: 16px; padding: 8px 14px;
+    background: var(--paper); border-bottom: 1px solid var(--line);
+  }
+  .eyebrow-brand { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--warn); font-weight: 700; }
+  .top h1 { font-size: 18px; letter-spacing: -0.02em; line-height: 1.1; }
+  .date-nav { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+  .date-nav strong { display: block; font-size: 14px; }
+  .date-nav span, .clock span, .who small { display: block; color: var(--muted); font-size: 11px; }
+  .icon-btn {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); background: white; font-size: 16px;
+  }
+  .weather { color: var(--muted); font-size: 12px; }
+  .clock { margin-left: auto; text-align: right; }
+  .clock strong { font-family: ui-monospace, Consolas, monospace; font-size: 20px; letter-spacing: -0.03em; }
+  .who { display: flex; align-items: center; gap: 8px; }
+  .who b { display: block; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--vest); color: var(--fir);
+    display: grid; place-items: center; font-weight: 800;
+  }
+  .kpis {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+    padding: 10px 14px; background: var(--paper); border-bottom: 1px solid var(--line);
+  }
+  .kpi b { display: block; font-size: 22px; line-height: 1; letter-spacing: -0.03em; }
+  .kpi span { display: block; margin-top: 4px; font-size: 11px; color: var(--muted); }
+  .kpi b.crit { color: var(--crit); }
+  .kpi b.warn { color: var(--warn); }
+  .ticker { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 0; }
+  .chip {
+    border: 1px solid #e0c2b8; background: #f8e4e0; border-radius: 999px;
+    padding: 5px 10px; font-size: 12px; color: var(--ink); text-align: left;
+  }
+  .chip b { font-size: 10px; letter-spacing: 0.04em; margin-right: 4px; }
+  .chip.warn { background: #f8efd8; border-color: #e0d0a8; }
+  .chip.resolved { background: #e5f2ea; border-color: #b7d7c4; }
+  .chip.pending { background: #f8efd8; border-color: #e0d0a8; }
+  .chip.is-on { box-shadow: 0 0 0 2px var(--ink); }
+  .workspace-body { flex: 1; min-height: 0; display: flex; }
+  .board-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 0; gap: 8px; }
+  .insight {
+    background: #f3e6c8; border-left: 3px solid #8a5a00; padding: 8px 10px;
+    font-size: 12.5px; line-height: 1.4; border-radius: 0 6px 6px 0;
+  }
+  .decisions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .section-label {
+    grid-column: 1 / -1; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+  .decision {
+    text-align: left; background: var(--paper); border: 1px solid #ddd4c6; border-left: 3px solid var(--vest);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .decision.primary { background: var(--fir); color: #f4f1ea; border-color: var(--fir); }
+  .decision.primary span { color: #d5ddd6; }
+  .decision.wide { grid-column: 1 / -1; border-left-color: #2c4a6e; }
+  .decision strong { display: block; font-size: 13px; }
+  .decision span { display: block; margin-top: 3px; font-size: 12px; color: #5c564c; line-height: 1.35; }
+  .decision:hover { border-color: var(--fir); }
+  .decision.is-done { background: #e5f2ea; color: var(--ink); border-color: #1f6a45; }
+  .decision.is-done span { color: #3e5344; }
+  .decision.is-done strong::before { content: "On the board · "; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+  .legend, .filters, .adjust { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .legend { color: var(--muted); font-size: 11px; }
+  .swatch { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 3px; }
+  .swatch.pm { background: #1f6a5a; }
+  .swatch.repair { background: #c56a2d; }
+  .swatch.emergency { background: #9d2c2c; }
+  .swatch.ghost { background: repeating-linear-gradient(90deg, #e0a15a, #e0a15a 3px, transparent 3px, transparent 6px); }
+  .swatch.travel { background: #c9bfb0; }
+  .filters button, .text-btn, #apply-move, #restore {
+    border: 1px solid var(--line); background: white; border-radius: 6px; padding: 5px 8px; font-size: 12px;
+  }
+  .filters button[aria-pressed="true"] { background: var(--fir); color: white; border-color: var(--fir); }
+  .search, #move-tech { border: 1px solid var(--line); background: white; border-radius: 6px; padding: 5px 8px; }
+  .search { width: 200px; }
+  #filter-note { color: var(--muted); font-size: 11px; }
+  .gantt-scroll { flex: 1; min-height: 0; overflow: auto; background: #e4ddd0; border: 1px solid var(--line); border-radius: 8px; }
+  .gantt-scroll::-webkit-scrollbar { height: 10px; width: 10px; }
+  .gantt-scroll::-webkit-scrollbar-thumb { background: #c9bfb0; border-radius: 99px; }
+  .gantt, .gantt-head, .rows { width: 1328px; }
+  .gantt-head, .row { display: flex; }
+  .gantt-head { position: sticky; top: 0; z-index: 8; background: var(--paper); box-shadow: 0 1px 0 var(--line); }
+  .corner, .row-label { width: var(--label); flex: 0 0 var(--label); }
+  .hours, .track { width: var(--track); flex: 0 0 var(--track); }
+  .corner {
+    position: sticky; left: 0; z-index: 9; background: var(--paper);
+    border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 8px 10px; display: flex; flex-direction: column; justify-content: center;
+  }
+  .corner span, .hour { font-size: 11px; color: var(--muted); }
+  .hours { display: flex; border-bottom: 1px solid var(--line); background: var(--paper); position: relative; }
+  .hour { width: 96px; flex: 0 0 96px; padding: 8px 0 8px 4px; }
+  .now-head {
+    position: absolute; top: 6px; transform: translateX(-50%); background: var(--vest); color: white;
+    font-size: 10px; font-weight: 800; padding: 2px 4px; border-radius: 2px; z-index: 9;
+  }
+  .rows { position: relative; }
+  .now {
+    position: absolute; top: 0; bottom: 0; width: 2px; background: var(--vest); z-index: 5; pointer-events: none;
+  }
+  .row-label {
+    position: sticky; left: 0; z-index: 6; background: var(--paper);
+    border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 6px 8px 6px 10px; display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  }
+  .row-label b { font-size: 13px; }
+  .row-label .rl-meta { font-size: 11px; color: var(--muted); }
+  .rl-status { font-size: 11px; font-weight: 750; }
+  .rl-status.bad { color: var(--crit); }
+  .rl-status.warn { color: var(--warn); }
+  .rl-status.ok { color: var(--ok); }
+  #row-open .row-label { background: #f8e4e0; }
+  .row.is-hot .row-label { box-shadow: inset 3px 0 0 var(--ink); }
+  .track {
+    position: relative; height: 96px; border-bottom: 1px solid var(--line); background: #e4ddd0; overflow: hidden;
+  }
+  .track::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: linear-gradient(to right, rgba(28,25,21,0.08) 1px, transparent 1px);
+    background-size: 96px 100%;
+  }
+  #track-open { background: #f6e4df; }
+  .shift { position: absolute; top: 0; bottom: 0; background: #fbf9f5; z-index: 0; }
+  .off-tag {
+    position: absolute; top: 8px; z-index: 2; font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #8a8175; pointer-events: none;
+  }
+  .job {
+    position: absolute; top: 6px; height: 54px; z-index: 3;
+    border-radius: 6px; border: 1px solid #c9bfb0; background: #fff;
+    padding: 4px 6px 6px 8px; text-align: left; overflow: hidden; line-height: 1.2; color: var(--ink);
+    box-shadow: 0 1px 0 rgba(28,25,21,0.05);
+  }
+  .job.lane2 { top: 34px; height: 52px; z-index: 4; }
+  .job.emergency { background: #fdeceb; border-color: #9d2c2c; animation: pulse 2.2s ease-in-out infinite; }
+  .job.repair { background: #f8efe4; border-color: #c56a2d; }
+  .job.pm { background: #e7f2ec; border-color: #1f6a5a; }
+  .job.shop { background: #efe6d4; border-color: #b5a48a; }
+  .job.ghost {
+    background: repeating-linear-gradient(90deg, #f3e0c8, #f3e0c8 8px, #f8efe4 8px, #f8efe4 16px);
+    border-style: dashed; color: #7a4a1e; z-index: 2;
+  }
+  .job.available {
+    background: transparent; border: 1px dashed #7d8f7a; color: #3e5344; height: 28px; top: 36px;
+    display: flex; align-items: center;
+  }
+  .job.deferred {
+    opacity: 0.72;
+    background: repeating-linear-gradient(-45deg, #f3efe8, #f3efe8 6px, #e7e1d6 6px, #e7e1d6 12px);
+    border-style: dashed;
+  }
+  .job.at-risk { box-shadow: inset 0 0 0 1.5px #9d2c2c; }
+  .job.confirmed { box-shadow: inset 0 0 0 2px #1f6a45; }
+  .job.is-selected { box-shadow: 0 0 0 2px var(--ink); z-index: 4; }
+  .job:hover { z-index: 5; }
+  .kicker { display: flex; gap: 4px; align-items: center; font-size: 10px; }
+  .pri, .flag { font-style: normal; font-weight: 800; letter-spacing: 0.04em; font-size: 9px; padding: 1px 4px; border-radius: 2px; }
+  .p1 { background: #9d2c2c; color: white; }
+  .p2 { background: #9a4e16; color: white; }
+  .p3 { background: #5c564c; color: white; }
+  .pm-tag { background: #1f6a5a; color: white; }
+  .flag { background: rgba(0,0,0,0.06); color: var(--ink); }
+  .when { font-style: normal; color: #5c564c; font-variant-numeric: tabular-nums; }
+  .title { display: block; font-weight: 750; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub { display: block; font-size: 11px; color: #5c564c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .job.is-live .title::before, .job.is-over .title::before {
+    content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: #1f6a45; margin-right: 4px;
+  }
+  .job.is-over .title::before { background: #9d2c2c; }
+  #job-harbor { height: 68px; top: 14px; }
+  #job-harbor .title { font-size: 14px; }
+  .prog { position: absolute; left: 0; bottom: 0; height: 3px; background: rgba(28,25,21,0.38); }
+  .travel {
+    position: absolute; bottom: 4px; height: 14px; z-index: 2; border-radius: 3px;
+    background: #e7e0d2; border: 1px solid #c9bfb0; font-size: 9px; line-height: 12px;
+    padding: 0 3px; color: #5c564c; overflow: hidden; white-space: nowrap;
+  }
+  .travel.done { opacity: 0.75; }
+  .travel.live { background: #f3d7b0; border-color: #c56a2d; color: #7a4a1e; }
+  .travel.warn { background: #f8d0c8; color: #7a1f1f; border-color: #a32020; font-weight: 750; }
+  .travel.ok { background: #e5f2ea; color: #1f6a45; border-color: #1f6a45; }
+  .clash {
+    position: absolute; top: 76px; z-index: 5; background: #9d2c2c; color: white;
+    font-size: 9px; font-weight: 800; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 2px;
+    pointer-events: none;
+  }
+  .job.dim { opacity: 0.18; }
+  .is-hidden { display: none !important; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(163,32,32,0.35); }
+    50% { box-shadow: 0 0 0 5px rgba(163,32,32,0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .job.emergency { animation: none; }
+  }
+
+  .inspector {
+    width: 384px; flex: 0 0 384px; min-height: 0; background: var(--paper);
+    border-left: 1px solid var(--line); display: flex; flex-direction: column;
+  }
+  .insp-head {
+    padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 750;
+  }
+  #detail { flex: 1; overflow: auto; padding: 12px 14px 18px; }
+  #detail h2 { margin: 2px 0 2px; font-size: 22px; letter-spacing: -0.03em; line-height: 1.15; }
+  #detail h3 { margin: 14px 0 6px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .eyebrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .status-pill { background: #f8e4e0; color: var(--crit); font-weight: 750; padding: 1px 6px; border-radius: 99px; font-size: 11px; }
+  .addr, .assigned, .contact-line { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .assigned strong { color: var(--ink); }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .fact { background: #f3efe8; padding: 6px 8px; border-radius: 6px; }
+  .fact span { display: block; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  .fact strong { display: block; font-size: 12.5px; margin-top: 2px; }
+  .problem { margin: 10px 0; padding: 8px 10px; background: #f8e4e0; border-left: 3px solid var(--crit); font-size: 13px; }
+  .problem.calm { background: #f3efe8; border-left-color: #1f6a5a; }
+  .seq { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; }
+  .seq li { margin: 3px 0; }
+  .seq time, .log-list time { font-family: ui-monospace, Consolas, monospace; font-weight: 750; }
+  .fits li { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+  .fits li.best { border-color: #1f6a45; background: #e5f2ea; }
+  .fits b { display: block; margin-bottom: 2px; }
+  .needs { padding-left: 16px; list-style: disc; font-size: 12.5px; }
+  .needs li { margin: 3px 0; }
+  .travel-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .travel-table th, .travel-table td { text-align: left; padding: 4px 0; border-bottom: 1px solid var(--line); font-weight: 550; }
+  .travel-table td { text-align: right; }
+  .mini-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .btn { border: 1px solid #cfc6b8; background: white; border-radius: 6px; padding: 7px 10px; font-size: 12.5px; }
+  .btn.primary { background: var(--fir); color: white; border-color: var(--fir); }
+  .banner { margin: 8px 0; padding: 8px 10px; background: #f8efd8; border-left: 3px solid #8a5a00; font-size: 12.5px; border-radius: 0 6px 6px 0; }
+  .banner.ok { background: #e5f2ea; border-left-color: #1f6a45; }
+  .log { border-top: 1px solid var(--line); max-height: 168px; overflow: auto; padding: 8px 14px 12px; background: #f7f4ee; }
+  .log h3 { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .log-list { list-style: none; }
+  .log-list li { font-size: 11.5px; margin: 4px 0; color: #3e3832; }
+  .log-list time { color: var(--muted); margin-right: 6px; }
+  .statusbar {
+    flex: 0 0 28px; background: var(--fir); color: #d5ddd6; font-size: 11px;
+    display: flex; align-items: center; padding: 0 12px; gap: 10px; overflow: hidden; white-space: nowrap;
+  }
+  #toast {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: var(--fir); color: #f4f1ea; padding: 12px 14px; border-radius: 8px;
+    border-left: 3px solid var(--vest); max-width: 560px; font-size: 13px; line-height: 1.4;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.25); opacity: 0; pointer-events: none; z-index: 30;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#e4572e"/>
+        <path d="M7 21.5h18M9 16.5h14M12 11.5h8" stroke="#1c2b24" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <div class="brand-name">FIELDLINE</div>
+        <div class="brand-sub">HVAC Dispatch</div>
+      </div>
+    </div>
+    <nav class="nav" aria-label="Primary">
+      <button type="button" class="nav-btn is-on" id="nav-board" aria-current="page">Dispatch board</button>
+      <button type="button" class="nav-btn" id="nav-risks">Risk clusters</button>
+      <button type="button" class="nav-btn" id="nav-crew">Crew and certs</button>
+      <button type="button" class="nav-btn" id="nav-parts">Parts cage</button>
+    </nav>
+    <div class="side-h" id="roster">Today’s crew · 5 of 6</div>
+    <button type="button" class="tech" data-tech="marcus" title="Last ping 08:49">
+      <span class="tech-top"><b>Marcus Hale</b><em class="pill on">On site</em></span>
+      <span class="meta">North Loop · van 07 · 07:00–16:00</span>
+      <span class="certs"><i>EPA Universal</i><i>Trane CVHE</i><i>Brazing</i></span>
+      <span class="systems">Centrifugal chillers, towers, large RTUs</span>
+      <span class="load"><span class="bar"><span style="width:82%"></span></span><em>82%</em></span>
+      <span class="warn-line">Collision 11:15–13:00 if the seal holds</span>
+    </button>
+    <button type="button" class="tech" data-tech="derek" title="Last ping 08:41">
+      <span class="tech-top"><b>Derek Owens</b><em class="pill on">On site</em></span>
+      <span class="meta">East Industrial · van 04 · 06:30–15:30</span>
+      <span class="certs"><i>EPA Type II</i><i>ASME boilers</i><i>Combustion</i></span>
+      <span class="systems">Steam and hot-water boilers, pumps, gas MAUs</span>
+      <span class="load"><span class="bar"><span style="width:74%"></span></span><em>74%</em></span>
+      <span class="warn-line">Load is fine. Must roll by 08:58 for Jamal Reeves</span>
+    </button>
+    <button type="button" class="tech" data-tech="priya" title="Last ping 08:44">
+      <span class="tech-top"><b>Priya Shah</b><em class="pill on">On site</em></span>
+      <span class="meta">Medical corridor · van 11 · 07:30–16:30</span>
+      <span class="certs"><i>EPA Universal</i><i>VRF</i><i>Niagara N4</i><i>Rack, supervised</i></span>
+      <span class="systems">VRF, AHUs, BAS, light commercial racks</span>
+      <span class="load"><span class="bar"><span style="width:78%"></span></span><em>78%</em></span>
+      <span class="ok-line">Riverside PM on track · pause approved 08:33</span>
+    </button>
+    <button type="button" class="tech" data-tech="lena" title="Last ping 08:36">
+      <span class="tech-top"><b>Lena Cho</b><em class="pill route">En route</em></span>
+      <span class="meta">South and West · van 14 · 08:00–17:00</span>
+      <span class="certs"><i>EPA Type II</i><i>RTU</i><i>PM lead</i></span>
+      <span class="systems">Packaged RTUs, make-up air, splits</span>
+      <span class="load"><span class="bar warn"><span style="width:94%"></span></span><em>94%</em></span>
+      <span class="warn-line">Travel-saturated · Lakeshore ETA 13:36 vs 13:00</span>
+    </button>
+    <button type="button" class="tech" data-tech="andre" title="Last ping 08:50">
+      <span class="tech-top"><b>Andre Walsh</b><em class="pill yard">At yard</em></span>
+      <span class="meta">Float · van 19 · 08:00–16:30</span>
+      <span class="certs"><i>EPA Type II</i><i>Helper</i><i>Recovery machines</i></span>
+      <span class="systems">Assists, parts runs, filter PMs · no solo rack</span>
+      <span class="load"><span class="bar spare"><span style="width:54%"></span></span><em>54%</em></span>
+      <span class="warn-line">Open until 11:38 · not signed off on racks</span>
+    </button>
+    <p class="sofia">Off the board: Sofia Reyes, Niagara recert at Tridium, returns Fri 07:30. Not a spare seat today.</p>
+    <div class="side-h" id="parts">Parts and tools · 08:52</div>
+    <ul class="parts">
+      <li class="bad"><b>Trane KIT-0482 shaft seal</b><span>Bay 1 cage · not on van 07 · Oakmont</span></li>
+      <li><b>Copeland ZP54K5E-TFD</b><span>Van 14 · on truck · Westbridge RTU-2</span></li>
+      <li><b>TXV kit + 40A contactor</b><span>Bay 3 · staged · Harbor Fresh likely fault</span></li>
+      <li><b>Weil-McLain LWCO</b><span>Van 04 · on truck · Municipal Annex</span></li>
+      <li><b>Testo 330 analyzer</b><span>Van 04 · with Derek · Eastside boiler</span></li>
+      <li><b>Rack recovery machine A</b><span>Van 19 · with Andre · required for Harbor</span></li>
+      <li class="warn"><b>Rack recovery machine B</b><span>Calibration bench · back Fri 07:00 · do not promise it</span></li>
+      <li><b>Compact Appion + filters ×24</b><span>Van 14 · RTU charge and Cedar / Southgate filters</span></li>
+    </ul>
+    <div class="side-foot">Metro Yard · 410 Industrial Pkwy, Bay 3 · Halden</div>
+  </aside>
+
+  <main class="workspace">
+    <header class="top">
+      <div>
+        <p class="eyebrow-brand">Fieldline HVAC</p>
+        <h1>Dispatch Board</h1>
+      </div>
+      <div class="date-nav">
+        <button type="button" class="icon-btn" id="prev-day" aria-label="Previous day">‹</button>
+        <div>
+          <strong>Thursday, April 16, 2026</strong>
+          <span>Live board · Metro Yard</span>
+        </div>
+        <button type="button" class="icon-btn" id="next-day" aria-label="Next day">›</button>
+      </div>
+      <div class="weather">54°F · dry until 14:00, then light rain · add 8–12 min westbound</div>
+      <div class="clock">
+        <span>Board time</span>
+        <strong>08:52</strong>
+      </div>
+      <div class="who">
+        <span class="avatar" aria-hidden="true">AN</span>
+        <span><b>Alicia Nguyen</b><small>Dispatcher · on until 14:00</small></span>
+      </div>
+    </header>
+
+    <section class="kpis" aria-label="Day snapshot">
+      <div class="kpi"><b>15</b><span>visits on the board</span></div>
+      <div class="kpi"><b>3</b><span>on site · 1 en route</span></div>
+      <div class="kpi"><b class="crit" id="kpi-open">1</b><span>unassigned emergency</span></div>
+      <div class="kpi"><b class="crit" id="kpi-risk">5</b><span>open risk clusters</span></div>
+      <div class="kpi" title="Assigned job and travel hours. Harbor’s 3.0h are demand, not yet engaged."><b>77%</b><span>engaged · 34.2 of 44.5h</span></div>
+      <div class="kpi"><b class="warn" id="kpi-roll">08:58</b><span id="kpi-roll-label">Derek must roll for Annex</span></div>
+    </section>
+
+    <div class="ticker" id="ticker">
+      <button type="button" class="chip crit is-on" id="chip-harbor" data-id="harbor"><b>P1</b> <span>Harbor Fresh · 88 Dock St · unassigned · aging 2h 40m</span></button>
+      <button type="button" class="chip crit" id="chip-annex" data-id="municipal"><b>ACCESS</b> <span>Annex · 1 Civic Plaza · Jamal waits until 09:20</span></button>
+      <button type="button" class="chip warn" id="chip-oakmont" data-id="oakmont"><b>OVERRUN</b> <span>Oakmont · 1200 Oakmont Ave · likely through 13:00 · Meridian clashes</span></button>
+      <button type="button" class="chip warn" id="chip-apex" data-id="apex"><b>CREW</b> <span>Apex · 500 Fiber Way · lead seat open · Andre is helper only</span></button>
+      <button type="button" class="chip warn" id="chip-lake" data-id="lakeshore"><b>TRAVEL</b> <span>Lakeshore · 220 Lakeshore Rd · ETA 13:36 vs 13:00 window</span></button>
+    </div>
+
+    <div class="workspace-body">
+      <section class="board-col">
+        <p class="insight">Spare hours are in the wrong seats. Andre Walsh is free until 11:38 but cannot close a rack. Priya Shah can pause a stable PM. Marcus Hale cannot leave an open chiller. Derek Owens is 74% booked and still misses Jamal Reeves unless he rolls by 08:58.</p>
+        <div class="decisions" aria-label="Schedule adjustments">
+          <p class="section-label">Make the call</p>
+          <button type="button" class="decision primary" id="btn-harbor" data-action="harbor">
+            <strong>Run Harbor sequence</strong>
+            <span>Priya at Dock St 09:37. Andre drops the seal at 09:24, then joins at 09:55. Harper to Friday. Apex lead stays open.</span>
+          </button>
+          <button type="button" class="decision" id="btn-derek" data-action="derek">
+            <strong>Pull Derek to Annex</strong>
+            <span>Roll now, arrive 09:14, inside Jamal’s 09:20 grace. Eastside boiler to manual with Hugh Bell. Greenline holds.</span>
+          </button>
+          <button type="button" class="decision" id="btn-meridian" data-action="meridian">
+            <strong>Park Meridian Friday</strong>
+            <span>Move the 11:15 chiller inspection to Fri 07:30. Clears Marcus’s clash. Northline holds if he is free by 13:00.</span>
+          </button>
+          <button type="button" class="decision" id="btn-cedar" data-action="cedar">
+            <strong>Slip Cedar, save Lakeshore</strong>
+            <span>Filter PM to Fri 08:30. Lena drives Westbridge to Lakeshore in 36 min and keeps the 13:00 window.</span>
+          </button>
+          <button type="button" class="decision wide" id="btn-apex" data-action="apex">
+            <strong>Offer Apex Friday 07:00</strong>
+            <span>No qualified lead is free today if Harbor and the west route hold. Nia Patel wants a confirm call by 10:00. Hot aisle is 81°F with aisle fans already on.</span>
+          </button>
+        </div>
+        <div class="toolbar">
+          <div class="legend" aria-hidden="true">
+            <span><i class="swatch pm"></i>PM</span>
+            <span><i class="swatch repair"></i>Repair</span>
+            <span><i class="swatch emergency"></i>Emergency</span>
+            <span><i class="swatch ghost"></i>Likely overrun</span>
+            <span><i class="swatch travel"></i>Travel</span>
+          </div>
+          <div class="filters" role="group" aria-label="Filter visits">
+            <button type="button" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" data-filter="risk" aria-pressed="false">Risks</button>
+            <button type="button" data-filter="pm" aria-pressed="false">PM</button>
+            <button type="button" data-filter="repair" aria-pressed="false">Repairs</button>
+            <button type="button" data-filter="emergency" aria-pressed="false">Emergency</button>
+            <span id="filter-note">Showing full day · 15 visits</span>
+          </div>
+          <div class="adjust">
+            <label>Selected <strong id="sel-name">Harbor Fresh Foods</strong></label>
+            <label for="move-tech" class="sr-only">Assign selected visit to</label>
+            <select id="move-tech" aria-label="Assign selected visit to">
+              <option value="open">Unassigned</option>
+              <option value="marcus">Marcus Hale</option>
+              <option value="priya">Priya Shah</option>
+              <option value="derek">Derek Owens</option>
+              <option value="lena">Lena Cho</option>
+              <option value="andre">Andre Walsh</option>
+            </select>
+            <button type="button" id="apply-move">Apply assignment</button>
+            <button type="button" id="restore">Restore 08:52</button>
+          </div>
+        </div>
+        <div class="gantt-scroll" id="gantt">
+          <div class="gantt" role="region" aria-label="Thursday timeline, 6:00 to 18:00">
+            <div class="gantt-head">
+              <div class="corner"><b>Crew</b><span>Attention order · 6:00–18:00</span></div>
+              <div class="hours">
+                <div class="hour">6:00</div><div class="hour">7:00</div><div class="hour">8:00</div><div class="hour">9:00</div>
+                <div class="hour">10:00</div><div class="hour">11:00</div><div class="hour">12:00</div><div class="hour">13:00</div>
+                <div class="hour">14:00</div><div class="hour">15:00</div><div class="hour">16:00</div><div class="hour">17:00</div>
+                <div class="now-head" style="left:275px">08:52</div>
+              </div>
+            </div>
+            <div class="rows">
+              <div class="now" style="left:451px" title="Board time 08:52"></div>
+
+              <div class="row is-hot" id="row-open">
+                <div class="row-label">
+                  <b>Unassigned</b>
+                  <span class="rl-meta">East Waterfront · no seat</span>
+                  <span class="rl-meta">1 emergency · 3.0h demand</span>
+                  <span class="rl-status bad" id="st-open">Aging 2h 40m</span>
+                </div>
+                <div class="track" id="track-open">
+                  <button type="button" class="job emergency is-selected" id="job-harbor" data-id="harbor" data-tech="open" data-kind="emergency risk" data-count="1" data-label="Harbor Fresh Foods" data-ticket="FL-48210" data-search="harbor fresh foods 88 dock street keeprite rack freezer emergency caleb ortiz unassigned" style="left:96px;width:384px" aria-pressed="true" aria-label="Harbor Fresh Foods, 88 Dock Street, Halden. P1 emergency. Keeprite rack, freezer 2 at 48 degrees. Unassigned. Accept a tech until 11:00. Expected duration 3 hours.">
+                    <span class="kicker"><i class="pri p1">P1</i><i class="when">until 11:00</i><i class="flag">UNASSIGNED</i></span>
+                    <span class="title">Harbor Fresh Foods</span>
+                    <span class="sub">88 Dock St · freezer #2 at 48°F · need Universal + machine A</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row" id="row-marcus">
+                <div class="row-label" style="border-left:3px solid #c56a2d">
+                  <b>Marcus Hale</b>
+                  <span class="rl-meta">Van 07 · North Loop</span>
+                  <span class="rl-meta">07:00–16:00 · 82% planned</span>
+                  <span class="rl-status bad" id="st-marcus">On site · collision 11:15</span>
+                </div>
+                <div class="track" id="track-marcus">
+                  <div class="shift" style="left:96px;width:864px"></div>
+                  <span class="off-tag" style="left:8px">Off</span>
+                  <div class="travel done" style="left:106px;width:38px" title="24 min · yard to Oakmont Office Tower">24m</div>
+                  <button type="button" class="job repair is-live" id="job-oakmont" data-id="oakmont" data-tech="marcus" data-kind="repair risk" data-count="1" data-label="Oakmont Office Tower" data-ticket="FL-48192" data-search="oakmont office tower 1200 oakmont avenue trane cvhe chiller seal marcus rosa delgado" style="left:144px;width:288px" aria-label="Oakmont Office Tower, 1200 Oakmont Avenue. P2 repair. Trane CVHE 450-ton shaft seal. Planned 7:30 to 10:30, likely through 13:00. Marcus Hale on site. Rosa Delgado must escort. Seal kit not on the van.">
+                    <span class="kicker"><i class="pri p2">P2</i><i class="when">07:30–10:30</i><i class="flag">OVERRUN</i></span>
+                    <span class="title">Oakmont Tower</span>
+                    <span class="sub">1200 Oakmont · CVHE seal · Rosa escorts · parts gap</span>
+                    <span class="prog" style="width:46%"></span>
+                  </button>
+                  <button type="button" class="job ghost" id="ext-oakmont" data-id="oakmont" data-tech="marcus" data-kind="repair risk" data-count="0" data-label="Oakmont Office Tower" data-ticket="FL-48192" data-search="oakmont overrun seal" style="left:432px;width:240px" aria-label="Projected Oakmont overrun through 13:00 if the shaft seal is replaced.">
+                    <span class="kicker"><i class="flag">LIKELY</i><i class="when">10:30–13:00</i></span>
+                    <span class="title">Seal replacement</span>
+                    <span class="sub">Needs KIT-0482 from Bay 1 · 32 min via Andre</span>
+                  </button>
+                  <button type="button" class="job pm lane2 at-risk" id="job-meridian" data-id="meridian" data-tech="marcus" data-kind="pm risk" data-count="1" data-label="Meridian Bank" data-ticket="FL-48188" data-search="meridian bank 88 commerce street york yk inspection edwina brooks" style="left:504px;width:168px" aria-label="Meridian Bank, 88 Commerce Street. Quarterly York YK inspection. 11:15 to 13:00. Clashes with the Oakmont overrun. Contact Edwina Brooks.">
+                    <span class="kicker"><i class="pri pm-tag">PM</i><i class="flag">CLASH</i></span>
+                    <span class="title">Meridian Bank</span>
+                    <span class="sub">88 Commerce · 1h 45m · slips</span>
+                  </button>
+                  <div class="clash" id="clash-meridian" style="left:504px">CLASH</div>
+                  <button type="button" class="job repair at-risk" id="job-northline" data-id="northline" data-tech="marcus" data-kind="repair risk" data-count="1" data-label="Northline Clinic" data-ticket="FL-48201" data-search="northline clinic 640 northline avenue aaon rtu paul adeyemi" style="left:792px;width:144px" aria-label="Northline Clinic, 640 Northline Avenue. P2 Aaon RTU no cool. 14:15 to 15:45. At risk if Oakmont holds past 13:00. Contact Paul Adeyemi.">
+                    <span class="kicker"><i class="pri p2">P2</i><i class="when">14:15–15:45</i><i class="flag">WATCH</i></span>
+                    <span class="title">Northline Clinic</span>
+                    <span class="sub">640 Northline · RTU no cool</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row" id="row-derek">
+                <div class="row-label" style="border-left:3px solid #8a4b2f">
+                  <b>Derek Owens</b>
+                  <span class="rl-meta">Van 04 · East Industrial</span>
+                  <span class="rl-meta">06:30–15:30 · 74% planned</span>
+                  <span class="rl-status bad" id="st-derek">Roll by 08:58 · 22 min out</span>
+                </div>
+                <div class="track" id="track-derek">
+                  <div class="shift" style="left:48px;width:864px"></div>
+                  <div class="travel done" style="left:58px;width:26px" title="16 min · yard to Eastside Laundry">16m</div>
+                  <button type="button" class="job repair is-live is-over" id="job-eastside" data-id="eastside" data-tech="derek" data-kind="repair risk" data-count="1" data-label="Eastside Laundry" data-ticket="FL-48180" data-search="eastside laundry 2100 mill road cleaver-brooks boiler testo hugh bell" style="left:83px;width:157px" aria-label="Eastside Laundry, 2100 Mill Road. P2 Cleaver-Brooks boiler short-cycling. Planned end 08:30, still on site at 08:52. Testo 330 on van. Hugh Bell can take manual low-fire.">
+                    <span class="kicker"><i class="pri p2">P2</i><i class="when">06:52–08:30</i><i class="flag">LONG</i></span>
+                    <span class="title">Eastside Laundry</span>
+                    <span class="sub">2100 Mill · roll by 08:58</span>
+                    <span class="prog" style="width:100%"></span>
+                  </button>
+                  <button type="button" class="job ghost" id="ext-eastside" data-id="eastside" data-tech="derek" data-kind="repair risk" data-count="0" data-label="Eastside Laundry" data-ticket="FL-48180" data-search="eastside overrun" style="left:240px;width:112px" aria-label="Eastside projected to continue until 09:40, which misses the Annex escort.">
+                    <span class="kicker"><i class="flag">STILL OUT</i></span>
+                    <span class="title">to 09:40</span>
+                    <span class="sub">+50 min likely</span>
+                  </button>
+                  <button type="button" class="job repair lane2 at-risk" id="job-municipal" data-id="municipal" data-tech="derek" data-kind="repair risk" data-count="1" data-label="Municipal Annex" data-ticket="FL-48174" data-search="municipal annex 1 civic plaza weil-mclain boiler jamal reeves access window escort" style="left:288px;width:240px" aria-label="Municipal Annex, 1 Civic Plaza. Weil-McLain boiler, LWCO and combustion check. Hard access 9:00 to 11:30. Jamal Reeves must be present and waits only until 9:20. Duration 2 hours 30 minutes. Zero slack.">
+                    <span class="kicker"><i class="pri p2">P2</i><i class="when">09:00–11:30</i><i class="flag">WINDOW</i></span>
+                    <span class="title">Municipal Annex</span>
+                    <span class="sub">1 Civic Plaza · Jamal until 09:20 · escort</span>
+                  </button>
+                  <div class="clash" id="clash-annex" style="left:288px">MISS</div>
+                  <button type="button" class="job pm" id="job-greenline" data-id="greenline" data-tech="derek" data-kind="pm" data-count="1" data-label="Greenline Warehouse" data-ticket="FL-48170" data-search="greenline warehouse 900 spur road reznor mau june park" style="left:696px;width:144px" aria-label="Greenline Warehouse, 900 Spur Road. Planned MAU filter PM, 13:15 to 14:45, 1 hour 30 minutes. Moved off 09:30 this morning to protect the Annex window. Contact June Park.">
+                    <span class="kicker"><i class="pri pm-tag">PM</i><i class="when">13:15–14:45</i><i class="flag">MOVED</i></span>
+                    <span class="title">Greenline Warehouse</span>
+                    <span class="sub">900 Spur · moved off 09:30</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row" id="row-priya">
+                <div class="row-label" style="border-left:3px solid #1a6b73">
+                  <b>Priya Shah</b>
+                  <span class="rl-meta">Van 11 · Medical corridor</span>
+                  <span class="rl-meta">07:30–16:30 · 78% planned</span>
+                  <span class="rl-status ok" id="st-priya">On site · pause approved</span>
+                </div>
+                <div class="track" id="track-priya">
+                  <div class="shift" style="left:144px;width:864px"></div>
+                  <span class="off-tag" style="left:8px">Off</span>
+                  <div class="travel done" style="left:184px;width:32px" title="20 min · yard to Riverside Medical Plaza">20m</div>
+                  <button type="button" class="job pm is-live" id="job-riverside" data-id="riverside" data-tech="priya" data-kind="pm" data-count="1" data-label="Riverside Medical Plaza" data-ticket="FL-48195" data-search="riverside medical plaza 900 riverside drive carrier ahu niagara helen okonkwo" style="left:216px;width:240px" aria-label="Riverside Medical Plaza, 900 Riverside Drive. Planned maintenance on Carrier AHU-3 and VAV boxes, 2 hours 30 minutes, window 8:00 to 12:00. Priya on site since 8:15. Helen Okonkwo approved a pause.">
+                    <span class="kicker"><i class="pri pm-tag">PM</i><i class="when">08:15–10:45</i><i class="flag">ON TRACK</i></span>
+                    <span class="title">Riverside Medical</span>
+                    <span class="sub">900 Riverside · AHU-3 PM · Helen on site</span>
+                    <span class="prog" style="width:25%"></span>
+                  </button>
+                  <div class="travel" style="left:456px;width:35px" title="22 min · Riverside Medical to Harper and Finch">22m</div>
+                  <button type="button" class="job repair" id="job-harper" data-id="harper" data-tech="priya" data-kind="repair" data-count="1" data-label="Harper and Finch" data-ticket="FL-48204" data-search="harper finch 44 harper street mitsubishi vrf alarm chris pell" style="left:552px;width:144px" aria-label="Harper and Finch, 44 Harper Street. P3 Mitsubishi VRF high-pressure alarm. 11:45 to 13:15, 1 hour 30 minutes. Can slip to Friday. Contact Chris Pell.">
+                    <span class="kicker"><i class="pri p3">P3</i><i class="when">11:45–13:15</i><i class="flag">P3</i></span>
+                    <span class="title">Harper &amp; Finch</span>
+                    <span class="sub">44 Harper · VRF alarm U4</span>
+                  </button>
+                  <div class="travel" style="left:696px;width:30px" title="19 min · Harper and Finch to St. Brigid School">19m</div>
+                  <button type="button" class="job pm" id="job-brigid" data-id="brigid" data-tech="priya" data-kind="pm" data-count="1" data-label="St. Brigid School" data-ticket="FL-48166" data-search="st brigid school 40 chapel lane carrier rtu ray molina escort access" style="left:768px;width:192px" aria-label="St. Brigid School, 40 Chapel Lane. PM on four Carrier RTUs, 2 hours. Restricted access 14:00 to 16:30 when wing B is empty. Ray Molina must escort. No solo roof.">
+                    <span class="kicker"><i class="pri pm-tag">PM</i><i class="when">14:00–16:00</i><i class="flag">ESCORT</i></span>
+                    <span class="title">St. Brigid School</span>
+                    <span class="sub">40 Chapel · Ray escorts · 14:00–16:30 only</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row" id="row-lena">
+                <div class="row-label" style="border-left:3px solid #3d6b58">
+                  <b>Lena Cho</b>
+                  <span class="rl-meta">Van 14 · South and West</span>
+                  <span class="rl-meta">08:00–17:00 · 94% planned</span>
+                  <span class="rl-status warn" id="st-lena">En route · ETA 09:05</span>
+                </div>
+                <div class="track" id="track-lena">
+                  <div class="shift" style="left:192px;width:864px"></div>
+                  <span class="off-tag" style="left:8px">Off</span>
+                  <div class="travel live" style="left:246px;width:50px" title="31 min · yard to Westbridge Market · left 08:34 · ETA 09:05">31m</div>
+                  <button type="button" class="job repair" id="job-westbridge" data-id="westbridge" data-tech="lena" data-kind="repair" data-count="1" data-label="Westbridge Market" data-ticket="FL-48198" data-search="westbridge market 780 westbridge boulevard lennox compressor copeland mia chen" style="left:296px;width:240px" aria-label="Westbridge Market, 780 Westbridge Boulevard. P2 Lennox RTU compressor replacement, 2 hours 30 minutes, window 9:00 to 12:00. Copeland compressor is on van 14. Compact Appion covers the charge. Contact Mia Chen. Lena ETA 9:05.">
+                    <span class="kicker"><i class="pri p2">P2</i><i class="when">09:05–11:35</i><i class="flag">PARTS OK</i></span>
+                    <span class="title">Westbridge Market</span>
+                    <span class="sub">780 Westbridge · compressor on van 14</span>
+                  </button>
+                  <div class="travel" id="travel-wb-cedar" style="left:536px;width:45px" title="28 min · Westbridge Market to Cedar Court">28m</div>
+                  <button type="button" class="job pm" id="job-cedar" data-id="cedar" data-tech="lena" data-kind="pm" data-count="1" data-label="Cedar Court Offices" data-ticket="FL-48162" data-search="cedar court offices 15 cedar court rtu filters gus edelman" style="left:592px;width:72px" aria-label="Cedar Court Offices, 15 Cedar Court. Filter and belt PM, 45 minutes, 12:10 to 12:55. Can slip a day. Contact Gus Edelman. Filters are on van 14.">
+                    <span class="kicker"><i class="pri pm-tag">PM</i></span>
+                    <span class="title">Cedar PM</span>
+                    <span class="sub">15 Cedar</span>
+                  </button>
+                  <div class="travel warn" id="travel-cedar-lake" style="left:664px;width:66px" title="41 min · Cedar Court to Lakeshore Dental · arrives 13:36, window opened 13:00, desk closes 15:00">41m late</div>
+                  <button type="button" class="job repair at-risk" id="job-lakeshore" data-id="lakeshore" data-tech="lena" data-kind="repair risk" data-count="1" data-label="Lakeshore Dental" data-ticket="FL-48207" data-search="lakeshore dental 220 lakeshore road trane voyager heat amy voss" style="left:672px;width:192px" aria-label="Lakeshore Dental, 220 Lakeshore Road. P3 Trane Voyager no heat, planned 2 hours, window 13:00 to 15:00. Current route arrives 13:36, leaving 84 minutes before the desk closes. Contact Dr. Amy Voss.">
+                    <span class="kicker"><i class="pri p3">P3</i><i class="when">13:00–15:00</i><i class="flag">LATE</i></span>
+                    <span class="title">Lakeshore Dental</span>
+                    <span class="sub">LATE · ETA 13:36 · desk closes 15:00</span>
+                  </button>
+                  <button type="button" class="job pm" id="job-southgate" data-id="southgate" data-tech="lena" data-kind="pm" data-count="1" data-label="Southgate Apartments" data-ticket="FL-48158" data-search="southgate apartments 18 southgate circle greenheck mau tina alvarez escort roof" style="left:904px;width:120px" aria-label="Southgate Apartments, 18 Southgate Circle. Make-up air filter PM, 1 hour 15 minutes, 15:25 to 16:40. Tina Alvarez must escort to the roof at 15:30. Confirmed at 07:55. 16 minutes from Lakeshore.">
+                    <span class="kicker"><i class="pri pm-tag">PM</i><i class="flag">ESCORT</i></span>
+                    <span class="title">Southgate Apts</span>
+                    <span class="sub">18 Southgate · Tina at 15:30</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row" id="row-andre">
+                <div class="row-label" style="border-left:3px solid #4d5e8a">
+                  <b>Andre Walsh</b>
+                  <span class="rl-meta">Van 19 · float / helper</span>
+                  <span class="rl-meta">08:00–16:30 · 54% booked</span>
+                  <span class="rl-status ok" id="st-andre">Open until 11:38</span>
+                </div>
+                <div class="track" id="track-andre">
+                  <div class="shift" style="left:192px;width:816px"></div>
+                  <span class="off-tag" style="left:8px">Off</span>
+                  <button type="button" class="job shop" id="job-staging" data-id="staging" data-tech="andre" data-kind="shop" data-count="0" data-label="Yard staging" data-ticket="YARD" data-search="andre walsh staging nitrogen scale h10 bay 3 recovery machine" style="left:192px;width:72px" aria-label="Andre Walsh staging nitrogen, scale, and H10 detector at Bay 3. Recovery machine A is on van 19.">
+                    <span class="kicker"><i class="flag">YARD</i></span>
+                    <span class="title">Staging</span>
+                    <span class="sub">N2 · H10</span>
+                  </button>
+                  <button type="button" class="job available" id="job-available" data-id="available" data-tech="andre" data-kind="open" data-count="0" data-label="Andre open window" data-ticket="OPEN" data-search="andre walsh open capacity helper no rack sign-off" style="left:264px;width:277px" aria-label="Andre Walsh is open from 8:45 to 11:38. He cannot lead a rack call. Useful for a parts run or a second set of hands.">
+                    <span class="title">Open until 11:38 · no rack sign-off</span>
+                  </button>
+                  <div class="travel" id="travel-andre-apex" style="left:541px;width:35px" title="22 min · yard to Apex Data Center · must roll by 11:38 for a 12:00 start">22m</div>
+                  <button type="button" class="job repair at-risk" id="job-apex" data-id="apex" data-tech="andre" data-kind="repair risk" data-count="1" data-label="Apex Data Center" data-ticket="FL-48202" data-search="apex data center 500 fiber way liebert crac nia patel two tech leak detector sponsor" style="left:576px;width:336px" aria-label="Apex Data Center, 500 Fiber Way. P2 Liebert CRAC 12 and 14, high head, hot aisle 81 degrees. Window 12:00 to 16:00, duration 3 hours 30 minutes. Requires two technicians, leak detector, and a sponsor. Nia Patel must badge them through the mantrap. Lead seat is open. Andre is helper only.">
+                    <span class="kicker"><i class="pri p2">P2</i><i class="when">12:00–15:30</i><i class="flag">2-TECH</i></span>
+                    <span class="title">Apex Data · lead open</span>
+                    <span class="sub">500 Fiber · Nia must sponsor · Andre helper only</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="Visit detail">
+        <div class="insp-head">Visit detail · selected ticket</div>
+        <div id="detail">
+          <div class="eyebrow"><i class="pri p1">P1</i> Emergency · FL-48210 · <span class="status-pill">Unassigned</span></div>
+          <h2>Harbor Fresh Foods</h2>
+          <p class="addr">88 Dock Street, Halden · East Waterfront · Derek’s territory, no free rack lead</p>
+          <p class="assigned">Assigned to <strong id="d-assigned">Unassigned</strong></p>
+          <div class="facts">
+            <div class="fact"><span>Box / probe</span><strong>48°F / 31°F at 08:47</strong></div>
+            <div class="fact"><span>Reported</span><strong>06:12 · aging 2h 40m</strong></div>
+            <div class="fact"><span>Accept a tech until</span><strong>11:00, then they move product</strong></div>
+            <div class="fact"><span>Expected duration</span><strong>3h 00m once on site</strong></div>
+            <div class="fact"><span>Equipment</span><strong>Keeprite rack · R-404A</strong></div>
+            <div class="fact"><span>From yard</span><strong>18 min · van 19 has machine A</strong></div>
+            <div class="fact"><span>Crew</span><strong>Universal lead + helper</strong></div>
+            <div class="fact"><span>Priority</span><strong>P1 product loss</strong></div>
+          </div>
+          <p class="problem">Caleb Ortiz, 06:12: freezer #2 climbed after a short power blip. The contactor chatters. Salmon-pallet probe was 31°F at 08:47, about 4°F an hour. They start moving pallets at 11:00 if the unit is still unmanned. Charge isolation is unconfirmed.</p>
+          <h3>Recommended sequence</h3>
+          <ol class="seq">
+            <li><time>09:00</time> Andre leaves Bay 1 with KIT-0482 and rack recovery machine A.</li>
+            <li><time>09:10</time> Priya pauses AHU-3 at Riverside. Helen Okonkwo already agreed.</li>
+            <li><time>09:24</time> Seal handed to Marcus at the Oakmont penthouse. He stays on radio.</li>
+            <li><time>09:37</time> Priya starts electrical checks at 88 Dock Street.</li>
+            <li><time>09:55</time> Andre joins with the machine and the TXV kit.</li>
+            <li><time>12:15</time> Target release. Harper &amp; Finch moves to Friday 08:30.</li>
+            <li><time>12:45</time> Andre can be back as Apex helper. The lead seat stays open.</li>
+            <li><time>14:00</time> St. Brigid escort with Ray Molina is left untouched.</li>
+          </ol>
+          <h3>Who can take it</h3>
+          <ul class="fits">
+            <li class="best"><b>Priya + Andre · on site 09:37 / 09:55</b><span>Can close it. Priya is Universal and did supervised rack work at Pier Cold Storage on Jan 12 with Marcus. Andre brings the only available rack machine. Costs a Riverside pause, Harper to Friday, and a late Apex helper.</span></li>
+            <li><b>Marcus alone · cannot leave</b><span>Best rack and chiller tech. Oil side of the CVHE is open. Refrigerant is isolated, so he does not need machine A, but he cannot abandon the penthouse.</span></li>
+            <li><b>Derek alone · 09:14 if he rolls now</b><span>Territory match. EPA Type II, not rack-signed-off. Rolling now is the only way he still catches Jamal Reeves.</span></li>
+            <li><b>Lena alone · about 10:20</b><span>Type II only. Would abandon a compressor the bakery cases need. Her Appion is not a rack machine.</span></li>
+            <li><b>Andre alone · 09:18 from the yard</b><span>Has machine A. Not signed off to diagnose or close a rack. Cannot be the lead.</span></li>
+          </ul>
+          <h3>Needs on site</h3>
+          <ul class="needs">
+            <li>EPA Universal lead. Andre Walsh cannot close this call.</li>
+            <li>Rack recovery machine A from van 19. Machine B is in calibration until Friday 07:00.</li>
+            <li>TXV kit and 40A contactor, staged in Bay 3 since 07:22.</li>
+            <li>Onsite contact to open the mezzanine hatch. Caleb until 10:00, then Dana Ruiz.</li>
+            <li>Arrival before 11:00. Completion can run past 11:00 once a tech is on the unit.</li>
+            <li>Dock vendor gate is open 05:00–15:00. That is not the binding constraint.</li>
+          </ul>
+          <h3>Drive time to 88 Dock Street</h3>
+          <table class="travel-table">
+            <tbody>
+              <tr><th>Yard, Bay 3</th><td>18 min</td></tr>
+              <tr><th>Eastside Laundry (Derek now)</th><td>22 min</td></tr>
+              <tr><th>Riverside Medical (Priya now)</th><td>27 min</td></tr>
+              <tr><th>Oakmont Tower (Marcus now)</th><td>31 min</td></tr>
+              <tr><th>Westbridge approach (Lena)</th><td>44 min</td></tr>
+            </tbody>
+          </table>
+          <p class="contact-line">Caleb Ortiz, night manager, on site until 10:00 · (555) 014-0198. Dana Ruiz, receiving, from 10:00 · (555) 014-0172.</p>
+          <div class="mini-actions">
+            <button type="button" class="btn primary" data-action="harbor">Run Harbor sequence</button>
+            <button type="button" class="btn" data-action="call" data-who="Caleb Ortiz" data-phone="(555) 014-0198">Log call to Caleb</button>
+            <button type="button" class="btn" data-action="call" data-who="Dana Ruiz" data-phone="(555) 014-0172">Log call to Dana</button>
+          </div>
+        </div>
+        <div class="log">
+          <h3>Board log</h3>
+          <ol class="log-list" id="log-list">
+            <li><time>08:51</time> Board refreshed from tech phones. Five on-duty vans checked in.</li>
+            <li><time>08:47</time> Harbor Fresh probe 31°F on the salmon pallets. Box at 48°F.</li>
+            <li><time>08:41</time> Derek: Eastside combustion still unstable, wants another 45–60 min.</li>
+            <li><time>08:33</time> Helen Okonkwo approved a Riverside pause if a P1 lands.</li>
+            <li><time>07:55</time> Tina Alvarez confirmed the Southgate roof escort for 15:30.</li>
+            <li><time>07:22</time> Parts cage: compressor on van 14. Seal KIT-0482 still in Bay 1.</li>
+            <li><time>06:40</time> Alicia moved Greenline PM from 09:30 to 13:15 to protect the Annex window.</li>
+            <li><time>06:12</time> Caleb Ortiz reported freezer #2. FL-48210 opened P1, still unassigned.</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+    <footer class="statusbar">
+      <span>Fieldline Dispatch · Metro Yard</span>
+      <span>Dispatch line (555) 014-0100</span>
+      <span>Radio 3</span>
+      <span>Recovery machine B in calibration until Fri 07:00</span>
+      <span>Last ping 08:51</span>
+      <span>Snapshot 08:52</span>
+    </footer>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(function () {
+  var detail = document.getElementById('detail');
+  var harborHTML = detail.innerHTML;
+  var current = 'harbor';
+  var state = { mutated: false };
+  var done = { harbor: false, derek: false, meridian: false, cedar: false, apex: false };
+  var toastTimer;
+  var names = { open: 'Unassigned', marcus: 'Marcus Hale', priya: 'Priya Shah', derek: 'Derek Owens', lena: 'Lena Cho', andre: 'Andre Walsh' };
+
+  var VISITS = {
+    harbor: { ticket: 'FL-48210', pri: 'p1', priText: 'P1', kind: 'Emergency', title: 'Harbor Fresh Foods', address: '88 Dock Street, Halden', zone: 'East Waterfront', status: 'Unassigned', assigned: 'Unassigned', phone: '(555) 014-0198', who: 'Caleb Ortiz', contactRole: 'night manager, on site until 10:00', action: 'harbor', actionLabel: 'Run Harbor sequence',
+      facts: [['Box / probe', '48°F / 31°F at 08:47'], ['Reported', '06:12 · aging 2h 40m'], ['Accept tech until', '11:00'], ['Expected duration', '3h 00m'], ['Equipment', 'Keeprite rack · R-404A'], ['From yard', '18 min']],
+      problem: 'Freezer #2 climbed after a power blip. Contactor chatters. They move salmon pallets at 11:00 if nobody is on the unit. Charge isolation is unconfirmed, so machine A has to go.',
+      needs: ['EPA Universal lead. Andre cannot close a rack.', 'Rack recovery machine A. Machine B is in calibration until Friday 07:00.', 'TXV kit and 40A contactor, staged in Bay 3.', 'Caleb Ortiz or Dana Ruiz to open the mezzanine hatch.'],
+      travel: [['Yard, Bay 3', '18 min'], ['Eastside (Derek)', '22 min'], ['Riverside (Priya)', '27 min'], ['Oakmont (Marcus)', '31 min']] },
+    oakmont: { ticket: 'FL-48192', pri: 'p2', priText: 'P2', kind: 'Repair', title: 'Oakmont Office Tower', address: '1200 Oakmont Avenue, Halden', zone: 'North Loop · Marcus territory', status: 'On site · overrun likely', assigned: 'Marcus Hale', phone: '(555) 014-0160', who: 'Rosa Delgado', contactRole: 'chief engineer, must escort to the penthouse', action: 'harbor', actionLabel: 'Run Harbor sequence for the seal',
+      facts: [['Window', '07:00–12:00'], ['On site since', '07:30 · 46% of plan'], ['Planned duration', '3h 00m'], ['Likely release', '13:00 if the seal is replaced'], ['Equipment', 'Trane CVHE 450-ton'], ['Refrigerant', 'R-1233zd isolated at 08:20']],
+      problem: 'Rosa Delgado reported oil on the evaporator head at 05:40. Marcus opened the oil side at 08:05 and found weepage at the motor shaft seal, not a fitting. KIT-0482 is in Bay 1, not on van 07. He cannot leave an open chiller.',
+      needs: ['Shaft seal kit KIT-0482 from Bay 1.', 'Rosa Delgado present for freight-elevator access.', 'No rack recovery machine. Charge is isolated.', 'A decision on Meridian before 11:15.'],
+      travel: [['From yard', '24 min'], ['To Meridian Bank', '18 min'], ['To Northline Clinic', '19 min'], ['To Harbor Fresh', '31 min']] },
+    meridian: { ticket: 'FL-48188', pri: 'pm-tag', priText: 'PM', kind: 'Planned maintenance', title: 'Meridian Bank', address: '88 Commerce Street, Halden', zone: 'North Loop', status: 'Scheduled · clashes with overrun', assigned: 'Marcus Hale', phone: '(555) 014-0114', who: 'Edwina Brooks', contactRole: 'facilities, lobby sign-in only', action: 'meridian', actionLabel: 'Park Meridian Friday 07:30',
+      facts: [['Window', '11:00–14:00'], ['Appointment', '11:15–13:00'], ['Duration', '1h 45m'], ['Equipment', 'York YK quarterly'], ['Slack', 'None if Oakmont holds'], ['Access', 'Lobby sign-in, no escort']],
+      problem: 'Quarterly chiller inspection. It sits on top of the projected Oakmont seal job from 11:15 to 13:00. Edwina Brooks can take Friday 07:30. This is the clean way to clear Marcus.',
+      needs: ['A free chiller tech for 1h 45m.', 'No replacement parts expected.', 'Customer contact for the lobby badge.'],
+      travel: [['From Oakmont', '18 min'], ['From yard', '12 min'], ['To Northline', '27 min']] },
+    northline: { ticket: 'FL-48201', pri: 'p2', priText: 'P2', kind: 'Repair', title: 'Northline Clinic', address: '640 Northline Avenue, Halden', zone: 'North Loop', status: 'Watched · depends on Oakmont release', assigned: 'Marcus Hale', phone: '(555) 014-0188', who: 'Paul Adeyemi', contactRole: 'clinic manager', action: 'meridian', actionLabel: 'Park Meridian so this can hold',
+      facts: [['Window', '13:00–16:30'], ['Appointment', '14:15–15:45'], ['Duration', '1h 30m'], ['Equipment', 'Aaon RN RTU, no cool'], ['Suite', 'Imaging'], ['Drive from Oakmont', '19 min']],
+      problem: 'Imaging suite RTU is not cooling. If Marcus is free by 13:00 he arrives about 13:19 and still makes 14:15. If he also tries to keep Meridian, this call slips past the clinic window.',
+      needs: ['Standard RTU diagnostic kit, already on van 07.', 'No special parts staged. Contactor is the likely fault.', 'Paul Adeyemi will meet the tech in imaging.'],
+      travel: [['From Oakmont', '19 min'], ['From Meridian', '27 min'], ['From yard', '22 min']] },
+    eastside: { ticket: 'FL-48180', pri: 'p2', priText: 'P2', kind: 'Repair', title: 'Eastside Laundry Co.', address: '2100 Mill Road, Halden', zone: 'East Industrial', status: 'On site · already 22 min over', assigned: 'Derek Owens', phone: '(555) 014-0144', who: 'Hugh Bell', contactRole: 'plant manager', action: 'derek', actionLabel: 'Pull Derek to Annex now',
+      facts: [['On site since', '06:52'], ['Planned end', '08:30 · 1h 40m'], ['Now', '08:52 · still out'], ['Projects', '09:40 if he stays'], ['Equipment', 'Cleaver-Brooks CB-200, 150 HP'], ['Tool', 'Testo 330, on van 04']],
+      problem: 'Steam boiler is short-cycling and the laundry lines are backing up. Combustion numbers are unstable. Hugh Bell can hold it on manual low-fire at half capacity if Derek leaves for the Annex.',
+      needs: ['Combustion analyzer, already with Derek.', 'A call to Hugh before the truck rolls.', 'Return retest after 11:30 if he makes the Annex window.'],
+      travel: [['From yard', '16 min'], ['To Municipal Annex', '22 min'], ['To Harbor Fresh', '22 min']] },
+    municipal: { ticket: 'FL-48174', pri: 'p2', priText: 'P2', kind: 'Repair plus compliance', title: 'Municipal Annex', address: '1 Civic Plaza, Halden', zone: 'East Industrial', status: 'Hard window · escort not secured', assigned: 'Derek Owens', phone: '(555) 014-0128', who: 'Jamal Reeves', contactRole: 'facilities, must be present', action: 'derek', actionLabel: 'Pull Derek to Annex now',
+      facts: [['Access window', '09:00–11:30 only'], ['Grace', 'Jamal waits until 09:20'], ['Must roll by', '08:58 from Eastside'], ['Duration', '2h 30m · zero slack'], ['Equipment', 'Weil-McLain 88, dual fuel'], ['Parts', 'LWCO is on van 04']],
+      problem: 'Combustion check plus the LWCO the annex asked for after a nuisance trip Tuesday. The mechanical room is behind council chambers. After 09:20 Jamal is in a budget hearing and the room stays locked until 13:00, which is useless for Derek’s shift.',
+      needs: ['Jamal Reeves on site to badge the tech in. No after-hours badge.', 'Testo 330 and the LWCO, both on van 04.', 'Derek must leave Eastside immediately to arrive by 09:14.'],
+      travel: [['From Eastside now', '22 min'], ['From yard', '14 min'], ['To Greenline', '24 min']] },
+    greenline: { ticket: 'FL-48170', pri: 'pm-tag', priText: 'PM', kind: 'Planned maintenance', title: 'Greenline Warehouse', address: '900 Spur Road, Halden', zone: 'East Industrial', status: 'Moved to 13:15 · holds', assigned: 'Derek Owens', phone: '(555) 014-0190', who: 'June Park', contactRole: 'warehouse lead', action: '', actionLabel: '', hold: 'No further move. Alicia already pulled this off 09:30 so the Annex window could be protected. It holds if Derek clears Civic Plaza by 11:30.',
+      facts: [['Window', '13:00–15:30'], ['Appointment', '13:15–14:45'], ['Duration', '1h 30m'], ['Equipment', 'Reznor MAU filters'], ['Access', 'Dock office, no escort'], ['Moved at', '06:40 by Alicia']],
+      problem: 'Filter PM only. June Park is flexible inside the afternoon window. Do not pull it back into the morning.',
+      needs: ['Filters already on the branch truck cycle.', 'No diagnostic specialty.', 'June Park at the dock office.'],
+      travel: [['From Municipal Annex', '24 min'], ['From yard', '19 min']] },
+    riverside: { ticket: 'FL-48195', pri: 'pm-tag', priText: 'PM', kind: 'Planned maintenance', title: 'Riverside Medical Plaza', address: '900 Riverside Drive, Halden', zone: 'Medical corridor', status: 'On site since 08:15 · on track', assigned: 'Priya Shah', phone: '(555) 014-0119', who: 'Helen Okonkwo', contactRole: 'facilities manager', action: 'harbor', actionLabel: 'Pause this and run Harbor',
+      facts: [['Window', '08:00–12:00'], ['Duration', '2h 30m'], ['Progress', 'About 25% at 08:52'], ['Equipment', 'Carrier 39M AHU-3'], ['Controls', 'Niagara N4, VAV 3-1 to 3-18'], ['Pause', 'Approved by text at 08:33']],
+      problem: 'Quarterly AHU and VAV PM. The air handler is stable. Helen Okonkwo said a pause is acceptable if a P1 lands. The remainder will not fit after St. Brigid and needs a new appointment.',
+      needs: ['Laptop with Niagara, already with Priya.', 'No replacement parts expected today.', 'Helen on site if the tech returns later.'],
+      travel: [['From yard', '20 min'], ['To Harbor Fresh', '27 min'], ['To Harper', '22 min']] },
+    harper: { ticket: 'FL-48204', pri: 'p3', priText: 'P3', kind: 'Repair', title: 'Harper and Finch', address: '44 Harper Street, Halden', zone: 'Midtown', status: 'Scheduled · can slip', assigned: 'Priya Shah', phone: '(555) 014-0155', who: 'Chris Pell', contactRole: 'office manager', action: 'harbor', actionLabel: 'Slip this by running Harbor',
+      facts: [['Window', '11:30–15:00'], ['Appointment', '11:45–13:15'], ['Duration', '1h 30m'], ['Equipment', 'Mitsubishi VRF PUHY'], ['Alarm', 'U4 high pressure'], ['Impact', 'Comfort only, not down']],
+      problem: 'Outdoor unit alarm. The office is warm, not down. This is the visit to give away so Priya can take Harbor and still make the St. Brigid escort at 14:00.',
+      needs: ['Manifold and VRF service tool, on van 11.', 'No parts staged. Likely a fan or coil wash.', 'Chris Pell for roof access, not a hard window.'],
+      travel: [['From Riverside', '22 min'], ['To St. Brigid', '19 min'], ['From yard', '15 min']] },
+    brigid: { ticket: 'FL-48166', pri: 'pm-tag', priText: 'PM', kind: 'Planned maintenance', title: 'St. Brigid School', address: '40 Chapel Lane, Halden', zone: 'Midtown', status: 'Escort locked · do not move', assigned: 'Priya Shah', phone: '(555) 014-0133', who: 'Ray Molina', contactRole: 'custodian, must escort', action: '', actionLabel: '', hold: 'Protect this window. Wing B is empty only 14:00–16:30. Ray Molina must be on the roof with the tech. Priya needs to be free by 13:40.',
+      facts: [['Access', '14:00–16:30 only'], ['Appointment', '14:00–16:00'], ['Duration', '2h 00m'], ['Equipment', '4× Carrier 50XC RTUs'], ['Escort', 'Ray Molina required'], ['Shift fit', 'Priya off at 16:30']],
+      problem: 'Filter, belt, and condensate PM on wing B. No solo roof access. School will not open the wing during class. This is a fixed point, not a flexible PM.',
+      needs: ['Filters on van 11.', 'Ray Molina present the whole visit.', 'No second tech required.'],
+      travel: [['From Harper', '19 min'], ['From Harbor Fresh', '24 min'], ['From yard', '18 min']] },
+    westbridge: { ticket: 'FL-48198', pri: 'p2', priText: 'P2', kind: 'Repair', title: 'Westbridge Market', address: '780 Westbridge Boulevard, Halden', zone: 'South and West', status: 'En route · ETA 09:05 · on track', assigned: 'Lena Cho', phone: '(555) 014-0177', who: 'Mia Chen', contactRole: 'store director', action: '', actionLabel: '', hold: 'On track. Do not pull machine A for this. The compact Appion on van 14 covers the RTU charge. Bakery cases are on this circuit and need cooling before Friday open.',
+      facts: [['Window', '09:00–12:00'], ['ETA', '09:05 · left yard 08:34'], ['Duration', '2h 30m'], ['Equipment', 'Lennox LGH RTU-2'], ['Part', 'Copeland ZP54K5E-TFD on van'], ['Recovery', 'Compact Appion, van 14']],
+      problem: 'Compressor failed overnight. Replacement is confirmed on van 14. Lena is 18 minutes into a 31 minute drive. Leave her on this call.',
+      needs: ['Compressor, confirmed on the van at 07:22.', 'Compact Appion, not rack machine A.', 'Mia Chen for roof hatch. No hard escort window.'],
+      travel: [['From yard', '31 min'], ['To Cedar Court', '28 min'], ['To Lakeshore direct', '36 min'], ['To Apex', '24 min']] },
+    cedar: { ticket: 'FL-48162', pri: 'pm-tag', priText: 'PM', kind: 'Planned maintenance', title: 'Cedar Court Offices', address: '15 Cedar Court, Halden', zone: 'South and West', status: 'Scheduled · the visit to give away', assigned: 'Lena Cho', phone: '(555) 014-0108', who: 'Gus Edelman', contactRole: 'property manager', action: 'cedar', actionLabel: 'Slip Cedar to Friday 08:30',
+      facts: [['Window', '12:00–16:00'], ['Appointment', '12:10–12:55'], ['Duration', '45 min'], ['Equipment', '6 packaged RTUs'], ['Parts', 'Filters and belts on van 14'], ['Slack', 'Can slip one day']],
+      problem: 'Filter and belt PM wedged between the compressor job and Lakeshore. The 41 minute hop to Lakeshore is what makes Lena late. Gus Edelman already accepts Friday mornings.',
+      needs: ['Filters 20×25×2, on van 14.', 'No diagnostic specialty.', 'No escort.'],
+      travel: [['From Westbridge', '28 min'], ['To Lakeshore', '41 min'], ['From yard', '26 min']] },
+    lakeshore: { ticket: 'FL-48207', pri: 'p3', priText: 'P3', kind: 'Repair', title: 'Lakeshore Dental', address: '220 Lakeshore Road, Halden', zone: 'South and West', status: 'Late on the current route', assigned: 'Lena Cho', phone: '(555) 014-0126', who: 'Dr. Amy Voss', contactRole: 'practice owner', action: 'cedar', actionLabel: 'Slip Cedar and keep this window',
+      facts: [['Window', '13:00–15:00'], ['Current ETA', '13:36 via Cedar Court'], ['Usable time if late', '84 min before desk closes'], ['Planned duration', '2h 00m'], ['Equipment', 'Trane Voyager, no heat'], ['Likely fault', 'Spark ignitor']],
+      problem: 'Front desk closes at 15:00. The Cedar Court leg adds a 41 minute drive and lands Lena 36 minutes after the window opens, so the 2 hour repair does not fit. Direct from Westbridge is 36 minutes and she can start at 13:00.',
+      needs: ['Ignitor is a van-stock item.', 'Dr. Amy Voss or the front desk to open the mechanical closet.', 'No second tech. No restricted roof.'],
+      travel: [['From Cedar Court', '41 min'], ['From Westbridge direct', '36 min'], ['To Southgate', '16 min'], ['From yard', '34 min']] },
+    southgate: { ticket: 'FL-48158', pri: 'pm-tag', priText: 'PM', kind: 'Planned maintenance', title: 'Southgate Apartments', address: '18 Southgate Circle, Halden', zone: 'South and West', status: 'Escort confirmed · holds', assigned: 'Lena Cho', phone: '(555) 014-0182', who: 'Tina Alvarez', contactRole: 'leasing, roof escort', action: '', actionLabel: '', hold: 'Tina Alvarez confirmed the roof escort at 07:55 for 15:30. Do not move this. Lena’s shift ends at 17:00 and the PM ends at 16:40 if she leaves Lakeshore on time.',
+      facts: [['Escort', '15:30 with Tina Alvarez'], ['Appointment', '15:25–16:40'], ['Duration', '1h 15m'], ['Equipment', 'Greenheck make-up air'], ['Access', 'Roof only with escort'], ['From Lakeshore', '16 min']],
+      problem: 'Filter PM. The roof hatch is locked to leasing. Tina will not stay past 17:00. This fits if Lakeshore starts at 13:00.',
+      needs: ['Filters on van 14.', 'Tina Alvarez present for the roof.', 'No combustion tools.'],
+      travel: [['From Lakeshore', '16 min'], ['From yard', '29 min']] },
+    apex: { ticket: 'FL-48202', pri: 'p2', priText: 'P2', kind: 'Repair', title: 'Apex Data Center', address: '500 Fiber Way, Halden', zone: 'Float · mantrap site', status: 'Helper only · lead seat open', assigned: 'Andre Walsh, helper', phone: '(555) 014-0164', who: 'Nia Patel', contactRole: 'data hall manager, must sponsor', action: 'apex', actionLabel: 'Offer Friday 07:00 to Nia',
+      facts: [['Window', '12:00–16:00'], ['Duration', '3h 30m'], ['Crew', '2 techs · lead unfilled'], ['Equipment', 'Liebert CRAC-12 and CRAC-14'], ['Condition', 'High head · hot aisle 81°F'], ['Access', 'Mantrap · government ID']],
+      problem: 'Both CRAC units are running high head. Aisle fans are already on. Andre can change filters and carry the H10, but he is not signed off to close the leak check. Marcus, Priya, and Lena each lose a harder commitment if they take the lead today. Nia Patel will take Friday 07:00 if Alicia confirms by 10:00.',
+      needs: ['A lead with EPA Type II or better and CRAC experience.', 'H10 detector, scale, and nitrogen, on van 19.', 'Nia Patel to sponsor both techs. No tailgating.', 'Do not send a solo helper.'],
+      travel: [['From yard', '22 min'], ['From Harbor Fresh', '26 min'], ['From Westbridge', '24 min'], ['From Oakmont', '28 min']] },
+    staging: { ticket: 'YARD', pri: 'p3', priText: 'YARD', kind: 'Shop', title: 'Bay 3 staging', address: '410 Industrial Parkway, Bay 3, Halden', zone: 'Metro Yard', status: 'Andre on the clock since 08:00', assigned: 'Andre Walsh', phone: '(555) 014-0100', who: 'Parts cage', contactRole: 'counter', action: 'harbor', actionLabel: 'Send Andre on the Harbor sequence',
+      facts: [['Since', '08:00'], ['Ends', '08:45'], ['On the cart', 'Nitrogen, scale, H10'], ['Also on van 19', 'Rack recovery machine A'], ['Not here', 'KIT-0482 is Bay 1, 8 min walk'], ['Machine B', 'In calibration']],
+      problem: 'Andre is pulling tools for the Apex helper seat. The same cart can leave at 09:00 with the seal kit and machine A if Harbor is the priority.',
+      needs: ['Do not split machine A onto a second van. There is no second rack machine today.'],
+      travel: [['Bay 1 parts counter', '8 min on foot'], ['To Oakmont', '24 min'], ['To Harbor Fresh', '18 min']] },
+    available: { ticket: 'OPEN', pri: 'p3', priText: 'OPEN', kind: 'Capacity', title: 'Andre Walsh open window', address: 'Metro Yard, then wherever he is sent', zone: 'Float', status: 'Open 08:45–11:38', assigned: 'Andre Walsh', phone: '(555) 014-0100', who: 'Andre Walsh', contactRole: 'helper, van 19', action: 'harbor', actionLabel: 'Use this window on Harbor',
+      facts: [['Open', '08:45–11:38'], ['Then', 'Must roll for Apex, 22 min'], ['Certs', 'EPA Type II · helper'], ['Cannot', 'Lead a rack or a chiller'], ['Van', '19 · machine A aboard'], ['Booked day', '54%']],
+      problem: 'This is the spare capacity on the board. It is a parts runner and a second set of hands, not a Harbor lead and not an Apex lead.',
+      needs: ['Pair him with Priya for Harbor, or send him with the seal first.', 'Do not assign a solo commercial rack.'],
+      travel: [['To Oakmont with the seal', '24 min after an 8 min counter pick'], ['To Harbor Fresh', '18 min from the yard'], ['To Apex', '22 min']] }
+  };
+
+  var FIT = '<h3>Who can take it</h3><ul class="fits">' +
+    '<li class="best"><b>Priya + Andre · 09:37 / 09:55</b><span>Can close it. Universal lead plus machine A. Riverside pauses, Harper moves to Friday, Apex helper is late, seal reaches Marcus.</span></li>' +
+    '<li><b>Marcus · cannot leave</b><span>Best rack tech. Oil side of the CVHE is open.</span></li>' +
+    '<li><b>Derek · 09:14 if he rolls</b><span>Territory match, no rack sign-off. Costs the Annex escort.</span></li>' +
+    '<li><b>Lena · about 10:20</b><span>Type II only. Would drop the compressor job.</span></li>' +
+    '<li><b>Andre alone · 09:18</b><span>Has the machine. Cannot sign off the rack.</span></li></ul>';
+
+  var SEQUENCE = '<h3>Recommended sequence</h3><ol class="seq">' +
+    '<li><time>09:00</time> Andre leaves Bay 1 with KIT-0482 and machine A.</li>' +
+    '<li><time>09:10</time> Priya pauses Riverside. Helen already agreed.</li>' +
+    '<li><time>09:24</time> Seal handed to Marcus. He stays on radio.</li>' +
+    '<li><time>09:37</time> Priya starts checks at 88 Dock Street.</li>' +
+    '<li><time>09:55</time> Andre joins with the machine and TXV kit.</li>' +
+    '<li><time>Fri 08:30</time> Harper and Finch slips. St. Brigid stays 14:00.</li></ol>';
+
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 4600);
+  }
+  function log(msg) {
+    var li = document.createElement('li');
+    var t = document.createElement('time');
+    t.textContent = '08:52';
+    li.appendChild(t);
+    li.appendChild(document.createTextNode(' Alicia · ' + msg));
+    document.getElementById('log-list').insertBefore(li, document.getElementById('log-list').firstChild);
+  }
+  function hide(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add('is-hidden');
+  }
+  function setJob(id, opts) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (opts.left != null) el.style.left = opts.left + 'px';
+    if (opts.width != null) el.style.width = opts.width + 'px';
+    if (opts.sub && el.querySelector('.sub')) el.querySelector('.sub').textContent = opts.sub;
+    if (opts.flag && el.querySelector('.flag')) el.querySelector('.flag').textContent = opts.flag;
+    if (opts.when && el.querySelector('.when')) el.querySelector('.when').textContent = opts.when;
+    if (opts.title && el.querySelector('.title')) el.querySelector('.title').textContent = opts.title;
+    if (opts.addClass) el.classList.add(opts.addClass);
+    if (opts.removeClass) el.classList.remove(opts.removeClass);
+    if (opts.tech) el.dataset.tech = opts.tech;
+  }
+  function addTravel(trackId, left, width, text, title, extra) {
+    var el = document.createElement('div');
+    el.className = 'travel' + (extra ? ' ' + extra : '');
+    el.style.left = left + 'px';
+    el.style.width = width + 'px';
+    el.title = title;
+    el.textContent = text;
+    document.getElementById(trackId).appendChild(el);
+  }
+  function addBlock(trackId, className, left, width, title, sub, id) {
+    var el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'job ' + className;
+    el.style.left = left + 'px';
+    el.style.width = width + 'px';
+    el.dataset.id = id;
+    el.dataset.tech = trackId.replace('track-', '');
+    el.dataset.label = title;
+    el.dataset.count = '0';
+    el.innerHTML = '<span class="kicker"><i class="flag">SEQ</i></span><span class="title"></span><span class="sub"></span>';
+    el.querySelector('.title').textContent = title;
+    el.querySelector('.sub').textContent = sub;
+    document.getElementById(trackId).appendChild(el);
+  }
+  function setChip(id, text, cls) {
+    var chip = document.getElementById(id);
+    if (!chip) return;
+    var s = chip.querySelector('span');
+    if (s) s.textContent = text;
+    if (cls) chip.classList.add(cls);
+  }
+  function lockBtn(id) {
+    var b = document.getElementById(id);
+    if (!b) return;
+    b.disabled = true;
+    b.classList.add('is-done');
+  }
+  function resolve(key) {
+    if (done[key]) {
+      toast('That adjustment is already on the board.');
+      return false;
+    }
+    done[key] = true;
+    var el = document.getElementById('kpi-risk');
+    el.textContent = String(Math.max(0, Number(el.textContent) - 1));
+    return true;
+  }
+  function refreshMarcus() {
+    var parts = ['On site'];
+    if (done.harbor) parts.push('seal 09:24');
+    if (done.meridian) parts.push('Meridian parked');
+    else parts.push('collision 11:15');
+    document.getElementById('st-marcus').textContent = parts.join(' · ');
+  }
+  function statusFor(id) {
+    if (id === 'harbor' && done.harbor) return 'On the board · Priya ETA 09:37';
+    if (id === 'meridian' && done.meridian) return 'Parked Friday 07:30';
+    if (id === 'cedar' && done.cedar) return 'Parked Friday 08:30';
+    if (id === 'lakeshore' && done.cedar) return 'Window restored · 13:00 start';
+    if (id === 'municipal' && done.derek) return 'Derek ETA 09:14 · inside grace';
+    if (id === 'eastside' && done.derek) return 'Cut at 08:52 · manual low-fire';
+    if (id === 'apex' && done.apex) return 'Friday 07:00 pending Nia Patel';
+    if (id === 'oakmont' && done.harbor) return 'On site · seal arrives 09:24';
+    if (id === 'riverside' && done.harbor) return 'Paused at 09:10';
+    if (id === 'harper' && done.harbor) return 'Slipped to Friday 08:30';
+    return VISITS[id].status;
+  }
+  function assignedFor(id) {
+    if (id === 'harbor' && done.harbor) return 'Priya Shah + Andre Walsh';
+    if (id === 'meridian' && done.meridian) return 'Marcus Hale · Friday 07:30';
+    if (id === 'cedar' && done.cedar) return 'Lena Cho · Friday 08:30';
+    if (id === 'harper' && done.harbor) return 'Priya Shah · Friday 08:30';
+    if (id === 'apex' && done.apex) return 'Friday 07:00 · pending Nia Patel';
+    var job = document.querySelector('.job[data-id="' + id + '"]');
+    if (job && names[job.dataset.tech]) return names[job.dataset.tech];
+    return VISITS[id].assigned;
+  }
+  function banners(id) {
+    var html = '';
+    if (id === 'harbor' && done.harbor) html += '<p class="banner ok">Sequence is on the board. Priya ETA 09:37. Andre drops the seal at 09:24 and reaches Dock Street at 09:55. The rest of the Riverside PM is not back on today’s board.</p>';
+    if (id === 'oakmont' && done.harbor) html += '<p class="banner ok">Andre is bringing KIT-0482. Hand-off about 09:24. Likely release is still 13:00.</p>';
+    if (id === 'meridian' && done.meridian) html += '<p class="banner ok">Parked to Friday 07:30 with Marcus. Call Edwina Brooks so the lobby badge is waiting.</p>';
+    if ((id === 'municipal' || id === 'eastside') && done.derek) html += '<p class="banner ok">Derek is released. Annex ETA 09:14. Confirm Hugh Bell has the boiler on manual low-fire before the truck clears Mill Road.</p>';
+    if ((id === 'cedar' || id === 'lakeshore') && done.cedar) html += '<p class="banner ok">Cedar Court slipped to Friday. Lakeshore keeps the 13:00 window via a 36 min drive from Westbridge.</p>';
+    if (id === 'apex' && done.apex) html += '<p class="banner">Offer logged for Friday 07:00 with Marcus and Andre. Not confirmed until Nia Patel calls back. She asked for that call by 10:00.</p>';
+    if (id === 'northline' && done.meridian) html += '<p class="banner">Northline holds if Marcus is free by 13:00. That still depends on the seal reaching Oakmont.</p>';
+    return html;
+  }
+  function render(id) {
+    var v = VISITS[id];
+    if (!v) return '<p class="problem calm">Select a visit on the board.</p>';
+    var facts = v.facts.map(function (f) {
+      return '<div class="fact"><span>' + f[0] + '</span><strong>' + f[1] + '</strong></div>';
+    }).join('');
+    var needs = v.needs.map(function (n) { return '<li>' + n + '</li>'; }).join('');
+    var travel = v.travel.map(function (t) { return '<tr><th>' + t[0] + '</th><td>' + t[1] + '</td></tr>'; }).join('');
+    var actions = '';
+    if (v.action) actions += '<button type="button" class="btn primary" data-action="' + v.action + '">' + v.actionLabel + '</button>';
+    if (v.phone) actions += '<button type="button" class="btn" data-action="call" data-who="' + v.who + '" data-phone="' + v.phone + '">Log call to ' + v.who + '</button>';
+    var hold = v.hold ? '<p class="banner">' + v.hold + '</p>' : '';
+    var extra = id === 'harbor' ? SEQUENCE + FIT : '';
+    var calm = v.pri === 'p1' ? '' : ' calm';
+    return '<div class="eyebrow"><i class="pri ' + v.pri + '">' + v.priText + '</i> ' + v.kind + ' · ' + v.ticket + ' · <span class="status-pill">' + statusFor(id) + '</span></div>' +
+      '<h2>' + v.title + '</h2>' +
+      '<p class="addr">' + v.address + ' · ' + v.zone + '</p>' +
+      '<p class="assigned">Assigned to <strong id="d-assigned">' + assignedFor(id) + '</strong></p>' +
+      banners(id) +
+      '<div class="facts">' + facts + '</div>' +
+      '<p class="problem' + calm + '">' + v.problem + '</p>' +
+      extra + hold +
+      '<div class="mini-actions">' + actions + '</div>' +
+      '<h3>Needs on site</h3><ul class="needs">' + needs + '</ul>' +
+      '<h3>Travel</h3><table class="travel-table"><tbody>' + travel + '</tbody></table>' +
+      '<p class="contact-line">' + v.who + ' · ' + v.phone + ' · ' + v.contactRole + '</p>';
+  }
+  function syncSelection(id) {
+    document.querySelectorAll('.job').forEach(function (j) {
+      var on = j.dataset.id === id;
+      j.classList.toggle('is-selected', on);
+      j.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('.chip').forEach(function (c) {
+      c.classList.toggle('is-on', c.dataset.id === id);
+    });
+    var primary = document.querySelector('.job[data-id="' + id + '"]');
+    document.querySelectorAll('.row').forEach(function (r) {
+      r.classList.toggle('is-hot', primary && r.id === 'row-' + primary.dataset.tech);
+    });
+    if (primary) {
+      document.getElementById('sel-name').textContent = primary.dataset.label || id;
+      if (names[primary.dataset.tech]) document.getElementById('move-tech').value = primary.dataset.tech;
+    }
+    var openRow = document.getElementById('row-open');
+    if (primary && primary.dataset.tech === 'open' && openRow) openRow.classList.add('is-hot');
+  }
+  function show(id) {
+    current = id;
+    if (id === 'harbor' && !state.mutated) detail.innerHTML = harborHTML;
+    else detail.innerHTML = render(id);
+    syncSelection(id);
+  }
+  function afterChange() {
+    state.mutated = true;
+    detail.innerHTML = render(current);
+    syncSelection(current);
+    document.getElementById('kpi-open').textContent = String(document.querySelectorAll('#track-open .job').length);
+  }
+
+  function runHarbor() {
+    if (!resolve('harbor')) return;
+    var harbor = document.getElementById('job-harbor');
+    document.getElementById('track-priya').appendChild(harbor);
+    harbor.style.left = '347px';
+    harbor.style.width = '253px';
+    harbor.dataset.tech = 'priya';
+    harbor.classList.remove('emergency');
+    setJob('job-harbor', { flag: 'PRIYA+ANDRE', when: '09:37–12:15', sub: '88 Dock · Priya lead · Andre 09:55', title: 'Harbor Fresh' });
+    setJob('job-riverside', { width: 88, flag: 'PAUSED', sub: 'Paused 09:10 · about 35% done' });
+    setJob('job-harper', { addClass: 'deferred', flag: 'FRI 08:30', sub: 'Slipped · St. Brigid stays 14:00' });
+    setJob('job-oakmont', { flag: 'SEAL 09:24', sub: '1200 Oakmont · Rosa escorts · seal en route' });
+    if (!done.apex) {
+      setJob('job-apex', { left: 648, width: 336, when: '12:45–16:15', sub: 'Helper 12:45 · lead still open' });
+    }
+    hide('job-available');
+    addTravel('track-priya', 304, 43, '27m', '27 min · Riverside Medical to Harbor Fresh', '');
+    addTravel('track-andre', 288, 48, 'Seal', '09:00–09:24 · KIT-0482 to Oakmont', 'live');
+    addTravel('track-andre', 336, 40, '31m', '31 min · Oakmont to Harbor Fresh', '');
+    addBlock('track-andre', 'repair', 376, 224, 'Harbor assist', '09:55–12:15 · machine A with Priya', 'harbor');
+    if (!done.apex) addTravel('track-andre', 600, 48, '26m', '26 min · Harbor Fresh to Apex', '');
+    document.getElementById('st-open').textContent = 'Cleared';
+    document.getElementById('st-priya').textContent = 'Rolls 09:10 · Harbor';
+    document.getElementById('st-andre').textContent = done.apex ? 'Seal run, then Dock St' : 'Seal, then Dock St · Apex 12:45';
+    refreshMarcus();
+    setChip('chip-harbor', 'Harbor Fresh assigned · Priya 09:37 · Andre 09:55', 'resolved');
+    if (done.meridian) setChip('chip-oakmont', 'Seal en route 09:24 · Meridian parked · Northline holds', 'resolved');
+    else setChip('chip-oakmont', 'Seal en route 09:24 · Meridian still clashes at 11:15');
+    if (!done.apex) setChip('chip-apex', 'Apex lead still open · helper slips to 12:45');
+    log('Ran Harbor sequence. Priya pauses Riverside at 09:10. Andre drops KIT-0482 at Oakmont 09:24 and joins Dock St 09:55. Harper to Friday 08:30. St. Brigid escort untouched. Apex lead still open.');
+    toast('Harbor sequence is on the board. Priya ETA 09:37, Andre 09:55. Riverside remainder is not rescheduled. Apex still needs a lead.');
+    lockBtn('btn-harbor');
+    afterChange();
+  }
+  function pullDerek() {
+    if (!resolve('derek')) return;
+    setJob('job-eastside', { width: 192, flag: 'MANUAL', when: '06:52–08:52', sub: 'Cut · Hugh on low-fire' });
+    hide('ext-eastside');
+    hide('clash-annex');
+    var mun = document.getElementById('job-municipal');
+    mun.classList.add('confirmed');
+    mun.classList.remove('at-risk');
+    setJob('job-municipal', { flag: 'ETA 09:14', sub: '1 Civic Plaza · Jamal caught · escort' });
+    addTravel('track-derek', 275, 35, '22m', '22 min · Eastside to Municipal Annex · arrive 09:14', 'live');
+    addTravel('track-derek', 528, 35, '22m', '22 min · Annex back to Eastside', '');
+    addBlock('track-derek', 'repair', 563, 77, 'Eastside retest', '11:52–12:40 · combustion recheck', 'eastside');
+    document.getElementById('st-derek').textContent = 'To Annex · ETA 09:14';
+    document.getElementById('kpi-roll').textContent = '09:14';
+    document.getElementById('kpi-roll-label').textContent = 'Derek ETA at Annex';
+    setChip('chip-annex', 'Annex covered · Derek ETA 09:14 · Eastside on manual', 'resolved');
+    log('Pulled Derek off Eastside at 08:52. ETA Civic Plaza 09:14, inside Jamal Reeves’s 09:20 grace. Hugh Bell to hold the boiler on manual low-fire. Retest 11:52. Greenline 13:15 holds.');
+    toast('Derek is released. Annex ETA 09:14. Call Hugh Bell at (555) 014-0144 and confirm manual low-fire before the van clears Mill Road.');
+    lockBtn('btn-derek');
+    afterChange();
+  }
+  function parkMeridian() {
+    if (!resolve('meridian')) return;
+    var mer = document.getElementById('job-meridian');
+    mer.classList.add('deferred');
+    mer.classList.remove('at-risk');
+    setJob('job-meridian', { flag: 'FRI 07:30', sub: 'Parked · call Edwina Brooks', when: 'Fri 07:30' });
+    hide('clash-meridian');
+    if (done.harbor) setJob('job-northline', { flag: 'HOLDS', sub: '640 Northline · holds, seal en route', removeClass: 'at-risk' });
+    else setJob('job-northline', { flag: 'WATCH', sub: 'Holds only if the seal arrives' });
+    refreshMarcus();
+    var oakText = done.harbor ? 'Seal en route 09:24 · Meridian parked · Northline holds' : 'Meridian parked Fri 07:30 · Northline needs the seal';
+    setChip('chip-oakmont', oakText, 'resolved');
+    log('Parked Meridian Bank quarterly to Friday 07:30 with Marcus. Clash at 11:15 cleared. Northline 14:15 holds if Oakmont releases by 13:00.');
+    toast('Meridian is parked to Friday 07:30. Call Edwina Brooks at (555) 014-0114. Northline still depends on a 13:00 release from Oakmont.');
+    lockBtn('btn-meridian');
+    afterChange();
+  }
+  function slipCedar() {
+    if (!resolve('cedar')) return;
+    setJob('job-cedar', { addClass: 'deferred', flag: 'FRI', sub: 'Friday 08:30', when: 'Fri' });
+    hide('travel-wb-cedar');
+    hide('travel-cedar-lake');
+    addTravel('track-lena', 536, 58, '36m', '36 min · Westbridge Market to Lakeshore Dental', 'ok');
+    addTravel('track-lena', 594, 78, 'early 12:11', 'Arrives 12:11 · window opens 13:00 · Dr. Amy Voss', 'ok');
+    var lake = document.getElementById('job-lakeshore');
+    lake.classList.remove('at-risk');
+    setJob('job-lakeshore', { flag: 'ON TIME', sub: '220 Lakeshore · full 13:00 window' });
+    document.getElementById('st-lena').textContent = 'West route holds';
+    setChip('chip-lake', 'Lakeshore kept · Cedar Court to Friday 08:30', 'resolved');
+    log('Slipped Cedar Court filter PM to Friday 08:30 with Gus Edelman. Lena goes Westbridge to Lakeshore direct, 36 min, and keeps the 13:00 window. Southgate escort at 15:30 still holds.');
+    toast('Cedar Court is off today’s route. Lakeshore starts at 13:00. Southgate roof escort with Tina Alvarez stays 15:30.');
+    lockBtn('btn-cedar');
+    afterChange();
+  }
+  function offerApex() {
+    if (!resolve('apex')) return;
+    var apex = document.getElementById('job-apex');
+    apex.classList.add('deferred');
+    apex.classList.remove('at-risk');
+    setJob('job-apex', { flag: 'PENDING', when: 'Fri 07:00', sub: 'Offer in · Nia confirms by 10:00' });
+    hide('travel-andre-apex');
+    if (!done.harbor) document.getElementById('st-andre').textContent = 'Open afternoon if Nia accepts';
+    else document.getElementById('st-andre').textContent = 'Seal run, then Dock St · Apex offered Fri';
+    setChip('chip-apex', 'Offered Friday 07:00 · Nia Patel to confirm by 10:00', 'pending');
+    log('Offered Apex CRAC lead to Friday 07:00 with Marcus and Andre. Pending Nia Patel’s confirm call by 10:00. Hot aisle 81°F, aisle fans already on. Not confirmed yet.');
+    toast('Offer logged for Nia Patel at (555) 014-0164. Friday 07:00 is pending her callback by 10:00. Do not tell the site it is confirmed.');
+    lockBtn('btn-apex');
+    afterChange();
+  }
+  function applyMove() {
+    var tech = document.getElementById('move-tech').value;
+    var nodes = document.querySelectorAll('.job[data-id="' + current + '"]');
+    if (!nodes.length) { toast('Select a visit on the board first.'); return; }
+    var track = document.getElementById('track-' + tech);
+    nodes.forEach(function (n) {
+      track.appendChild(n);
+      n.dataset.tech = tech;
+    });
+    var ticket = nodes[0].dataset.ticket || current;
+    log('Reassigned ' + ticket + ' to ' + names[tech] + ' without retiming the window.');
+    toast(ticket + ' is now on ' + names[tech] + ' at the same window. Travel was not recalculated. Check that row for overlaps.');
+    afterChange();
+  }
+
+  document.body.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-action]');
+    if (!b || b.disabled) return;
+    var action = b.dataset.action;
+    if (action === 'call') {
+      log('Call logged to ' + b.dataset.who + ' at ' + b.dataset.phone + '.');
+      toast('Call logged · ' + b.dataset.who + ' · ' + b.dataset.phone);
+      return;
+    }
+    if (action === 'harbor') runHarbor();
+    else if (action === 'derek') pullDerek();
+    else if (action === 'meridian') parkMeridian();
+    else if (action === 'cedar') slipCedar();
+    else if (action === 'apex') offerApex();
+  });
+
+  document.getElementById('gantt').addEventListener('click', function (e) {
+    var job = e.target.closest('.job');
+    if (!job) return;
+    show(job.dataset.id);
+  });
+  document.getElementById('ticker').addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) return;
+    show(chip.dataset.id);
+    var job = document.getElementById('job-' + chip.dataset.id);
+    if (job) job.scrollIntoView({ inline: 'center', block: 'nearest' });
+  });
+  document.querySelectorAll('.tech').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var row = document.getElementById('row-' + el.dataset.tech);
+      if (row) row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  });
+  document.getElementById('nav-board').addEventListener('click', function () {
+    document.getElementById('gantt').scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  });
+  document.getElementById('nav-crew').addEventListener('click', function () {
+    document.getElementById('roster').scrollIntoView({ block: 'start' });
+  });
+  document.getElementById('nav-parts').addEventListener('click', function () {
+    document.getElementById('parts').scrollIntoView({ block: 'start' });
+  });
+  document.getElementById('nav-risks').addEventListener('click', function () {
+    document.getElementById('ticker').scrollIntoView({ block: 'nearest' });
+  });
+  document.getElementById('apply-move').addEventListener('click', applyMove);
+  document.getElementById('restore').addEventListener('click', function () { location.reload(); });
+  document.getElementById('prev-day').addEventListener('click', function () {
+    toast('Wednesday 15 April is closed. 14 visits completed. No carryover except Meridian, already on this board.');
+  });
+  document.getElementById('next-day').addEventListener('click', function () {
+    toast('Friday 17 April is still a draft with 6 holds. It is not published. Thursday stays the live board.');
+  });
+  var searchBox = document.getElementById('search');
+  if (searchBox) searchBox.addEventListener('input', function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('.job').forEach(function (job) {
+      var hay = ((job.dataset.search || '') + ' ' + job.textContent).toLowerCase();
+      job.classList.toggle('dim', Boolean(q) && hay.indexOf(q) === -1);
+    });
+  });
+  document.querySelectorAll('[data-filter]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var f = btn.dataset.filter;
+      document.querySelectorAll('[data-filter]').forEach(function (b) {
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      var seen = {};
+      var n = 0;
+      document.querySelectorAll('.job').forEach(function (job) {
+        var kind = job.dataset.kind || '';
+        var show = f === 'all' || kind.split(' ').indexOf(f) !== -1;
+        job.classList.toggle('is-hidden', !show);
+        if (show && job.dataset.count === '1' && !seen[job.dataset.id]) {
+          seen[job.dataset.id] = true;
+          n += 1;
+        }
+      });
+      var labels = { all: 'full day', risk: 'risks', pm: 'planned maintenance', repair: 'repairs', emergency: 'emergencies' };
+      document.getElementById('filter-note').textContent = 'Showing ' + (labels[f] || f) + ' · ' + (f === 'all' ? '15' : n) + ' visits';
+    });
+  });
+})();
+</script>
+<label for="search" class="sr-only">Search visits</label>
+</body>
+</html>

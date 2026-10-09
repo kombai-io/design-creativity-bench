@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Patchbay Cloud — temporary webhook endpoints with inspect, replay, mutate and failure injection. Test webhook integrations before production. Join the private beta.">
+<meta name="theme-color" content="#0A0E12">
+<title>Patchbay Cloud — Wire-test webhooks before production</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0E12; --bg2:#0D1319; --panel:#10171E; --panel2:#141D26; --well:#0B1117;
+  --line:rgba(148,170,187,.14); --line2:rgba(148,170,187,.30);
+  --txt:#E7EEF2; --sub:#93A3B1; --dim:#5E6E7C;
+  --grn:#5CE6A4; --grn-dim:#2E9A70; --amb:#FFB84D; --red:#FF6E6E; --cyn:#6ECBE8; --vio:#B7A5FF;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --body:'Space Grotesk',system-ui,-apple-system,sans-serif;
+  --disp:'Syne','Space Grotesk',system-ui,sans-serif;
+  --r:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{
+  background:var(--bg);color:var(--txt);font-family:var(--body);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(rgba(148,170,187,.05) 1px,transparent 1px);
+  background-size:26px 26px;
+}
+::selection{background:var(--grn);color:#08110C}
+:focus-visible{outline:2px solid var(--grn);outline-offset:3px;border-radius:4px}
+a{color:inherit;text-decoration:none}
+img,svg{display:block;max-width:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.skip{position:absolute;left:-999px;top:0;background:var(--grn);color:#08110C;padding:10px 16px;z-index:99;font-family:var(--mono)}
+.skip:focus{left:12px;top:12px}
+
+/* ---------- header ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(10,14,18,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;gap:26px;height:62px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;font-size:17px;letter-spacing:.02em}
+.brand .cloud{color:var(--grn);font-weight:700}
+.brand svg{width:26px;height:26px}
+.mainnav{display:flex;gap:24px;margin-left:14px}
+.mainnav a{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--sub);padding:6px 2px;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
+.mainnav a:hover{color:var(--grn);border-color:var(--grn)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.beta-chip{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--amb);border:1px solid rgba(255,184,77,.35);padding:5px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:7px}
+.beta-chip i{width:6px;height:6px;border-radius:50%;background:var(--amb);animation:pulse 2.2s infinite}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--mono);font-weight:600;font-size:13px;letter-spacing:.05em;padding:11px 20px;border-radius:8px;border:1px solid transparent;transition:transform .18s ease,box-shadow .18s ease,background .18s,border-color .18s;white-space:nowrap}
+.btn-pri{background:var(--grn);color:#08110C}
+.btn-pri:hover{transform:translateY(-2px);box-shadow:0 10px 28px -8px rgba(92,230,164,.45)}
+.btn-pri:active{transform:translateY(0)}
+.btn-ghost{border-color:var(--line2);color:var(--txt);background:rgba(148,170,187,.04)}
+.btn-ghost:hover{border-color:var(--grn);color:var(--grn);transform:translateY(-2px)}
+.btn-sm{padding:8px 14px;font-size:12px}
+.btn[disabled]{opacity:.7;cursor:default;transform:none!important;box-shadow:none!important}
+
+/* ---------- scanlines overlay ---------- */
+.scanlines{position:fixed;inset:0;z-index:70;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px);opacity:.5}
+
+/* ---------- opening ---------- */
+.opening{padding:72px 0 64px;position:relative}
+.opening::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 340px at 78% 12%,rgba(92,230,164,.07),transparent 70%);pointer-events:none}
+.open-grid{display:grid;grid-template-columns:5fr 6fr;gap:56px;align-items:center;position:relative}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--grn);display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.kicker::before{content:"";width:26px;height:1px;background:var(--grn)}
+.kicker-dim{color:var(--dim)}
+h1{font-family:var(--disp);font-weight:800;font-size:clamp(38px,4.8vw,60px);line-height:1.02;letter-spacing:-.01em;margin-bottom:22px;min-height:2.04em}
+h1 .caret{display:inline-block;width:.55em;color:var(--grn);animation:blink 1.05s steps(1) infinite}
+.lede{color:var(--sub);font-size:17.5px;max-width:52ch;margin-bottom:26px}
+.lede strong{color:var(--txt);font-weight:600}
+.lede em{font-style:normal;color:var(--grn)}
+.hero-bullets{display:flex;flex-wrap:wrap;gap:10px 20px;margin-bottom:30px}
+.hero-bullets li{list-style:none;font-family:var(--mono);font-size:12px;color:var(--sub);display:flex;align-items:center;gap:8px}
+.hero-bullets li::before{content:"▸";color:var(--grn)}
+.hero-form{display:flex;gap:10px;max-width:480px;margin-bottom:14px}
+.hero-form input{flex:1;min-width:0;background:var(--well);border:1px solid var(--line2);border-radius:8px;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--txt);transition:border-color .2s,box-shadow .2s}
+.hero-form input::placeholder{color:var(--dim)}
+.hero-form input:focus{outline:none;border-color:var(--grn);box-shadow:0 0 0 3px rgba(92,230,164,.15)}
+.hero-form input.err{border-color:var(--red);animation:shake .4s}
+.hero-form.done input{border-color:var(--grn)}
+.hero-form button{min-width:172px}
+.form-note{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.04em}
+.form-note b{color:var(--grn);font-weight:600}
+.hero-proof{margin-top:26px;font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.hero-proof i{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:pulse 2.4s infinite}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+
+/* ---------- console ---------- */
+.console{background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);box-shadow:0 30px 80px -30px rgba(0,0,0,.7),0 0 0 1px rgba(92,230,164,.05);overflow:hidden}
+.console-head{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;border-radius:50%;background:#2A3540}
+.dots i:first-child{background:#E9695D}.dots i:nth-child(2){background:#E5B455}.dots i:last-child{background:#4FC47F}
+.console-title{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.08em}
+.livechip{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--grn)}
+.livechip i{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.endpoint-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(11,17,23,.6)}
+.endpoint-row code{font-family:var(--mono);font-size:12.5px;color:var(--grn);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--sub);border:1px solid var(--line2);border-radius:6px;padding:5px 10px;transition:color .2s,border-color .2s;flex:none}
+.copy-btn:hover{color:var(--grn);border-color:var(--grn)}
+.console-body{display:grid;grid-template-columns:250px 1fr;min-height:352px}
+.feed{border-right:1px solid var(--line);display:flex;flex-direction:column}
+.feed-label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--dim);padding:10px 14px 8px}
+.feed-list{display:flex;flex-direction:column;overflow:hidden}
+.feed-item{display:block;width:100%;text-align:left;padding:9px 14px;border-bottom:1px solid rgba(148,170,187,.07);border-left:2px solid transparent;transition:background .15s}
+.feed-item:hover{background:rgba(92,230,164,.05)}
+.feed-item.active{background:rgba(92,230,164,.08);border-left-color:var(--grn)}
+.feed-item.enter{animation:feedIn .45s ease}
+@keyframes feedIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.feed-top{display:flex;align-items:center;gap:8px;font-size:12px}
+.feed-time{font-family:var(--mono);font-size:10px;color:var(--dim)}
+.feed-name{font-family:var(--mono);font-size:12px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-status{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;flex:none}
+.st-ok{color:var(--grn);background:rgba(92,230,164,.12)}
+.st-warn{color:var(--amb);background:rgba(255,184,77,.13)}
+.st-err{color:var(--red);background:rgba(255,110,110,.13)}
+.st-info{color:var(--cyn);background:rgba(110,203,232,.12)}
+.feed-sub{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:2px}
+.inspector{display:flex;flex-direction:column;background:var(--well)}
+.insp-tabs{display:flex;gap:2px;padding:8px 12px 0;border-bottom:1px solid var(--line)}
+.insp-tab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--dim);padding:8px 14px;border-bottom:2px solid transparent;transition:color .2s}
+.insp-tab:hover{color:var(--sub)}
+.insp-tab.on{color:var(--grn);border-color:var(--grn)}
+.insp-pane{display:none;padding:14px 16px;overflow:auto;flex:1}
+.insp-pane.on{display:block}
+.insp-pane pre{font-family:var(--mono);font-size:12px;line-height:1.65;white-space:pre-wrap;word-break:break-word;color:#B9C7D2}
+.insp-meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:11px;color:var(--dim);padding:10px 16px;border-top:1px solid var(--line)}
+.insp-meta b{color:var(--sub);font-weight:500}
+.insp-meta .m-err{color:var(--red)}
+.j-k{color:var(--amb)}.j-s{color:var(--grn)}.j-n{color:var(--cyn)}.j-b{color:var(--red)}
+.console-status{display:flex;gap:22px;padding:10px 16px;border-top:1px solid var(--line);background:var(--panel2);font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.06em}
+.console-status b{color:var(--grn);font-weight:600}
+.console-status .warn b{color:var(--red)}
+.console-status span:last-child{margin-left:auto}
+.console-status .cur{color:var(--grn);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ---------- ticker ---------- */
+.ticker{border-block:1px solid var(--line);background:var(--bg2);overflow:hidden;position:relative}
+.ticker::before,.ticker::after{content:"";position:absolute;top:0;bottom:0;width:90px;z-index:2;pointer-events:none}
+.ticker::before{left:0;background:linear-gradient(90deg,var(--bg2),transparent)}
+.ticker::after{right:0;background:linear-gradient(-90deg,var(--bg2),transparent)}
+.ticker-track{display:flex;width:max-content;animation:tick 30s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+@keyframes tick{to{transform:translateX(-50%)}}
+.tk-set{display:flex;align-items:center}
+.tk{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--sub);padding:13px 0 13px 28px;white-space:nowrap}
+.tk i{color:var(--grn);font-style:normal;margin-left:28px}
+
+/* ---------- sections ---------- */
+section{position:relative}
+.sect{padding:96px 0}
+.sect-head{margin-bottom:52px;max-width:720px}
+.sec-kick{font-family:var(--mono);font-size:11.5px;letter-spacing:.24em;color:var(--grn);margin-bottom:16px}
+.sec-kick span{color:var(--dim)}
+.sec-title{font-family:var(--disp);font-weight:700;font-size:clamp(28px,3.4vw,42px);line-height:1.08;letter-spacing:-.01em}
+.mask{display:block;overflow:hidden}
+.mask>span{display:block;transform:translateY(112%);transition:transform .9s cubic-bezier(.2,.75,.2,1)}
+.mask.in>span{transform:none}
+.sec-sub{color:var(--sub);margin-top:16px;max-width:58ch}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- workflow ---------- */
+.workflow-grid{display:grid;grid-template-columns:380px 1fr;gap:64px;align-items:start}
+.steps-rail{position:sticky;top:96px}
+.step-item{display:flex;align-items:baseline;gap:14px;padding:13px 12px;border-left:2px solid var(--line);color:var(--dim);font-weight:600;font-size:15px;transition:color .25s,border-color .25s;cursor:default}
+.step-item .n{font-family:var(--mono);font-size:11px;letter-spacing:.1em}
+.step-item.on{color:var(--txt);border-color:var(--grn)}
+.step-item.on .n{color:var(--grn)}
+.rail-note{margin-top:26px;padding:16px;border:1px dashed var(--line2);border-radius:8px;font-family:var(--mono);font-size:11.5px;color:var(--dim);line-height:1.7}
+.rail-note b{color:var(--grn);font-weight:600}
+.step-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:38px 40px;margin-bottom:28px;transition:border-color .3s}
+.step-panel:hover{border-color:var(--line2)}
+.step-num{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--grn);margin-bottom:14px}
+.step-panel h3{font-family:var(--disp);font-weight:700;font-size:24px;margin-bottom:12px}
+.step-panel p{color:var(--sub);margin-bottom:22px;max-width:56ch}
+.mock{background:var(--well);border:1px solid var(--line);border-radius:8px;padding:16px 18px;font-family:var(--mono);font-size:12px;line-height:1.8;color:#A9B8C4}
+.mock .mg{color:var(--grn)}.mock .ma{color:var(--amb)}.mock .mr{color:var(--red)}.mock .mc{color:var(--cyn)}.mock .mv{color:var(--vio)}
+.mock-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.mock-row+.mock-row{margin-top:10px}
+.mini-btn{font-family:var(--mono);font-size:10px;letter-spacing:.1em;border:1px solid var(--line2);border-radius:5px;padding:3px 9px;color:var(--sub)}
+.mini-btn.hot{border-color:rgba(92,230,164,.5);color:var(--grn)}
+.mini-btn.on{background:rgba(92,230,164,.14);border-color:var(--grn);color:var(--grn)}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--sub)}
+.tag.g{border-color:rgba(92,230,164,.4);color:var(--grn)}
+.tag.a{border-color:rgba(255,184,77,.4);color:var(--amb)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;padding:2px 9px;border-radius:999px;border:1px solid var(--line2)}
+.pill i{width:6px;height:6px;border-radius:50%}
+.pill.ok i{background:var(--grn)}.pill.ok{color:var(--grn)}
+.pill.view i{background:var(--cyn)}.pill.view{color:var(--cyn)}
+
+/* ---------- capabilities ---------- */
+.cap-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+.cap{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px;transition:transform .25s ease,border-color .25s,box-shadow .25s;position:relative}
+.cap:hover{transform:translateY(-4px);border-color:rgba(92,230,164,.45);box-shadow:0 18px 44px -22px rgba(0,0,0,.8)}
+.cap.c7{grid-column:span 7}.cap.c5{grid-column:span 5}.cap.c4{grid-column:span 4}
+.cap h3{font-family:var(--disp);font-weight:700;font-size:19px;margin-bottom:10px}
+.cap p{color:var(--sub);font-size:14.5px;max-width:52ch}
+.cap-icon{width:34px;height:34px;margin-bottom:18px;color:var(--grn)}
+.cap-icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.cap-tag{position:absolute;top:24px;right:24px;font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;color:var(--dim);border:1px solid var(--line);padding:3px 8px;border-radius:999px}
+.code-strip{margin-top:18px;background:var(--well);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto}
+.code-strip pre{font-family:var(--mono);font-size:11.5px;line-height:1.7;color:#B9C7D2;white-space:pre}
+.snip-tabs{display:flex;gap:6px;margin-top:18px;margin-bottom:10px}
+.snip-tab{font-family:var(--mono);font-size:11px;color:var(--sub);border:1px solid var(--line2);border-radius:6px;padding:5px 12px;transition:all .2s}
+.snip-tab:hover{color:var(--txt)}
+.snip-tab.on{color:var(--grn);border-color:var(--grn);background:rgba(92,230,164,.08)}
+.share-mock{margin-top:18px;background:var(--well);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:11px;color:var(--dim);display:flex;align-items:center;gap:10px;overflow:hidden}
+.share-mock code{color:var(--cyn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- stats ---------- */
+.stats{border-block:1px solid var(--line);background:var(--bg2)}
+.stats-in{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:44px 28px;border-left:1px solid var(--line)}
+.stat:first-child{border-left:none}
+.stat-num{font-family:var(--disp);font-weight:800;font-size:clamp(34px,3.6vw,50px);line-height:1;color:var(--txt)}
+.stat-num b{color:var(--grn);font-weight:800}
+.stat-lab{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--dim);margin-top:12px}
+
+/* ---------- compare ---------- */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{padding:16px 20px;text-align:left;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
+thead th{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--sub);background:var(--panel2);text-transform:uppercase}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:rgba(148,170,187,.04)}
+td.first{font-weight:600;color:var(--txt);white-space:nowrap}
+td.no,td.yes{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+td.yes{color:var(--grn)}
+.pb-col{background:rgba(92,230,164,.055);border-inline:1px solid rgba(92,230,164,.3)}
+th.pb-col{color:var(--grn);position:relative}
+.pb-flag{display:inline-block;font-size:9px;letter-spacing:.16em;background:var(--grn);color:#08110C;padding:2px 8px;border-radius:999px;margin-left:10px;vertical-align:2px}
+
+/* ---------- beta scope ---------- */
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.scope-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:32px}
+.scope-card h3{font-family:var(--disp);font-weight:700;font-size:20px;margin-bottom:6px}
+.scope-card .sub{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--grn);margin-bottom:22px}
+.scope-card.later .sub{color:var(--amb)}
+.scope-list li{list-style:none;display:flex;gap:14px;padding:13px 0;border-bottom:1px solid rgba(148,170,187,.08);color:var(--sub);font-size:14.5px}
+.scope-list li:last-child{border-bottom:none}
+.scope-list .mk{font-family:var(--mono);color:var(--grn);flex:none;width:18px}
+.scope-card.later .mk{color:var(--amb)}
+.scope-list b{color:var(--txt);font-weight:600}
+.sign-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;padding-top:20px;border-top:1px dashed var(--line2)}
+.sign-row .tag{font-size:11px}
+
+/* ---------- faq ---------- */
+.faq{max-width:800px}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-q{width:100%;display:flex;align-items:center;gap:18px;text-align:left;padding:24px 4px;transition:color .2s}
+.faq-q:hover{color:var(--grn)}
+.faq-q .q-txt{font-weight:600;font-size:17px;flex:1}
+.faq-q .plus{font-family:var(--mono);color:var(--grn);font-size:18px;transition:transform .3s;flex:none}
+.faq-item.open .plus{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.2,.7,.2,1)}
+.faq-a-in{padding:0 44px 26px 4px;color:var(--sub);max-width:66ch}
+.faq-a-in code{font-family:var(--mono);font-size:.88em;color:var(--cyn);background:rgba(110,203,232,.08);padding:1px 6px;border-radius:4px}
+
+/* ---------- final CTA ---------- */
+.final{background:var(--bg2);border-top:1px solid var(--line);padding:110px 0;text-align:center;position:relative;overflow:hidden}
+.final::before{content:"";position:absolute;inset:0;background:radial-gradient(520px 300px at 50% 0%,rgba(92,230,164,.08),transparent 70%);pointer-events:none}
+.final .sec-kick{margin-bottom:18px}
+.final h2{font-family:var(--disp);font-weight:800;font-size:clamp(34px,4.6vw,58px);line-height:1.04;letter-spacing:-.01em;max-width:18ch;margin:0 auto 24px}
+.final h2 .hl{color:var(--grn)}
+.final .lede{margin:0 auto 34px}
+.final-form{display:flex;gap:10px;max-width:520px;margin:0 auto 16px}
+.final-form input{flex:1;min-width:0;background:var(--well);border:1px solid var(--line2);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:13px;color:var(--txt);transition:border-color .2s,box-shadow .2s}
+.final-form input:focus{outline:none;border-color:var(--grn);box-shadow:0 0 0 3px rgba(92,230,164,.15)}
+.final-form input.err{border-color:var(--red);animation:shake .4s}
+.final-form button{min-width:190px;padding:14px 22px}
+.final-note{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.final-ok{display:none;max-width:520px;margin:0 auto 16px;border:1px solid rgba(92,230,164,.5);background:rgba(92,230,164,.07);border-radius:10px;padding:26px 28px;text-align:left}
+.final-ok.on{display:block;animation:feedIn .5s ease}
+.final-ok .ok-title{font-family:var(--disp);font-weight:700;font-size:19px;color:var(--grn);margin-bottom:10px}
+.final-ok pre{font-family:var(--mono);font-size:12px;line-height:1.8;color:#A9B8C4;background:var(--well);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto}
+.final-ok pre b{color:var(--grn);font-weight:500}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--bg)}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr;gap:40px;margin-bottom:48px}
+.foot-tag{color:var(--dim);font-size:13.5px;max-width:30ch;margin-top:14px}
+.foot-col h4{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--dim);margin-bottom:16px;text-transform:uppercase}
+.foot-col li{list-style:none;margin-bottom:10px}
+.foot-col a,.foot-col span{font-size:13.5px;color:var(--sub);transition:color .2s}
+.foot-col a:hover{color:var(--grn)}
+.foot-col .mute{color:var(--dim)}
+.foot-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:26px;font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em}
+.foot-bar .stat-live{margin-left:auto;display:flex;align-items:center;gap:8px}
+.foot-bar .stat-live i{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:pulse 2.2s infinite}
+
+/* ---------- responsive ---------- */
+@media(max-width:1020px){
+  .open-grid{grid-template-columns:1fr;gap:44px}
+  .workflow-grid{grid-template-columns:1fr;gap:36px}
+  .steps-rail{position:static;display:flex;flex-wrap:wrap;gap:8px}
+  .step-item{border-left:none;border-bottom:2px solid var(--line);padding:8px 10px;font-size:13px}
+  .step-item.on{border-color:var(--grn)}
+  .rail-note{display:none}
+  .cap.c7,.cap.c5,.cap.c4{grid-column:span 12}
+  .cap.c5{grid-column:span 6}.cap.c7{grid-column:span 6}
+  .scope-grid{grid-template-columns:1fr}
+  .foot-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .mainnav{display:none}
+  .console-body{grid-template-columns:1fr}
+  .feed{border-right:none;border-bottom:1px solid var(--line)}
+  .feed-list{max-height:230px;overflow-y:auto}
+  .stats-in{grid-template-columns:1fr 1fr}
+  .stat:nth-child(3){border-left:none}
+  .stat{border-top:1px solid var(--line)}
+  .stat:nth-child(-n+2){border-top:none}
+  .cap.c5,.cap.c7{grid-column:span 12}
+  .hero-form,.final-form{flex-direction:column}
+  .hero-form button,.final-form button{width:100%}
+  .step-panel{padding:26px 22px}
+  .beta-chip{display:none}
+  .foot-grid{grid-template-columns:1fr}
+}
+
+/* ---------- reduced motion ---------- */
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .ticker-track{animation:none}
+  .ticker{overflow-x:auto}
+  .mask>span{transform:none}
+  .reveal{opacity:1;transform:none}
+  .scanlines{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="scanlines" aria-hidden="true"></div>
+
+<!-- ======= header ======= -->
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#top" aria-label="Patchbay Cloud home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 12h6v8H4z" fill="none" stroke="#5CE6A4" stroke-width="1.6"/><path d="M22 12h6v8h-6z" fill="none" stroke="#93A3B1" stroke-width="1.6"/><path d="M10 16h12" stroke="#5CE6A4" stroke-width="1.6" stroke-dasharray="3 2.4"/><circle cx="16" cy="16" r="2.4" fill="#5CE6A4"/></svg>
+      Patchbay<span class="cloud">Cloud</span>
+    </a>
+    <nav class="mainnav" aria-label="Primary">
+      <a href="#workflow">WORKFLOW</a>
+      <a href="#capabilities">CAPABILITIES</a>
+      <a href="#compare">WHY</a>
+      <a href="#beta">BETA SCOPE</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="top-right">
+      <span class="beta-chip"><i></i>PRIVATE BETA</span>
+      <a class="btn btn-pri btn-sm" href="#join">Join waitlist</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<!-- ======= opening ======= -->
+<section class="opening" id="top">
+  <div class="wrap open-grid">
+    <div>
+      <p class="kicker">PRE-LAUNCH · WEBHOOK TEST INFRASTRUCTURE</p>
+      <h1><span id="scramble" data-text="Wire-test your webhooks before production ever hears them.">Wire-test your webhooks before production ever hears them.</span><span class="caret" aria-hidden="true">▍</span></h1>
+      <p class="lede">Patchbay Cloud gives your team <strong>temporary endpoints</strong> that catch, inspect, replay and mutate every webhook event — so you can <em>break the integration on purpose</em> long before real customers feel it.</p>
+      <ul class="hero-bullets">
+        <li>no servers, no tunnels</li>
+        <li>capture · inspect · replay · mutate</li>
+        <li>snippets ready to ship</li>
+      </ul>
+      <form class="hero-form" data-waitlist novalidate>
+        <label class="skip" for="hero-email">Work email</label>
+        <input id="hero-email" name="email" type="email" placeholder="you@yourcompany.dev" autocomplete="email" required>
+        <button class="btn btn-pri" type="submit">Get beta access →</button>
+      </form>
+      <p class="form-note">Free during beta · <b id="queue-a">212</b> teams already queued · invites ship weekly</p>
+      <p class="hero-proof"><i></i>NO CARD · NO PROD TRAFFIC · NO NOISE</p>
+    </div>
+
+    <!-- live console -->
+    <div class="console" aria-label="Live demo of a Patchbay capture session">
+      <div class="console-head">
+        <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+        <span class="console-title">patchbay · capture session wt-4f8a2c</span>
+        <span class="livechip"><i></i>LISTENING</span>
+      </div>
+      <div class="endpoint-row">
+        <code id="endpoint-url">POST https://pbay.dev/t/wt-4f8a2c</code>
+        <button class="copy-btn" id="copy-url" type="button">COPY</button>
+      </div>
+      <div class="console-body">
+        <div class="feed">
+          <div class="feed-label">EVENTS · NEWEST FIRST</div>
+          <div class="feed-list" id="feed-list"></div>
+        </div>
+        <div class="inspector">
+          <div class="insp-tabs" role="tablist" aria-label="Event detail tabs">
+            <button class="insp-tab on" role="tab" aria-selected="true" data-pane="p-body" id="tab-body">PAYLOAD</button>
+            <button class="insp-tab" role="tab" aria-selected="false" data-pane="p-headers" id="tab-headers">HEADERS</button>
+            <button class="insp-tab" role="tab" aria-selected="false" data-pane="p-timing" id="tab-timing">TIMING</button>
+          </div>
+          <div class="insp-pane on" id="p-body" role="tabpanel" aria-labelledby="tab-body"><pre id="body-json"></pre></div>
+          <div class="insp-pane" id="p-headers" role="tabpanel" aria-labelledby="tab-headers"><pre id="headers-txt"></pre></div>
+          <div class="insp-pane" id="p-timing" role="tabpanel" aria-labelledby="tab-timing"><pre id="timing-txt"></pre></div>
+          <div class="insp-meta" id="insp-meta"></div>
+        </div>
+      </div>
+      <div class="console-status">
+        <span>RECEIVED <b id="rx-count">0</b></span>
+        <span>5xx <b id="err-count">0</b></span>
+        <span class="warn" id="err-note" style="display:none"><b>▲ failure drills on</b></span>
+        <span>UPTIME <b>100%</b></span>
+        <span>TTL 23:59:41</span>
+        <span class="cur" aria-hidden="true">▍</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======= ticker ======= -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    <div class="tk-set">
+      <span class="tk">X-Hub-Signature-256<i>▪</i></span><span class="tk">X-Stripe-Signature<i>▪</i></span><span class="tk">X-Shopify-Hmac-Sha256<i>▪</i></span><span class="tk">X-Slack-Signature<i>▪</i></span><span class="tk">X-Twilio-Email-Event-Webhook-Signature<i>▪</i></span><span class="tk">X-GitHub-Event<i>▪</i></span><span class="tk">X-GitHub-Hook-Installation-Target-Type<i>▪</i></span><span class="tk">Svix-Id<i>▪</i></span><span class="tk">Svix-Timestamp<i>▪</i></span><span class="tk">Svix-Signature<i>▪</i></span><span class="tk">X-Signature<i>▪</i></span><span class="tk">Idempotency-Key<i>▪</i></span><span class="tk">X-Webhook-Id<i>▪</i></span><span class="tk">User-Agent<i>▪</i></span><span class="tk">Content-Type: application/json<i>▪</i></span>
+    </div>
+    <div class="tk-set">
+      <span class="tk">X-Hub-Signature-256<i>▪</i></span><span class="tk">X-Stripe-Signature<i>▪</i></span><span class="tk">X-Shopify-Hmac-Sha256<i>▪</i></span><span class="tk">X-Slack-Signature<i>▪</i></span><span class="tk">X-Twilio-Email-Event-Webhook-Signature<i>▪</i></span><span class="tk">X-GitHub-Event<i>▪</i></span><span class="tk">X-GitHub-Hook-Installation-Target-Type<i>▪</i></span><span class="tk">Svix-Id<i>▪</i></span><span class="tk">Svix-Timestamp<i>▪</i></span><span class="tk">Svix-Signature<i>▪</i></span><span class="tk">X-Signature<i>▪</i></span><span class="tk">Idempotency-Key<i>▪</i></span><span class="tk">X-Webhook-Id<i>▪</i></span><span class="tk">User-Agent<i>▪</i></span><span class="tk">Content-Type: application/json<i>▪</i></span>
+    </div>
+  </div>
+</div>
+
+<!-- ======= workflow ======= -->
+<section class="sect" id="workflow">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="sec-kick"><span>01</span> — THE WORKFLOW</p>
+      <h2 class="sec-title"><span class="mask"><span>From first event to shipped handler,</span></span><span class="mask"><span>without touching production.</span></span></h2>
+      <p class="sec-sub">Five moves, one capture session. Everything happens on a throwaway endpoint that you control end to end.</p>
+    </div>
+    <div class="workflow-grid">
+      <div class="steps-rail" id="steps-rail" aria-hidden="true">
+        <div class="step-item on" data-step="0"><span class="n">01</span>Catch everything</div>
+        <div class="step-item" data-step="1"><span class="n">02</span>Inspect &amp; replay</div>
+        <div class="step-item" data-step="2"><span class="n">03</span>Mutate &amp; break it</div>
+        <div class="step-item" data-step="3"><span class="n">04</span>Share the session</div>
+        <div class="step-item" data-step="4"><span class="n">05</span>Ship the handler</div>
+        <div class="rail-note">TIP · Point your provider's <b>test mode</b> at the patchbay URL first. Promote to production only when the timeline is boring.<br><br>STATUS · <b>LISTENING</b> on wt-4f8a2c</div>
+      </div>
+      <div id="steps-col">
+        <article class="step-panel reveal">
+          <p class="step-num">STEP 01</p>
+          <h3>Catch everything</h3>
+          <p>Spin up a temporary endpoint in one click — a secret URL that accepts any method, any header, any body. No servers, no tunnels, no port forwarding. Set a TTL or keep it for the whole sprint.</p>
+          <div class="mock">
+            <span class="mg">$</span> patchbay create --ttl 24h<br>
+            <span class="mc">✔ endpoint ready</span> → <span class="ma">https://pbay.dev/t/wt-4f8a2c</span><br>
+            <span class="mv">↳ accepts: POST · PUT · PATCH · any body · HMAC or plain</span>
+          </div>
+        </article>
+        <article class="step-panel reveal">
+          <p class="step-num">STEP 02</p>
+          <h3>Inspect &amp; replay</h3>
+          <p>Every event lands in a queryable history with the raw body, headers and millisecond-level timing. Fire any of them back at your handler with one click — or re-deliver a whole batch with jitter, exactly like a flaky provider would.</p>
+          <div class="mock">
+            <div class="mock-row">
+              <span>#431</span><span class="mg">202</span><span>payment_intent.succeeded</span>
+              <span class="mini-btn hot">⟲ REPLAY</span><span class="mini-btn">DIFF</span>
+            </div>
+            <div class="mock-row">
+              <span>#430</span><span class="mr">500</span><span>invoice.payment_failed</span>
+              <span class="mini-btn hot">⟲ REPLAY ×3</span><span class="mini-btn">EXPORT</span>
+            </div>
+          </div>
+        </article>
+        <article class="step-panel reveal">
+          <p class="step-num">STEP 03</p>
+          <h3>Mutate &amp; break it</h3>
+          <p>Edit any payload before it re-fires: flip currencies, corrupt signatures, send 2&nbsp;MB of JSON. Then see how your handler answers 503s, timeouts and retries before a provider ever does it for you.</p>
+          <div class="mock">
+            <div class="mock-row"><span class="ma">status:</span> <span style="text-decoration:line-through">"paid"</span> → <span class="mg">"failed"</span></div>
+            <div class="mock-row">
+              <span>inject:</span>
+              <span class="mini-btn on">503</span><span class="mini-btn">TIMEOUT 10s</span><span class="mini-btn">DROP BODY</span><span class="mini-btn">BAD HMAC</span>
+            </div>
+          </div>
+        </article>
+        <article class="step-panel reveal">
+          <p class="step-num">STEP 04</p>
+          <h3>Share the session</h3>
+          <p>Hand the whole capture to a teammate with a signed link — full event history, timing and your annotations. Support can see the exact payload a customer received. Export to HAR whenever a paper trail helps.</p>
+          <div class="mock">
+            <div class="mock-row"><span class="mv">@mira</span> pinned <span class="ma">#431</span> · <em style="color:#A9B8C4">"currency arrives as string, not cents"</em></div>
+            <div class="mock-row">
+              <span class="pill ok"><i></i>@mira · editing</span>
+              <span class="pill view"><i></i>@devon · viewing</span>
+              <span class="mini-btn">EXPORT .HAR</span>
+            </div>
+          </div>
+        </article>
+        <article class="step-panel reveal">
+          <p class="step-num">STEP 05</p>
+          <h3>Ship the handler</h3>
+          <p>When the timeline looks boring, generate the handler code for the events you actually captured — signature verification, idempotency checks and error paths included. Paste it in, promote the endpoint, done.</p>
+          <div class="mock">
+            <span class="mg">$</span> patchbay snippet 431 --lang node<br>
+            <span class="mc">✔ handler.ts written</span> · <span class="ma">verify() · dedupe() · respond()</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======= capabilities ======= -->
+<section class="sect" id="capabilities" style="padding-top:40px">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="sec-kick"><span>02</span> — CAPABILITIES</p>
+      <h2 class="sec-title"><span class="mask"><span>Everything a webhook wishes</span></span><span class="mask"><span>it could tell you.</span></span></h2>
+    </div>
+    <div class="cap-grid">
+      <article class="cap c7 reveal">
+        <div class="cap-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 9h16"/><path d="M7 13l2 2 4-4"/></svg></div>
+        <span class="cap-tag">CORE</span>
+        <h3>Event inspector</h3>
+        <p>Pretty-printed bodies, raw bytes, full headers and the exact millisecond each event landed. Filter by source, status or header, and pin anything worth arguing about.</p>
+        <div class="code-strip"><pre>{ <span class="j-k">"id"</span>: <span class="j-s">"evt_4f8a2c"</span>, <span class="j-k">"type"</span>: <span class="j-s">"payment_intent.succeeded"</span>,
+  <span class="j-k">"data"</span>: { <span class="j-k">"amount"</span>: <span class="j-n">4900</span>, <span class="j-k">"currency"</span>: <span class="j-s">"usd"</span> },
+  <span class="j-k">"received_at"</span>: <span class="j-s">"2025-06-14T09:41:22.318Z"</span> }</pre></div>
+      </article>
+      <article class="cap c5 reveal">
+        <div class="cap-icon"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M7 2v4h4"/></svg></div>
+        <span class="cap-tag">CORE</span>
+        <h3>Replay engine</h3>
+        <p>Re-deliver any captured event — one at a time or as a jittered batch — with sub-50&nbsp;ms turnaround. Reproduce the exact sequence that broke staging on a Tuesday.</p>
+      </article>
+      <article class="cap c5 reveal">
+        <div class="cap-icon"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
+        <span class="cap-tag">FAILURE LAB</span>
+        <h3>Payload mutator</h3>
+        <p>Diff-edit any JSON before it re-fires: change amounts, drop fields, corrupt a signature, triple the size. The sender never knows; your handler learns everything.</p>
+      </article>
+      <article class="cap c7 reveal">
+        <div class="cap-icon"><svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-2 7 8-11h-6z"/></svg></div>
+        <span class="cap-tag">FAILURE LAB</span>
+        <h3>Failure injection</h3>
+        <p>Make your endpoint answer 503, stall for 10 seconds, drop the body mid-stream or respond with malformed JSON. Providers retry weirdly — rehearse for it on your terms, not theirs.</p>
+      </article>
+      <article class="cap c7 reveal">
+        <div class="cap-icon"><svg viewBox="0 0 24 24"><path d="M8 8h12v12H8z"/><path d="M4 16V4h12"/></svg></div>
+        <span class="cap-tag">TEAM</span>
+        <h3>Shared sessions</h3>
+        <p>One signed link hands engineering and support the same event history, timing chart and comments. No more "can you paste the payload again?" in Slack.</p>
+        <div class="share-mock"><span style="color:var(--grn)">⛓</span><code>pbay.dev/s/8f3k2 · view+replay · expires 7d</code><span class="tag g" style="margin-left:auto">2 VIEWING</span></div>
+      </article>
+      <article class="cap c5 reveal">
+        <div class="cap-icon"><svg viewBox="0 0 24 24"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></div>
+        <span class="cap-tag">SHIP</span>
+        <h3>Snippet generator</h3>
+        <p>Turn captured events into starter handler code — with signature verification and idempotency handled for you.</p>
+        <div class="snip-tabs" role="tablist" aria-label="Snippet language">
+          <button class="snip-tab on" data-lang="node" type="button">node</button>
+          <button class="snip-tab" data-lang="python" type="button">python</button>
+          <button class="snip-tab" data-lang="go" type="button">go</button>
+        </div>
+        <div class="code-strip"><pre id="snippet-code"></pre></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ======= stats ======= -->
+<section class="stats">
+  <div class="wrap stats-in">
+    <div class="stat"><div class="stat-num"><span data-count="100" data-suffix="%">0%</span></div><div class="stat-lab">OF THE EVENT CAUGHT &amp; KEPT</div></div>
+    <div class="stat"><div class="stat-num"><b>&lt;</b><span data-count="50">0</span> ms</div><div class="stat-lab">REPLAY ROUND-TRIP</div></div>
+    <div class="stat"><div class="stat-num"><span data-count="0">0</span></div><div class="stat-lab">PROD INCIDENTS WHILE TESTING</div></div>
+    <div class="stat"><div class="stat-num"><span data-count="150" data-suffix="+">0+</span></div><div class="stat-lab">TEAMS ON THE PRIVATE BETA LIST</div></div>
+  </div>
+</section>
+
+<!-- ======= compare ======= -->
+<section class="sect" id="compare">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="sec-kick"><span>03</span> — WHY NOT THE OLD WAY</p>
+      <h2 class="sec-title"><span class="mask"><span>Your current options,</span></span><span class="mask"><span>plugged in side by side.</span></span></h2>
+    </div>
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Capability</th>
+            <th scope="col">curl + tunnel on your laptop</th>
+            <th scope="col">Staging env + fake events</th>
+            <th scope="col" class="pb-col">Patchbay Cloud<span class="pb-flag">PRIVATE BETA</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="first">Setup time</td><td class="no">Minutes, breaks on sleep</td><td class="no">Days of plumbing</td><td class="yes pb-col">✔ One click, ~2 seconds</td></tr>
+          <tr><td class="first">Inspect full request</td><td class="no">Scroll a terminal</td><td class="no">Log files, maybe</td><td class="yes pb-col">✔ Headers · body · timing</td></tr>
+          <tr><td class="first">Replay any event</td><td class="no">✗ Recreate by hand</td><td class="no">✗ Script it yourself</td><td class="yes pb-col">✔ One click, batched or jittered</td></tr>
+          <tr><td class="first">Test failures &amp; retries</td><td class="no">✗ Hope</td><td class="no">✗ Mocks drift from reality</td><td class="yes pb-col">✔ 5xx · timeouts · bad signatures</td></tr>
+          <tr><td class="first">Share with the team</td><td class="no">✗ It's your laptop</td><td class="no">Screenshots</td><td class="yes pb-col">✔ Signed links · comments · HAR</td></tr>
+          <tr><td class="first">Signature verification</td><td class="no">Roll your own</td><td class="no">Roll your own</td><td class="yes pb-col">✔ HMAC-SHA256 &amp; friends, checked</td></tr>
+          <tr><td class="first">Handler starter code</td><td class="no">✗</td><td class="no">✗</td><td class="yes pb-col">✔ Generated from real captures</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======= beta scope ======= -->
+<section class="sect" id="beta" style="padding-top:40px">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="sec-kick"><span>04</span> — PRIVATE BETA SCOPE</p>
+      <h2 class="sec-title"><span class="mask"><span>What's wired in at launch —</span></span><span class="mask"><span>and what's spooled up next.</span></span></h2>
+    </div>
+    <div class="scope-grid">
+      <div class="scope-card reveal">
+        <h3>Live at beta launch</h3>
+        <p class="sub">SHIPPING WITH YOUR INVITE</p>
+        <ul class="scope-list">
+          <li><span class="mk">✔</span><span><b>Temporary endpoints</b> — secret URLs with per-session TTL, custom response codes and canned latency.</span></li>
+          <li><span class="mk">✔</span><span><b>HTTP-based webhooks</b> — any provider that POSTs JSON or form data over HTTP/HTTPS. Yes, that one too.</span></li>
+          <li><span class="mk">✔</span><span><b>Common signing methods</b> — HMAC-SHA256 header schemes verified automatically, with plain-text fallback.</span></li>
+          <li><span class="mk">✔</span><span><b>Replay, mutate &amp; failure injection</b> on every captured event, with full history kept per session.</span></li>
+          <li><span class="mk">✔</span><span><b>Shared sessions</b> — read-only or replay-capable links for engineering and support.</span></li>
+        </ul>
+        <div class="sign-row" aria-label="Signing methods supported at launch">
+          <span class="tag g">HMAC-SHA256</span><span class="tag g">t=…,v1=…</span><span class="tag g">sha256=…</span><span class="tag g">base64 HMAC</span><span class="tag">plain-text fallback</span>
+        </div>
+      </div>
+      <div class="scope-card later reveal">
+        <h3>On the bench next</h3>
+        <p class="sub">QUEUED AFTER LAUNCH</p>
+        <ul class="scope-list">
+          <li><span class="mk">▸</span><span><b>Non-HTTP transports</b> — queue-based deliveries, SSE and gRPC-style streams.</span></li>
+          <li><span class="mk">▸</span><span><b>Scheduled replay suites</b> — run regression batches against handlers on every deploy.</span></li>
+          <li><span class="mk">▸</span><span><b>Provider templates</b> — one-click presets for the big payment, CRM and dev-tool senders.</span></li>
+          <li><span class="mk">▸</span><span><b>mTLS &amp; custom cert endpoints</b> for pickier senders.</span></li>
+          <li><span class="mk">▸</span><span><b>Org-wide libraries</b> — shared event fixtures across every team and session.</span></li>
+        </ul>
+        <div class="sign-row"><span class="tag a">VOTE ON THE ROADMAP FROM INSIDE THE BETA</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======= faq ======= -->
+<section class="sect" id="faq" style="padding-top:40px">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="sec-kick"><span>05</span> — QUESTIONS WE GET</p>
+      <h2 class="sec-title"><span class="mask"><span>Fair questions,</span></span><span class="mask"><span>straight answers.</span></span></h2>
+    </div>
+    <div class="faq">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="q-txt">Does the beta cost anything?</span><span class="plus" aria-hidden="true">+</span></button>
+        <div class="faq-a"><div class="faq-a-in">No. The private beta is free, with generous per-session limits. Paid plans arrive at general availability — beta teams keep a founding discount and their event histories migrate with them.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="q-txt">When do invites go out?</span><span class="plus" aria-hidden="true">+</span></button>
+        <div class="faq-a"><div class="faq-a-in">In weekly waves, oldest signup first. Tell us which providers you integrate with and we'll prioritize waves that match what we're stabilizing — currently payment, CRM and dev-tool webhooks.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="q-txt">Which webhook providers are supported?</span><span class="plus" aria-hidden="true">+</span></button>
+        <div class="faq-a"><div class="faq-a-in">Anything that sends an HTTP or HTTPS <code>POST</code>. Patchbay endpoints are provider-agnostic: any method, any headers, any body. The beta ships with automatic checks for the common HMAC-SHA256 signing schemes plus plain-text delivery.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="q-txt">What happens to captured payloads?</span><span class="plus" aria-hidden="true">+</span></button>
+        <div class="faq-a"><div class="faq-a-in">They're encrypted at rest, visible only to your session's collaborators, and auto-expire on the TTL you set. You can redact fields (tokens, emails, card fragments) before anything is stored. Patchbay Cloud never sees production traffic — that's the point. SOC 2 work is underway ahead of GA.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="q-txt">What's explicitly out of scope for now?</span><span class="plus" aria-hidden="true">+</span></button>
+        <div class="faq-a"><div class="faq-a-in">Non-HTTP transports (queues, gRPC streams), mTLS endpoints and multi-region replay are planned but not in the first beta wave. If any of those are blockers, say so in the waitlist form — it directly shapes the wave order.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======= final CTA ======= -->
+<section class="final" id="join">
+  <div class="wrap">
+    <p class="sec-kick"><span>06</span> — JOIN THE PRIVATE BETA</p>
+    <h2>Get your endpoint before your <span class="hl">next integration</span> ships.</h2>
+    <p class="lede">Waves go out weekly. Grab a spot, keep your endpoints, and break things on purpose from day one.</p>
+    <form class="final-form" data-waitlist novalidate>
+      <label class="skip" for="final-email">Work email</label>
+      <input id="final-email" name="email" type="email" placeholder="you@yourcompany.dev" autocomplete="email" required>
+      <button class="btn btn-pri" type="submit">Reserve my endpoint →</button>
+    </form>
+    <p class="final-note">FREE DURING BETA · NO CARD · UNSUBSCRIBE WITH ONE REPLY</p>
+    <div class="final-ok" id="final-ok" role="status">
+      <p class="ok-title">✔ You're patched in.</p>
+      <pre>invite.status  = <b>queued</b>
+position       = <b id="ok-pos">#213</b>
+wave           = <b>weekly · oldest first</b>
+first_command  = <b>patchbay create --ttl 24h</b></pre>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ======= footer ======= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 12h6v8H4z" fill="none" stroke="#5CE6A4" stroke-width="1.6"/><path d="M22 12h6v8h-6z" fill="none" stroke="#93A3B1" stroke-width="1.6"/><path d="M10 16h12" stroke="#5CE6A4" stroke-width="1.6" stroke-dasharray="3 2.4"/><circle cx="16" cy="16" r="2.4" fill="#5CE6A4"/></svg>
+          Patchbay<span class="cloud">Cloud</span>
+        </a>
+        <p class="foot-tag">Temporary endpoints for teams who'd rather break a webhook on purpose than explain it in a postmortem.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="#workflow">Workflow</a></li>
+          <li><a href="#capabilities">Capabilities</a></li>
+          <li><a href="#compare">Why Patchbay</a></li>
+          <li><a href="#beta">Beta scope</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:hello@patchbay.cloud">hello@patchbay.cloud</a></li>
+          <li><span class="mute">X / GitHub — soon</span></li>
+          <li><span class="mute">Changelog — at GA</span></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h4>Status</h4>
+        <ul>
+          <li><span class="mute">Console — pre-launch</span></li>
+          <li><span class="mute">Docs — shipping with invites</span></li>
+          <li><span class="mute">Uptime — 100% (nothing to break yet)</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bar">
+      <span>© 2025 PATCHBAY CLOUD, INC.</span>
+      <span>PRIVACY · TERMS — WITH THE DOCS</span>
+      <span class="stat-live"><i></i>ENDPOINTS ARMED: <span id="armed">3</span></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+var RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- scramble-decode title ---------- */
+(function(){
+  var el = document.getElementById("scramble");
+  if(!el) return;
+  var txt = el.getAttribute("data-text");
+  if(RM){ el.textContent = txt; return; }
+  var glyphs = "▓▒░<>/{}[]#$%&@=+*";
+  var frame = 0, total = Math.max(26, Math.round(txt.length*1.15));
+  el.textContent = "";
+  var iv = setInterval(function(){
+    frame++;
+    var reveal = Math.floor(txt.length * (frame/total));
+    var out = "";
+    for(var i=0;i<txt.length;i++){
+      if(i < reveal || txt[i] === " ") out += txt[i];
+      else out += glyphs[Math.floor(Math.random()*glyphs.length)];
+    }
+    el.textContent = out;
+    if(frame >= total){ clearInterval(iv); el.textContent = txt; }
+  }, 32);
+})();
+
+/* ---------- data ---------- */
+var NOW = Date.now();
+var EV = [
+ {n:"payment_intent.succeeded", src:"stripe", ua:"Stripe/1.0", st:200, sz:"1.9 kB", d:9, sig:'X-Stripe-Signature: t=1718351422, v1=5f8a…c2e9', body:{id:"evt_1PZqk2L", type:"payment_intent.succeeded", created:1718351422, data:{object:{id:"pi_3PZqj8Lk", amount:4900, currency:"usd", status:"succeeded", customer:"cus_Qr8x00L1"}}}},
+ {n:"checkout.session.completed", src:"stripe", ua:"Stripe/1.0", st:202, sz:"2.4 kB", d:36, sig:'X-Stripe-Signature: t=1718351395, v1=8b12…77aa', body:{id:"evt_1PZqabC", type:"checkout.session.completed", data:{object:{id:"cs_test_a1Fh2", payment_status:"paid", amount_total:12800, currency:"eur"}}}},
+ {n:"issue.opened", src:"github", ua:"GitHub-Hookshot/f02c1c", st:202, sz:"3.1 kB", d:74, sig:'X-Hub-Signature-256: sha256=9c4e…1d0b', body:{action:"opened", issue:{number:482, title:"Retry loop floods logs on 503", state:"open", user:{login:"mira-dev"}}, repository:{full_name:"acme/billing-api"}}},
+ {n:"invoice.paid", src:"stripe", ua:"Stripe/1.0", st:200, sz:"2.2 kB", d:118, sig:'X-Stripe-Signature: t=1718351313, v1=aa19…03fe', body:{id:"evt_1PZq90A", type:"invoice.paid", data:{object:{id:"in_1PZq88Xk", amount_paid:9900, paid:true, hosted_invoice_url:"https://in.example/9F2k"}}}},
+ {n:"orders/updated", src:"shopify", ua:"Shopify-Captain-Hook", st:200, sz:"2.8 kB", d:151, sig:'X-Shopify-Hmac-Sha256: 3jJ9…Qx2=', body:{id:5519284771, order_id:"#1042", fulfillment_status:"shipped", total_price:"84.20", currency:"USD", line_items:[{sku:"PB-USB-C", qty:2}]}},
+ {n:"delivery.sent", src:"sendgrid", ua:"SendGrid Event API", st:204, sz:"0.6 kB", d:203, sig:'X-Twilio-Email-Event-Webhook-Signature: MEUCIQ…', body:[{email:"ops@acme.dev", event:"delivered", timestamp:1718351227, sg_message_id:"filter001-22"}]},
+ {n:"subscription.canceled", src:"stripe", ua:"Stripe/1.0", st:200, sz:"1.7 kB", d:262, sig:'X-Stripe-Signature: t=1718351169, v1=c00d…91b7', body:{id:"evt_1PZq12D", type:"customer.subscription.deleted", data:{object:{id:"sub_9x8Y7", status:"canceled", cancel_at_period_end:false}}}},
+ {n:"invoice.payment_failed", src:"stripe", ua:"Stripe/1.0", st:500, sz:"2.1 kB", d:305, err:"retried ×3 · handler raised on status \u201Cpast_due\u201D", sig:'X-Stripe-Signature: t=1718351126, v1=77e1…4410', body:{id:"evt_1PZpxzK", type:"invoice.payment_failed", data:{object:{id:"in_1PZpwxJk", amount_due:12900, attempt_count:3, status:"past_due"}}}},
+ {n:"message.action", src:"slack", ua:"Slackbot 1.0 (+https://api.slack.com)", st:200, sz:"0.9 kB", d:348, sig:'X-Slack-Signature: v0=a211…8ef3', body:{type:"event_callback", event:{type:"message", channel:"C0PAYBAY", text:"deploy is green ✔"}}, note:"delivery retried ×2 by sender"},
+ {n:"contact.created", src:"hubspot", ua:"HubSpot Webhooks", st:502, sz:"1.2 kB", d:392, err:"timeout after 10s — fault injection on", sig:'X-HubSpot-Signature: v1=19dc…b6a2', body:[{subscriptionType:"contact.creation", objectId:90211, occurredAt:1718351039000}]}
+];
+
+/* ---------- helpers ---------- */
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function fmt(obj){ return JSON.stringify(obj, null, 2).replace(/"/g,"&quot;"); }
+function hl(jsonStr){ /* input already uses &quot; for quotes */
+  return jsonStr.replace(/(&quot;)((?:\\.|[^&])*?)(&quot;)(\s*:)?|\b(true|false|null)\b|-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g,
+    function(m, q1, inner, q2, colon, kw){
+      if(q1 !== undefined){
+        if(colon) return '<span class="j-k">'+q1+inner+q2+'</span>'+colon;
+        return '<span class="j-s">'+q1+inner+q2+'</span>';
+      }
+      if(kw !== undefined) return '<span class="j-b">'+kw+'</span>';
+      return '<span class="j-n">'+m+'</span>';
+    });
+}
+function stClass(s){ if(s>=500) return "st-err"; if(s===204) return "st-info"; if(s>=400) return "st-warn"; return "st-ok"; }
+function fmtTime(d){
+  if(d < 3) return "just now";
+  if(d < 60) return Math.round(d)+"s ago";
+  if(d < 3600) return Math.round(d/60)+"m ago";
+  return Math.round(d/3600)+"h ago";
+}
+function tick(){
+  var n = Math.floor(Math.random()*400)+120;
+  document.querySelectorAll(".snip-tab.on");
+  return n;
+}
+
+/* ---------- console feed ---------- */
+var feedList = document.getElementById("feed-list");
+var bodyJson = document.getElementById("body-json");
+var headersTxt = document.getElementById("headers-txt");
+var timingTxt = document.getElementById("timing-txt");
+var inspMeta = document.getElementById("insp-meta");
+var rxEl = document.getElementById("rx-count");
+var errEl = document.getElementById("err-count");
+var items = []; // {btn, ts, ev}
+var rx = 0, errs = 0, activeIdx = -1, live = true;
+
+function buildHeaders(ev, tsMs){
+  return [
+    ["User-Agent", ev.ua],
+    ["Content-Type", Array.isArray(ev.body) ? "application/json" : "application/json"],
+    [ev.sig.split(":")[0], ev.sig.split(": ").slice(1).join(": ")],
+    ["Idempotency-Key", "idem_"+Math.abs(tsMs).toString(36)],
+    ["X-Webhook-Id", "wh_"+Math.abs(tsMs*7).toString(36)],
+    ["Content-Length", ev.sz]
+  ];
+}
+function renderInspector(ev){
+  bodyJson.innerHTML = hl(fmt(ev.body));
+  var hh = buildHeaders(ev, NOW - ev.d*1000);
+  headersTxt.innerHTML = hh.map(function(h){
+    var sigRow = /Signature|Hmac/i.test(h[0]);
+    return '<span style="color:'+(sigRow?"var(--grn)":"var(--cyn)")+'">'+esc(h[0])+'</span>: '+esc(h[1]);
+  }).join("\n") + "\n\n<span style=\"color:var(--dim)\">↳ green rows verified against the session secret</span>";
+  var rtt = (Math.random()*80+9).toFixed(1);
+  timingTxt.innerHTML =
+    "received     "+esc(fmtTime(ev.d))+"  (t0)\n"+
+    "ingested     +"+ (Math.random()*3+0.4).toFixed(1) +" ms\n"+
+    "sig checked  +"+ (Math.random()*2+0.2).toFixed(1) +" ms  → "+(ev.st>=500?"skipped (5xx)":"valid")+"\n"+
+    "handler ack  +"+ rtt +" ms\n"+
+    "status       "+ev.st+" "+(ev.st>=500?"— provider will retry":"")+"\n\n"+
+    "<span style=\"color:var(--dim)\">replay ETA &lt;50 ms · jitter optional</span>";
+  inspMeta.innerHTML = "<span>SOURCE <b>"+esc(ev.src)+"</b></span><span>STATUS <b"+(ev.st>=500?' class="m-err"':'')+">"+ev.st+"</b></span><span>SIZE <b>"+esc(ev.sz)+"</b></span>" + (ev.err? "<span class='m-err'>▲ "+esc(ev.err)+"</span>":"") + (ev.note? "<span><b>"+esc(ev.note)+"</b></span>":"");
+}
+function activate(i){
+  activeIdx = i;
+  items.forEach(function(it, idx){ it.btn.classList.toggle("active", idx===i); });
+  renderInspector(items[i].ev);
+}
+function addEvent(ev, animate){
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "feed-item" + (animate && !RM ? " enter" : "");
+  var ts = Date.now();
+  btn.innerHTML =
+    '<span class="feed-top"><span class="feed-time">'+fmtTime(0)+'</span><span class="feed-status '+stClass(ev.st)+'">'+ev.st+'</span></span>'+
+    '<span class="feed-name">'+esc(ev.n)+'</span>'+
+    '<span class="feed-sub">'+esc(ev.src)+' · '+esc(ev.sz)+'</span>';
+  var rec = {btn:btn, ts:ts, ev:ev};
+  btn.addEventListener("click", function(){ live=false; activate(items.indexOf(rec)); });
+  if(items.length){
+    feedList.insertBefore(btn, feedList.firstChild);
+  } else {
+    feedList.appendChild(btn);
+  }
+  items.unshift(rec);
+  if(items.length > 8){
+    var gone = items.pop();
+    gone.btn.remove();
+  }
+  rx++;
+  if(ev.st >= 500) errs++;
+  rxEl.textContent = rx;
+  errEl.textContent = errs;
+  document.getElementById("err-note").style.display = errs ? "" : "none";
+  if(live || activeIdx === -1) activate(0);
+}
+
+/* seed a few events (oldest first so newest ends on top) */
+for(var s = Math.min(4, EV.length-1); s >= 0; s--){ addEvent(EV[s], false); }
+var cursor = 5;
+if(!RM){
+  setInterval(function(){
+    if(document.hidden) return;
+    addEvent(EV[cursor % EV.length], true);
+    cursor++;
+  }, 3200);
+}
+/* refresh relative timestamps */
+setInterval(function(){
+  items.forEach(function(it){
+    var t = it.btn.querySelector(".feed-time");
+    if(t) t.textContent = fmtTime((Date.now()-it.ts)/1000);
+  });
+}, 1000);
+
+/* ---------- inspector tabs ---------- */
+document.querySelectorAll(".insp-tab").forEach(function(tab){
+  tab.addEventListener("click", function(){
+    document.querySelectorAll(".insp-tab").forEach(function(t){ t.classList.remove("on"); t.setAttribute("aria-selected","false"); });
+    document.querySelectorAll(".insp-pane").forEach(function(p){ p.classList.remove("on"); });
+    tab.classList.add("on"); tab.setAttribute("aria-selected","true");
+    document.getElementById(tab.dataset.pane).classList.add("on");
+  });
+});
+
+/* ---------- copy endpoint ---------- */
+var copyBtn = document.getElementById("copy-url");
+copyBtn.addEventListener("click", function(){
+  var url = "https://pbay.dev/t/wt-4f8a2c";
+  function done(){ copyBtn.textContent = "COPIED ✓"; setTimeout(function(){ copyBtn.textContent = "COPY"; }, 1600); }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done, done);
+  } else {
+    var ta = document.createElement("textarea");
+    ta.value = url; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    ta.remove(); done();
+  }
+});
+
+/* ---------- snippet tabs ---------- */
+var SNIP = {
+  node: "// handler.ts — generated from evt_4f8a2c\nimport { verify } from \u0022@patchbay/sig\u0022;\n\nexport async function handler(req) {\n  const evt = await verify(req, process.env.PB_SECRET);\n  if (seen(evt.id)) return ok();   // idempotent\n  switch (evt.type) {\n    case \u0022payment_intent.succeeded\u0022:\n      return grantAccess(evt.data.object.customer);\n  }\n}",
+  python: "# handler.py — generated from evt_4f8a2c\nfrom patchbay import verify\n\ndef handler(request):\n    evt = verify(request, settings.PB_SECRET)\n    if seen(evt[\"id\"]):\n        return ok()  # idempotent\n    if evt[\"type\"] == \"payment_intent.succeeded\":\n        grant_access(evt[\"data\"][\"object\"][\"customer\"])",
+  go: "// handler.go — generated from evt_4f8a2c\nfunc Handler(w http.ResponseWriter, r *http.Request) {\n\tevt, err := pbay.Verify(r, os.Getenv(\"PB_SECRET\"))\n\tif err != nil || seen(evt.ID) { return }\n\tif evt.Type == \"payment_intent.succeeded\" {\n\t\tgrantAccess(evt.Data.Object.Customer)\n\t}\n}"
+};
+var snipCode = document.getElementById("snippet-code");
+function setSnip(lang){ snipCode.textContent = SNIP[lang]; }
+setSnip("node");
+document.querySelectorAll(".snip-tab").forEach(function(b){
+  b.addEventListener("click", function(){
+    document.querySelectorAll(".snip-tab").forEach(function(x){ x.classList.remove("on"); });
+    b.classList.add("on");
+    setSnip(b.dataset.lang);
+  });
+});
+
+/* ---------- line-mask + reveal on scroll ---------- */
+var io = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); }
+  });
+}, {threshold:.18});
+document.querySelectorAll(".mask, .reveal").forEach(function(el){ io.observe(el); });
+
+/* ---------- count-up stats ---------- */
+var cio = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if(!en.isIntersecting) return;
+    cio.unobserve(en.target);
+    var el = en.target, target = parseInt(el.dataset.count, 10), suf = el.dataset.suffix || "";
+    if(RM){ el.textContent = target + suf; return; }
+    var t0 = null, dur = 1400;
+    function step(ts){
+      if(!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0)/dur);
+      var eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(target*eased) + suf;
+      if(p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}, {threshold:.6});
+document.querySelectorAll("[data-count]").forEach(function(el){ cio.observe(el); });
+
+/* ---------- step scrollspy ---------- */
+var panels = document.querySelectorAll("#steps-col .step-panel");
+var railItems = document.querySelectorAll(".step-item");
+var sio = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if(!en.isIntersecting) return;
+    var idx = Array.prototype.indexOf.call(panels, en.target);
+    railItems.forEach(function(r, i){ r.classList.toggle("on", i === idx); });
+  });
+}, {rootMargin:"-38% 0px -52% 0px"});
+panels.forEach(function(p){ sio.observe(p); });
+
+/* ---------- FAQ accordion ---------- */
+document.querySelectorAll(".faq-item").forEach(function(item){
+  var q = item.querySelector(".faq-q"), a = item.querySelector(".faq-a");
+  q.addEventListener("click", function(){
+    var open = item.classList.contains("open");
+    document.querySelectorAll(".faq-item.open").forEach(function(o){
+      o.classList.remove("open");
+      o.querySelector(".faq-a").style.maxHeight = "0";
+      o.querySelector(".faq-q").setAttribute("aria-expanded","false");
+    });
+    if(!open){
+      item.classList.add("open");
+      a.style.maxHeight = a.scrollHeight + "px";
+      q.setAttribute("aria-expanded","true");
+    }
+  });
+});
+
+/* ---------- waitlist forms ---------- */
+var QBASE = 212;
+function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
+document.querySelectorAll("form[data-waitlist]").forEach(function(form){
+  var input = form.querySelector("input[type=email]");
+  var btn = form.querySelector("button[type=submit]");
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var v = input.value.trim();
+    if(!validEmail(v)){
+      input.classList.remove("err"); void input.offsetWidth; input.classList.add("err");
+      input.focus();
+      return;
+    }
+    var pos = QBASE + 1;
+    btn.disabled = true;
+    btn.textContent = "Queued ✓";
+    input.disabled = true;
+    form.classList.add("done");
+    if(form.classList.contains("final-form")){
+      var ok = document.getElementById("final-ok");
+      document.getElementById("ok-pos").textContent = "#" + pos;
+      ok.classList.add("on");
+      ok.scrollIntoView({behavior: RM ? "auto" : "smooth", block:"nearest"});
+    } else {
+      document.getElementById("queue-a").textContent = pos;
+      var note = form.nextElementSibling;
+      if(note) note.innerHTML = "✔ <b style='color:var(--grn)'>Spot #" + pos + " reserved.</b> Invite waves ship weekly — watch your inbox.";
+    }
+  });
+});
+
+/* ---------- footer armed counter ---------- */
+var armed = document.getElementById("armed");
+var n = 3;
+if(!RM){
+  setInterval(function(){
+    if(document.hidden) return;
+    n += Math.floor(Math.random()*3) - 1 + 1;
+    if(n < 3) n = 3; if(n > 9) n = 9;
+    armed.textContent = n;
+  }, 4200);
+}
+})();
+</script>
+</body>
+</html>

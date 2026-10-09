@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Helix Ops — Incident Triage</title>
+<style>
+  :root{
+    --bg:#eef1f7;
+    --surface:#ffffff;
+    --surface-sunken:#f5f7fb;
+    --surface-sunken-2:#eff3f9;
+    --ink:#1b2437;
+    --ink-2:#3d4a63;
+    --muted:#6b7a94;
+    --muted-2:#8b97ad;
+    --accent:#4f46e5;
+    --accent-soft:#eef1fe;
+    --accent-ink:#3730a3;
+    --crit-bg:#fde8e8; --crit-ink:#b42318;
+    --high-bg:#fdf0d5; --high-ink:#a4610a;
+    --low-bg:#e3e8f0;  --low-ink:#4a5a73;
+    --open-bg:#e6eafe;  --open-ink:#3f3bb5;
+    --inv-bg:#e0f0fb;   --inv-ink:#1f6390;
+    --res-bg:#dff2e9;   --res-ink:#1c7150;
+    --shadow-sm:0 1px 2px rgba(23,35,58,.05), 0 3px 8px rgba(23,35,58,.05);
+    --shadow-md:0 2px 4px rgba(23,35,58,.05), 0 10px 26px rgba(23,35,58,.07);
+    --shadow-lg:0 4px 10px rgba(23,35,58,.05), 0 20px 44px rgba(23,35,58,.09);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    font-size:14px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.018em;color:var(--ink)}
+  button{font-family:inherit}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cfd7e4;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#b9c4d6;background-clip:content-box}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  .app{display:flex;height:100vh;overflow:hidden}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:252px;flex:0 0 252px;
+    background:var(--surface);
+    box-shadow:var(--shadow-md);
+    padding:24px 20px;
+    display:flex;flex-direction:column;gap:26px;
+    z-index:3;
+  }
+  .switcher{
+    display:flex;align-items:center;gap:12px;
+    width:100%;text-align:left;
+    background:var(--surface-sunken);
+    border:0;border-radius:14px;
+    padding:12px 14px;cursor:pointer;
+    box-shadow:var(--shadow-sm);
+    transition:background .15s ease, box-shadow .15s ease;
+  }
+  .switcher:hover{background:var(--surface-sunken-2);box-shadow:var(--shadow-md)}
+  .switcher .mark{
+    width:36px;height:36px;flex:0 0 36px;border-radius:11px;
+    background:linear-gradient(145deg,#6366f1,#4338ca);
+    color:#fff;font-weight:700;font-size:14px;letter-spacing:-.02em;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 14px rgba(67,56,202,.30);
+  }
+  .switcher .who{min-width:0;flex:1}
+  .switcher .who .name{display:block;font-weight:650;font-size:13.5px;letter-spacing:-.01em;line-height:1.3}
+  .switcher .who .sub{display:block;font-size:11.5px;color:var(--muted);line-height:1.4}
+  .switcher .chev{color:var(--muted-2);font-size:11px}
+
+  .nav-label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);font-weight:650;padding:0 12px 8px}
+  nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .nav-item{
+    width:100%;display:flex;align-items:center;gap:11px;
+    background:transparent;border:0;border-radius:11px;
+    padding:11px 13px;cursor:pointer;
+    color:var(--ink-2);font-size:13.5px;font-weight:550;
+    text-align:left;transition:background .15s ease,color .15s ease;
+  }
+  .nav-item .glyph{width:18px;text-align:center;font-size:13px;color:var(--muted-2);flex:0 0 18px}
+  .nav-item .count{margin-left:auto;font-size:11.5px;font-weight:650;color:var(--muted);background:var(--surface-sunken-2);padding:1px 8px;border-radius:7px}
+  .nav-item:hover{background:var(--surface-sunken)}
+  .nav-item.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:650}
+  .nav-item.active .glyph{color:var(--accent)}
+  .nav-item.active .count{background:#dfe3fd;color:var(--accent-ink)}
+
+  .side-foot{margin-top:auto;background:var(--surface-sunken);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow-sm)}
+  .side-foot .row{display:flex;align-items:center;gap:11px}
+  .side-foot .name{font-size:13px;font-weight:650;letter-spacing:-.01em;line-height:1.3}
+  .side-foot .sub{font-size:11.5px;color:var(--muted);line-height:1.4}
+
+  .avatar{
+    border-radius:50%;background:#dfe4ee;color:#41506b;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:650;letter-spacing:.01em;flex:none;
+  }
+  .avatar.sm{width:30px;height:30px;font-size:11px}
+  .avatar.md{width:38px;height:38px;font-size:12.5px}
+  .avatar.accent{background:#e0e3fc;color:#3f3bb5}
+
+  /* ---------- Main ---------- */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px 24px;gap:18px}
+
+  .topbar{
+    background:var(--surface);border-radius:16px;box-shadow:var(--shadow-md);
+    padding:18px 26px;display:flex;align-items:center;gap:24px;flex:none;
+  }
+  .crumb{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);font-weight:550}
+  .crumb .sep{color:#c3ccdb}
+  .crumb .here{color:var(--ink-2);font-weight:650}
+  .topbar h1{font-size:19px;line-height:1.35;margin-top:2px}
+  .topbar .titlewrap{min-width:0}
+  .topbar .tools{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .search{position:relative}
+  .search .icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:12.5px;color:var(--muted-2)}
+  .search input{
+    width:290px;border:0;outline:0;background:var(--surface-sunken);
+    border-radius:10px;padding:11px 14px 11px 34px;font-size:13px;color:var(--ink);
+    box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s ease,background .15s ease;
+  }
+  .search input::placeholder{color:var(--muted-2)}
+  .search input:focus{background:#fff;box-shadow:inset 0 0 0 2px var(--accent), var(--shadow-sm)}
+  .select{
+    appearance:none;border:0;outline:0;background:var(--surface-sunken);
+    border-radius:10px;padding:11px 32px 11px 14px;font-size:13px;font-weight:550;color:var(--ink-2);
+    cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,#8b97ad 50%),linear-gradient(135deg,#8b97ad 50%,transparent 50%);
+    background-position:calc(100% - 17px) 51%,calc(100% - 12px) 51%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+    box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .15s ease;
+  }
+  .select:focus{box-shadow:inset 0 0 0 2px var(--accent)}
+  .btn{
+    border:0;border-radius:10px;padding:11px 17px;font-size:13px;font-weight:650;letter-spacing:-.01em;
+    cursor:pointer;transition:transform .12s ease,box-shadow .15s ease,background .15s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.28)}
+  .btn-primary:hover{background:#4338ca}
+  .btn-ghost{background:var(--surface-sunken);color:var(--ink-2)}
+  .btn-ghost:hover{background:var(--surface-sunken-2)}
+
+  .workspace{flex:1;min-height:0;display:grid;grid-template-columns:35% minmax(0,1fr);gap:18px}
+
+  /* ---------- Queue (left column) ---------- */
+  .queue{
+    background:var(--surface);border-radius:16px;box-shadow:var(--shadow-md);
+    padding:24px 20px 20px;display:flex;flex-direction:column;min-height:0;
+  }
+  .queue-head{display:flex;align-items:baseline;gap:10px;padding:0 6px 4px}
+  .queue-head h2{font-size:15px}
+  .queue-head .n{font-size:11.5px;font-weight:650;color:var(--muted);background:var(--surface-sunken-2);padding:2px 9px;border-radius:7px}
+  .queue-sub{padding:0 6px 14px;font-size:11.5px;color:var(--muted-2);letter-spacing:.02em;text-transform:uppercase;font-weight:600}
+  .queue-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 6px 6px;margin-right:-6px}
+
+  /* Component: Incident row */
+  .incident-row{
+    width:100%;text-align:left;border:0;cursor:pointer;
+    background:var(--surface-sunken);
+    border-radius:13px;padding:14px 16px;min-height:74px;
+    display:flex;flex-direction:column;gap:8px;
+    box-shadow:var(--shadow-sm);
+    transition:background .15s ease,box-shadow .16s ease,transform .12s ease;
+  }
+  .incident-row:hover{background:var(--surface-sunken-2);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+  .incident-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .incident-row.selected{background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent) inset, 0 10px 24px rgba(79,70,229,.14)}
+  .ir-top{display:flex;align-items:center;gap:8px}
+  .ir-id{font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted)}
+  .incident-row.selected .ir-id{color:var(--accent-ink)}
+  .ir-age{margin-left:auto;font-size:11.5px;color:var(--muted-2);font-weight:550;white-space:nowrap}
+  .ir-title{font-size:13.5px;font-weight:650;letter-spacing:-.012em;line-height:1.4;color:var(--ink)}
+  .ir-bottom{display:flex;align-items:center;gap:8px;margin-top:1px}
+  .ir-meta{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);font-weight:550;min-width:0}
+  .ir-meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .queue-empty{padding:34px 10px;text-align:center;color:var(--muted);font-size:13px}
+
+  /* Component: Severity/status badge */
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    border-radius:7px;padding:3px 9px;
+    font-size:11px;font-weight:700;letter-spacing:.035em;text-transform:uppercase;
+    white-space:nowrap;line-height:1.5;
+  }
+  .badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8}
+  .badge.sev-critical{background:var(--crit-bg);color:var(--crit-ink)}
+  .badge.sev-high{background:var(--high-bg);color:var(--high-ink)}
+  .badge.sev-low{background:var(--low-bg);color:var(--low-ink)}
+  .badge.st-open{background:var(--open-bg);color:var(--open-ink)}
+  .badge.st-investigating{background:var(--inv-bg);color:var(--inv-ink)}
+  .badge.st-resolved{background:var(--res-bg);color:var(--res-ink)}
+  .badge.lg{font-size:11.5px;padding:5px 11px}
+
+  /* ---------- Detail (right column) ---------- */
+  .detail{
+    background:var(--surface);border-radius:16px;box-shadow:var(--shadow-lg);
+    padding:30px 32px 32px;overflow-y:auto;min-height:0;
+  }
+  .d-head{display:flex;flex-direction:column;gap:14px;padding-bottom:24px}
+  .d-head .line1{display:flex;align-items:center;gap:10px}
+  .d-id{font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--muted)}
+  .d-head h2{font-size:23px;line-height:1.32;letter-spacing:-.024em;max-width:44ch}
+  .d-head .line3{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .assignee-chip{
+    display:flex;align-items:center;gap:10px;background:var(--surface-sunken);
+    border-radius:12px;padding:7px 14px 7px 8px;box-shadow:var(--shadow-sm);
+  }
+  .assignee-chip .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-2);font-weight:650;line-height:1.3}
+  .assignee-chip .v{font-size:13px;font-weight:650;letter-spacing:-.01em;line-height:1.3}
+  .d-actions{margin-left:auto;display:flex;gap:9px}
+
+  .d-split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;align-items:start}
+  .card{background:var(--surface-sunken);border-radius:15px;padding:24px 26px;box-shadow:var(--shadow-sm)}
+  .card + .card{margin-top:18px}
+  .card h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2);font-weight:700;margin-bottom:12px}
+  .desc p{margin:0 0 12px;font-size:13.5px;line-height:1.75;color:var(--ink-2)}
+  .desc p:last-child{margin-bottom:0}
+  .impact{
+    margin-top:16px;background:#fff;border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-sm);
+    font-size:12.5px;color:var(--ink-2);line-height:1.65;
+  }
+  .impact b{color:var(--ink);font-weight:650}
+
+  .props{margin-top:22px;padding-top:22px;background:
+    linear-gradient(to right, rgba(150,163,185,.28), rgba(150,163,185,.28)) top left / 100% 1px no-repeat;}
+  .prop-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px}
+  .prop{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .prop .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-2);font-weight:700}
+  .prop .v{font-size:13.5px;font-weight:600;color:var(--ink);letter-spacing:-.008em;display:flex;align-items:center;gap:8px;line-height:1.45}
+  .prop .v.plain{font-weight:550;color:var(--ink-2)}
+
+  .links{margin-top:22px;padding-top:22px;background:
+    linear-gradient(to right, rgba(150,163,185,.28), rgba(150,163,185,.28)) top left / 100% 1px no-repeat;}
+  .link-list{display:flex;flex-direction:column;gap:8px}
+  .link-item{
+    display:flex;align-items:center;gap:11px;background:#fff;border-radius:11px;
+    padding:11px 14px;text-decoration:none;color:var(--ink-2);box-shadow:var(--shadow-sm);
+    transition:transform .12s ease,box-shadow .15s ease,color .15s ease;
+  }
+  .link-item:hover{transform:translateY(-1px);box-shadow:var(--shadow-md);color:var(--accent-ink)}
+  .link-item .g{width:22px;height:22px;border-radius:7px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;flex:none}
+  .link-item .t{font-size:13px;font-weight:600;letter-spacing:-.01em}
+  .link-item .u{margin-left:auto;font-size:11px;color:var(--muted-2);font-weight:550}
+
+  .feed-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .feed-head h3{margin:0}
+  .feed-head .n{margin-left:auto;font-size:11px;font-weight:650;color:var(--muted);background:#fff;padding:2px 9px;border-radius:7px;box-shadow:var(--shadow-sm)}
+  .feed{display:flex;flex-direction:column;gap:4px}
+
+  /* Component: Activity entry */
+  .activity-entry{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;padding:0 0 4px;position:relative}
+  .activity-entry .rail{display:flex;flex-direction:column;align-items:center;gap:5px}
+  .activity-entry .node{
+    width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm);
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#5a6a85;flex:none;
+  }
+  .activity-entry .node.accent{background:var(--accent);color:#fff;box-shadow:0 6px 14px rgba(79,70,229,.3)}
+  .activity-entry .line{flex:1;width:2px;background:#dbe2ec;border-radius:2px;min-height:12px}
+  .activity-entry:last-child .line{display:none}
+  .activity-entry .body{padding-bottom:18px;min-width:0}
+  .activity-entry .who{font-size:13px;font-weight:650;letter-spacing:-.01em;color:var(--ink)}
+  .activity-entry .what{font-size:13px;color:var(--ink-2);line-height:1.65;margin-top:1px}
+  .activity-entry .what .em{font-weight:650;color:var(--ink)}
+  .activity-entry .note{
+    margin-top:8px;background:#fff;border-radius:11px;padding:11px 14px;
+    font-size:12.5px;line-height:1.65;color:var(--ink-2);box-shadow:var(--shadow-sm);
+  }
+  .activity-entry .when{margin-top:6px;font-size:11px;color:var(--muted-2);font-weight:600;letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ LEFT SIDEBAR (global nav) ============ -->
+  <aside class="sidebar">
+    <button class="switcher" type="button" aria-label="Switch workspace">
+      <span class="mark">HX</span>
+      <span class="who">
+        <span class="name">Helix Ops</span>
+        <span class="sub">Internal IT &amp; Ops</span>
+      </span>
+      <span class="chev">▾</span>
+    </button>
+
+    <nav aria-label="Global">
+      <div class="nav-label">Workspace</div>
+      <ul>
+        <li><button class="nav-item active" type="button" aria-current="page"><span class="glyph">▤</span>Queue<span class="count" id="navQueueCount">11</span></button></li>
+        <li><button class="nav-item" type="button"><span class="glyph">◉</span>My incidents<span class="count">3</span></button></li>
+        <li><button class="nav-item" type="button"><span class="glyph">▥</span>Reports</button></li>
+        <li><button class="nav-item" type="button"><span class="glyph">⚙</span>Settings</button></li>
+      </ul>
+    </nav>
+
+    <div class="side-foot">
+      <div class="row">
+        <span class="avatar md accent">DW</span>
+        <span>
+          <span class="name">Dana Whitfield</span>
+          <span class="sub">On call · Tier 2</span>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+
+    <!-- Top header bar -->
+    <header class="topbar">
+      <div class="titlewrap">
+        <div class="crumb"><span>Helix Ops</span><span class="sep">/</span><span>Incidents</span><span class="sep">/</span><span class="here">Queue</span></div>
+        <h1>Incident triage</h1>
+      </div>
+      <div class="tools">
+        <div class="search">
+          <span class="icon">⌕</span>
+          <input id="searchInput" type="search" placeholder="Search ID, title, team or assignee…" aria-label="Search the incident queue" />
+        </div>
+        <select class="select" id="sevFilter" aria-label="Filter by severity">
+          <option value="all">All severities</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
+        <select class="select" id="statusFilter" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option value="open">Open</option>
+          <option value="investigating">Investigating</option>
+          <option value="resolved">Resolved</option>
+        </select>
+        <button class="btn btn-primary" type="button">New incident</button>
+      </div>
+    </header>
+
+    <!-- Two-column workspace -->
+    <div class="workspace">
+
+      <!-- LEFT column: queue -->
+      <section class="queue" aria-label="Incident queue">
+        <div class="queue-head">
+          <h2>Open queue</h2>
+          <span class="n" id="queueCount">11</span>
+        </div>
+        <div class="queue-sub">Sorted by severity, then age</div>
+        <div class="queue-list" id="queueList" role="listbox" aria-label="Incidents"></div>
+      </section>
+
+      <!-- RIGHT column: detail -->
+      <section class="detail" id="detail" aria-live="polite" aria-label="Incident detail"></section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const INCIDENTS = [
+  {
+    id:"INC-4821",
+    title:"Checkout API returning 500s for card payments",
+    severity:"critical", status:"investigating", priority:"P1 · Customer impacting",
+    team:"Payments Platform", assignee:"Dana Whitfield", reporter:"Elena Vasquez (Retail Support)",
+    age:"42m", openedAt:"Today, 09:14 GMT",
+    desc:[
+      "Since roughly 09:05 the <b>checkout-api</b> service is returning HTTP 500 on ~18% of card authorisation calls. Errors are concentrated in the eu-west-1 cluster and correlate with the 09:02 rollout of release 2024.31.2.",
+      "Retail Support opened the ticket after four merchant complaints in ten minutes. Failed calls are not being retried by the storefront, so affected baskets are abandoned rather than degraded."
+    ],
+    impact:"<b>Blast radius:</b> ~18% of card authorisations in EU · 2 merchants reporting · Storefront and mobile app both affected.",
+    links:[
+      {t:"Grafana — Checkout latency &amp; error rate", u:"grafana", g:"▤"},
+      {t:"Runbook — API 5xx triage", u:"confluence", g:"▦"},
+      {t:"#inc-4821-checkout-500", u:"slack", g:"◈"},
+      {t:"Deploy 2024.31.2 — release notes", u:"github", g:"◆"}
+    ],
+    timeline:[
+      {who:"Dana Whitfield", init:"DW", act:'added a comment', when:"Today · 09:46", accent:true, note:"Rolling back to 2024.31.1 in eu-west-1 now. Canary in eu-central looks clean, so I'm treating this as region-scoped until proven otherwise."},
+      {who:"Priya Raman", init:"PR", act:'linked <span class="em">Grafana — Checkout latency &amp; error rate</span>', when:"Today · 09:38"},
+      {who:"Dana Whitfield", init:"DW", act:'changed status from <span class="em">Open</span> to <span class="em">Investigating</span>', when:"Today · 09:29"},
+      {who:"Marcus Lee", init:"ML", act:'added a comment', when:"Today · 09:24", note:"Error budget for checkout burnt 31% in the last 30 minutes. Payments gateway upstream is healthy — failures originate inside our service."},
+      {who:"Ops Bot", init:"⚡", act:'assigned the incident to <span class="em">Dana Whitfield</span> and raised severity to <span class="em">Critical</span>', when:"Today · 09:17"},
+      {who:"Elena Vasquez", init:"EV", act:'opened the incident from <span class="em">Retail Support</span>', when:"Today · 09:14"}
+    ]
+  },
+  {
+    id:"INC-4815",
+    title:"SSO login loop on Okta redirect for contractors",
+    severity:"critical", status:"open", priority:"P1 · Access blocking",
+    team:"Identity &amp; Access", assignee:"Priya Raman", reporter:"Helpdesk Rota (Tier 1)",
+    age:"2h 05m", openedAt:"Today, 07:51 GMT",
+    desc:[
+      "Contractor accounts in the <b>ext-partners</b> group are bounced between the Okta sign-in page and the internal portal indefinitely. Full-time staff are unaffected.",
+      "Suspected cause is the group-claim mapping updated during last night's identity provider maintenance window."
+    ],
+    impact:"<b>Blast radius:</b> ~140 contractor accounts locked out of the internal portal and ticketing tools.",
+    links:[
+      {t:"Okta — system log filter", u:"okta", g:"▤"},
+      {t:"Runbook — SSO redirect loops", u:"confluence", g:"▦"},
+      {t:"#identity-oncall", u:"slack", g:"◈"}
+    ],
+    timeline:[
+      {who:"Priya Raman", init:"PR", act:'added a comment', when:"Today · 09:20", accent:true, note:"Reproduced with a test contractor account. The SAML assertion is missing the groups attribute entirely."},
+      {who:"Priya Raman", init:"PR", act:'self-assigned the incident', when:"Today · 08:40"},
+      {who:"Ops Bot", init:"⚡", act:'raised severity to <span class="em">Critical</span> after 12 duplicate reports', when:"Today · 08:22"},
+      {who:"Tom Ashby", init:"TA", act:'added a comment', when:"Today · 08:05", note:"Three contractors in Fulfilment can't clock in either — same loop."},
+      {who:"Helpdesk Rota", init:"HR", act:'opened the incident from <span class="em">Tier 1 triage</span>', when:"Today · 07:51"}
+    ]
+  },
+  {
+    id:"INC-4781",
+    title:"Email deliverability drop to Outlook domains",
+    severity:"critical", status:"investigating", priority:"P2 · Degraded delivery",
+    team:"Messaging", assignee:"Aisha Khan", reporter:"Marketing Ops",
+    age:"14h 45m", openedAt:"Yesterday, 21:10 GMT",
+    desc:[
+      "Transactional email delivery to outlook.com and hotmail.com recipients fell from 99.2% to 61% overnight. Bounces return a 550 5.7.1 reputation error from the receiving MTA.",
+      "One of our sending IPs appears on a reputation list following a spike in password-reset volume."
+    ],
+    impact:"<b>Blast radius:</b> password resets and receipts to Microsoft-hosted mailboxes — roughly 22k messages queued.",
+    links:[
+      {t:"SendGrid — suppression dashboard", u:"sendgrid", g:"▤"},
+      {t:"Runbook — IP reputation recovery", u:"confluence", g:"▦"},
+      {t:"#inc-mail-deliverability", u:"slack", g:"◈"}
+    ],
+    timeline:[
+      {who:"Aisha Khan", init:"AK", act:'added a comment', when:"Today · 08:55", accent:true, note:"Delisting request submitted. Warm-up traffic shifted to the secondary pool; deliverability back up to 74%."},
+      {who:"Aisha Khan", init:"AK", act:'changed status from <span class="em">Open</span> to <span class="em">Investigating</span>', when:"Today · 06:30"},
+      {who:"Ops Bot", init:"⚡", act:'attached <span class="em">bounce sample (48 messages)</span>', when:"Today · 02:15"},
+      {who:"Jonas Berg", init:"JB", act:'added a comment', when:"Yesterday · 22:40", note:"Reset volume tripled at 20:50 — likely tied to the campaign send. Throttling applied."},
+      {who:"Marketing Ops", init:"MO", act:'opened the incident', when:"Yesterday · 21:10"}
+    ]
+  },
+  {
+    id:"INC-4818",
+    title:"VPN gateway intermittent auth failures (LON-2)",
+    severity:"high", status:"open", priority:"P2 · Workforce impacting",
+    team:"Corporate IT", assignee:"Marcus Lee", reporter:"Nadia Osei (People Ops)",
+    age:"1h 15m", openedAt:"Today, 08:41 GMT",
+    desc:[
+      "Remote staff connecting through the London-2 VPN concentrator see intermittent MFA timeouts, roughly one in four attempts. Retrying usually succeeds within two attempts.",
+      "RADIUS response times on the secondary node are averaging 7.8s against a 5s client timeout."
+    ],
+    impact:"<b>Blast radius:</b> ~380 remote users on LON-2; failover to LON-1 is available but manual.",
+    links:[
+      {t:"Runbook — RADIUS latency checks", u:"confluence", g:"▦"},
+      {t:"#corp-it-network", u:"slack", g:"◈"}
+    ],
+    timeline:[
+      {who:"Marcus Lee", init:"ML", act:'added a comment', when:"Today · 09:31", accent:true, note:"Draining the secondary RADIUS node at 10:00 during the low-traffic window. Users should fail over transparently."},
+      {who:"Ops Bot", init:"⚡", act:'assigned the incident to <span class="em">Marcus Lee</span>', when:"Today · 09:02"},
+      {who:"Nadia Osei", init:"NO", act:'added a comment', when:"Today · 08:57", note:"Six people in the People Ops standup all hit this. Second attempt works for everyone so far."},
+      {who:"Ops Bot", init:"⚡", act:'set severity to <span class="em">High</span> from the alert rule <span class="em">vpn-auth-timeouts</span>', when:"Today · 08:44"},
+      {who:"Nadia Osei", init:"NO", act:'opened the incident from <span class="em">People Ops</span>', when:"Today · 08:41"}
+    ]
+  },
+  {
+    id:"INC-4804",
+    title:"Nightly data warehouse sync delayed 90 minutes",
+    severity:"high", status:"investigating", priority:"P2 · Reporting delayed",
+    team:"Data Engineering", assignee:"Sofia Marin", reporter:"Finance Analytics",
+    age:"5h 12m", openedAt:"Today, 04:44 GMT",
+    desc:[
+      "The 02:00 warehouse load finished at 05:31 instead of 04:00. Downstream finance dashboards showed stale figures at the start of business.",
+      "A long-running vacuum on the orders fact table blocked the incremental merge step."
+    ],
+    impact:"<b>Blast radius:</b> finance, growth and supply dashboards stale until 05:31; no data loss.",
+    links:[
+      {t:"Airflow — nightly_warehouse_load DAG", u:"airflow", g:"▤"},
+      {t:"Runbook — warehouse backfill", u:"confluence", g:"▦"},
+      {t:"#data-eng-oncall", u:"slack", g:"◈"}
+    ],
+    timeline:[
+      {who:"Sofia Marin", init:"SM", act:'added a comment', when:"Today · 08:10", accent:true, note:"Backfill complete and dashboards refreshed. Keeping this open while I size a partitioning change to stop the repeat."},
+      {who:"Sofia Marin", init:"SM", act:'changed status from <span class="em">Open</span> to <span class="em">Investigating</span>', when:"Today · 06:05"},
+      {who:"Ops Bot", init:"⚡", act:'linked <span class="em">Airflow — nightly_warehouse_load DAG</span>', when:"Today · 05:33"},
+      {who:"Jonas Berg", init:"JB", act:'added a comment', when:"Today · 05:12", note:"Vacuum held a lock for 71 minutes. Same pattern as INC-4602 in June."},
+      {who:"Finance Analytics", init:"FA", act:'opened the incident', when:"Today · 04:44"}
+    ]
+  },
+  {
+    id:"INC-4799",
+    title:"Elevated 429s from partner rate limiter",
+    severity:"high", status:"investigating", priority:"P2 · Partner impacting",
+    team:"API Gateway", assignee:"Dana Whitfield", reporter:"Partner Success",
+    age:"6h 30m", openedAt:"Today, 03:26 GMT",
+    desc:[
+      "Two logistics partners are receiving HTTP 429 on the shipments endpoint well below their contracted quota. The limiter appears to be counting retried requests against the same bucket twice.",
+      "Traffic shaping was changed on Tuesday to a sliding-window algorithm."
+    ],
+    impact:"<b>Blast radius:</b> 2 partner integrations, ~4% of inbound shipment updates rejected.",
+    links:[
+      {t:"Kibana — 429 breakdown by partner", u:"kibana", g:"▤"},
+      {t:"Rate limit policy — v3 config", u:"github", g:"◆"},
+      {t:"#api-gateway", u:"slack", g:"◈"}
+    ],
+    timeline:[
+      {who:"Dana Whitfield", init:"DW", act:'added a comment', when:"Today · 07:58", accent:true, note:"Temporarily raised both partners' burst ceiling by 40% while we patch the double-count."},
+      {who:"Dana Whitfield", init:"DW", act:'changed status from <span class="em">Open</span> to <span class="em">Investigating</span>', when:"Today · 05:20"},
+      {who:"Ops Bot", init:"⚡", act:'assigned the incident to <span class="em">Dana Whitfield</span>', when:"Today · 04:02"},
+      {who:"Partner Success", init:"PS", act:'added a comment', when:"Today · 03:44", note:"NorthRoute say their overnight batch failed three times. They are asking for an ETA."},
+      {who:"Partner Success", init:"PS", act:'opened the incident', when:"Today · 03:26"}
+    ]
+  },
+  {
+    id:"INC-4788",
+    title:"Search index stale for product catalogue",
+    severity:"high", status:"open", priority:"P3 · Degraded experience",
+    team:"Search Platform", assignee:"Jonas Berg", reporter:"Merchandising",
+    age:"11h 20m", openedAt:"Yesterday, 22:35 GMT",
+    desc:[
+      "Products created or edited after 21:00 yesterday are missing from on-site search. The indexer is consuming its queue but the alias never flipped to the new index.",
+      "Manual reindex of a single SKU works, so the pipeline itself is healthy."
+    ],
+    impact:"<b>Blast radius:</b> ~1,900 catalogue changes not searchable; browse and direct links unaffected.",
+    links:[
+      {t:"OpenSearch — indexer dashboard", u:"opensearch", g:"▤"},
+      {t:"Runbook — alias swap recovery", u:"confluence", g:"▦"}
+    ],
+    timeline:[
+      {who:"Jonas Berg", init:"JB", act:'added a comment', when:"Today · 08:02", accent:true, note:"Alias swap job exited 0 but never ran the swap — looks like a silent permission failure after the IAM rotation."},
+      {who:"Ops Bot", init:"⚡", act:'assigned the incident to <span class="em">Jonas Berg</span>', when:"Today · 07:30"},
+      {who:"Grace Nolan", init:"GN", act:'added a comment', when:"Yesterday · 23:40", note:"Confirmed on staging as well, so it is not environment specific."},
+      {who:"Ops Bot", init:"⚡", act:'set severity to <span class="em">High</span>', when:"Yesterday · 22:51"},
+      {who:"Merchandising", init:"MG", act:'opened the incident', when:"Yesterday · 22:35"}
+    ]
+  },
+  {
+    id:"INC-4809",
+    title:"Warehouse label printer offline (Bay 3)",
+    severity:"low", status:"open", priority:"P4 · Localised",
+    team:"Fulfilment Ops", assignee:"Tom Ashby", reporter:"Ravi Menon (Bay 3 Lead)",
+    age:"3h 40m", openedAt:"Today, 06:15 GMT",
+    desc:[
+      "The Zebra ZT411 in Bay 3 stopped responding to print jobs. The queue accepts jobs but nothing prints; the device shows a static network light.",
+      "Bay 2's printer is being shared as a workaround with no measurable throughput loss."
+    ],
+    impact:"<b>Blast radius:</b> one packing bay; workaround in place.",
+    links:[
+      {t:"Asset record — ZT411-BAY3", u:"snipe-it", g:"▦"},
+      {t:"#warehouse-tech", u:"slack", g:"◈"}
+    ],
+    timeline:[
+      {who:"Tom Ashby", init:"TA", act:'added a comment', when:"Today · 09:05", accent:true, note:"Spare printer staged. If the port reset doesn't help by midday I'll swap the unit."},
+      {who:"Tom Ashby", init:"TA", act:'self-assigned the incident', when:"Today · 07:45"},
+      {who:"Ops Bot", init:"⚡", act:'set severity to <span class="em">Low</span> — workaround recorded', when:"Today · 06:50"},
+      {who:"Ravi Menon", init:"RM", act:'added a comment', when:"Today · 06:30", note:"Power cycled twice, no change. Using Bay 2 in the meantime."},
+      {who:"Ravi Menon", init:"RM", act:'opened the incident from <span class="em">Fulfilment Ops</span>', when:"Today · 06:15"}
+    ]
+  },
+  {
+    id:"INC-4793",
+    title:"Conference room A/V dongle missing (Meridian 4)",
+    severity:"low", status:"open", priority:"P4 · Facilities",
+    team:"Workplace Tech", assignee:"Grace Nolan", reporter:"Front of House",
+    age:"8h 05m", openedAt:"Today, 01:50 GMT",
+    desc:[
+      "The USB-C to HDMI adapter for the Meridian 4 meeting room is missing from its tether. Guests cannot present from laptops without a loaner.",
+      "A loaner has been left at reception until a permanent replacement arrives."
+    ],
+    impact:"<b>Blast radius:</b> one meeting room; loaner available at reception.",
+    links:[
+      {t:"Room asset checklist — Meridian 4", u:"sheets", g:"▦"}
+    ],
+    timeline:[
+      {who:"Grace Nolan", init:"GN", act:'added a comment', when:"Today · 08:35", accent:true, note:"Replacement ordered, two-day delivery. Tether clip will be replaced at the same time."},
+      {who:"Grace Nolan", init:"GN", act:'self-assigned the incident', when:"Today · 08:20"},
+      {who:"Ops Bot", init:"⚡", act:'routed the incident to <span class="em">Workplace Tech</span>', when:"Today · 07:00"},
+      {who:"Front of House", init:"FH", act:'added a comment', when:"Today · 02:05", note:"Checked lost property and the neighbouring rooms — not found."},
+      {who:"Front of House", init:"FH", act:'opened the incident', when:"Today · 01:50"}
+    ]
+  },
+  {
+    id:"INC-4776",
+    title:"Staging cluster disk pressure warnings",
+    severity:"low", status:"resolved", priority:"P4 · Non-production",
+    team:"Platform SRE", assignee:"Marcus Lee", reporter:"Automated monitor",
+    age:"1d 3h", openedAt:"2 Oct, 06:20 GMT",
+    desc:[
+      "Nodes in the staging cluster crossed the 85% disk-pressure threshold, causing pod evictions for short-lived preview environments.",
+      "Old build artefacts and dangling images were pruned; retention policy reduced from 30 to 10 days."
+    ],
+    impact:"<b>Blast radius:</b> staging preview environments only; no production impact.",
+    links:[
+      {t:"Runbook — node disk pressure", u:"confluence", g:"▦"},
+      {t:"PR #2841 — artefact retention policy", u:"github", g:"◆"}
+    ],
+    timeline:[
+      {who:"Marcus Lee", init:"ML", act:'changed status from <span class="em">Investigating</span> to <span class="em">Resolved</span>', when:"2 Oct · 15:12", accent:true},
+      {who:"Marcus Lee", init:"ML", act:'added a comment', when:"2 Oct · 15:08", note:"Pruned 412GB of dangling images. Utilisation now at 46% across all nodes."},
+      {who:"Sofia Marin", init:"SM", act:'linked <span class="em">PR #2841 — artefact retention policy</span>', when:"2 Oct · 11:30"},
+      {who:"Marcus Lee", init:"ML", act:'changed status from <span class="em">Open</span> to <span class="em">Investigating</span>', when:"2 Oct · 08:45"},
+      {who:"Automated monitor", init:"⚡", act:'opened the incident from alert <span class="em">node-disk-pressure</span>', when:"2 Oct · 06:20"}
+    ]
+  },
+  {
+    id:"INC-4770",
+    title:"Payroll portal slow during month-end close",
+    severity:"low", status:"resolved", priority:"P3 · Seasonal load",
+    team:"Finance Systems", assignee:"Sofia Marin", reporter:"Payroll Team",
+    age:"1d 9h", openedAt:"1 Oct, 23:58 GMT",
+    desc:[
+      "Page loads in the payroll portal exceeded 8 seconds during the month-end close window. Report generation queued behind a single worker.",
+      "Worker concurrency was raised from 2 to 6 for the close window and response times returned to under 1.5 seconds."
+    ],
+    impact:"<b>Blast radius:</b> 24 payroll users during a four-hour window; no failed submissions.",
+    links:[
+      {t:"APM — payroll portal traces", u:"datadog", g:"▤"},
+      {t:"#finance-systems", u:"slack", g:"◈"}
+    ],
+    timeline:[
+      {who:"Sofia Marin", init:"SM", act:'changed status from <span class="em">Investigating</span> to <span class="em">Resolved</span>', when:"2 Oct · 09:40", accent:true},
+      {who:"Sofia Marin", init:"SM", act:'added a comment', when:"2 Oct · 09:35", note:"Concurrency bump held through the close. Adding a scheduled scale-up for the 28th–2nd each month."},
+      {who:"Payroll Team", init:"PT", act:'added a comment', when:"2 Oct · 07:15", note:"Much better this morning — reports return in a couple of seconds."},
+      {who:"Sofia Marin", init:"SM", act:'changed status from <span class="em">Open</span> to <span class="em">Investigating</span>', when:"2 Oct · 00:40"},
+      {who:"Payroll Team", init:"PT", act:'opened the incident', when:"1 Oct · 23:58"}
+    ]
+  }
+];
+
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const badge = (kind, value) =>
+  `<span class="badge ${kind === 'sev' ? 'sev-' : 'st-'}${value}"><span class="dot"></span>${cap(value)}</span>`;
+const initials = name => name.split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase();
+
+let selectedId = "INC-4821";
+
+const listEl = document.getElementById('queueList');
+const detailEl = document.getElementById('detail');
+const countEl = document.getElementById('queueCount');
+const navCountEl = document.getElementById('navQueueCount');
+const searchEl = document.getElementById('searchInput');
+const sevEl = document.getElementById('sevFilter');
+const statusEl = document.getElementById('statusFilter');
+
+function matches(inc){
+  const q = searchEl.value.trim().toLowerCase();
+  const sev = sevEl.value, st = statusEl.value;
+  if (sev !== 'all' && inc.severity !== sev) return false;
+  if (st !== 'all' && inc.status !== st) return false;
+  if (!q) return true;
+  const hay = [inc.id, inc.title, inc.team.replace('&amp;','&'), inc.assignee, inc.reporter].join(' ').toLowerCase();
+  return hay.includes(q);
+}
+
+function renderQueue(){
+  const rows = INCIDENTS.filter(matches);
+  countEl.textContent = rows.length;
+  navCountEl.textContent = INCIDENTS.length;
+  if (!rows.length){
+    listEl.innerHTML = '<div class="queue-empty">No incidents match the current search or filters.</div>';
+    return;
+  }
+  listEl.innerHTML = rows.map(inc => `
+    <button class="incident-row ${inc.id === selectedId ? 'selected' : ''}" type="button"
+            role="option" aria-selected="${inc.id === selectedId}" data-id="${inc.id}">
+      <span class="ir-top">
+        <span class="ir-id">${inc.id}</span>
+        ${badge('sev', inc.severity)}
+        <span class="ir-age">${inc.age}</span>
+      </span>
+      <span class="ir-title">${inc.title}</span>
+      <span class="ir-bottom">
+        ${badge('st', inc.status)}
+        <span class="ir-meta"><span>${inc.team}</span>·<span>${inc.assignee}</span></span>
+      </span>
+    </button>`).join('');
+}
+
+function renderDetail(){
+  const inc = INCIDENTS.find(i => i.id === selectedId);
+  if (!inc){ detailEl.innerHTML = ''; return; }
+  detailEl.innerHTML = `
+    <div class="d-head">
+      <div class="line1">
+        <span class="d-id">${inc.id}</span>
+        ${badge('sev', inc.severity).replace('badge ','badge lg ')}
+        ${badge('st', inc.status).replace('badge ','badge lg ')}
+      </div>
+      <h2>${inc.title}</h2>
+      <div class="line3">
+        <div class="assignee-chip">
+          <span class="avatar sm accent">${initials(inc.assignee)}</span>
+          <span>
+            <span class="k">Assignee</span>
+            <span class="v">${inc.assignee}</span>
+          </span>
+        </div>
+        <div class="assignee-chip">
+          <span class="avatar sm">${initials(inc.team.replace('&amp;','and'))}</span>
+          <span>
+            <span class="k">Owning team</span>
+            <span class="v">${inc.team}</span>
+          </span>
+        </div>
+        <div class="d-actions">
+          <button class="btn btn-ghost" type="button">Reassign</button>
+          <button class="btn btn-primary" type="button">${inc.status === 'resolved' ? 'Reopen incident' : 'Mark resolved'}</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-split">
+      <!-- LEFT sub-column: description + properties (single stacked block) -->
+      <div>
+        <div class="card">
+          <h3>Description</h3>
+          <div class="desc">${inc.desc.map(p => `<p>${p}</p>`).join('')}</div>
+          <div class="impact">${inc.impact}</div>
+
+          <div class="props">
+            <h3>Properties</h3>
+            <div class="prop-grid">
+              <div class="prop"><span class="k">Status</span><span class="v">${badge('st', inc.status)}</span></div>
+              <div class="prop"><span class="k">Priority</span><span class="v">${inc.priority}</span></div>
+              <div class="prop"><span class="k">Assignee</span><span class="v"><span class="avatar sm accent">${initials(inc.assignee)}</span>${inc.assignee}</span></div>
+              <div class="prop"><span class="k">Reporter</span><span class="v plain">${inc.reporter}</span></div>
+              <div class="prop"><span class="k">Reporting team</span><span class="v plain">${inc.team}</span></div>
+              <div class="prop"><span class="k">Opened</span><span class="v plain">${inc.openedAt} · ${inc.age} ago</span></div>
+            </div>
+          </div>
+
+          <div class="links">
+            <h3>Linked resources</h3>
+            <div class="link-list">
+              ${inc.links.map(l => `
+                <a class="link-item" href="#" onclick="return false;">
+                  <span class="g">${l.g}</span>
+                  <span class="t">${l.t}</span>
+                  <span class="u">${l.u}</span>
+                </a>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT sub-column: always-visible activity feed -->
+      <div>
+        <div class="card">
+          <div class="feed-head">
+            <h3>Activity &amp; timeline</h3>
+            <span class="n">${inc.timeline.length} entries</span>
+          </div>
+          <div class="feed">
+            ${inc.timeline.map(e => `
+              <div class="activity-entry">
+                <div class="rail">
+                  <span class="node ${e.accent ? 'accent' : ''}">${e.init}</span>
+                  <span class="line"></span>
+                </div>
+                <div class="body">
+                  <div class="who">${e.who}</div>
+                  <div class="what">${e.act}</div>
+                  ${e.note ? `<div class="note">${e.note}</div>` : ''}
+                  <div class="when">${e.when}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  detailEl.scrollTop = 0;
+}
+
+listEl.addEventListener('click', e => {
+  const row = e.target.closest('.incident-row');
+  if (!row) return;
+  selectedId = row.dataset.id;
+  renderQueue();
+  renderDetail();
+});
+
+[searchEl, sevEl, statusEl].forEach(el => el.addEventListener('input', renderQueue));
+
+renderQueue();
+renderDetail();
+</script>
+</body>
+</html>

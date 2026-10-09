@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>How it works — Branchglass</title>
+<meta name="description" content="Branchglass connects to your repository and cloud account, then gives every pull request its own isolated, production-like preview environment — updated on every commit and removed when the PR is merged or closed.">
+<style>
+:root{
+  --bg:#070b14;
+  --bg-2:#0c1322;
+  --ink:#e9edf5;
+  --ink-2:rgba(233,237,245,.74);
+  --ink-3:rgba(233,237,245,.52);
+  --line:rgba(255,255,255,.08);
+  --line-2:rgba(255,255,255,.14);
+  --line-main:rgba(255,255,255,.16);
+  --glass:rgba(255,255,255,.04);
+  --accent:#6fe7d2;
+  --accent-2:#2fb9a4;
+  --accent-ink:#052622;
+  --branch-line:rgba(111,231,210,.85);
+  --strip:rgba(111,231,210,.07);
+  --green:#4ade80;
+  --rail:64px;
+  --main-x:calc(var(--rail) * .25);
+  --branch-x:calc(var(--rail) * .75);
+  --node:28px;
+  --font-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+svg{display:block}
+.i{width:1em;height:1em;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+/* ---------- Section shell ---------- */
+.how{position:relative;isolation:isolate;overflow:hidden;padding:clamp(72px,9vw,128px) 0 clamp(72px,8vw,112px)}
+.how::before{content:"";position:absolute;z-index:-1;pointer-events:none;top:-280px;left:-240px;width:800px;height:800px;border-radius:50%;background:radial-gradient(closest-side,rgba(111,231,210,.16),rgba(111,231,210,0))}
+.how::after{content:"";position:absolute;z-index:-1;pointer-events:none;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:radial-gradient(60% 55% at 22% 0%,#000 0%,transparent 100%);mask-image:radial-gradient(60% 55% at 22% 0%,#000 0%,transparent 100%)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.layout{display:grid;gap:56px}
+@media (min-width:1024px){
+  .layout{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(56px,6vw,88px);align-items:start}
+  .intro{position:sticky;top:48px}
+}
+@media (min-width:1024px) and (max-height:700px){
+  .intro{position:static}
+}
+
+/* ---------- Intro ---------- */
+.eyebrow{display:inline-flex;align-items:center;gap:10px;margin:0 0 22px;font:600 12px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.eyebrow::before{content:"";width:22px;height:2px;border-radius:2px;background:var(--accent)}
+.title{margin:0 0 20px;font-size:clamp(2rem,1.25rem + 2vw,2.75rem);line-height:1.06;letter-spacing:-.025em;font-weight:700;text-wrap:balance}
+.lede{margin:0;max-width:44ch;font-size:clamp(1.0625rem,1rem + .25vw,1.1875rem);line-height:1.6;color:var(--ink-2)}
+.toc-nav{margin-top:36px}
+@media (max-width:1023px){.toc-nav{display:none}}
+.toc{list-style:none;margin:0;padding:0;border-left:1px solid var(--line-2)}
+.toc a{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:baseline;padding:9px 12px 9px 18px;margin-left:-1px;border-left:2px solid transparent;color:var(--ink-3);text-decoration:none;font-size:14.5px;line-height:1.35;transition:color .2s ease,border-color .2s ease}
+.toc .k{font:600 11px/1.5 var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+.toc a:hover{color:var(--ink)}
+.toc a.is-active,.toc a[aria-current]{color:var(--ink);border-left-color:var(--accent)}
+.toc a.is-active .k,.toc a[aria-current] .k{color:var(--accent)}
+
+/* ---------- Flow / git-graph rail ---------- */
+.flow{--gap:20px;position:relative}
+.rail{position:relative}
+.rail::before{content:"";position:absolute;top:0;bottom:0;left:calc(var(--main-x) - 1px);width:2px;background:var(--line-main)}
+
+.phase{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);column-gap:var(--gap);align-items:end;min-height:56px;padding-bottom:20px}
+.phase-first .rail::before{background:linear-gradient(180deg,rgba(255,255,255,0),var(--line-main))}
+.phase-branch{min-height:92px;padding-bottom:22px}
+.phase-label{margin:0;display:flex;align-items:center;gap:12px;font:600 12px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.phase-label .rule{flex:1;height:1px;background:var(--line)}
+.phase-label .sub{color:var(--ink-3);letter-spacing:.12em;font-weight:500}
+.phase-branch .phase-label > span:first-child{color:var(--accent)}
+
+.curve{position:absolute;left:0;width:var(--rail);height:40px;overflow:visible}
+.phase-branch .curve{top:0}
+.step-last .curve{bottom:0}
+
+.phase-branch .rail::after,
+.on-branch .rail::after{content:"";position:absolute;top:0;bottom:0;left:var(--main-x);width:calc(var(--branch-x) - var(--main-x) + 1px);background:linear-gradient(90deg,rgba(111,231,210,0),var(--strip) calc(100% - 2px),var(--branch-line) calc(100% - 2px))}
+.phase-branch .rail::after{top:40px}
+.step-last .rail::after{bottom:40px}
+
+.steps{list-style:none;margin:0;padding:0}
+.step{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);column-gap:var(--gap);scroll-margin-top:32px}
+.step .body{min-width:0;padding-bottom:clamp(40px,5vw,56px)}
+.step-once .body{padding-bottom:28px}
+
+.node{position:absolute;z-index:1;top:0;left:calc(var(--branch-x) - var(--node) / 2);width:var(--node);height:var(--node);border-radius:50%;display:grid;place-items:center;background:var(--bg);border:2px solid var(--accent);color:var(--accent);font:700 12px/1 var(--font-mono);box-shadow:0 0 0 5px var(--bg);transition:background-color .25s ease,color .25s ease,box-shadow .25s ease,border-color .25s ease}
+.node .i{width:14px;height:14px}
+.node-main{left:calc(var(--main-x) - var(--node) / 2);border-color:rgba(255,255,255,.38);color:var(--ink-2)}
+.is-active .node{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 5px var(--bg),0 0 0 7px rgba(111,231,210,.22),0 0 32px rgba(111,231,210,.35)}
+.is-active .node-main{background:var(--ink);border-color:var(--ink);color:var(--bg);box-shadow:0 0 0 5px var(--bg),0 0 0 7px rgba(255,255,255,.14)}
+
+.step-title{margin:0;font-size:clamp(1.25rem,1.05rem + .6vw,1.5rem);line-height:var(--node);letter-spacing:-.015em;font-weight:600;text-wrap:balance}
+.step-text{margin:12px 0 0;max-width:60ch;color:var(--ink-2)}
+
+.tags{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0;padding:0}
+.tags li{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;border:1px solid var(--line-2);background:var(--glass);font-size:12.5px;font-weight:500;color:var(--ink-2);line-height:1.2}
+.tags .i{color:var(--accent);width:14px;height:14px}
+
+/* ---------- Artifacts (mock UI) ---------- */
+.artifact{margin-top:20px;border-radius:14px;border:1px solid var(--line-2);background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 24px 48px -28px rgba(0,0,0,.8);overflow:hidden;font-size:13px;line-height:1.4;color:var(--ink-2);transition:border-color .3s ease}
+.is-active .artifact{border-color:rgba(111,231,210,.3)}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;min-height:46px}
+.row + .row{border-top:1px solid var(--line)}
+.row.status{background:rgba(111,231,210,.045)}
+.mono{font-family:var(--font-mono)}
+
+.badge{display:inline-flex;align-items:center;gap:6px;flex:none;padding:2px 9px 2px 7px;border-radius:999px;border:1px solid;font-size:12px;font-weight:600;line-height:18px;white-space:nowrap}
+.badge .i{width:13px;height:13px}
+.badge.open{color:#86e7a8;background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.3)}
+.badge.merged{color:#cdb6ff;background:rgba(180,140,255,.12);border-color:rgba(180,140,255,.32)}
+.pr-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--ink)}
+.pr-num{margin-left:5px;font-weight:500;color:var(--ink-3)}
+.pr-branch{flex:none;font-size:12px;color:var(--ink-3)}
+.mark-sm{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex:none;color:var(--accent-ink);background:linear-gradient(135deg,#a9f4e8,var(--accent) 50%,var(--accent-2))}
+.mark-sm .i{width:13px;height:13px}
+.status-text{flex:1;min-width:0}
+.status-text b{color:var(--ink);font-weight:600;margin-right:8px}
+.pill{display:inline-flex;align-items:center;gap:7px;flex:none;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.dot.live{animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(111,231,210,.5)}100%{box-shadow:0 0 0 9px rgba(111,231,210,0)}}
+
+/* Connect diagram */
+.connect{display:flex;align-items:center;padding:16px}
+.tile{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line-2);background:rgba(255,255,255,.035)}
+.tile-ico{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex:none;color:var(--ink);background:rgba(255,255,255,.07)}
+.tile-ico .i{width:16px;height:16px}
+.tile-text{display:grid;min-width:0;line-height:1.3}
+.tile-text b{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile-text small{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-3)}
+.ok{width:6px;height:6px;border-radius:50%;background:var(--green);flex:none}
+.wire{flex:0 0 26px;height:2px;background:repeating-linear-gradient(90deg,var(--accent) 0 4px,transparent 4px 8px);opacity:.75}
+.hub{display:grid;justify-items:center;gap:6px;padding:0 6px;flex:none}
+.hub small{font:600 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.mark{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--accent-ink);background:linear-gradient(135deg,#a9f4e8,var(--accent) 50%,var(--accent-2));box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 10px 24px -8px rgba(111,231,210,.55)}
+.mark .i{width:18px;height:18px}
+
+/* Share */
+.urlbar .ico{color:var(--accent);width:15px;height:15px}
+.url{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--ink-2)}
+.url b{color:var(--ink);font-weight:600}
+.copy{display:inline-flex;align-items:center;gap:6px;flex:none;padding:4px 9px;border-radius:7px;border:1px solid var(--line-2);background:rgba(255,255,255,.05);font-size:12px;font-weight:600;color:var(--ink-2)}
+.copy .i{width:13px;height:13px}
+.people{flex-wrap:wrap;gap:8px}
+.person{display:inline-flex;align-items:center;gap:8px;padding:3px 10px 3px 3px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.035);font-size:12px;font-weight:500;color:var(--ink-2)}
+.avatar{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex:none;font:700 10px/1 var(--font-sans);color:#0b1120}
+.a1{background:linear-gradient(135deg,#ffd68a,#ff9a62)}
+.a2{background:linear-gradient(135deg,#9fd8ff,#6f93ff)}
+.a3{background:linear-gradient(135deg,#d3fbe2,#7fe0c3)}
+
+/* Commits */
+.commit{gap:12px}
+.sha{flex:0 0 58px;font-size:12px;color:var(--ink-3)}
+.msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.commit.dim .msg{color:var(--ink-2)}
+.tag{display:inline-flex;align-items:center;gap:6px;flex:none;font-size:12px;font-weight:600;white-space:nowrap}
+.tag .i{width:13px;height:13px}
+.tag.fresh{color:var(--accent)}
+.tag.done{color:var(--ink-3)}
+
+/* Merged */
+.gone{flex:none;font-size:12px;color:var(--ink-3);text-decoration:line-through;text-decoration-color:rgba(233,237,245,.45)}
+
+/* ---------- Outro ---------- */
+.outro{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);column-gap:var(--gap)}
+.outro .rail::before{background:linear-gradient(180deg,var(--line-main),rgba(255,255,255,0))}
+.outro .body{min-width:0;padding-top:4px}
+.outro-card{position:relative;overflow:hidden;padding:24px 26px;border-radius:16px;border:1px solid rgba(111,231,210,.22);background:linear-gradient(135deg,rgba(111,231,210,.12),rgba(255,255,255,.03) 55%)}
+.outro-text{margin:0;font-size:1.0625rem;line-height:1.55;color:var(--ink-2);max-width:56ch}
+.outro-text strong{color:var(--ink);font-weight:600}
+.cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin-top:20px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-size:14.5px;font-weight:600;text-decoration:none;transition:background-color .2s ease,transform .15s ease}
+.btn:hover{background:#8ef0df;transform:translateY(-1px)}
+.btn .i{width:16px;height:16px}
+.link{color:var(--ink);font-size:14.5px;font-weight:600;text-decoration:none;border-bottom:1px solid var(--line-2);padding-bottom:1px;transition:border-color .2s ease}
+.link:hover{border-bottom-color:var(--accent)}
+
+/* ---------- Responsive ---------- */
+@media (max-width:639px){
+  :root{--rail:52px;--node:26px}
+  .flow{--gap:14px}
+  .wrap{padding:0 20px}
+  .pr-branch{display:none}
+  .artifact{font-size:12.5px}
+  .row{padding:11px 12px}
+  .status{flex-wrap:wrap}
+  .status-text{flex:1 1 120px}
+  .gone{flex:1 1 100%;padding-left:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .commit{flex-wrap:wrap;row-gap:6px}
+  .commit .msg{flex:1 1 calc(100% - 70px)}
+  .commit .tag{margin-left:70px}
+  .outro-card{padding:20px}
+}
+@media (max-width:519px){
+  .connect{flex-direction:column;align-items:stretch}
+  .wire{flex:0 0 18px;width:2px;height:18px;align-self:center;background:repeating-linear-gradient(180deg,var(--accent) 0 4px,transparent 4px 8px)}
+  .hub{grid-auto-flow:column;align-items:center;justify-content:center}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .dot.live{animation:none}
+  .node,.artifact,.toc a,.btn,.link{transition:none}
+  .btn:hover{transform:none}
+}
+</style>
+</head>
+<body>
+<main>
+<section class="how" id="how-it-works" aria-labelledby="how-title">
+  <div class="wrap layout">
+
+    <!-- Sticky intro -->
+    <div class="intro">
+      <p class="eyebrow">How it works</p>
+      <h2 class="title" id="how-title">Connect once. Every pull request gets its own environment.</h2>
+      <p class="lede">Branchglass connects to your repository and your cloud account, then handles the rest: an isolated, production-like environment for every pull request, kept current with each commit and removed when the PR is merged or closed.</p>
+      <nav class="toc-nav" aria-label="Steps in this section">
+        <ol class="toc">
+          <li><a href="#s-connect"><span class="k">Once</span><span>Connect your repository and cloud account</span></a></li>
+          <li><a href="#s-open"><span class="k">01</span><span>Open a pull request</span></a></li>
+          <li><a href="#s-share"><span class="k">02</span><span>Share one URL with everyone</span></a></li>
+          <li><a href="#s-push"><span class="k">03</span><span>Push, and it keeps up</span></a></li>
+          <li><a href="#s-merge"><span class="k">04</span><span>Merge or close, and it’s gone</span></a></li>
+        </ol>
+      </nav>
+    </div>
+
+    <!-- Timeline -->
+    <div class="flow">
+
+      <div class="phase phase-first">
+        <div class="rail" aria-hidden="true"></div>
+        <p class="phase-label"><span>One-time setup</span><span class="rule"></span></p>
+      </div>
+
+      <div class="step step-once" id="s-connect">
+        <div class="rail" aria-hidden="true">
+          <span class="node node-main">
+            <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </span>
+        </div>
+        <div class="body">
+          <h3 class="step-title">Connect your repository and cloud account</h3>
+          <p class="step-text">Point Branchglass at the repository your team works in and connect the cloud account you already deploy to. That’s the whole setup — from here on, Branchglass listens for pull request activity and does the rest.</p>
+
+          <div class="artifact connect" role="img" aria-label="Diagram: your repository and your cloud account, both connected to Branchglass.">
+            <div class="tile">
+              <span class="tile-ico">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              </span>
+              <span class="tile-text"><b>Repository</b><small><span class="ok"></span>Connected</small></span>
+            </div>
+            <span class="wire"></span>
+            <div class="hub">
+              <span class="mark">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+              </span>
+              <small>Branchglass</small>
+            </div>
+            <span class="wire"></span>
+            <div class="tile">
+              <span class="tile-ico">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+              </span>
+              <span class="tile-text"><b>Cloud account</b><small><span class="ok"></span>Connected</small></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase phase-branch">
+        <div class="rail" aria-hidden="true">
+          <svg class="curve" viewBox="0 0 64 40" preserveAspectRatio="none" focusable="false">
+            <defs>
+              <linearGradient id="curve-out" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffffff" stop-opacity=".16"/>
+                <stop offset="1" stop-color="#6fe7d2" stop-opacity=".85"/>
+              </linearGradient>
+            </defs>
+            <path d="M16 0C16 22 48 18 48 40" fill="none" stroke="url(#curve-out)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+          </svg>
+        </div>
+        <p class="phase-label"><span>Every pull request</span><span class="rule"></span><span class="sub">Automatic</span></p>
+      </div>
+
+      <ol class="steps">
+
+        <!-- 1 -->
+        <li class="step on-branch" id="s-open">
+          <div class="rail" aria-hidden="true"><span class="node">1</span></div>
+          <div class="body">
+            <h3 class="step-title">Open a pull request</h3>
+            <p class="step-text">As soon as a pull request opens, Branchglass provisions an isolated environment for that branch. It’s configured like production and seeded with safe test data, so what your team reviews behaves like what you’ll ship.</p>
+            <ul class="tags" aria-label="What every environment includes">
+              <li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Isolated per branch</li>
+              <li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Production-like configuration</li>
+              <li><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Safe test data</li>
+            </ul>
+
+            <div class="artifact" role="img" aria-label="Example: pull request #482, “Add usage-based billing”, is opened. Branchglass reports the preview environment is ready and live.">
+              <div class="row">
+                <span class="badge open">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>Open
+                </span>
+                <span class="pr-title">Add usage-based billing <span class="pr-num">#482</span></span>
+                <span class="pr-branch mono">feat/usage-billing → main</span>
+              </div>
+              <div class="row status">
+                <span class="mark-sm">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                </span>
+                <span class="status-text"><b>Branchglass</b>Preview environment ready</span>
+                <span class="pill"><span class="dot live"></span>Live</span>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- 2 -->
+        <li class="step on-branch" id="s-share">
+          <div class="rail" aria-hidden="true"><span class="node">2</span></div>
+          <div class="body">
+            <h3 class="step-title">Share one URL with everyone</h3>
+            <p class="step-text">Each environment comes with a shareable URL. Developers, designers, and reviewers open the same link and try the actual change in their browser — no checking out branches locally, no queueing for a shared staging server.</p>
+
+            <div class="artifact" role="img" aria-label="Example: the preview URL pr-482.acme.branchglass.app, shared with an engineer, a designer, and a reviewer.">
+              <div class="row urlbar">
+                <svg class="i ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span class="url mono">https://<b>pr-482</b>.acme.branchglass.app</span>
+                <span class="copy">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy
+                </span>
+              </div>
+              <div class="row people">
+                <span class="person"><span class="avatar a1">M</span>Engineer</span>
+                <span class="person"><span class="avatar a2">J</span>Designer</span>
+                <span class="person"><span class="avatar a3">P</span>Reviewer</span>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- 3 -->
+        <li class="step on-branch" id="s-push">
+          <div class="rail" aria-hidden="true"><span class="node">3</span></div>
+          <div class="body">
+            <h3 class="step-title">Push, and it keeps up</h3>
+            <p class="step-text">Every new commit updates the environment automatically, so reviewers are always looking at the latest state of the branch — and nobody has to redeploy anything by hand.</p>
+
+            <div class="artifact" role="img" aria-label="Example: two commits on the pull request. The first created the preview environment; the newest updated it automatically.">
+              <div class="row commit">
+                <span class="sha mono">c19e4d7</span>
+                <span class="msg">Handle proration when plans change mid-cycle</span>
+                <span class="tag fresh">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Preview updated
+                </span>
+              </div>
+              <div class="row commit dim">
+                <span class="sha mono">8b02f31</span>
+                <span class="msg">Add usage-based billing</span>
+                <span class="tag done">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><polyline points="20 6 9 17 4 12"/></svg>Preview created
+                </span>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- 4 -->
+        <li class="step on-branch step-last" id="s-merge">
+          <div class="rail" aria-hidden="true">
+            <span class="node">4</span>
+            <svg class="curve" viewBox="0 0 64 40" preserveAspectRatio="none" focusable="false">
+              <defs>
+                <linearGradient id="curve-in" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#6fe7d2" stop-opacity=".85"/>
+                  <stop offset="1" stop-color="#ffffff" stop-opacity=".16"/>
+                </linearGradient>
+              </defs>
+              <path d="M48 0C48 22 16 18 16 40" fill="none" stroke="url(#curve-in)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+            </svg>
+          </div>
+          <div class="body">
+            <h3 class="step-title">Merge or close, and it’s gone</h3>
+            <p class="step-text">When the pull request is merged or closed, Branchglass tears the environment down. Nothing is left running, and there’s nothing for anyone to clean up.</p>
+
+            <div class="artifact" role="img" aria-label="Example: pull request #482 is merged. Branchglass reports the environment was removed and its URL is no longer active.">
+              <div class="row">
+                <span class="badge merged">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>Merged
+                </span>
+                <span class="pr-title">Add usage-based billing <span class="pr-num">#482</span></span>
+              </div>
+              <div class="row status">
+                <span class="mark-sm">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                </span>
+                <span class="status-text"><b>Branchglass</b>Environment removed</span>
+                <span class="gone mono">pr-482.acme.branchglass.app</span>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ol>
+
+      <div class="outro">
+        <div class="rail" aria-hidden="true"></div>
+        <div class="body">
+          <div class="outro-card">
+            <p class="outro-text"><strong>Your workflow doesn’t change.</strong> Branchglass runs on the events your team already produces — open, push, merge — so every pull request simply comes with a place to try it.</p>
+            <div class="cta">
+              <a class="btn" href="#">Connect a repository
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
+              <a class="link" href="#">Read the setup guide</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function () {
+  if (!('IntersectionObserver' in window)) { return; }
+  var steps = Array.prototype.slice.call(document.querySelectorAll('.step[id]'));
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  if (!steps.length) { return; }
+
+  var linkFor = {};
+  links.forEach(function (a) { linkFor[a.getAttribute('href').slice(1)] = a; });
+
+  var visible = [];
+
+  function activate(target) {
+    steps.forEach(function (s) { s.classList.toggle('is-active', s === target); });
+    links.forEach(function (a) {
+      var on = a === linkFor[target.id];
+      a.classList.toggle('is-active', on);
+      if (on) { a.setAttribute('aria-current', 'step'); } else { a.removeAttribute('aria-current'); }
+    });
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      var i = visible.indexOf(e.target);
+      if (e.isIntersecting && i === -1) { visible.push(e.target); }
+      if (!e.isIntersecting && i !== -1) { visible.splice(i, 1); }
+    });
+    for (var k = 0; k < steps.length; k++) {
+      if (visible.indexOf(steps[k]) !== -1) { activate(steps[k]); return; }
+    }
+  }, { rootMargin: '-38% 0px -57% 0px', threshold: 0 });
+
+  steps.forEach(function (s) { io.observe(s); });
+})();
+</script>
+</body>
+</html>

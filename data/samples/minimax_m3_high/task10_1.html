@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Fieldline Repair — Dispatch Board</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f1f5f9;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --text-faint: #94a3b8;
+    --primary: #1d4ed8;
+    --primary-light: #dbeafe;
+    --primary-dark: #1e3a8a;
+    --accent: #0891b2;
+
+    --priority-urgent: #dc2626;
+    --priority-high:   #ea580c;
+    --priority-normal: #0284c7;
+    --priority-low:    #64748b;
+
+    --shadow-sm: 0 1px 2px rgba(15,23,42,0.05);
+    --shadow-md: 0 1px 3px rgba(15,23,42,0.07), 0 1px 2px rgba(15,23,42,0.04);
+    --shadow-lg: 0 4px 12px rgba(15,23,42,0.08);
+  }
+
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1680px; margin: 0 auto; }
+
+  /* ===== Top bar ===== */
+  .topbar {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 15px; color: var(--primary-dark);
+  }
+  .brand-logo {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, #1d4ed8 0%, #0891b2 100%);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+  }
+  .brand-logo svg { width: 20px; height: 20px; }
+
+  .nav-tabs {
+    display: flex; gap: 2px;
+    margin-left: 6px;
+    background: var(--bg);
+    padding: 3px;
+    border-radius: 8px;
+  }
+  .nav-tab {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active {
+    background: white;
+    color: var(--primary);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .search {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    width: 260px;
+    background: var(--bg);
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .search input {
+    border: none; outline: none; background: transparent;
+    flex: 1; font-size: 12px; color: var(--text);
+  }
+
+  .topbar-stats {
+    display: flex; gap: 8px; margin-left: auto;
+  }
+  .kpi {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    min-width: 86px;
+    cursor: default;
+  }
+  .kpi-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .kpi-value {
+    font-size: 18px; font-weight: 700; color: var(--text);
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .kpi-sub { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+  .kpi.alert { background: #fef2f2; border-color: #fecaca; }
+  .kpi.alert .kpi-value { color: var(--priority-urgent); }
+  .kpi.warn  { background: #fff7ed; border-color: #fed7aa; }
+  .kpi.warn  .kpi-value { color: var(--priority-high); }
+  .kpi.good  { background: #f0fdf4; border-color: #bbf7d0; }
+  .kpi.good  .kpi-value { color: #15803d; }
+
+  .topbar-right {
+    display: flex; align-items: center; gap: 14px;
+    padding-left: 12px; border-left: 1px solid var(--border);
+  }
+  .icon-btn {
+    width: 34px; height: 34px;
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .icon-btn:hover { background: var(--bg); color: var(--text); }
+  .icon-btn .badge {
+    position: absolute; top: -4px; right: -4px;
+    min-width: 16px; height: 16px; padding: 0 4px;
+    background: var(--priority-urgent);
+    color: white; font-size: 9px; font-weight: 700;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid white;
+  }
+
+  .dispatcher {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dispatcher-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px;
+  }
+  .dispatcher-info { line-height: 1.15; }
+  .dispatcher-name { font-weight: 600; font-size: 12.5px; }
+  .dispatcher-role { font-size: 10.5px; color: var(--text-muted); }
+
+  /* ===== Layout ===== */
+  .dashboard {
+    display: grid;
+    grid-template-columns: 308px 1fr 348px;
+    gap: 14px;
+    padding: 14px 20px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  .panel-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(180deg, #fafbfc, #ffffff);
+  }
+  .panel-title {
+    font-size: 12px; font-weight: 700; color: var(--text);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-subtitle { font-size: 11px; color: var(--text-muted); }
+  .panel-actions { display: flex; gap: 4px; align-items: center; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .pill.primary { background: var(--primary-light); color: var(--primary); border-color: #bfdbfe; }
+  .pill.warn { background: #fff7ed; color: var(--priority-high); border-color: #fed7aa; }
+  .pill.alert { background: #fef2f2; color: var(--priority-urgent); border-color: #fecaca; }
+  .pill.good { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+  /* ===== Tech roster ===== */
+  .tech-list { padding: 8px; overflow-y: auto; max-height: 760px; }
+  .tech-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all .15s;
+    position: relative;
+  }
+  .tech-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+  }
+  .tech-card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; border-radius: 10px 0 0 10px;
+    background: var(--tech-color, var(--primary));
+  }
+  .tech-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .tech-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 12.5px;
+    background: var(--tech-color, var(--primary));
+    flex-shrink: 0;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .tech-info { flex: 1; min-width: 0; }
+  .tech-name { font-weight: 700; font-size: 13px; line-height: 1.2; }
+  .tech-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+
+  .status-chip {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex; align-items: center; gap: 4px;
+    flex-shrink: 0;
+  }
+  .status-chip::before {
+    content: ""; width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor;
+  }
+  .chip-confirmed { background: #f0fdf4; color: #15803d; }
+  .chip-progress  { background: #eff6ff; color: #1d4ed8; }
+  .chip-long     { background: #fff7ed; color: #c2410c; }
+  .chip-route    { background: #fefce8; color: #a16207; }
+  .chip-done     { background: #f1f5f9; color: #475569; }
+  .chip-unassigned { background: #fef2f2; color: #b91c1c; }
+
+  .tech-grid {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    row-gap: 4px;
+    column-gap: 8px;
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  .tech-grid dt {
+    color: var(--text-muted);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .tech-grid dd { color: var(--text); font-weight: 500; }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+  .tag {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .tag.cert   { background: #ede9fe; color: #6d28d9; }
+  .tag.skill  { background: #dbeafe; color: #1e40af; }
+  .tag.zone   { background: #d1fae5; color: #047857; }
+  .tag.brand  { background: #f1f5f9; color: #475569; }
+
+  .util {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10.5px; color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .util-bar {
+    height: 5px; background: var(--bg); border-radius: 3px;
+    margin-top: 6px; overflow: hidden;
+    display: flex;
+  }
+  .util-fill {
+    height: 100%;
+    background: var(--tech-color, var(--primary));
+    opacity: 0.85;
+  }
+  .util-fill.long {
+    background: repeating-linear-gradient(45deg, #ea580c 0 4px, #fb923c 4px 8px);
+  }
+  .util-fill.gap {
+    background: #e2e8f0;
+  }
+
+  /* ===== Schedule ===== */
+  .schedule-panel .panel-body { display: flex; flex-direction: column; flex: 1; }
+  .schedule-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 11px;
+  }
+  .schedule-toolbar .date-nav {
+    display: flex; align-items: center; gap: 4px;
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 6px;
+    padding: 2px;
+  }
+  .date-nav button {
+    background: transparent; border: none; cursor: pointer;
+    width: 22px; height: 22px; border-radius: 4px;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .date-nav button:hover { background: var(--bg); color: var(--text); }
+  .date-nav .date-label {
+    padding: 0 10px; font-weight: 600; color: var(--text); font-size: 12px;
+  }
+
+  .legend {
+    display: flex; gap: 10px; margin-left: auto;
+    font-size: 10.5px; color: var(--text-muted);
+    align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+  .legend-swatch.travel {
+    background: repeating-linear-gradient(-45deg, #cbd5e1 0 2px, #f1f5f9 2px 4px);
+  }
+
+  .timeline-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 720px;
+    padding: 0;
+  }
+  .timeline {
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    min-width: 980px;
+  }
+  .tl-corner {
+    border-bottom: 1px solid var(--border);
+    background: #fafbfc;
+    position: sticky; left: 0; z-index: 3;
+  }
+  .time-row {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    border-bottom: 1px solid var(--border);
+    background: #fafbfc;
+    position: sticky; top: 0; z-index: 2;
+  }
+  .time-cell {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    padding: 6px 0;
+    border-left: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .time-cell:first-child { border-left: none; }
+  .time-cell.hour { color: var(--text); font-weight: 700; background: #f1f5f9; }
+  .time-cell.now-cell {
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .tech-label {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: white;
+    position: sticky; left: 0; z-index: 1;
+    display: flex; flex-direction: column; justify-content: center;
+    min-height: 76px;
+  }
+  .tech-label .tl-name {
+    font-weight: 700; font-size: 12.5px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tech-label .tl-name::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--tech-color, var(--primary));
+  }
+  .tech-label .tl-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+  .tech-label .tl-load { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+  .tech-row {
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    background:
+      repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent calc(100% / 20 - 1px),
+        #f1f5f9 calc(100% / 20 - 1px),
+        #f1f5f9 calc(100% / 20)
+      );
+    min-height: 76px;
+  }
+  .tech-row.unassigned { background: #fef2f2; }
+
+  .appt-block {
+    position: absolute;
+    top: 6px; bottom: 6px;
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: white;
+    font-size: 10.5px;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.18);
+    display: flex; flex-direction: column; gap: 2px;
+    transition: all .15s;
+    z-index: 2;
+    border: 1px solid rgba(255,255,255,0.18);
+  }
+  .appt-block:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15,23,42,0.22);
+    z-index: 5;
+  }
+  .ab-title {
+    font-weight: 700; font-size: 11.5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ab-meta {
+    opacity: 0.92;
+    font-size: 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .ab-tags { display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; }
+  .ab-tag {
+    background: rgba(255,255,255,0.22);
+    padding: 0 5px; border-radius: 3px;
+    font-size: 9px; font-weight: 600;
+  }
+  .ab-tag.parts { background: rgba(254,243,199,0.95); color: #92400e; }
+  .ab-tag.equip { background: rgba(237,233,254,0.95); color: #5b21b6; }
+
+  .prio-urgent { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); }
+  .prio-high   { background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%); }
+  .prio-normal { background: linear-gradient(135deg, #0284c7 0%, #075985 100%); }
+  .prio-low    { background: linear-gradient(135deg, #64748b 0%, #334155 100%); }
+
+  .running-long {
+    background: repeating-linear-gradient(
+      45deg,
+      #ea580c 0 8px,
+      #fb923c 8px 16px
+    ) !important;
+    border: 2px solid #c2410c;
+  }
+  .now-flag {
+    position: absolute; top: -8px;
+    background: var(--primary);
+    color: white; font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  .travel-block {
+    position: absolute;
+    top: 26px; bottom: 26px;
+    background: repeating-linear-gradient(
+      -45deg,
+      #e2e8f0 0 3px,
+      #f8fafc 3px 6px
+    );
+    border: 1px dashed var(--border-strong);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600;
+    z-index: 1;
+  }
+
+  .lunch-block {
+    position: absolute; left: 42.5%; width: 7.5%;
+    top: 30px; bottom: 30px;
+    background: #f1f5f9;
+    border: 1px dashed var(--border-strong);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 9.5px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600;
+    z-index: 1;
+  }
+
+  .now-line {
+    position: absolute; top: 0; bottom: 0;
+    width: 2px; background: var(--primary);
+    z-index: 3;
+    box-shadow: 0 0 0 1px rgba(29,78,216,0.18);
+  }
+  .now-line::before {
+    content: ""; position: absolute; top: -1px; left: -4px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid white;
+  }
+
+  /* ===== Right column ===== */
+  .alerts-list {
+    overflow-y: auto;
+    max-height: 480px;
+  }
+  .alert {
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    display: flex; gap: 10px;
+    position: relative;
+  }
+  .alert:hover { background: #fafbfc; }
+  .alert:last-child { border-bottom: none; }
+  .alert::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .alert.urgent::before { background: var(--priority-urgent); }
+  .alert.warn::before { background: var(--priority-high); }
+  .alert.info::before { background: var(--accent); }
+  .alert.ok::before { background: var(--status-confirmed, #16a34a); }
+  .alert-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; flex-shrink: 0;
+    font-size: 14px;
+  }
+  .alert.urgent .alert-icon { background: var(--priority-urgent); }
+  .alert.warn .alert-icon { background: var(--priority-high); }
+  .alert.info .alert-icon { background: var(--accent); }
+  .alert.ok .alert-icon { background: #16a34a; }
+  .alert-body { flex: 1; min-width: 0; }
+  .alert-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .alert-title { font-weight: 700; font-size: 12.5px; }
+  .alert-time { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+  .alert-text { font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4; }
+  .alert-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn {
+    padding: 4px 10px; border-radius: 5px;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #1e40af; }
+  .btn-ghost { background: white; color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { background: var(--bg); }
+  .btn-danger { background: white; color: var(--priority-urgent); border-color: #fecaca; }
+  .btn-danger:hover { background: #fef2f2; }
+
+  .right-section {
+    border-top: 1px solid var(--border);
+    padding: 10px 14px;
+    background: #fafbfc;
+  }
+  .section-title {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .notif-item {
+    display: flex; gap: 10px; padding: 6px 0;
+    font-size: 11px; line-height: 1.35;
+    border-bottom: 1px dashed var(--border);
+  }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-time { color: var(--text-muted); font-weight: 600; min-width: 48px; }
+  .notif-text { color: var(--text); flex: 1; }
+  .notif-text b { color: var(--text); }
+  .notif-text .muted { color: var(--text-muted); font-weight: 500; }
+
+  .parts-row {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 8px; padding: 5px 0;
+    font-size: 11px; align-items: center;
+    border-bottom: 1px dashed var(--border);
+  }
+  .parts-row:last-child { border-bottom: none; }
+  .parts-part { font-weight: 600; color: var(--text); }
+  .parts-loc { color: var(--text-muted); font-size: 10.5px; }
+  .parts-tag {
+    font-size: 9.5px; padding: 2px 6px; border-radius: 3px;
+    font-weight: 700;
+  }
+  .parts-tag.avail { background: #d1fae5; color: #047857; }
+  .parts-tag.low { background: #fef3c7; color: #92400e; }
+  .parts-tag.short { background: #fee2e2; color: #b91c1c; }
+
+  /* ===== Bottom appointments ===== */
+  .appointments {
+    margin: 0 20px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .appt-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(180deg, #fafbfc, white);
+  }
+  .appt-header h2 {
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .filter-row {
+    display: flex; gap: 8px; align-items: center;
+    font-size: 11.5px; color: var(--text-muted);
+  }
+  .filter-btn {
+    padding: 4px 10px; border-radius: 5px;
+    background: white; border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 11px;
+    cursor: pointer; font-weight: 600;
+  }
+  .filter-btn.active { background: var(--primary-light); color: var(--primary); border-color: #bfdbfe; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead { background: var(--bg); }
+  th {
+    text-align: left;
+    padding: 9px 12px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:hover { background: #fafbfc; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .priority-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .priority-badge.urgent { background: #fee2e2; color: #b91c1c; }
+  .priority-badge.high { background: #ffedd5; color: #c2410c; }
+  .priority-badge.normal { background: #e0f2fe; color: #075985; }
+  .priority-badge.low { background: #f1f5f9; color: #475569; }
+
+  .cust-name { font-weight: 600; font-size: 12.5px; }
+  .cust-addr { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+  .cust-zone {
+    display: inline-block;
+    font-size: 9.5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: #ecfdf5;
+    color: #047857;
+    margin-left: 4px;
+    font-weight: 600;
+  }
+
+  .appl-row { display: flex; flex-direction: column; }
+  .appl-name { font-weight: 600; font-size: 12.5px; }
+  .appl-brand { font-size: 11px; color: var(--text-muted); }
+
+  .parts-list { display: flex; flex-wrap: wrap; gap: 3px; }
+  .parts-pill {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .equip-pill {
+    background: #ede9fe;
+    color: #5b21b6;
+    border: 1px solid #ddd6fe;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+
+  .tech-cell { display: flex; align-items: center; gap: 8px; }
+  .tech-mini {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .tech-name-cell { font-weight: 600; font-size: 12px; line-height: 1.2; }
+  .tech-eta { font-size: 10.5px; color: var(--text-muted); }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .sp-confirmed { background: #dcfce7; color: #15803d; }
+  .sp-progress { background: #dbeafe; color: #1d4ed8; }
+  .sp-long { background: #fed7aa; color: #c2410c; }
+  .sp-route { background: #fef3c7; color: #a16207; }
+  .sp-done { background: #f1f5f9; color: #475569; }
+  .sp-unassigned { background: #fee2e2; color: #b91c1c; animation: pulse 1.6s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+    50% { box-shadow: 0 0 0 4px rgba(220,38,38,0); }
+  }
+
+  .window {
+    font-weight: 700; font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .window-meta { font-size: 10.5px; color: var(--text-muted); }
+
+  .row-unassigned { background: #fffafa; }
+  .row-unassigned:hover { background: #fef2f2; }
+  .row-unassigned td:first-child { box-shadow: inset 3px 0 0 var(--priority-urgent); }
+  .row-running-long td:first-child { box-shadow: inset 3px 0 0 var(--priority-high); }
+  .row-running-long { background: #fffaf5; }
+
+  .action-stack { display: flex; gap: 4px; }
+  .action-icon {
+    width: 26px; height: 26px;
+    border-radius: 5px;
+    background: white;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .action-icon:hover { color: var(--primary); border-color: var(--primary); }
+
+  /* ===== Footer summary ===== */
+  .summary-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 0 20px 20px;
+    display: flex; align-items: center; gap: 24px;
+    box-shadow: var(--shadow-sm);
+    font-size: 12px;
+  }
+  .summary-stat {
+    display: flex; flex-direction: column;
+  }
+  .summary-stat .lab { color: var(--text-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .summary-stat .val { font-weight: 700; font-size: 16px; color: var(--text); }
+  .summary-stat .val.warn { color: var(--priority-high); }
+  .summary-stat .val.alert { color: var(--priority-urgent); }
+  .summary-stat .val.good { color: #15803d; }
+
+  .summary-divider {
+    width: 1px; height: 32px; background: var(--border);
+  }
+
+  .route-strip {
+    display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+  }
+  .route-strip-item {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; padding: 3px 8px;
+    background: var(--bg); border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .route-strip-item b { font-weight: 700; }
+
+  /* small bits */
+  .arrow { color: var(--text-faint); margin: 0 2px; }
+  .text-muted { color: var(--text-muted); }
+  .mono { font-variant-numeric: tabular-nums; }
+  .nowrap { white-space: nowrap; }
+  .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+  svg { display: block; }
+  .nowrap { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+      </svg>
+    </div>
+    <span>Fieldline Repair</span>
+  </div>
+
+  <nav class="nav-tabs">
+    <div class="nav-tab active">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dispatch Board
+    </div>
+    <div class="nav-tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+      Customers
+    </div>
+    <div class="nav-tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Work Orders
+    </div>
+    <div class="nav-tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Technicians
+    </div>
+    <div class="nav-tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+      Routes
+    </div>
+    <div class="nav-tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+      Reports
+    </div>
+  </nav>
+
+  <div class="search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <input placeholder="Search customer, address, work order…" />
+  </div>
+
+  <div class="topbar-stats">
+    <div class="kpi">
+      <div class="kpi-label">Today</div>
+      <div class="kpi-value">9 <span class="kpi-sub">appts</span></div>
+    </div>
+    <div class="kpi good">
+      <div class="kpi-label">On Route</div>
+      <div class="kpi-value">2 <span class="kpi-sub">techs</span></div>
+    </div>
+    <div class="kpi warn">
+      <div class="kpi-label">Running Long</div>
+      <div class="kpi-value">1</div>
+    </div>
+    <div class="kpi alert">
+      <div class="kpi-label">Unassigned</div>
+      <div class="kpi-value">1</div>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <button class="icon-btn" title="Inbox">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span class="badge">3</span>
+    </button>
+    <button class="icon-btn" title="Notifications">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="badge">5</span>
+    </button>
+    <div class="dispatcher">
+      <div class="dispatcher-avatar">MH</div>
+      <div class="dispatcher-info">
+        <div class="dispatcher-name">Morgan Hayes</div>
+        <div class="dispatcher-role">Dispatcher · Central</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== DASHBOARD GRID ===================== -->
+<div class="dashboard">
+
+  <!-- ===== LEFT: Tech Roster ===== -->
+  <aside class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+          Technicians
+        </div>
+        <div class="panel-subtitle">5 active · 0 off-shift</div>
+      </div>
+      <div class="panel-actions">
+        <span class="pill primary">Live</span>
+        <button class="icon-btn" title="Filter">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="tech-list">
+
+      <!-- Marcus -->
+      <div class="tech-card" style="--tech-color:#2563eb">
+        <div class="tech-head">
+          <div class="tech-avatar">MC</div>
+          <div class="tech-info">
+            <div class="tech-name">Marcus Chen</div>
+            <div class="tech-meta">Tech III · North Zone</div>
+          </div>
+          <span class="status-chip chip-progress">In Progress</span>
+        </div>
+        <dl class="tech-grid">
+          <dt>Hours</dt><dd class="mono">7:30 AM – 4:30 PM</dd>
+          <dt>Vehicle</dt><dd>Van #14 · F-150</dd>
+          <dt>Today</dt><dd class="mono">3 jobs · 4h 45m</dd>
+        </dl>
+        <div class="tag-row">
+          <span class="tag cert">EPA 608</span>
+          <span class="tag skill">Refrigeration</span>
+          <span class="tag skill">Laundry</span>
+          <span class="tag zone">North</span>
+        </div>
+        <div class="tag-row">
+          <span class="tag brand">Samsung</span>
+          <span class="tag brand">LG</span>
+          <span class="tag brand">Whirlpool</span>
+          <span class="tag brand">GE</span>
+          <span class="tag brand">Maytag</span>
+        </div>
+        <div class="util">
+          <span>Day utilization</span>
+          <span class="mono"><b>68%</b></span>
+        </div>
+        <div class="util-bar">
+          <div class="util-fill" style="width:55%"></div>
+          <div class="util-fill long" style="width:13%"></div>
+          <div class="util-fill gap" style="width:32%"></div>
+        </div>
+      </div>
+
+      <!-- Sarah -->
+      <div class="tech-card" style="--tech-color:#db2777">
+        <div class="tech-head">
+          <div class="tech-avatar">SR</div>
+          <div class="tech-info">
+            <div class="tech-name">Sarah Rodriguez</div>
+            <div class="tech-meta">Lead Tech · Central + West</div>
+          </div>
+          <span class="status-chip chip-long">Running Long</span>
+        </div>
+        <dl class="tech-grid">
+          <dt>Hours</dt><dd class="mono">8:00 AM – 5:00 PM</dd>
+          <dt>Vehicle</dt><dd>Van #03 · Transit</dd>
+          <dt>Today</dt><dd class="mono">4 jobs · 5h 30m</dd>
+        </dl>
+        <div class="tag-row">
+          <span class="tag cert">EPA 608</span>
+          <span class="tag cert">Gas Fitter</span>
+          <span class="tag skill">Cooking</span>
+          <span class="tag skill">Refrigeration</span>
+        </div>
+        <div class="tag-row">
+          <span class="tag brand">Sub-Zero</span>
+          <span class="tag brand">Bosch</span>
+          <span class="tag brand">KitchenAid</span>
+          <span class="tag brand">Miele</span>
+          <span class="tag brand">Thermador</span>
+        </div>
+        <div class="util">
+          <span>Day utilization</span>
+          <span class="mono" style="color:#c2410c"><b>93%</b> · overrunning</span>
+        </div>
+        <div class="util-bar">
+          <div class="util-fill" style="width:60%"></div>
+          <div class="util-fill long" style="width:33%"></div>
+          <div class="util-fill gap" style="width:7%"></div>
+        </div>
+      </div>
+
+      <!-- Jamie -->
+      <div class="tech-card" style="--tech-color:#16a34a">
+        <div class="tech-head">
+          <div class="tech-avatar">JO</div>
+          <div class="tech-info">
+            <div class="tech-name">Jamie O'Brien</div>
+            <div class="tech-meta">Tech II · South Zone</div>
+          </div>
+          <span class="status-chip chip-route">En Route</span>
+        </div>
+        <dl class="tech-grid">
+          <dt>Hours</dt><dd class="mono">8:00 AM – 4:00 PM</dd>
+          <dt>Vehicle</dt><dd>Van #21 · Sprinter</dd>
+          <dt>Today</dt><dd class="mono">2 jobs · 2h 30m</dd>
+        </dl>
+        <div class="tag-row">
+          <span class="tag skill">Laundry</span>
+          <span class="tag skill">Dishwashing</span>
+          <span class="tag skill">Microwaves</span>
+          <span class="tag zone">South</span>
+        </div>
+        <div class="tag-row">
+          <span class="tag brand">Whirlpool</span>
+          <span class="tag brand">GE</span>
+          <span class="tag brand">Kenmore</span>
+          <span class="tag brand">Samsung</span>
+        </div>
+        <div class="util">
+          <span>Day utilization</span>
+          <span class="mono"><b>35%</b></span>
+        </div>
+        <div class="util-bar">
+          <div class="util-fill" style="width:35%"></div>
+          <div class="util-fill gap" style="width:65%"></div>
+        </div>
+      </div>
+
+      <!-- Aisha -->
+      <div class="tech-card" style="--tech-color:#9333ea">
+        <div class="tech-head">
+          <div class="tech-avatar">AP</div>
+          <div class="tech-info">
+            <div class="tech-name">Aisha Patel</div>
+            <div class="tech-meta">Tech I · East Zone</div>
+          </div>
+          <span class="status-chip chip-confirmed">Confirmed</span>
+        </div>
+        <dl class="tech-grid">
+          <dt>Hours</dt><dd class="mono">7:00 AM – 3:00 PM</dd>
+          <dt>Vehicle</dt><dd>Van #08 · Promaster</dd>
+          <dt>Today</dt><dd class="mono">2 jobs · 2h 00m</dd>
+        </dl>
+        <div class="tag-row">
+          <span class="tag cert">EPA 608</span>
+          <span class="tag skill">Refrigeration</span>
+          <span class="tag skill">ACs</span>
+          <span class="tag skill">Microwaves</span>
+        </div>
+        <div class="tag-row">
+          <span class="tag brand">LG</span>
+          <span class="tag brand">Samsung</span>
+          <span class="tag brand">Frigidaire</span>
+          <span class="tag brand">GE</span>
+        </div>
+        <div class="util">
+          <span>Day utilization</span>
+          <span class="mono"><b>28%</b></span>
+        </div>
+        <div class="util-bar">
+          <div class="util-fill" style="width:28%"></div>
+          <div class="util-fill gap" style="width:72%"></div>
+        </div>
+      </div>
+
+      <!-- Tom -->
+      <div class="tech-card" style="--tech-color:#ea580c">
+        <div class="tech-head">
+          <div class="tech-avatar">TW</div>
+          <div class="tech-info">
+            <div class="tech-name">Tom Williams</div>
+            <div class="tech-meta">Apprentice · paired w/ Sarah</div>
+          </div>
+          <span class="status-chip chip-confirmed">Confirmed</span>
+        </div>
+        <dl class="tech-grid">
+          <dt>Hours</dt><dd class="mono">8:00 AM – 4:00 PM</dd>
+          <dt>Vehicle</dt><dd>Rides w/ SR (Van #03)</dd>
+          <dt>Today</dt><dd class="mono">1 job + training</dd>
+        </dl>
+        <div class="tag-row">
+          <span class="tag skill">Diagnostics</span>
+          <span class="tag skill">Parts runs</span>
+          <span class="tag zone">Central</span>
+        </div>
+        <div class="tag-row">
+          <span class="tag brand">All brands (sup.)</span>
+        </div>
+        <div class="util">
+          <span>Day utilization</span>
+          <span class="mono"><b>40%</b></span>
+        </div>
+        <div class="util-bar">
+          <div class="util-fill" style="width:40%"></div>
+          <div class="util-fill gap" style="width:60%"></div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ===== CENTER: Schedule Timeline ===== -->
+  <main class="panel schedule-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Day Schedule
+        </div>
+        <div class="panel-subtitle">Wednesday, Oct 23 · 9 appointments · 1 unassigned urgent</div>
+      </div>
+      <div class="panel-actions">
+        <span class="pill">Capacity: <b style="color:var(--text)">54%</b></span>
+        <button class="icon-btn" title="Print">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </button>
+        <button class="icon-btn" title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="schedule-toolbar">
+      <div class="date-nav">
+        <button><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <span class="date-label">Today · Wed Oct 23</span>
+        <button><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+      <button class="filter-btn active">All techs</button>
+      <button class="filter-btn">North</button>
+      <button class="filter-btn">Central</button>
+      <button class="filter-btn">South</button>
+      <button class="filter-btn">East</button>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(135deg,#dc2626,#991b1b)"></div>Urgent</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(135deg,#ea580c,#9a3412)"></div>High</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:linear-gradient(135deg,#0284c7,#075985)"></div>Normal</div>
+        <div class="legend-item"><div class="legend-swatch travel"></div>Travel</div>
+        <div class="legend-item" style="margin-left:8px"><svg width="14" height="6" viewBox="0 0 14 6"><rect width="14" height="6" fill="#1d4ed8" rx="1"/></svg>Now (11:15)</div>
+      </div>
+    </div>
+
+    <div class="timeline-scroll">
+      <div class="timeline">
+
+        <!-- Time header -->
+        <div class="tl-corner"></div>
+        <div class="time-row">
+          <div class="time-cell hour">7:00</div>
+          <div class="time-cell">7:30</div>
+          <div class="time-cell hour">8:00</div>
+          <div class="time-cell">8:30</div>
+          <div class="time-cell hour">9:00</div>
+          <div class="time-cell">9:30</div>
+          <div class="time-cell hour">10:00</div>
+          <div class="time-cell">10:30</div>
+          <div class="time-cell hour">11:00</div>
+          <div class="time-cell now-cell">11:30</div>
+          <div class="time-cell hour">12:00</div>
+          <div class="time-cell">12:30</div>
+          <div class="time-cell hour">1:00</div>
+          <div class="time-cell">1:30</div>
+          <div class="time-cell hour">2:00</div>
+          <div class="time-cell">2:30</div>
+          <div class="time-cell hour">3:00</div>
+          <div class="time-cell">3:30</div>
+          <div class="time-cell hour">4:00</div>
+          <div class="time-cell">4:30</div>
+        </div>
+
+        <!-- ===== Marcus Chen row ===== -->
+        <div class="tech-label" style="--tech-color:#2563eb">
+          <div class="tl-name">Marcus Chen</div>
+          <div class="tl-meta">Tech III · #MC</div>
+          <div class="tl-load">3 jobs · 4h 45m</div>
+        </div>
+        <div class="tech-row">
+          <div class="appt-block prio-normal" style="left:8.33%; width:11.67%">
+            <div class="ab-title">Kim · Washer</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              8:30–9:45
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Pump</span></div>
+          </div>
+          <div class="travel-block" style="left:20%; width:2.5%">12m</div>
+          <div class="appt-block prio-normal" style="left:22.5%; width:15%">
+            <div class="ab-title">Hartwell · Dryer</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              10:00–12:00
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Belt</span><span class="ab-tag parts">Pulley</span></div>
+          </div>
+          <div class="lunch-block" style="left:42.5%">Lunch 12–12:30</div>
+          <div class="appt-block prio-low" style="left:50%; width:10%">
+            <div class="ab-title">Jenkinson · Fridge</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              1:00–2:00
+            </div>
+          </div>
+          <div class="now-line" style="left:42.5%"></div>
+        </div>
+
+        <!-- ===== Sarah Rodriguez row ===== -->
+        <div class="tech-label" style="--tech-color:#db2777">
+          <div class="tl-name">Sarah Rodriguez</div>
+          <div class="tl-meta">Lead Tech · #SR</div>
+          <div class="tl-load">4 jobs · 5h 30m</div>
+        </div>
+        <div class="tech-row">
+          <div class="appt-block prio-high" style="left:6.67%; width:15%">
+            <div class="ab-title">Vasquez · Sub-Zero Fridge</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              8:00–9:30
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Relay</span><span class="ab-tag equip">Diag</span></div>
+          </div>
+          <div class="travel-block" style="left:21.67%; width:3%">18m</div>
+          <div class="appt-block prio-normal running-long" style="left:25%; width:17.5%">
+            <div class="ab-title">Brennan · KitchenAid Oven</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              10:00–12:30 · +45m
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Hinge</span></div>
+          </div>
+          <div class="lunch-block" style="left:42.5%">Lunch 12:30–1</div>
+          <div class="appt-block prio-normal" style="left:47.5%; width:12.5%">
+            <div class="ab-title">Wong · Bosch DW</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              1:00–2:30
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Hose</span></div>
+          </div>
+          <div class="now-line" style="left:42.5%"></div>
+        </div>
+
+        <!-- ===== Jamie O'Brien row ===== -->
+        <div class="tech-label" style="--tech-color:#16a34a">
+          <div class="tl-name">Jamie O'Brien</div>
+          <div class="tl-meta">Tech II · #JO</div>
+          <div class="tl-load">2 jobs · 2h 30m</div>
+        </div>
+        <div class="tech-row">
+          <div class="appt-block prio-normal" style="left:13.33%; width:10%">
+            <div class="ab-title">Singh · Whirlpool DW</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              9:00–10:00
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Latch</span></div>
+          </div>
+          <div class="travel-block" style="left:23.33%; width:2.5%">15m</div>
+          <div class="appt-block prio-low" style="left:25.83%; width:15%">
+            <div class="ab-title">Park · GE Microwave</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              10:15–12:00
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Panel</span></div>
+          </div>
+          <div class="lunch-block" style="left:42.5%">Lunch 12–12:30</div>
+          <div class="appt-block prio-normal" style="left:52.5%; width:12.5%">
+            <div class="ab-title">Patel · Samsung Fridge</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              1:30–2:30
+            </div>
+          </div>
+          <div class="now-line" style="left:42.5%"></div>
+        </div>
+
+        <!-- ===== Aisha Patel row ===== -->
+        <div class="tech-label" style="--tech-color:#9333ea">
+          <div class="tl-name">Aisha Patel</div>
+          <div class="tl-meta">Tech I · #AP</div>
+          <div class="tl-load">2 jobs · 2h 00m</div>
+        </div>
+        <div class="tech-row">
+          <div class="appt-block prio-normal" style="left:33.33%; width:10%">
+            <div class="ab-title">Mendoza · LG Fridge</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              11:00–12:00
+            </div>
+            <div class="ab-tags"><span class="ab-tag parts">Ice maker</span></div>
+          </div>
+          <div class="lunch-block" style="left:42.5%">Lunch 12–12:30</div>
+          <div class="appt-block prio-low" style="left:47.5%; width:10%">
+            <div class="ab-title">Garcia · Maytag MW</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              1:00–2:00
+            </div>
+          </div>
+          <div class="now-line" style="left:42.5%"></div>
+        </div>
+
+        <!-- ===== Tom Williams row ===== -->
+        <div class="tech-label" style="--tech-color:#ea580c">
+          <div class="tl-name">Tom Williams</div>
+          <div class="tl-meta">Apprentice · paired SR</div>
+          <div class="tl-load">1 job + training</div>
+        </div>
+        <div class="tech-row">
+          <div class="travel-block" style="left:6.67%; width:3%">Travel w/ SR</div>
+          <div class="appt-block prio-high" style="left:9.67%; width:12%">
+            <div class="ab-title">Vasquez · shadow</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              8:00–9:30
+            </div>
+            <div class="ab-tags"><span class="ab-tag equip">Training</span></div>
+          </div>
+          <div class="appt-block prio-low" style="left:60%; width:7.5%" style="position:absolute;top:6px;bottom:6px;left:60%;width:7.5%">
+            <div class="ab-title">Parts run · WH</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              2:30–3:00
+            </div>
+          </div>
+          <div class="now-line" style="left:42.5%"></div>
+        </div>
+
+        <!-- ===== UNASSIGNED row ===== -->
+        <div class="tech-label" style="--tech-color:#dc2626; background:#fef2f2">
+          <div class="tl-name" style="color:#b91c1c">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:#b91c1c"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Unassigned Urgent
+          </div>
+          <div class="tl-meta" style="color:#b91c1c">needs EPA cert</div>
+          <div class="tl-load" style="color:#b91c1c">1 request · 2h SLA</div>
+        </div>
+        <div class="tech-row unassigned">
+          <div class="appt-block prio-urgent" style="left:47.5%; width:17.5%">
+            <span class="now-flag">URGENT · UNASSIGNED</span>
+            <div class="ab-title">Olsen · HVAC Mini-Split</div>
+            <div class="ab-meta">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              1:30–3:30 · ASAP
+            </div>
+            <div class="ab-tags"><span class="ab-tag equip">Reclaim</span><span class="ab-tag equip">Manifold</span></div>
+          </div>
+          <div class="now-line" style="left:42.5%"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== RIGHT: Alerts & Action Items ===== -->
+  <aside class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Action Queue
+        </div>
+        <div class="panel-subtitle">4 require dispatch action</div>
+      </div>
+      <span class="pill alert">3 new</span>
+    </div>
+
+    <div class="alerts-list">
+
+      <div class="alert urgent">
+        <div class="alert-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="alert-body">
+          <div class="alert-head">
+            <span class="alert-title">Urgent HVAC request · unassigned</span>
+            <span class="alert-time">11:02 AM</span>
+          </div>
+          <div class="alert-text">
+            <b>Margaret Olsen</b> · 678 Willow Dr, Hilltop<br>
+            Mini-split not cooling (78°F inside). Customer has COPD. Needs EPA-certified tech with HVAC &amp; refrigerant-recovery experience within <b>2 hrs</b>. No qualified tech free before 1:30 PM.
+          </div>
+          <div class="alert-actions">
+            <button class="btn btn-primary">Assign tech</button>
+            <button class="btn btn-ghost">Call customer</button>
+            <button class="btn btn-ghost">Reschedule</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert warn">
+        <div class="alert-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="alert-body">
+          <div class="alert-head">
+            <span class="alert-title">Running long: Brennan oven</span>
+            <span class="alert-time">10:48 AM</span>
+          </div>
+          <div class="alert-text">
+            <b>Sarah Rodriguez</b> at 445 Cedar Court. Door-hinge kit installation taking ~45 min over original window. Will push <b>Wong (Bosch DW) appointment from 12:30 to 1:00 PM</b>. Patricia Wong hasn't been notified.
+          </div>
+          <div class="alert-actions">
+            <button class="btn btn-primary">Notify customer</button>
+            <button class="btn btn-ghost">Reassign Wong</button>
+            <button class="btn btn-ghost">Extend window</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert warn">
+        <div class="alert-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="alert-body">
+          <div class="alert-head">
+            <span class="alert-title">Capacity gap during 12–1 PM</span>
+            <span class="alert-time">10:35 AM</span>
+          </div>
+          <div class="alert-text">
+            Only <b>Marcus &amp; Aisha</b> in field at noon (Sarah running long, Jamie on lunch). Two techs available cannot absorb an emergency in the Central zone. Consider pulling Tom off training at 12:30 PM.
+          </div>
+          <div class="alert-actions">
+            <button class="btn btn-ghost">View coverage map</button>
+            <button class="btn btn-ghost">Override schedule</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <div class="alert-body">
+          <div class="alert-head">
+            <span class="alert-title">Parts pickup needed before 8 AM</span>
+            <span class="alert-time">7:42 AM</span>
+          </div>
+          <div class="alert-text">
+            Sub-Zero compressor relay (#SR-CPR-4471) is at the warehouse (Bay 3). <b>Sarah</b> needs it before the 8:00 AM Vasquez call. Recommend Tom Williams picks it up on his way in.
+          </div>
+          <div class="alert-actions">
+            <button class="btn btn-ghost">Assign to Tom</button>
+            <button class="btn btn-ghost">Open ticket</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div class="alert-body">
+          <div class="alert-head">
+            <span class="alert-title">Travel conflict · Marcus 12:00 PM</span>
+            <span class="alert-time">9:15 AM</span>
+          </div>
+          <div class="alert-text">
+            <b>12 min</b> between Hartwell (2108 Birch Rd) and Jenkinson (1602 Aspen Way) — tight for North-zone drive. Jenkinson is a low-priority fridge; consider swapping with 1:00 PM slot.
+          </div>
+          <div class="alert-actions">
+            <button class="btn btn-ghost">Adjust route</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert ok">
+        <div class="alert-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="alert-body">
+          <div class="alert-head">
+            <span class="alert-title">ETA text sent · Mendoza</span>
+            <span class="alert-time">10:52 AM</span>
+          </div>
+          <div class="alert-text">
+            SMS delivered to <b>Carlos Mendoza</b> (•••-3342): "Aisha is 8 min away for your LG ice-maker repair at 567 Pine St. Reply STOP to opt out." Tracking: delivered.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Notification feed -->
+    <div class="right-section">
+      <div class="section-title">
+        Customer notifications
+        <span class="pill">Today: 6 sent</span>
+      </div>
+      <div class="notif-item">
+        <span class="notif-time">11:09</span>
+        <span class="notif-text"><b>SMS · Mendoza</b> <span class="muted">— ETA 8 min</span></span>
+      </div>
+      <div class="notif-item">
+        <span class="notif-time">10:48</span>
+        <span class="notif-text"><b>Draft · Wong</b> <span class="muted">— 30 min delay pending</span></span>
+      </div>
+      <div class="notif-item">
+        <span class="notif-time">10:30</span>
+        <span class="notif-text"><b>Email · Hartwell</b> <span class="muted">— confirmation + bio</span></span>
+      </div>
+      <div class="notif-item">
+        <span class="notif-time">9:12</span>
+        <span class="notif-text"><b>SMS · Kim</b> <span class="muted">— tech on the way</span></span>
+      </div>
+      <div class="notif-item">
+        <span class="notif-time">8:15</span>
+        <span class="notif-text"><b>SMS · Vasquez</b> <span class="muted">— window confirmed</span></span>
+      </div>
+    </div>
+
+    <!-- Parts inventory -->
+    <div class="right-section" style="border-top: 1px solid var(--border)">
+      <div class="section-title">
+        Parts &amp; equipment
+        <button class="btn-link">Manage →</button>
+      </div>
+      <div class="parts-row">
+        <div class="parts-tag avail">In stock</div>
+        <div>
+          <div class="parts-part">Compressor relay (Sub-Zero)</div>
+          <div class="parts-loc">Warehouse Bay 3 · 2 units</div>
+        </div>
+        <div class="text-muted mono" style="font-size:10.5px">SR-CPR-4471</div>
+      </div>
+      <div class="parts-row">
+        <div class="parts-tag avail">In stock</div>
+        <div>
+          <div class="parts-part">Drum belt (Samsung dryer)</div>
+          <div class="parts-loc">Van #14 · 1 unit</div>
+        </div>
+        <div class="text-muted mono" style="font-size:10.5px">SAM-BLT-2210</div>
+      </div>
+      <div class="parts-row">
+        <div class="parts-tag low">Low</div>
+        <div>
+          <div class="parts-part">Drain pump (Whirlpool)</div>
+          <div class="parts-loc">Warehouse Bay 1 · 1 unit</div>
+        </div>
+        <div class="text-muted mono" style="font-size:10.5px">WP-DRN-9980</div>
+      </div>
+      <div class="parts-row">
+        <div class="parts-tag short">Shortage</div>
+        <div>
+          <div class="parts-part">Refrigerant R-410A (25 lb)</div>
+          <div class="parts-loc">Warehouse Bay 5 · 0 units</div>
+        </div>
+        <div class="text-muted mono" style="font-size:10.5px">R410A-25</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- ===================== BOTTOM APPOINTMENTS TABLE ===================== -->
+<section class="appointments">
+  <div class="appt-header">
+    <h2>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Today's appointments
+      <span class="pill">9 total · 1 unassigned</span>
+    </h2>
+    <div class="filter-row">
+      <span>View:</span>
+      <button class="filter-btn active">All</button>
+      <button class="filter-btn">Confirmed</button>
+      <button class="filter-btn">In progress</button>
+      <button class="filter-btn">Running long</button>
+      <button class="filter-btn">Unassigned</button>
+      <button class="filter-btn" style="margin-left:8px">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Service window</th>
+          <th>Customer</th>
+          <th>Appliance &amp; problem</th>
+          <th>Parts / Equipment</th>
+          <th>Technician</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- Vasquez -->
+        <tr>
+          <td><span class="priority-badge high">High</span></td>
+          <td class="nowrap">
+            <div class="window">8:00 – 9:30 AM</div>
+            <div class="window-meta">90 min · 1.5h</div>
+          </td>
+          <td>
+            <div class="cust-name">Elena Vasquez</div>
+            <div class="cust-addr">1247 Maple Lane, Northgate <span class="cust-zone">North</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">Sub-Zero Refrigerator</span>
+              <span class="appl-brand">PRO486 · not cooling, freezer frosting</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                Compressor relay
+              </span>
+              <span class="equip-pill">Diagnostic scan</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#db2777">SR</div>
+              <div>
+                <div class="tech-name-cell">Sarah Rodriguez</div>
+                <div class="tech-eta">+ Tom Williams (training)</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-confirmed"><span class="dot"></span>En Route</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon" title="Message">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </button>
+              <button class="action-icon" title="Call">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              </button>
+              <button class="action-icon" title="More">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Kim -->
+        <tr>
+          <td><span class="priority-badge normal">Normal</span></td>
+          <td class="nowrap">
+            <div class="window">8:30 – 9:45 AM</div>
+            <div class="window-meta">75 min · 1.25h</div>
+          </td>
+          <td>
+            <div class="cust-name">David Kim</div>
+            <div class="cust-addr">1251 Oak Avenue, Riverside <span class="cust-zone">North</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">Whirlpool Washer</span>
+              <span class="appl-brand">WTW5000 · leaking water from bottom</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">Drain pump assembly</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#2563eb">MC</div>
+              <div>
+                <div class="tech-name-cell">Marcus Chen</div>
+                <div class="tech-eta">En route · ETA 8:34</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-route"><span class="dot"></span>En Route</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon" title="Message"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+              <button class="action-icon" title="Call"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon" title="More"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Singh -->
+        <tr>
+          <td><span class="priority-badge normal">Normal</span></td>
+          <td class="nowrap">
+            <div class="window">9:00 – 10:00 AM</div>
+            <div class="window-meta">60 min · 1h</div>
+          </td>
+          <td>
+            <div class="cust-name">Robert Singh</div>
+            <div class="cust-addr">1120 Cherry Lane, Central <span class="cust-zone">Central</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">Whirlpool Dishwasher</span>
+              <span class="appl-brand">WDF520PADM · won't start, no lights</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">Door latch</span>
+              <span class="parts-pill">Control board</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#16a34a">JO</div>
+              <div>
+                <div class="tech-name-cell">Jamie O'Brien</div>
+                <div class="tech-eta">On site · 9:04 AM</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-progress"><span class="dot"></span>In Progress</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Hartwell -->
+        <tr>
+          <td><span class="priority-badge normal">Normal</span></td>
+          <td class="nowrap">
+            <div class="window">10:00 AM – 12:00 PM</div>
+            <div class="window-meta">120 min · 2h</div>
+          </td>
+          <td>
+            <div class="cust-name">Linda Hartwell</div>
+            <div class="cust-addr">2108 Birch Road, Northpoint <span class="cust-zone">North</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">Samsung Dryer</span>
+              <span class="appl-brand">DV45H · squealing, takes 2 cycles to dry</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">Drum belt</span>
+              <span class="parts-pill">Idler pulley</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#2563eb">MC</div>
+              <div>
+                <div class="tech-name-cell">Marcus Chen</div>
+                <div class="tech-eta">Next up · ETA 10:18</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-confirmed"><span class="dot"></span>Confirmed</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Brennan -->
+        <tr class="row-running-long">
+          <td><span class="priority-badge high">High</span></td>
+          <td class="nowrap">
+            <div class="window">10:00 AM – 12:30 PM</div>
+            <div class="window-meta" style="color:#c2410c">extended +45m</div>
+          </td>
+          <td>
+            <div class="cust-name">Michael Brennan</div>
+            <div class="cust-addr">445 Cedar Court, Westbrook <span class="cust-zone">West</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">KitchenAid Wall Oven</span>
+              <span class="appl-brand">KEMS308 · door hinge broken, uneven heat</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">Hinge kit</span>
+              <span class="parts-pill">Temp sensor</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#db2777">SR</div>
+              <div>
+                <div class="tech-name-cell">Sarah Rodriguez</div>
+                <div class="tech-eta">On site · started 10:12</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-long"><span class="dot"></span>Running Long</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon" style="color:#c2410c;border-color:#fed7aa"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Park -->
+        <tr>
+          <td><span class="priority-badge low">Low</span></td>
+          <td class="nowrap">
+            <div class="window">10:15 AM – 12:00 PM</div>
+            <div class="window-meta">105 min · 1.75h</div>
+          </td>
+          <td>
+            <div class="cust-name">Jennifer Park</div>
+            <div class="cust-addr">3390 Walnut Avenue, Eastside <span class="cust-zone">South</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">GE Microwave</span>
+              <span class="appl-brand">PVM9005 · display dead, otherwise functional</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">Control panel</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#16a34a">JO</div>
+              <div>
+                <div class="tech-name-cell">Jamie O'Brien</div>
+                <div class="tech-eta">Traveling from Singh</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-route"><span class="dot"></span>En Route</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Mendoza -->
+        <tr>
+          <td><span class="priority-badge normal">Normal</span></td>
+          <td class="nowrap">
+            <div class="window">11:00 AM – 12:00 PM</div>
+            <div class="window-meta">60 min · 1h</div>
+          </td>
+          <td>
+            <div class="cust-name">Carlos Mendoza</div>
+            <div class="cust-addr">567 Pine Street, Lakeview <span class="cust-zone">East</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">LG Refrigerator</span>
+              <span class="appl-brand">LFXS26973D · ice maker stopped working</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">Ice maker assembly</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#9333ea">AP</div>
+              <div>
+                <div class="tech-name-cell">Aisha Patel</div>
+                <div class="tech-eta">Arriving · ETA 11:08</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-route"><span class="dot"></span>En Route</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Jenkinson -->
+        <tr>
+          <td><span class="priority-badge low">Low</span></td>
+          <td class="nowrap">
+            <div class="window">1:00 – 2:00 PM</div>
+            <div class="window-meta">60 min · 1h</div>
+          </td>
+          <td>
+            <div class="cust-name">Robert Jenkinson</div>
+            <div class="cust-addr">1602 Aspen Way, Northpoint <span class="cust-zone">North</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">GE Refrigerator</span>
+              <span class="appl-brand">GSS25GSHSS · interior light flickering</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">LED module</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#2563eb">MC</div>
+              <div>
+                <div class="tech-name-cell">Marcus Chen</div>
+                <div class="tech-eta">After Hartwell · tight travel</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-confirmed"><span class="dot"></span>Confirmed</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Wong (delayed) -->
+        <tr>
+          <td><span class="priority-badge normal">Normal</span></td>
+          <td class="nowrap">
+            <div class="window">1:00 – 2:30 PM</div>
+            <div class="window-meta" style="color:#c2410c">delayed from 12:30</div>
+          </td>
+          <td>
+            <div class="cust-name">Patricia Wong</div>
+            <div class="cust-addr">892 Elm Street, Hillcrest <span class="cust-zone">Central</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">Bosch Dishwasher</span>
+              <span class="appl-brand">SHPM88Z75N · not draining, standing water</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="parts-pill">Drain hose</span>
+              <span class="parts-pill">Check valve</span>
+            </div>
+          </td>
+          <td>
+            <div class="tech-cell">
+              <div class="tech-mini" style="background:#db2777">SR</div>
+              <div>
+                <div class="tech-name-cell">Sarah Rodriguez</div>
+                <div class="tech-eta">After Brennan (delayed)</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-confirmed"><span class="dot"></span>Confirmed</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="action-icon" style="color:#c2410c;border-color:#fed7aa"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.50 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Olsen URGENT UNASSIGNED -->
+        <tr class="row-unassigned">
+          <td><span class="priority-badge urgent">Urgent</span></td>
+          <td class="nowrap">
+            <div class="window" style="color:#b91c1c">1:30 – 3:30 PM</div>
+            <div class="window-meta" style="color:#b91c1c">SLA · 2h from call</div>
+          </td>
+          <td>
+            <div class="cust-name">Margaret Olsen</div>
+            <div class="cust-addr">678 Willow Drive, Hilltop <span class="cust-zone">Central</span></div>
+          </td>
+          <td>
+            <div class="appl-row">
+              <span class="appl-name">Mitsubishi Mini-Split</span>
+              <span class="appl-brand">MSZ-FH · not cooling (78°F in home)</span>
+            </div>
+          </td>
+          <td>
+            <div class="parts-list">
+              <span class="equip-pill">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>
+                Reclaim tank
+              </span>
+              <span class="equip-pill">Manifold gauge</span>
+              <span class="parts-pill" style="background:#fee2e2;color:#b91c1c;border-color:#fecaca">R-410A needed</span>
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;color:#b91c1c">
+              <div style="width:26px;height:26px;border-radius:50%;background:#fee2e2;color:#b91c1c;display:flex;align-items:center;justify-content:center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <div class="tech-name-cell" style="color:#b91c1c">Unassigned</div>
+                <div class="tech-eta">needs EPA-608 + HVAC</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="status-pill sp-unassigned"><span class="dot"></span>Unassigned</span></td>
+          <td>
+            <div class="action-stack">
+              <button class="btn btn-danger" style="padding:4px 10px;font-size:11px">Assign now</button>
+              <button class="action-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.50 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== SUMMARY BAR ===================== -->
+<div class="summary-bar">
+  <div class="summary-stat">
+    <span class="lab">Total drive time today</span>
+    <span class="val">2h 18m</span>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-stat">
+    <span class="lab">Service hours scheduled</span>
+    <span class="val">14h 45m</span>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-stat">
+    <span class="lab">Avg travel between jobs</span>
+    <span class="val">17 min</span>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-stat">
+    <span class="lab">Open parts needs</span>
+    <span class="val warn">2 low · 1 short</span>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-stat">
+    <span class="lab">Customer NPS (week)</span>
+    <span class="val good">+68</span>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-stat" style="min-width:280px">
+    <span class="lab">Active routes</span>
+    <div class="route-strip" style="margin-top:4px">
+      <span class="route-strip-item"><b style="color:#2563eb">MC</b> Kim → Hartwell → Jenkinson</span>
+      <span class="route-strip-item"><b style="color:#db2777">SR</b> Vasquez → Brennan → Wong</span>
+      <span class="route-strip-item"><b style="color:#16a34a">JO</b> Singh → Park</span>
+      <span class="route-strip-item"><b style="color:#9333ea">AP</b> Mendoza → Garcia</span>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
+</html>

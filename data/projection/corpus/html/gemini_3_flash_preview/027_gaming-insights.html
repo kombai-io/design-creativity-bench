@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aegis Performance | Patient Insight Review</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-deep: #0f1115;
+            --bg-surface: #1a1d23;
+            --bg-elevated: #252a31;
+            --bg-input: #0a0c0e;
+            --accent-glow: #3b82f6;
+            --accent-dim: #1d4ed8;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --status-success: #10b981;
+            --status-success-bg: #064e3b;
+            --status-error: #ef4444;
+            --status-error-bg: #450a0a;
+            --status-warning: #f59e0b;
+            --status-pending: #6366f1;
+            --border-subtle: #334155;
+            --border-focus: #3b82f6;
+            
+            /* Spacing & Sizing */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2.5rem;
+            --sidebar-width: 380px;
+            --header-height: 64px;
+            
+            /* Shadows & Effects */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            
+            /* Typography */
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.5rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            line-height: 1.5;
+        }
+
+        /* Layout Structure */
+        .app-shell {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            grid-template-rows: var(--header-height) 1fr;
+            height: 100vh;
+        }
+
+        header {
+            grid-column: 1 / 3;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--spacing-lg);
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: var(--font-size-lg);
+            letter-spacing: -0.025em;
+            color: var(--accent-glow);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .search-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            color: var(--text-primary);
+            width: 100%;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .queue-item {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .queue-item:hover {
+            background-color: var(--bg-elevated);
+        }
+
+        .queue-item.active {
+            background-color: var(--bg-elevated);
+            border-left: 4px solid var(--accent-glow);
+        }
+
+        .item-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .status-pill {
+            font-size: var(--font-size-xs);
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 100px;
+            text-transform: uppercase;
+        }
+
+        .pill-pending { background: var(--status-pending); color: white; }
+        .pill-review { background: var(--status-warning); color: black; }
+        .pill-complete { background: var(--status-success); color: white; }
+
+        .item-title {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .item-preview {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Main Detail View */
+        .detail-view {
+            overflow-y: auto;
+            padding: var(--spacing-xl);
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, var(--bg-deep) 70%);
+        }
+
+        .content-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .section {
+            background-color: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-md);
+        }
+
+        .section-title {
+            font-size: var(--font-size-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* Detail Components */
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stat-card {
+            background: var(--bg-input);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* Table Design */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: var(--spacing-sm);
+            border-bottom: 2px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        .data-table td {
+            padding: var(--spacing-md) var(--spacing-sm);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        /* Form & Validation Styling */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-md);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--border-focus);
+        }
+
+        .input-error {
+            border-color: var(--status-error);
+            background: var(--status-error-bg);
+        }
+
+        .input-success {
+            border-color: var(--status-success);
+            background: var(--status-success-bg);
+        }
+
+        .feedback-msg {
+            font-size: var(--font-size-sm);
+            margin-top: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .error-msg { color: var(--status-error); }
+        .success-msg { color: var(--status-success); }
+
+        .btn {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.1s;
+        }
+
+        .btn:active { transform: translateY(1px); }
+
+        .btn-primary {
+            background-color: var(--accent-glow);
+            color: white;
+        }
+
+        /* SVG Graph Mockup */
+        .graph-placeholder {
+            width: 100%;
+            height: 200px;
+            background: var(--bg-input);
+            border-radius: var(--radius-md);
+            position: relative;
+            margin-top: var(--spacing-md);
+        }
+
+        .indicator-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+    <header>
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            AEGIS PERFORMANCE LABS
+        </div>
+        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+            Physician Access: <strong>Dr. Elias Vance</strong>
+        </div>
+    </header>
+
+    <aside class="sidebar" role="complementary" aria-label="Insight Queue">
+        <div class="sidebar-header">
+            <input type="text" class="search-box" placeholder="Filter patient sessions...">
+            <div role="tablist" style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-sm);">
+                <button role="tab" aria-selected="true" style="background:none; border:none; color: var(--accent-glow); font-size: var(--font-size-xs); font-weight: bold; cursor: pointer;">ACTIVE (14)</button>
+                <button role="tab" aria-selected="false" style="background:none; border:none; color: var(--text-muted); font-size: var(--font-size-xs); font-weight: bold; cursor: pointer;">PENDING (4)</button>
+                <button role="tab" aria-selected="false" style="background:none; border:none; color: var(--text-muted); font-size: var(--font-size-xs); font-weight: bold; cursor: pointer;">ARCHIVED</button>
+            </div>
+        </div>
+
+        <nav role="list">
+            <div class="queue-item active" role="listitem">
+                <div class="item-meta">
+                    <span class="status-pill pill-review">Action Required</span>
+                    <span style="font-size: var(--font-size-xs); color: var(--text-muted);">2h ago</span>
+                </div>
+                <span class="item-title">Session: Apex Pro League Quals</span>
+                <span class="item-preview">Patient ID: #9902 | Sustained heart rate elevation (142bpm) detected during final ring phase.</span>
+            </div>
+
+            <div class="queue-item" role="listitem">
+                <div class="item-meta">
+                    <span class="status-pill pill-pending">Pending Sync</span>
+                    <span style="font-size: var(--font-size-xs); color: var(--text-muted);">4h ago</span>
+                </div>
+                <span class="item-title">Sleep Cycle Analysis - V. Kovač</span>
+                <span class="item-preview">REM deficit detected (8% of total). Potential blue-light interference noted post-2AM.</span>
+            </div>
+
+            <div class="queue-item" role="listitem">
+                <div class="item-meta">
+                    <span class="status-pill pill-complete">Verified</span>
+                    <span style="font-size: var(--font-size-xs); color: var(--text-muted);">Yesterday</span>
+                </div>
+                <span class="item-title">Reaction Delta: Valorant Scrims</span>
+                <span class="item-preview">Significant improvement in flick-to-target latency (+12ms average).</span>
+            </div>
+
+            <div class="queue-item" role="listitem">
+                <div class="item-meta">
+                    <span class="status-pill pill-review">Flagged</span>
+                    <span style="font-size: var(--font-size-xs); color: var(--text-muted);">Yesterday</span>
+                </div>
+                <span class="item-title">Ergonomic Strain Warning</span>
+                <span class="item-preview">Ulnar nerve pressure detected via wearable sleeve. Grip force exceeding safety limits.</span>
+            </div>
+
+            <div class="queue-item" role="listitem">
+                <div class="item-meta">
+                    <span class="status-pill pill-complete">Verified</span>
+                    <span style="font-size: var(--font-size-xs); color: var(--text-muted);">2 days ago</span>
+                </div>
+                <span class="item-title">Hydration & Electrolyte Log</span>
+                <span class="item-preview">Daily goals met. Potassium levels stabilized following dietary adjustment.</span>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="detail-view" role="main">
+        <div class="content-container">
+            <!-- Section 1: Header -->
+            <div style="margin-bottom: var(--spacing-xl);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h1 style="font-size: var(--font-size-xl); margin-bottom: var(--spacing-xs);">Physiological Insight Report: #9902</h1>
+                        <p style="color: var(--text-secondary);">Subject: <strong>Nikolai "Spectre" Volkov</strong> | Date: Oct 24, 2023</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="status-pill pill-review" style="padding: 8px 16px; font-size: var(--font-size-sm);">Critical Review Pending</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Core Metrics -->
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <span class="stat-label">Peak BPM</span>
+                    <span class="stat-value" style="color: var(--status-error);">164</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Cognitive Load</span>
+                    <span class="stat-value">88%</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Reaction Avg</span>
+                    <span class="stat-value">142ms</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Focus Score</span>
+                    <span class="stat-value" style="color: var(--status-success);">9.4</span>
+                </div>
+            </div>
+
+            <!-- Section 3: Visual Analytics -->
+            <section class="section">
+                <h2 class="section-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21H3V3m18 10h-4l-3 5-4-11-3 6H3"/></svg>
+                    Intensity Distribution
+                </h2>
+                <div class="graph-placeholder" aria-label="Performance graph showing spikes in stress levels over a 4 hour period.">
+                    <svg width="100%" height="100%" preserveAspectRatio="none">
+                        <path d="M0 180 Q 100 160 200 170 T 400 120 T 600 40 T 800 100" stroke="var(--accent-glow)" stroke-width="3" fill="none" />
+                        <circle cx="600" cy="40" r="6" fill="var(--status-error)" />
+                    </svg>
+                </div>
+                <p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--spacing-sm);">
+                    <span class="indicator-dot" style="background: var(--status-error);"></span> 
+                    Anomaly detected at T-04:12:00 (Correlation with high-stakes engagement).
+                </p>
+            </section>
+
+            <!-- Section 4: Breakdown Table -->
+            <section class="section">
+                <h2 class="section-title">Sub-System Analysis</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Baseline</th>
+                            <th>Current Session</th>
+                            <th>Deviation</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Alpha Wave Power</td>
+                            <td>12.4 μV²</td>
+                            <td>8.1 μV²</td>
+                            <td style="color: var(--status-error);">-34.6%</td>
+                            <td><span class="indicator-dot" style="background: var(--status-error);"></span></td>
+                        </tr>
+                        <tr>
+                            <td>Pupil Dilation Avg</td>
+                            <td>3.2mm</td>
+                            <td>4.1mm</td>
+                            <td style="color: var(--status-warning);">+28.1%</td>
+                            <td><span class="indicator-dot" style="background: var(--status-warning);"></span></td>
+                        </tr>
+                        <tr>
+                            <td>Galvanic Skin Response</td>
+                            <td>2.1 μS</td>
+                            <td>2.3 μS</td>
+                            <td style="color: var(--status-success);">+9.5%</td>
+                            <td><span class="indicator-dot" style="background: var(--status-success);"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 5: Clinical Observations -->
+            <section class="section">
+                <h2 class="section-title">Primary Observation</h2>
+                <p style="font-size: var(--font-size-base); color: var(--text-primary); line-height: 1.6;">
+                    The subject exhibits symptoms of acute sympathetic dominance during the final phases of high-stress competition. 
+                    While cognitive focus remains high (9.4), the cardiac workload is approaching clinical thresholds for a non-athletic context. 
+                    The correlation between "Alpha Wave" drop and "Peak BPM" suggests a narrow window of hyper-focus before burnout risk.
+                </p>
+            </section>
+
+            <!-- Section 6: Validation & Approval Form -->
+            <section class="section" id="approval-section">
+                <h2 class="section-title">Treatment & Approval Action</h2>
+                
+                <form>
+                    <!-- Case 1: Accepted Field -->
+                    <div class="form-group">
+                        <label for="regimen-type">Prescribed Cooling Down Regimen</label>
+                        <select id="regimen-type" class="input-field input-success">
+                            <option>4-7-8 Breathing Technique (Post-Match)</option>
+                            <option>Cryo-Therapy Intervention</option>
+                            <option>Cognitive Behavioral Reset</option>
+                        </select>
+                        <div class="feedback-msg success-msg" role="status">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            Selection verified by protocol system.
+                        </div>
+                    </div>
+
+                    <!-- Case 2: Error Field -->
+                    <div class="form-group">
+                        <label for="physician-notes">Actionable Steps for Patient</label>
+                        <textarea id="physician-notes" class="input-field input-error" rows="3" placeholder="Enter specific instructions for Nikolai..."></textarea>
+                        <div class="feedback-msg error-msg" role="alert">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            Instruction field cannot be empty for Critical Review status.
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: var(--spacing-md); justify-content: flex-end;">
+                        <button type="button" class="btn" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); color: var(--text-primary);">Escalate to Senior Clinician</button>
+                        <button type="button" class="btn btn-primary">Approve & Send to Patient</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Section 7: Metadata & Logs -->
+            <div style="padding: var(--spacing-md); border-top: 1px solid var(--border-subtle); margin-top: var(--spacing-xl); display: flex; justify-content: space-between; font-size: var(--font-size-xs); color: var(--text-muted);">
+                <span>System Integrity: High</span>
+                <span>UUID: aegis-449-x-alpha-99201</span>
+                <span>Last Sync: 10/24/2023 16:42:01 UTC</span>
+            </div>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

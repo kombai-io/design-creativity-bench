@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaForce Workforce Matrix</title>
+    <style>
+        :root {
+            /* Palette Decisions */
+            --color-bg-canvas: #f8fafc;
+            --color-bg-surface: #ffffff;
+            --color-bg-sidebar: #0f172a;
+            --color-bg-alt: #f1f5f9;
+            --color-border-subtle: #e2e8f0;
+            --color-border-active: #3b82f6;
+            --color-text-primary: #1e293b;
+            --color-text-secondary: #64748b;
+            --color-text-inverse: #f8fafc;
+            --color-accent-primary: #2563eb;
+            --color-accent-soft: #dbeafe;
+            --color-status-success: #10b981;
+            --color-status-warning: #f59e0b;
+            --color-status-danger: #ef4444;
+
+            /* Spacing Decisions */
+            --spacing-1: 4px;
+            --spacing-2: 8px;
+            --spacing-3: 12px;
+            --spacing-4: 16px;
+            --spacing-6: 24px;
+            --spacing-8: 32px;
+
+            /* Sizing Decisions */
+            --font-xs: 11px;
+            --font-sm: 13px;
+            --font-md: 14px;
+            --font-lg: 18px;
+
+            /* Radius & Shadow */
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--color-bg-canvas);
+            color: var(--color-text-primary);
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: var(--font-md);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout Structure */
+        .viewport-wrapper {
+            width: 1280px;
+            height: 100vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--color-bg-surface);
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        header {
+            flex: 0 0 auto;
+            background-color: var(--color-bg-sidebar);
+            color: var(--color-text-inverse);
+            padding: var(--spacing-4) var(--spacing-6);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-main h1 {
+            font-size: var(--font-lg);
+            margin: 0;
+            letter-spacing: -0.01em;
+            font-weight: 600;
+        }
+
+        .header-meta {
+            font-size: var(--font-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.7;
+            margin-top: var(--spacing-1);
+        }
+
+        .deployment-badge {
+            background-color: var(--color-status-warning);
+            color: #000;
+            padding: var(--spacing-1) var(--spacing-3);
+            border-radius: 100px;
+            font-size: var(--font-xs);
+            font-weight: 700;
+        }
+
+        /* Navigation Tabs */
+        .tab-bar {
+            background-color: var(--color-bg-alt);
+            border-bottom: 1px solid var(--color-border-subtle);
+            padding: 0 var(--spacing-6);
+            display: flex;
+            gap: var(--spacing-6);
+        }
+
+        .tab-item {
+            padding: var(--spacing-4) 0;
+            font-size: var(--font-sm);
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+
+        .tab-item.active {
+            color: var(--color-accent-primary);
+            border-bottom-color: var(--color-accent-primary);
+        }
+
+        /* Matrix Content */
+        .matrix-main {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .comparison-table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .comparison-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--color-bg-surface);
+            border-bottom: 2px solid var(--color-border-subtle);
+            padding: var(--spacing-4);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .comparison-table tbody td {
+            padding: var(--spacing-4);
+            border-bottom: 1px solid var(--color-border-subtle);
+            border-right: 1px solid var(--color-border-subtle);
+            vertical-align: top;
+        }
+
+        .comparison-table td:first-child, 
+        .comparison-table th:first-child {
+            width: 300px;
+            background-color: var(--color-bg-alt);
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            font-size: var(--font-sm);
+        }
+
+        /* Components */
+        .profile-summary {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            background-color: var(--color-accent-soft);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--color-accent-primary);
+        }
+
+        .profile-text h3 {
+            margin: 0;
+            font-size: var(--font-md);
+        }
+
+        .profile-text p {
+            margin: 0;
+            font-size: var(--font-xs);
+            color: var(--color-text-secondary);
+        }
+
+        .section-header {
+            background-color: #f1f5f9;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            font-size: var(--font-xs);
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            padding: var(--spacing-2) var(--spacing-4);
+        }
+
+        /* Form Controls */
+        .form-control {
+            width: 100%;
+            padding: var(--spacing-2);
+            font-size: var(--font-sm);
+            border: 1px solid var(--color-border-subtle);
+            border-radius: var(--radius-sm);
+            background-color: var(--color-bg-canvas);
+            color: var(--color-text-primary);
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--color-border-active);
+            box-shadow: var(--shadow-focus);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        textarea.form-control {
+            resize: none;
+            height: 64px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-2);
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            font-size: var(--font-sm);
+        }
+
+        .checkbox-item input {
+            width: 16px;
+            height: 16px;
+        }
+
+        .capacity-indicator {
+            height: 8px;
+            background-color: var(--color-border-subtle);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: var(--spacing-2);
+        }
+
+        .capacity-fill {
+            height: 100%;
+            background-color: var(--color-accent-primary);
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: var(--font-xs);
+            font-weight: 700;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+
+        .status-tag.success { background-color: #dcfce7; color: var(--color-status-success); }
+        .status-tag.warning { background-color: #fef3c7; color: var(--color-status-warning); }
+        .status-tag.danger { background-color: #fee2e2; color: var(--color-status-danger); }
+
+        /* Footer Actions */
+        .matrix-footer {
+            background-color: var(--color-bg-alt);
+            padding: var(--spacing-4) var(--spacing-6);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-4);
+            border-top: 1px solid var(--color-border-subtle);
+        }
+
+        .btn {
+            padding: var(--spacing-2) var(--spacing-6);
+            font-size: var(--font-sm);
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            border: 1px solid var(--color-border-subtle);
+            transition: all 0.1s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--color-accent-primary);
+            color: white;
+            border-color: var(--color-accent-primary);
+        }
+
+        .btn-ghost {
+            background-color: transparent;
+            color: var(--color-text-secondary);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Tooltip-like label info */
+        .info-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .info-icon {
+            color: var(--color-text-secondary);
+            cursor: help;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="viewport-wrapper">
+        <header>
+            <div class="header-main">
+                <h1>Deployment Readiness Matrix</h1>
+                <div class="header-meta">Unit: Sterile-Fill Line B-4 | Shift: A | Batch: CP-99201</div>
+            </div>
+            <div class="header-status">
+                <span class="deployment-badge">VALIDATION PENDING</span>
+            </div>
+        </header>
+
+        <nav class="tab-bar" role="tablist" aria-label="Workforce View Tabs">
+            <button class="tab-item active" role="tab" aria-selected="true" aria-controls="matrix-panel" id="tab-1">Comparison Matrix</button>
+            <button class="tab-item" role="tab" aria-selected="false" aria-controls="schedule-panel" id="tab-2">Shift Allocation</button>
+            <button class="tab-item" role="tab" aria-selected="false" aria-controls="compliance-panel" id="tab-3">GxP Compliance Logs</button>
+        </nav>
+
+        <main class="matrix-main" id="matrix-panel" role="tabpanel" aria-labelledby="tab-1">
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Selection Criteria</th>
+                        <th scope="col">
+                            <div class="profile-summary">
+                                <div class="avatar">ER</div>
+                                <div class="profile-text">
+                                    <h3>Elena Rodriguez</h3>
+                                    <p>Tech ID: T-48291 (Senior)</p>
+                                </div>
+                            </div>
+                        </th>
+                        <th scope="col">
+                            <div class="profile-summary">
+                                <div class="avatar" style="background-color: #fef3c7; color: #d97706;">MT</div>
+                                <div class="profile-text">
+                                    <h3>Marcus Thorne</h3>
+                                    <p>Tech ID: T-33921 (Expert)</p>
+                                </div>
+                            </div>
+                        </th>
+                        <th scope="col">
+                            <div class="profile-summary">
+                                <div class="avatar" style="background-color: #dcfce7; color: #059669;">JP</div>
+                                <div class="profile-text">
+                                    <h3>Jin-Woo Park</h3>
+                                    <p>Tech ID: T-55102 (Lead)</p>
+                                </div>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="section-header">Primary Competencies</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="info-label">
+                                <span>Aseptic Gowning Tier</span>
+                                <span class="info-icon" title="Certified gowning level for cleanroom entry">ⓘ</span>
+                            </div>
+                        </td>
+                        <td>
+                            <select class="form-control">
+                                <option>Tier 1: Grade A/B</option>
+                                <option selected>Tier 2: Grade C/D</option>
+                                <option>Uncertified</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-control">
+                                <option selected>Tier 1: Grade A/B</option>
+                                <option>Tier 2: Grade C/D</option>
+                                <option>Uncertified</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-control">
+                                <option selected>Tier 1: Grade A/B</option>
+                                <option>Tier 2: Grade C/D</option>
+                                <option>Uncertified</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>GxP Certification Expiry</td>
+                        <td>
+                            <input type="date" class="form-control" value="2025-04-12">
+                            <div style="margin-top: 4px;"><span class="status-tag success">Active</span></div>
+                        </td>
+                        <td>
+                            <input type="date" class="form-control" value="2024-02-15">
+                            <div style="margin-top: 4px;"><span class="status-tag danger">Expiring Soon</span></div>
+                        </td>
+                        <td>
+                            <input type="date" class="form-control" value="2024-11-30">
+                            <div style="margin-top: 4px;"><span class="status-tag success">Active</span></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="section-header">Capacity & Utilization</td>
+                    </tr>
+                    <tr>
+                        <td>Weekly Cumulative Hours</td>
+                        <td>
+                            <div class="info-label">
+                                <span>38.5 / 40.0</span>
+                                <span style="font-size: var(--font-xs);">96%</span>
+                            </div>
+                            <div class="capacity-indicator">
+                                <div class="capacity-fill" style="width: 96%; background-color: var(--color-status-danger);"></div>
+                            </div>
+                            <div style="font-size: var(--font-xs); color: var(--color-status-danger); margin-top: 4px;">Overutilisation Risk</div>
+                        </td>
+                        <td>
+                            <div class="info-label">
+                                <span>32.0 / 40.0</span>
+                                <span style="font-size: var(--font-xs);">80%</span>
+                            </div>
+                            <div class="capacity-indicator">
+                                <div class="capacity-fill" style="width: 80%;"></div>
+                            </div>
+                            <div style="font-size: var(--font-xs); color: var(--color-text-secondary); margin-top: 4px;">Optimal Load</div>
+                        </td>
+                        <td>
+                            <div class="info-label">
+                                <span>14.5 / 40.0</span>
+                                <span style="font-size: var(--font-xs);">36%</span>
+                            </div>
+                            <div class="capacity-indicator">
+                                <div class="capacity-fill" style="width: 36%; background-color: var(--color-status-warning);"></div>
+                            </div>
+                            <div style="font-size: var(--font-xs); color: var(--color-text-secondary); margin-top: 4px;">Under-utilised</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Overtime Eligibility</td>
+                        <td>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item"><input type="checkbox"> Double Shift</label>
+                                <label class="checkbox-item"><input type="checkbox"> Emergency On-Call</label>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item"><input type="checkbox" checked> Double Shift</label>
+                                <label class="checkbox-item"><input type="checkbox" checked> Emergency On-Call</label>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item"><input type="checkbox" checked> Double Shift</label>
+                                <label class="checkbox-item"><input type="checkbox"> Emergency On-Call</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="section-header">Operational Deployment</td>
+                    </tr>
+                    <tr>
+                        <td>Assigned Batch Station</td>
+                        <td>
+                            <select class="form-control">
+                                <option>A-1 Primary Filling</option>
+                                <option selected>B-2 Labeling/Audit</option>
+                                <option>C-1 Lyophilization</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-control">
+                                <option selected>A-1 Primary Filling</option>
+                                <option>B-2 Labeling/Audit</option>
+                                <option>C-1 Lyophilization</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-control">
+                                <option>A-1 Primary Filling</option>
+                                <option>B-2 Labeling/Audit</option>
+                                <option selected>C-1 Lyophilization</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Shift Intervention Limit</td>
+                        <td>
+                            <input type="number" class="form-control" value="3">
+                            <div class="header-meta">Max critical interventions</div>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" value="8">
+                            <div class="header-meta">Max critical interventions</div>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" value="12">
+                            <div class="header-meta">Max critical interventions</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Performance Evaluator Notes</td>
+                        <td>
+                            <textarea class="form-control">High precision on automated vial counters. Preferred for sterile auditing.</textarea>
+                        </td>
+                        <td>
+                            <textarea class="form-control">Subject Matter Expert (SME) for fill-head maintenance. Deploy for mechanical calibration cycles.</textarea>
+                        </td>
+                        <td>
+                            <textarea class="form-control">Strong supervisory record. Ideal for mentoring junior staff on Line B-4 during this batch.</textarea>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </main>
+
+        <footer class="matrix-footer">
+            <button class="btn btn-ghost">Reset Changes</button>
+            <button class="btn btn-ghost">Export Audit Log</button>
+            <button class="btn btn-primary">Lock Deployment Plan</button>
+        </footer>
+    </div>
+
+    <script>
+        // Simple tab navigation simulation
+        const tabs = document.querySelectorAll('.tab-item');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+                // Normally we would switch panels here
+            });
+        });
+
+        // Basic interactivity for form changes
+        const controls = document.querySelectorAll('.form-control, input[type="checkbox"]');
+        controls.forEach(control => {
+            control.addEventListener('change', () => {
+                // Visual feedback for change
+                const td = control.closest('td');
+                if (td) {
+                    td.style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

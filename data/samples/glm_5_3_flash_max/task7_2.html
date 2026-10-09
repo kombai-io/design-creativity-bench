@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>SceneLilt — How it works</title>
+<style>
+  :root{
+    --bg:#0D0B0A;
+    --card:#181411;
+    --card2:#1E1915;
+    --line:rgba(243,234,220,.12);
+    --line2:rgba(243,234,220,.22);
+    --ink:#F3EADC;
+    --ink2:#DCD2C0;
+    --muted:#A79D8D;
+    --dim:#8A8172;
+    --accent:#FF6B4A;
+    --accent-soft:rgba(255,107,74,.13);
+    --lilac:#C7B6FF;
+    --green:#8FD0A0;
+    --amber:#E9B45B;
+    --blue:#7FB4E8;
+    --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+    --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    --mono:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--accent);color:#1C0E08}
+
+  /* ============ SECTION SHELL ============ */
+  .how{
+    position:relative;
+    overflow:hidden;
+    padding-block:clamp(72px,10vw,124px);
+  }
+  .how::before,.how::after{
+    content:"";position:absolute;pointer-events:none;border-radius:50%;
+  }
+  .how::before{
+    width:760px;height:760px;right:-220px;top:-320px;
+    background:radial-gradient(circle,rgba(255,107,74,.11),transparent 65%);
+  }
+  .how::after{
+    width:640px;height:640px;left:-260px;bottom:-300px;
+    background:radial-gradient(circle,rgba(199,182,255,.07),transparent 65%);
+  }
+  .container{
+    position:relative;z-index:1;
+    max-width:1160px;margin-inline:auto;
+    padding-inline:clamp(20px,4vw,48px);
+  }
+
+  /* ============ HEADER ============ */
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:10px;
+    font:600 11px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 22px;
+  }
+  .eyebrow__dot{
+    width:7px;height:7px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 0 rgba(255,107,74,.5);animation:pulse 2.6s infinite;
+  }
+  @keyframes pulse{70%{box-shadow:0 0 0 9px rgba(255,107,74,0)}100%{box-shadow:0 0 0 0 rgba(255,107,74,0)}}
+  .how h2{
+    margin:0;
+    font:600 clamp(2.1rem,4.6vw,3.4rem)/1.1 var(--sans);
+    letter-spacing:-.025em;
+    max-width:30ch;
+  }
+  .how h2 em{
+    font-family:var(--serif);font-style:italic;font-weight:500;
+    color:var(--accent);letter-spacing:-.01em;
+  }
+  .lead{
+    margin:22px 0 0;
+    font-size:clamp(15px,1.6vw,17.5px);line-height:1.65;color:var(--muted);
+    max-width:62ch;
+  }
+  .specs{
+    margin:22px 0 0;
+    font:600 10.5px/1.8 var(--mono);letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dim);
+  }
+  .specs b{color:var(--muted);font-weight:600}
+
+  /* ============ GRID ============ */
+  .how__grid{
+    display:grid;grid-template-columns:1fr;gap:56px;
+    align-items:start;margin-top:64px;
+  }
+
+  /* ============ STEPS ============ */
+  .steps{position:relative}
+  .rail{
+    position:absolute;left:21px;top:48px;bottom:52px;width:2px;
+    background:var(--line);border-radius:2px;
+  }
+  .rail__fill{
+    position:absolute;left:0;top:0;width:100%;height:0%;
+    background:linear-gradient(180deg,var(--accent),#FF9A6E);
+    border-radius:2px;transition:height .45s ease;
+  }
+  .step{
+    position:relative;
+    padding:26px 0 30px 74px;
+    opacity:.6;transition:opacity .35s ease;
+  }
+  .step.is-active{opacity:1}
+  .step__h{margin:0}
+  .step__head{
+    display:flex;align-items:flex-start;gap:0;
+    width:100%;text-align:left;background:none;border:0;padding:0;
+    cursor:pointer;color:inherit;font:inherit;
+  }
+  .step__head:focus-visible{outline:2px solid var(--accent);outline-offset:6px;border-radius:10px}
+  .step__ico{
+    position:absolute;left:0;top:22px;
+    width:44px;height:44px;border-radius:13px;
+    display:grid;place-items:center;
+    color:var(--dim);background:var(--card);border:1px solid var(--line);
+    transition:color .3s,border-color .3s,background .3s,box-shadow .3s;
+  }
+  .step.is-active .step__ico{
+    color:var(--accent);border-color:rgba(255,107,74,.5);
+    background:var(--accent-soft);
+    box-shadow:0 0 0 4px rgba(255,107,74,.06);
+  }
+  .step__meta{display:grid;gap:7px;padding-top:2px}
+  .step__num{
+    font:600 10.5px/1 var(--mono);letter-spacing:.22em;
+    color:var(--dim);transition:color .3s;
+  }
+  .step.is-active .step__num{color:var(--accent)}
+  .step__title{
+    font:600 17px/1.35 var(--sans);letter-spacing:-.01em;
+    color:var(--ink2);transition:color .3s;
+  }
+  .step__head:hover .step__title{color:var(--ink)}
+  .step.is-active .step__title{color:var(--ink)}
+  .step__body p{
+    margin:12px 0 0;font-size:14.5px;line-height:1.68;color:var(--muted);max-width:54ch;
+  }
+  .step__mock{margin-top:18px}
+
+  /* ============ PANEL (sticky preview) ============ */
+  .panel-wrap{display:none}
+  .panel{position:sticky;top:32px}
+  .panel__bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 4px 12px;
+    font:600 10.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;
+    color:var(--dim);
+  }
+  .panel__count{color:var(--accent)}
+  .panel__body.is-swap > *{animation:rise .45s cubic-bezier(.2,.7,.3,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}}
+
+  /* ============ MOCK WINDOWS ============ */
+  .win{
+    border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    background:linear-gradient(180deg,#1A1613,#131010);
+    box-shadow:0 24px 70px -24px rgba(0,0,0,.7),0 0 120px -50px rgba(255,107,74,.28);
+  }
+  .win__bar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:11px 14px;border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.02);
+  }
+  .dots{display:inline-flex;gap:5px}
+  .dots i{width:9px;height:9px;border-radius:50%;background:#39322B;display:inline-block}
+  .win__title{font:500 12.5px/1.2 var(--sans);color:var(--muted)}
+  .win__tag{
+    margin-left:auto;
+    font:600 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);border:1px solid rgba(255,107,74,.38);
+    background:var(--accent-soft);padding:5px 9px;border-radius:999px;white-space:nowrap;
+  }
+  .win__body{padding:16px;display:grid;gap:13px}
+  .mock__label{
+    margin:0;font:600 10px/1 var(--mono);letter-spacing:.18em;
+    text-transform:uppercase;color:var(--dim);
+  }
+  .mock__hint{margin:0;font-size:11.5px;line-height:1.6;color:var(--dim)}
+
+  /* pills & chips */
+  .pill{
+    font:600 10.5px/1 var(--sans);padding:5px 9px;border-radius:999px;
+    border:1px solid var(--line2);color:var(--muted);white-space:nowrap;
+  }
+  .pill--ok{color:var(--green);border-color:rgba(143,208,160,.35);background:rgba(143,208,160,.08)}
+  .pill--warn{color:var(--amber);border-color:rgba(233,180,91,.35);background:rgba(233,180,91,.08)}
+  .pill--note{color:var(--accent);border-color:rgba(255,107,74,.38);background:var(--accent-soft)}
+  .pill--tag{color:var(--lilac);border-color:rgba(199,182,255,.3);background:rgba(199,182,255,.08)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    font:500 12px/1 var(--sans);color:var(--muted);
+    border:1px solid var(--line2);border-radius:999px;padding:7px 11px;
+  }
+  .chip i{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+  .chip--master{color:var(--ink);border-color:rgba(255,107,74,.55);background:var(--accent-soft)}
+  .chip--master i{background:var(--accent)}
+
+  /* mock 1 — dropzone */
+  .drop{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    border:1.5px dashed rgba(255,107,74,.45);background:rgba(255,107,74,.05);
+    border-radius:12px;padding:12px;
+  }
+  .drop__ico{
+    width:38px;height:38px;border-radius:10px;flex:none;
+    background:var(--accent-soft);display:grid;place-items:center;color:var(--accent);
+  }
+  .drop__txt{min-width:0}
+  .drop__txt b{display:block;font-size:13px;letter-spacing:-.01em}
+  .drop__txt span{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
+  .drop .pill{margin-left:auto}
+
+  /* mock 2 — transcript */
+  .wave svg{width:100%;height:48px;display:block}
+  .tr{
+    display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center;
+    padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02);
+  }
+  .tr time{font:600 10.5px/1 var(--mono);color:var(--dim)}
+  .tr p{margin:0;font-size:12.5px;line-height:1.4;color:var(--ink2)}
+  .tr.on{border-color:rgba(255,107,74,.42);background:rgba(255,107,74,.06)}
+  .tr.on p{color:var(--ink)}
+
+  /* mock 3 — translate / dub */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .tab{
+    font:600 11.5px/1 var(--sans);color:var(--muted);
+    border:1px solid var(--line2);padding:7px 11px;border-radius:8px;
+  }
+  .tab.on{color:var(--accent);border-color:rgba(255,107,74,.45);background:var(--accent-soft)}
+  .linepair{
+    display:grid;gap:10px;border:1px solid var(--line);border-radius:12px;
+    padding:12px;background:rgba(255,255,255,.02);
+  }
+  .lp__row .k{
+    display:block;margin-bottom:5px;
+    font:600 9.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+  }
+  .lp__row .v{font-size:13px;line-height:1.45;color:var(--muted)}
+  .lp__row--out{border-left:2px solid var(--accent);padding-left:11px}
+  .lp__row--out .v{color:var(--ink);font-weight:500}
+  .dub{
+    display:flex;align-items:center;gap:11px;
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  }
+  .dub__play{
+    width:34px;height:34px;border-radius:50%;flex:none;
+    background:var(--accent);color:#1C0E08;display:grid;place-items:center;
+  }
+  .dub__meta{min-width:0}
+  .dub__meta b{display:block;font-size:12.5px}
+  .dub__meta span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
+  .dub svg{margin-left:auto;flex:none}
+
+  /* mock 4 — compare */
+  .frames{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .frame.on{border-color:rgba(255,107,74,.55);box-shadow:0 0 0 3px var(--accent-soft)}
+  .frame__img{aspect-ratio:16/10;position:relative}
+  .frame__tag{
+    position:absolute;top:7px;left:7px;z-index:1;
+    font:600 9px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+    color:rgba(243,234,220,.8);background:rgba(10,8,7,.6);
+    padding:4px 7px;border-radius:999px;
+  }
+  .frame.on .frame__tag{color:var(--accent)}
+  .frame__cap{
+    position:absolute;left:8px;right:8px;bottom:8px;
+    background:rgba(10,8,7,.72);border:1px solid rgba(255,255,255,.08);
+    border-radius:7px;padding:6px 8px;text-align:center;
+    font-size:11px;line-height:1.3;color:var(--ink);
+  }
+  .tl{
+    display:flex;align-items:center;gap:6px;height:40px;padding:0 12px;
+    border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02);
+  }
+  .seg{height:14px;border-radius:5px;background:rgba(243,234,220,.14);position:relative}
+  .seg.on{height:18px;background:rgba(255,107,74,.28);border:1px solid var(--accent)}
+  .seg.on::before,.seg.on::after{
+    content:"";position:absolute;top:-7px;bottom:-7px;width:4px;border-radius:2px;background:var(--accent);
+  }
+  .seg.on::before{left:-3px}
+  .seg.on::after{right:-3px}
+  .tl__times{
+    display:flex;justify-content:space-between;gap:8px;
+    font:600 10px/1 var(--mono);color:var(--dim);
+  }
+  .tl__times span:nth-child(2){color:var(--accent)}
+
+  /* mock 5 — review */
+  .mkt{
+    display:flex;align-items:center;gap:11px;
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  }
+  .av{
+    width:27px;height:27px;border-radius:8px;flex:none;
+    display:grid;place-items:center;font:700 9.5px/1 var(--mono);letter-spacing:.04em;
+  }
+  .mkt__txt{min-width:0}
+  .mkt__txt b{display:block;font-size:12.5px}
+  .mkt__txt span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
+  .mkt .pill{margin-left:auto}
+  .comment{
+    display:grid;gap:8px;
+    border:1px solid rgba(199,182,255,.25);border-left:2px solid var(--lilac);
+    border-radius:10px;padding:12px;background:rgba(199,182,255,.05);
+  }
+  .who{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--muted)}
+  .who b{font-size:12px;color:var(--ink)}
+  .comment p{margin:0;font-size:12.5px;line-height:1.55;color:var(--ink2)}
+  .hl{color:var(--lilac)}
+  .act{display:flex;gap:8px}
+  .mini{
+    font:600 11px/1 var(--sans);padding:6px 11px;border-radius:999px;
+    border:1px solid var(--line2);color:var(--muted);
+  }
+  .mini--solid{background:var(--lilac);color:#17121F;border-color:transparent}
+
+  /* mock 6 — export */
+  .exp{display:grid;gap:8px}
+  .exp__row{
+    display:grid;gap:7px;border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+  }
+  .exp__top{display:flex;align-items:center;gap:10px}
+  .exp__top b{font-size:12.5px}
+  .exp__top .pill{margin-left:auto}
+  .spec{font:500 10.5px/1.5 var(--mono);letter-spacing:.03em;color:var(--dim)}
+  .bar{display:block;height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:99px;background:var(--amber)}
+  .exp__btn{
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    background:var(--accent);color:#210F07;border-radius:11px;padding:13px;
+    font:700 13px/1 var(--sans);letter-spacing:.01em;
+  }
+
+  /* ============ CTA ============ */
+  .cta{
+    margin-top:clamp(72px,9vw,104px);padding-top:44px;
+    border-top:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:28px;align-items:center;justify-content:space-between;
+  }
+  .cta h3{
+    margin:0;font:500 clamp(1.55rem,2.6vw,2.15rem)/1.25 var(--serif);letter-spacing:-.01em;max-width:26ch;
+  }
+  .cta h3 em{font-style:italic;color:var(--accent)}
+  .cta p{margin:10px 0 0;color:var(--muted);font-size:14.5px;line-height:1.65;max-width:52ch}
+  .cta__actions{display:flex;gap:12px;flex-wrap:wrap}
+  .btn{
+    border:0;cursor:pointer;font:600 14px/1 var(--sans);
+    padding:14px 24px;border-radius:999px;
+    background:var(--accent);color:#210F07;
+    transition:transform .15s ease,filter .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.06)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .btn--ghost{background:transparent;color:var(--ink);border:1px solid var(--line2)}
+  .btn--ghost:hover{border-color:var(--accent);color:var(--accent);filter:none}
+
+  /* ============ RESPONSIVE ============ */
+  @media (min-width:1024px){
+    .how__grid{grid-template-columns:minmax(0,1fr) 440px;gap:72px}
+    .panel-wrap{display:block}
+    .step__mock{display:none}
+  }
+  @media (max-width:560px){
+    .step{padding-left:60px}
+    .step__ico{width:38px;height:38px;top:26px;border-radius:11px}
+    .rail{left:18px}
+    .win__body{padding:13px}
+    .cta{flex-direction:column;align-items:flex-start}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+
+<main>
+<section class="how" id="how-it-works">
+  <div class="container">
+
+    <header class="how__head">
+      <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span>How SceneLilt works</p>
+      <h2>From one master cut to every market&nbsp;&mdash; without losing the <em>lilt</em>.</h2>
+      <p class="lead">SceneLilt sits between picture lock and publishing. It reads your film, rebuilds it language by language, and keeps your team in control of every word, every second, and every frame along the way.</p>
+      <p class="specs"><b>Transcription</b> &middot; <b>Translation</b> &middot; <b>Dubbing</b> &middot; <b>On&#8209;text adaptation</b> &middot; <b>Review</b> &middot; <b>Export</b></p>
+    </header>
+
+    <div class="how__grid">
+
+      <!-- ================= STEPS ================= -->
+      <div class="steps">
+        <span class="rail" aria-hidden="true"><i class="rail__fill" id="railFill"></i></span>
+
+        <!-- STEP 01 -->
+        <article class="step">
+          <h3 class="step__h">
+            <button class="step__head" type="button" aria-current="false">
+              <span class="step__ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m-4 4 4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+              </span>
+              <span class="step__meta">
+                <span class="step__num">STEP 01</span>
+                <span class="step__title">Import the master, pick your markets</span>
+              </span>
+            </button>
+          </h3>
+          <div class="step__body">
+            <p>Drop in the approved master and choose the markets you need. SceneLilt spins up a workspace per language, with the master file locked as the single source of truth.</p>
+          </div>
+          <div class="step__mock">
+            <div class="win">
+              <div class="win__bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title">SceneLilt &mdash; New localization run</span><span class="win__tag">Step 01</span></div>
+              <div class="win__body">
+                <div class="drop">
+                  <span class="drop__ico" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10.5 9.5 4.5 2.5-4.5 2.5Z" fill="currentColor" stroke="none"/></svg>
+                  </span>
+                  <span class="drop__txt"><b>brand_master_v7.mp4</b><span>00:30 &middot; 1080&times;1920 &middot; 92.4&nbsp;MB</span></span>
+                  <span class="pill pill--ok">Uploaded</span>
+                </div>
+                <div>
+                  <p class="mock__label">Markets in this run</p>
+                  <div class="chips" style="margin-top:11px">
+                    <span class="chip chip--master"><i></i>EN &middot; Master</span>
+                    <span class="chip"><i style="background:#C7B6FF"></i>ES &middot; Espa&ntilde;ol</span>
+                    <span class="chip"><i style="background:#E9B45B"></i>FR &middot; Fran&ccedil;ais</span>
+                    <span class="chip"><i style="background:#8FD0A0"></i>DE &middot; Deutsch</span>
+                    <span class="chip"><i style="background:#7FB4E8"></i>JA &middot; &#26085;&#26412;&#35486;</span>
+                  </div>
+                </div>
+                <p class="mock__hint">4 language workspaces created &middot; master file stays locked as source of truth</p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 02 -->
+        <article class="step">
+          <h3 class="step__h">
+            <button class="step__head" type="button" aria-current="false">
+              <span class="step__ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6M8 6v12M12 4v16M16 6v12M20 9v6"/></svg>
+              </span>
+              <span class="step__meta">
+                <span class="step__num">STEP 02</span>
+                <span class="step__title">SceneLilt reads the film</span>
+              </span>
+            </button>
+          </h3>
+          <div class="step__body">
+            <p>Dialogue is transcribed and every on-screen element &mdash; titles, supers, lower thirds, end cards &mdash; is mapped against the timeline, so nothing is left untranslated.</p>
+          </div>
+          <div class="step__mock">
+            <div class="win">
+              <div class="win__bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title">Transcript &amp; scene map</span><span class="win__tag">Step 02</span></div>
+              <div class="win__body">
+                <div class="wave" aria-hidden="true">
+                  <svg viewBox="0 0 300 48" preserveAspectRatio="none">
+                    <path d="M0 30 L6 18 L12 34 L18 12 L24 28 L30 20 L36 36 L42 14 L48 30 L54 22 L60 38 L66 16 L72 26 L78 20 L84 34 L90 12 L96 28 L102 18 L108 32 L114 22 L120 38 L126 14 L132 30 L138 20 L144 26 L150 36 L156 12 L162 28 L168 22 L174 34 L180 16 L186 24 L192 30 L198 20 L204 36 L210 14 L216 26 L222 18 L228 32 L234 22 L240 28 L246 12 L252 24 L258 30 L264 16 L270 26 L276 20 L282 34 L288 14 L294 24 L300 30" fill="none" stroke="#FF6B4A" stroke-width="2" opacity=".85" stroke-linejoin="round"/>
+                    <line x1="118" y1="3" x2="118" y2="45" stroke="#F3EADC" stroke-width="1.5" opacity=".9"/>
+                    <circle cx="118" cy="3" r="2.4" fill="#F3EADC"/>
+                  </svg>
+                </div>
+                <div class="tr on"><time>00:02</time><p>&ldquo;Our summer collection has landed.&rdquo;</p><span class="pill pill--tag">Spoken</span></div>
+                <div class="tr"><time>00:07</time><p>&ldquo;Up to 40% off &mdash; Friday only&rdquo;</p><span class="pill pill--note">On-screen &middot; lower third</span></div>
+                <div class="tr"><time>00:14</time><p>&ldquo;Silk. Cedar. Sea salt.&rdquo;</p><span class="pill pill--tag">Spoken</span></div>
+                <div class="tr"><time>00:24</time><p>&ldquo;Find it in stores&rdquo; + logo</p><span class="pill pill--note">End card</span></div>
+                <p class="mock__hint">18 spoken lines &middot; 4 on-screen elements detected and mapped to the timeline</p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 03 -->
+        <article class="step">
+          <h3 class="step__h">
+            <button class="step__head" type="button" aria-current="false">
+              <span class="step__ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M4 12h16"/><ellipse cx="12" cy="12" rx="3.5" ry="8"/></svg>
+              </span>
+              <span class="step__meta">
+                <span class="step__num">STEP 03</span>
+                <span class="step__title">Translate, dub, and adapt every asset</span>
+              </span>
+            </button>
+          </h3>
+          <div class="step__body">
+            <p>Each market gets translated lines, dubbed audio in matched voices, and on-screen text rebuilt to fit length, layout, and local conventions.</p>
+          </div>
+          <div class="step__mock">
+            <div class="win">
+              <div class="win__bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title">Translate &middot; Dub &middot; Adapt</span><span class="win__tag">Step 03</span></div>
+              <div class="win__body">
+                <div class="tabs"><span class="tab on">Espa&ntilde;ol</span><span class="tab">Fran&ccedil;ais</span><span class="tab">Deutsch</span><span class="tab">&#26085;&#26412;&#35486;</span></div>
+                <div class="linepair">
+                  <div class="lp__row"><span class="k">Original &middot; EN &middot; 00:07</span><span class="v">&ldquo;Up to 40% off &mdash; this Friday only.&rdquo;</span></div>
+                  <div class="lp__row lp__row--out"><span class="k">Espa&ntilde;ol &middot; ES</span><span class="v">&ldquo;Hasta 40&nbsp;% de descuento, solo este viernes.&rdquo;</span></div>
+                </div>
+                <div class="dub">
+                  <span class="dub__play" aria-hidden="true"><svg viewBox="0 0 12 12" width="12" height="12"><path d="M3.5 2.2v7.6l6.2-3.8Z" fill="currentColor"/></svg></span>
+                  <span class="dub__meta"><b>Luc&iacute;a &middot; matched brand voice</b><span>Warm tone &middot; 0:03 &middot; synced to 00:07</span></span>
+                  <svg viewBox="0 0 64 20" width="60" height="20" aria-hidden="true"><path d="M0 12 L4 6 L8 14 L12 4 L16 12 L20 8 L24 15 L28 6 L32 12 L36 9 L40 14 L44 5 L48 11 L52 8 L56 13 L60 7 L64 11" fill="none" stroke="#FF6B4A" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/></svg>
+                </div>
+                <p class="mock__hint">On-screen text adapted: &ldquo;SUMMER SALE&rdquo; &rarr; &ldquo;REBAJAS&rdquo; &mdash; resized to fit the lower third.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 04 -->
+        <article class="step">
+          <h3 class="step__h">
+            <button class="step__head" type="button" aria-current="false">
+              <span class="step__ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11"/><circle cx="17.5" cy="7" r="2"/><path d="M20 12H9"/><circle cx="6.5" cy="12" r="2"/><path d="M4 17h11"/><circle cx="17.5" cy="17" r="2"/></svg>
+              </span>
+              <span class="step__meta">
+                <span class="step__num">STEP 04</span>
+                <span class="step__title">Compare versions, refine in place</span>
+              </span>
+            </button>
+          </h3>
+          <div class="step__body">
+            <p>Play any version next to the original. Retime lines, adjust wording, tune pronunciation and tone &mdash; changes land on the timeline, not in a spreadsheet.</p>
+          </div>
+          <div class="step__mock">
+            <div class="win">
+              <div class="win__bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title">Compare &amp; refine</span><span class="win__tag">Step 04</span></div>
+              <div class="win__body">
+                <div class="frames">
+                  <div class="frame">
+                    <span class="frame__tag">Original &middot; EN</span>
+                    <div class="frame__img" style="background:linear-gradient(135deg,#4E3B2C,#221812)"><span class="frame__cap">Up to 40% off</span></div>
+                  </div>
+                  <div class="frame on">
+                    <span class="frame__tag">Espa&ntilde;ol &middot; ES</span>
+                    <div class="frame__img" style="background:linear-gradient(135deg,#443654,#181220)"><span class="frame__cap">Hasta 40&nbsp;% de descuento</span></div>
+                  </div>
+                </div>
+                <div class="tl" aria-hidden="true">
+                  <span class="seg" style="flex:0 0 16%"></span>
+                  <span class="seg on" style="flex:0 0 26%"></span>
+                  <span class="seg" style="flex:0 0 12%"></span>
+                  <span class="seg" style="flex:0 0 30%"></span>
+                </div>
+                <div class="tl__times"><span>00:00</span><span>00:07.2 &ndash; 00:09.8</span><span>00:30</span></div>
+                <div class="tabs"><span class="tab on">Timing</span><span class="tab">Pronunciation</span><span class="tab">Tone</span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 05 -->
+        <article class="step">
+          <h3 class="step__h">
+            <button class="step__head" type="button" aria-current="false">
+              <span class="step__ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A2.5 2.5 0 0 1 17.5 16H9l-5 4V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5Z"/><path d="m9 10.2 2 2 4-4"/></svg>
+              </span>
+              <span class="step__meta">
+                <span class="step__num">STEP 05</span>
+                <span class="step__title">Review market by market</span>
+              </span>
+            </button>
+          </h3>
+          <div class="step__body">
+            <p>Reviewers comment on exact moments and approve version by version, so every market ships with a clear sign-off trail.</p>
+          </div>
+          <div class="step__mock">
+            <div class="win">
+              <div class="win__bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title">Review &amp; approvals</span><span class="win__tag">Step 05</span></div>
+              <div class="win__body">
+                <div class="mkt">
+                  <span class="av" style="background:rgba(255,107,74,.16);color:#FF8A6E">ES</span>
+                  <span class="mkt__txt"><b>Espa&ntilde;ol &middot; v3</b><span>Approved by M. Okafor &middot; 2h</span></span>
+                  <span class="pill pill--ok">Approved</span>
+                </div>
+                <div class="mkt">
+                  <span class="av" style="background:rgba(233,180,91,.16);color:#E9B45B">FR</span>
+                  <span class="mkt__txt"><b>Fran&ccedil;ais &middot; v2</b><span>Waiting on L. Bernard</span></span>
+                  <span class="pill pill--warn">In review</span>
+                </div>
+                <div class="mkt">
+                  <span class="av" style="background:rgba(199,182,255,.16);color:#C7B6FF">DE</span>
+                  <span class="mkt__txt"><b>Deutsch &middot; v2</b><span>1 open comment</span></span>
+                  <span class="pill pill--note">Comment</span>
+                </div>
+                <div class="mkt">
+                  <span class="av" style="background:rgba(143,208,160,.16);color:#8FD0A0">JA</span>
+                  <span class="mkt__txt"><b>&#26085;&#26412;&#35486; &middot; v1</b><span>Approved by K. Tanaka &middot; 1d</span></span>
+                  <span class="pill pill--ok">Approved</span>
+                </div>
+                <div class="comment">
+                  <span class="who"><span class="av" style="background:rgba(243,234,220,.1);color:#F3EADC">MO</span><b>M. Okafor</b><span>on Deutsch &middot; 00:07</span></span>
+                  <p>&ldquo;<span class="hl">ab 40&nbsp;% reduziert</span> feels rushed &mdash; let the last word breathe before the cut.&rdquo;</p>
+                  <span class="act"><span class="mini mini--solid">Resolve</span><span class="mini">Reply</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 06 -->
+        <article class="step">
+          <h3 class="step__h">
+            <button class="step__head" type="button" aria-current="false">
+              <span class="step__ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m-4-4 4 4 4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              </span>
+              <span class="step__meta">
+                <span class="step__num">STEP 06</span>
+                <span class="step__title">Export ready for every channel</span>
+              </span>
+            </button>
+          </h3>
+          <div class="step__body">
+            <p>Export approved cuts in the formats and specs each platform requires &mdash; broadcast, web, and vertical social &mdash; with subtitles handled your way.</p>
+          </div>
+          <div class="step__mock">
+            <div class="win">
+              <div class="win__bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="win__title">Export &amp; deliver</span><span class="win__tag">Step 06</span></div>
+              <div class="win__body">
+                <div class="exp">
+                  <div class="exp__row">
+                    <div class="exp__top"><b>ES &middot; Espa&ntilde;ol</b><span class="pill pill--ok">Ready</span></div>
+                    <span class="spec">MP4 &middot; H.264 &middot; 1080&times;1920 &middot; 9:16 &middot; SRT sidecar</span>
+                  </div>
+                  <div class="exp__row">
+                    <div class="exp__top"><b>FR &middot; Fran&ccedil;ais</b><span class="pill pill--ok">Ready</span></div>
+                    <span class="spec">MOV &middot; ProRes 422 &middot; 1920&times;1080 &middot; 16:9 &middot; burned-in subs</span>
+                  </div>
+                  <div class="exp__row">
+                    <div class="exp__top"><b>DE &middot; Deutsch</b><span class="pill pill--warn">Rendering &middot; 78%</span></div>
+                    <span class="spec">WebM &middot; VP9 &middot; 16:9 + 1:1 cutdowns</span>
+                    <span class="bar"><i style="width:78%"></i></span>
+                  </div>
+                  <div class="exp__row">
+                    <div class="exp__top"><b>JA &middot; &#26085;&#26412;&#35486;</b><span class="pill">Queued</span></div>
+                    <span class="spec">MP4 &middot; H.265 &middot; 1080&times;1920 &middot; 9:16</span>
+                  </div>
+                </div>
+                <div class="exp__btn">Export 4 market versions
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                </div>
+                <p class="mock__hint">Loudness normalized per spec &middot; filenames follow your trafficking convention</p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- ================= STICKY PREVIEW ================= -->
+      <aside class="panel-wrap">
+        <div class="panel">
+          <div class="panel__bar"><span>Live preview</span><span class="panel__count" id="panelCount">01 / 06</span></div>
+          <div class="panel__body" id="panelBody"></div>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ================= CTA ================= -->
+    <div class="cta">
+      <div>
+        <h3>Ready to give your next campaign a <em>lilt</em> in every language?</h3>
+        <p>Your master stays untouched &mdash; every market branches from it, on brand, on spec, on time.</p>
+      </div>
+      <div class="cta__actions">
+        <button class="btn" type="button">Book a walkthrough</button>
+        <button class="btn btn--ghost" type="button">See a sample export</button>
+      </div>
+    </div>
+
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+  var steps = Array.prototype.slice.call(document.querySelectorAll('.step'));
+  var panelBody = document.getElementById('panelBody');
+  var panelCount = document.getElementById('panelCount');
+  var railFill = document.getElementById('railFill');
+  if(!steps.length || !panelBody) return;
+
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var active = -1;
+
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+
+  function setActive(i){
+    if(i === active || i < 0 || i >= steps.length) return;
+    active = i;
+
+    steps.forEach(function(s, idx){
+      var on = idx === i;
+      s.classList.toggle('is-active', on);
+      var btn = s.querySelector('.step__head');
+      if(btn) btn.setAttribute('aria-current', on ? 'true' : 'false');
+    });
+
+    var mock = steps[i].querySelector('.step__mock');
+    panelBody.innerHTML = '';
+    if(mock) panelBody.appendChild(mock.cloneNode(true));
+
+    if(panelCount) panelCount.textContent = pad(i + 1) + ' / ' + pad(steps.length);
+    if(railFill){
+      railFill.style.height = (steps.length > 1 ? (i / (steps.length - 1)) * 100 : 100) + '%';
+    }
+
+    panelBody.classList.remove('is-swap');
+    void panelBody.offsetWidth;
+    panelBody.classList.add('is-swap');
+  }
+
+  steps.forEach(function(s, i){
+    var btn = s.querySelector('.step__head');
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      setActive(i);
+      s.scrollIntoView({
+        behavior: reduce.matches ? 'auto' : 'smooth',
+        block: 'center'
+      });
+    });
+  });
+
+  if('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          var idx = steps.indexOf(e.target);
+          if(idx !== -1) setActive(idx);
+        }
+      });
+    }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+    steps.forEach(function(s){ io.observe(s); });
+  }
+
+  setActive(0);
+})();
+</script>
+
+</body>
+</html>

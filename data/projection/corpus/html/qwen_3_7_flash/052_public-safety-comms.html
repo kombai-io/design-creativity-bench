@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCRS — Communications Audit Review</title>
+<style>
+/* ── Design Tokens ── */
+:root {
+  /* Colors */
+  --color-primary: #1a3c5e;
+  --color-primary-light: #264f78;
+  --color-primary-dark: #0f2740;
+  --color-accent: #d4a017;
+  --color-accent-hover: #b88912;
+  --color-success: #2e7d32;
+  --color-success-bg: #e8f5e9;
+  --color-info: #1565c0;
+  --color-info-bg: #e3f2fd;
+  --color-warning: #e65100;
+  --color-warning-bg: #fff3e0;
+  --color-danger: #c62828;
+  --color-danger-bg: #ffebee;
+  --color-text: #1e1e1e;
+  --color-text-secondary: #5f6368;
+  --color-text-muted: #9aa0a6;
+  --color-bg-page: #f0f2f5;
+  --color-bg-panel: #ffffff;
+  --color-bg-sidebar: var(--color-primary);
+  --color-bg-sidebar-text: #ccd6e0;
+  --color-bg-row-hover: #f5f7fa;
+  --color-bg-row-active: #e3ecf5;
+  --color-bg-table-header: #e8edf3;
+  --color-bg-badge-open: #fff3cd;
+  --color-bg-badge-auditing: #cce5ff;
+  --color-bg-badge-complete: #d4edda;
+  --color-border: #d1d5db;
+  --color-border-light: #e5e7eb;
+  --color-border-focus: var(--color-primary-light);
+
+  /* Typography */
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  --font-xs: 0.6875rem;
+  --font-sm: 0.8125rem;
+  --font-base: 0.9375rem;
+  --font-md: 1.0625rem;
+  --font-lg: 1.3125rem;
+  --font-xl: 1.625rem;
+  --font-body: var(--font-base);
+  --font-heading: var(--font-md);
+  --line-height: 1.5;
+  --line-height-tight: 1.25;
+  --letter-spacing: -0.01em;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.25rem;
+  --space-2xl: 1.75rem;
+  --space-3xl: 2.5rem;
+
+  /* Border Radius */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+
+  /* Layout */
+  --sidebar-width: 310px;
+  --header-height: 52px;
+}
+
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-bg-page);
+  line-height: var(--line-height);
+  letter-spacing: var(--letter-spacing);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-sans);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Top Bar ── */
+.top-bar {
+  height: var(--header-height);
+  background: var(--color-bg-sidebar);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-xl);
+  gap: var(--space-lg);
+  border-bottom: 3px solid var(--color-accent);
+  flex-shrink: 0;
+}
+
+.top-bar-logo {
+  font-weight: 700;
+  font-size: var(--font-md);
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.top-bar-logo svg { opacity: 0.85; }
+
+.top-bar-title {
+  font-size: var(--font-sm);
+  color: var(--color-bg-sidebar-text);
+  font-weight: 400;
+}
+
+.top-bar-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255,255,255,0.2);
+}
+
+.top-bar-context {
+  font-size: var(--font-sm);
+  color: rgba(255,255,255,0.75);
+}
+
+.top-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  font-size: var(--font-sm);
+  color: rgba(255,255,255,0.7);
+}
+
+.top-bar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: #fff;
+}
+
+/* ── Two-Pane Layout ── */
+.layout {
+  display: flex;
+  height: calc(100vh - var(--header-height));
+}
+
+/* ── Master List (Left Pane) ── */
+.master-pane {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--color-bg-panel);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.master-list-header {
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+
+.master-list-header h2 {
+  font-size: var(--font-md);
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+}
+
+.master-list-header p {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+}
+
+.master-list-search {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.search-input-wrap {
+  position: relative;
+}
+
+.search-input-wrap svg {
+  position: absolute;
+  left: var(--space-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  width: 16px;
+  height: 16px;
+}
+
+.search-input-wrap input {
+  width: 100%;
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) 2.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.search-input-wrap input:focus {
+  border-color: var(--color-border-focus);
+}
+
+.filter-tabs {
+  display: flex;
+  padding: var(--space-sm) var(--space-lg);
+  gap: var(--space-xs);
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+
+.filter-tab {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.filter-tab:hover { background: var(--color-bg-row-hover); }
+
+.filter-tab.active {
+  background: var(--color-bg-row-active);
+  color: var(--color-primary);
+  border-color: rgba(26,60,94,0.15);
+}
+
+.filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.master-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.call-entry {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border-light);
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+}
+
+.call-entry:hover { background: var(--color-bg-row-hover); }
+
+.call-entry.active {
+  background: var(--color-bg-row-active);
+  border-left: 3px solid var(--color-primary);
+  padding-left: calc(var(--space-lg) - 3px);
+}
+
+.call-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.call-id {
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.call-status {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.status-completed { background: var(--color-bg-badge-complete); color: var(--color-success); }
+.status-auditing { background: var(--color-bg-badge-auditing); color: var(--color-info); }
+.status-open { background: var(--color-bg-badge-open); color: var(--color-warning); }
+
+.call-subject {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.call-meta {
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.call-meta-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+/* ── Detail Pane (Right Pane) ── */
+.detail-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-page);
+}
+
+/* Success Banner */
+.success-banner {
+  background: var(--color-success-bg);
+  border-bottom: 1px solid rgba(46,125,50,0.2);
+  padding: var(--space-md) var(--space-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--font-sm);
+  color: var(--color-success);
+  flex-shrink: 0;
+  animation: bannerSlide 0.3s ease-out;
+}
+
+@keyframes bannerSlide {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.success-banner svg { flex-shrink: 0; }
+
+.success-banner-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-success);
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+}
+
+.success-banner-close:hover { background: rgba(46,125,50,0.1); }
+
+/* Detail Header */
+.detail-header {
+  background: var(--color-bg-panel);
+  padding: var(--space-xl) var(--space-2xl);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.detail-breadcrumb {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.detail-breadcrumb a {
+  color: var(--color-info);
+  text-decoration: none;
+}
+
+.detail-breadcrumb a:hover { text-decoration: underline; }
+
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.detail-title {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  line-height: var(--line-height-tight);
+}
+
+.detail-call-id-badge {
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+  background: var(--color-bg-row-hover);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.meta-item label {
+  display: block;
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.meta-item span {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* Tabs */
+.detail-tabs-wrap {
+  background: var(--color-bg-panel);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-2xl);
+  flex-shrink: 0;
+}
+
+.tablist {
+  display: flex;
+  gap: 0;
+}
+
+.tab-btn {
+  padding: var(--space-md) var(--space-lg);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+  position: relative;
+  top: 1px;
+}
+
+.tab-btn:hover { color: var(--color-primary); }
+
+.tab-btn[aria-selected="true"] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.tab-btn .tab-badge {
+  font-size: 10px;
+  background: var(--color-bg-row-active);
+  color: var(--color-primary);
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: var(--space-xs);
+  font-weight: 600;
+}
+
+/* Tab Panels Container */
+.tab-panels {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-panel {
+  display: none;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tab-panel.active { display: block; }
+
+.panel-inner {
+  padding: var(--space-2xl);
+}
+
+/* Section within panels */
+.section-block {
+  margin-bottom: var(--space-2xl);
+}
+
+.section-block:last-child { margin-bottom: 0; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.section-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.section-title svg { color: var(--color-text-secondary); }
+
+.section-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.btn {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-sm);
+  font-family: var(--font-sans);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+}
+
+.btn:hover { border-color: var(--color-border-focus); background: var(--color-bg-row-hover); }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+}
+
+.btn-sm {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-xs);
+}
+
+/* ── Tables ── */
+.data-table-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+}
+
+.data-table thead th {
+  background: var(--color-bg-table-header);
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.data-table tbody td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+  vertical-align: top;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table tbody tr:hover { background: var(--color-bg-row-hover); }
+
+.table-col-time { width: 100px; white-space: nowrap; font-family: var(--font-mono); }
+.table-col-callsign { width: 110px; white-space: nowrap; font-weight: 600; font-family: var(--font-mono); }
+.table-col-type { width: 90px; }
+.table-col-duration { width: 80px; text-align: right; font-family: var(--font-mono); }
+.table-col-text { }
+
+.type-tag {
+  font-size: var(--font-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.type-dispatch { background: #e8eaf6; color: #283593; }
+.type-report { background: #f3e5f5; color: #6a1b9a; }
+.type-clear { background: #e0f2f1; color: #00695c; }
+.type-other { background: #eceff1; color: #455a64; }
+
+.time-highlight {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.quarter-mark {
+  background: repeating-linear-gradient(90deg, transparent, transparent 100%, rgba(26,60,94,0.04) 100%, rgba(26,60,94,0.04) calc(100% + 1px));
+}
+
+/* ── Field Cards (for Notes/Summary tabs) ── */
+.field-card {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg) var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+
+.field-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.field-value {
+  font-size: var(--font-base);
+  line-height: var(--line-height);
+}
+
+.field-value ul {
+  list-style: disc inside;
+  margin-top: var(--space-sm);
+}
+
+.field-value li { margin-bottom: var(--space-xs); }
+
+/* Inline Editing Field */
+.editable-field {
+  position: relative;
+}
+
+.editable-display {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: text;
+  min-height: 36px;
+  display: block;
+  font-size: var(--font-base);
+  line-height: var(--line-height);
+}
+
+.editable-display:hover {
+  border-color: var(--color-border);
+  background: var(--color-bg-row-hover);
+}
+
+.editable-input-wrap {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+}
+
+.editable-input-wrap.visible {
+  display: block;
+}
+
+.editable-display.hidden { display: none; }
+
+.inline-editor-input {
+  width: 100%;
+  min-height: 36px;
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--font-base);
+  line-height: var(--line-height);
+  outline: none;
+  box-shadow: var(--shadow-md);
+}
+
+.inline-editor-actions {
+  margin-top: var(--space-sm);
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.editor-hint {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+
+/* Rating Stars */
+.rating-group {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.rating-star {
+  cursor: pointer;
+  color: var(--color-border);
+  transition: color 0.15s;
+}
+
+.rating-star.filled { color: var(--color-accent); }
+.rating-star:hover { color: var(--color-accent-hover); }
+
+.rating-label {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  margin-left: var(--space-sm);
+}
+
+/* Summary Grid */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+}
+
+.summary-stat {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg) var(--space-xl);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+}
+
+.stat-label {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: var(--space-xs);
+}
+
+/* Quality Meter */
+.quality-meter {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.meter-segment {
+  width: 24px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color-border-light);
+}
+
+.meter-segment.pass { background: var(--color-success); }
+.meter-segment.fail { background: var(--color-danger); }
+.meter-segment.warn { background: var(--color-warning); }
+
+/* Call Type Icon Legend */
+.call-type-breakdown {
+  display: flex;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.breakdown-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-dispatch { background: #283593; }
+.dot-report { background: #6a1b9a; }
+.dot-clear { background: #00695c; }
+.dot-other { background: #455a64; }
+
+.breakdown-count {
+  font-size: var(--font-md);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.breakdown-label {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Footer */
+.detail-footer {
+  padding: var(--space-md) var(--space-2xl);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-panel);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+.master-list::-webkit-scrollbar { width: 5px; }
+</style>
+</head>
+<body>
+
+<!-- ════════ TOP BAR ════════ -->
+<header class="top-bar" role="banner">
+  <div class="top-bar-logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+    NCRS
+  </div>
+  <span class="top-bar-title">National Communications Review Service</span>
+  <span class="top-bar-divider"></span>
+  <span class="top-bar-context">Audit Workspace</span>
+  <div class="top-bar-right">
+    <span>Shift B — 06:00–18:00</span>
+    <span class="top-bar-user">
+      <span class="user-avatar">MH</span>
+      M. Hargreaves
+    </span>
+  </div>
+</header>
+
+<!-- ════════ LAYOUT ════════ -->
+<div class="layout">
+
+  <!-- ─── MASTER LIST ─── -->
+  <aside class="master-pane" role="navigation" aria-label="Call log list">
+    <div class="master-list-header">
+      <h2>Audit Queue</h2>
+      <p>Radio traffic review — 15 May 2025</p>
+    </div>
+
+    <div class="master-list-search">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Filter by ID, unit, keyword…">
+      </div>
+    </div>
+
+    <nav class="filter-tabs" role="tablist" aria-label="Status filters">
+      <button class="filter-tab active" aria-selected="true">All<span class="filter-count">12</span></button>
+      <button class="filter-tab">Auditing<span class="filter-count">4</span></button>
+      <button class="filter-tab">Completed<span class="filter-count">7</span></button>
+      <button class="filter-tab">Open<span class="filter-count">1</span></button>
+    </nav>
+
+    <div class="master-list" role="list">
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0418">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0418</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Major Incident — Rail Bridge Collapse</div>
+        <div class="call-meta">
+          <span>06:12–09:47</span>
+          <span class="call-meta-dot"></span>
+          <span>209 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry active" role="listitem" tabindex="0" aria-selected="true" data-call="NCR-2025-0417">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0417</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Hazardous Materials — Chemical Plant Fire</div>
+        <div class="call-meta">
+          <span>03:44–06:01</span>
+          <span class="call-meta-dot"></span>
+          <span>156 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0416">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0416</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Multi-Vehicle Collision — Junction 14 M25</div>
+        <div class="call-meta">
+          <span>23:18–00:42</span>
+          <span class="call-meta-dot"></span>
+          <span>87 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0415">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0415</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Search Operation — Missing Person, Elderly Male</div>
+        <div class="call-meta">
+          <span>20:05–02:33</span>
+          <span class="call-meta-dot"></span>
+          <span>134 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0414">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0414</span>
+          <span class="call-status status-auditing">Auditing</span>
+        </div>
+        <div class="call-subject">Building Fire — Residential Flat, Block C</div>
+        <div class="call-meta">
+          <span>17:22–19:15</span>
+          <span class="call-meta-dot"></span>
+          <span>68 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0413">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0413</span>
+          <span class="call-status status-auditing">Auditing</span>
+        </div>
+        <div class="call-subject">Road Traffic Accident — Serious Injury</div>
+        <div class="call-meta">
+          <span>14:07–15:48</span>
+          <span class="call-meta-dot"></span>
+          <span>52 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0412">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0412</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Public Disturbance — Community Centre</div>
+        <div class="call-meta">
+          <span>12:33–13:19</span>
+          <span class="call-meta-dot"></span>
+          <span>31 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0411">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0411</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Flood Warning — River Ouse Outfall</div>
+        <div class="call-meta">
+          <span>09:56–11:44</span>
+          <span class="call-meta-dot"></span>
+          <span>44 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0410">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0410</span>
+          <span class="call-status status-auditing">Auditing</span>
+        </div>
+        <div class="call-subject">Welfare Check — Industrial Estate Unit 7</div>
+        <div class="call-meta">
+          <span>08:11–09:02</span>
+          <span class="call-meta-dot"></span>
+          <span>23 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0409">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0409</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Explosive Device Alert — School Perimeter</div>
+        <div class="call-meta">
+          <span>07:28–08:55</span>
+          <span class="call-meta-dot"></span>
+          <span>98 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0408">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0408</span>
+          <span class="call-status status-completed">Completed</span>
+        </div>
+        <div class="call-subject">Traffic Control — Parasympathetic Route Clear</div>
+        <div class="call-meta">
+          <span>05:44–06:09</span>
+          <span class="call-meta-dot"></span>
+          <span>19 transmissions</span>
+        </div>
+      </div>
+
+      <div class="call-entry" role="listitem" tabindex="0" data-call="NCR-2025-0407">
+        <div class="call-entry-header">
+          <span class="call-id">NCR-2025-0407</span>
+          <span class="call-status status-open">Open</span>
+        </div>
+        <div class="call-subject">Priority Call-Out — Multi-Agency Response</div>
+        <div class="call-meta">
+          <span>01:00–05:43</span>
+          <span class="call-meta-dot"></span>
+          <span>176 transmissions</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ─── DETAIL PANE ─── -->
+  <main class="detail-pane" role="main" aria-label="Selected call detail">
+
+    <!-- Success Banner -->
+    <div class="success-banner" id="successBanner" role="status" aria-live="polite">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <strong>Rating saved.</strong>&ensp;Quality score for NCR-2025-0417 updated to 4 / 5. Changes applied by M. Hargreaves at 16:42.
+      <button class="success-banner-close" aria-label="Dismiss" onclick="document.getElementById('successBanner').style.display='none'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Detail Header -->
+    <div class="detail-header">
+      <div class="detail-breadcrumb">
+        <a href="#">Audit Queue</a>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        <span>Call NCR-2025-0417</span>
+      </div>
+      <div class="detail-title-row">
+        <h1 class="detail-title">Hazardous Materials — Chemical Plant Fire<br>Eastfield Petrochemical Works</h1>
+        <span class="detail-call-id-badge">NCR-2025-0417</span>
+      </div>
+      <div class="detail-meta-grid">
+        <div class="meta-item">
+          <label>Report Date</label>
+          <span>15 May 2025</span>
+        </div>
+        <div class="meta-item">
+          <label>Time Window</label>
+          <span>03:44 – 06:01 UTC</span>
+        </div>
+        <div class="meta-item">
+          <label>Duration</label>
+          <span>2h 17m</span>
+        </div>
+        <div class="meta-item">
+          <label>Total Transmissions</label>
+          <span>156</span>
+        </div>
+        <div class="meta-item">
+          <label>Units Active</label>
+          <span>9 stations / 34 vehicles</span>
+        </div>
+        <div class="meta-item">
+          <label>Audit Status</label>
+          <span style="color:var(--color-success); font-weight:600;">✓ Complete</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="detail-tabs-wrap" role="tablist" aria-label="Detail sections">
+      <button class="tab-btn" role="tab" aria-selected="true" aria-controls="panel-transcript" id="tab-transcript">Transcript</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-summary" id="tab-summary">Summary <span class="tab-badge">New</span></button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-notes" id="tab-notes">Case Notes</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-quality" id="tab-quality">Quality Metrics</button>
+    </nav>
+
+    <!-- Tab Panels -->
+    <div class="tab-panels">
+
+      <!-- ═══ TAB 1: TRANSCRIPT ═══ -->
+      <section class="tab-panel active" id="panel-transcript" role="tabpanel" aria-labelledby="tab-transcript">
+        <div class="panel-inner">
+
+          <!-- Transmission Table -->
+          <div class="section-block">
+            <div class="section-header">
+              <h3 class="section-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                Radio Traffic Log — Phase 1: Initial Response
+              </h3>
+              <div class="section-actions">
+                <button class="btn btn-sm">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Export CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="table-col-time">Timestamp</th>
+                    <th scope="col" class="table-col-callsign">Callsign</th>
+                    <th scope="col" class="table-col-type">Type</th>
+                    <th scope="col" class="table-col-text">Message Summary</th>
+                    <th scope="col" class="table-col-duration">Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="table-col-time time-highlight">03:44:07</td>
+                    <td class="table-col-callsign">DCR-Ctrl</td>
+                    <td><span class="type-tag type-dispatch">Dispatch</span></td>
+                    <td>"All units, be advised. We have a confirmed fire at Eastfield Petrochemical Works, Sector 4, storage tanks Alpha through Delta. Structure fires reported. Sending HazMat team 1 and Engines 12, 17, 23. Status Black."</td>
+                    <td class="table-col-duration">14s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">03:44:49</td>
+                    <td class="table-col-callsign">Eng-12</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"Eng-12 en route, ETA four minutes via A12 corridor. Requesting water tanker support on approach."</td>
+                    <td class="table-col-duration">8s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">03:45:11</td>
+                    <td class="table-col-callsign">HazMat-1</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"HazMat-1 acknowledged. We're picking up chlorine compound readings in the vicinity. Recommend evacuation buffer extended to five hundred metres north and east."</td>
+                    <td class="table-col-duration">11s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">03:45:38</td>
+                    <td class="table-col-callsign">DCR-Ctrl</td>
+                    <td><span class="type-tag type-dispatch">Dispatch</span></td>
+                    <td>"Copy HazMat-1. Extended perimeter to five hundred metres, all directions. Notify Civil Contingencies Desk. Initiate Area Emergency Plan Level 2."</td>
+                    <td class="table-col-duration">12s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">03:46:02</td>
+                    <td class="table-col-callsign">Amb-Flex-7</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"Amb-Flex-7 rolling up from Southside. Three patient hold requests already received — smoke inhalation, residents on Mill Road. Establishing staging area at Carfax Recreation Ground."</td>
+                    <td class="table-col-duration">13s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time quarter-mark">03:47:55</td>
+                    <td class="table-col-callsign">FireCtrl</td>
+                    <td><span class="type-tag type-dispatch">Dispatch</span></td>
+                    <td>"Additional resource request. Sending Engines 8, 19 and Tanker 3 to Stage 2 muster point on Station Approach Road."</td>
+                    <td class="table-col-duration">9s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">03:49:18</td>
+                    <td class="table-col-callsign">Eng-17</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"Eng-17 arriving on site. Heavy smoke volume visible from upper floors of Processing Building B. Heat signatures consistent with hydrocarbon store engagement. We're establishing attack lines from south-east exposure wall."</td>
+                    <td class="table-col-duration">17s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">03:50:44</td>
+                    <td class="table-col-callsign">DCR-Ctrl</td>
+                    <td><span class="type-tag type-dispatch">Dispatch</span></td>
+                    <td>"Copy Eng-17. Be advised we have a live feed from plant CCTV showing tank Delta breaching. Expect rapid escalation. All personnel maintain standoff distance minimum two hundred metres from North face."</td>
+                    <td class="table-col-duration">15s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">03:52:10</td>
+                    <td class="table-col-callsign">PC-Tail-44</td>
+                    <td><span class="type-tag type-other">Other</span></td>
+                    <td>"Police cordons established. Mill Road closed westbound from Oak Lane junction. Eastfield Primary School on evacuation protocol — pupils accounted for, no injuries reported among children."</td>
+                    <td class="table-col-duration">11s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time quarter-mark">04:00:33</td>
+                    <td class="table-col-callsign">HazMat-1</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"Initial atmosphere sampling complete. Benzene concentrations elevated at boundary markers. Chlorine plume modelling suggests drift toward residential zone along River Wey. Recommend voluntary advisory for communities downstream to Shelter-in-Place."</td>
+                    <td class="table-col-duration">22s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">04:02:05</td>
+                    <td class="table-col-callsign">DCR-Ctrl</td>
+                    <td><span class="type-tag type-dispatch">Dispatch</span></td>
+                    <td>"All units, we're broadcasting Shelter-in-Place advisory for Mill Road, Riverside Close, and Weybridge estates. Advise households to close windows, switch off HVAC systems. Further updates every fifteen minutes."</td>
+                    <td class="table-col-duration">14s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">04:08:47</td>
+                    <td class="table-col-callsign">Tanker-3</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"Tanker-3 at Stage 2. Water supply established from works fire hydrant network. Can sustain continuous deluge on exposed structures for approximately ninety minutes before needing refill rotation."</td>
+                    <td class="table-col-duration">10s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time quarter-mark">04:15:22</td>
+                    <td class="table-col-callsign">Eng-23</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"Eng-23 reporting flare-up in Tank Delta. Visible flame contact with adjacent pipeline run. We're transitioning to defensive mode, applying foam blanket from fixed monitor positions. No interior operations at this stage."</td>
+                    <td class="table-col-duration">16s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">04:18:09</td>
+                    <td class="table-col-callsign">CC-Desk</td>
+                    <td><span class="type-tag type-dispatch">Dispatch</span></td>
+                    <td>"Central Command update: Major Incident declared. All mutual aid resources now on standby. Thames Valley Fire and Rescue dispatched with specialist foam apparatus. Estimated arrival twenty-five minutes."</td>
+                    <td class="table-col-duration">12s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time">04:24:33</td>
+                    <td class="table-col-callsign">HazMat-1</td>
+                    <td><span class="type-tag type-report">Report</span></td>
+                    <td>"Wind shift to south-south-east. Plume trajectory changes — divert shelter-in-place advisory to cover areas upwind of original directive. Affected zones: Eastfield Park estate, Station Yard flats, industrial units 5–9 on Orchard Lane."</td>
+                    <td class="table-col-duration">19s</td>
+                  </tr>
+                  <tr>
+                    <td class="table-col-time quarter-mark">04:30:01</td>
+                    <td class="table-col-callsign">DCR-Ctrl</td>
+                    <td><span class="type-tag type-dispatch">Dispatch</span></td>
+                    <td>"Acknowledged HazMat-1. Re-broadcasting adjusted shelter-in-place perimeter. All units, stand by for updated situation briefing at 04:45. Maintain current operational tempo."</td>
+                    <td class="table-col-duration">13s</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p style="margin-top:var(--space-md); font-size:var(--font-xs); color:var(--color-text-muted);">
+              Showing 15 of 156 total transmissions · Phase 1 covers 03:44–04:30 UTC (Incident Declaration to Joint Briefing)
+            </p>
+          </div>
+
+          <!-- Additional phases summary -->
+          <div class="section-block">
+            <div class="section-header">
+              <h3 class="section-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                Remaining Activity Phases
+              </h3>
+            </div>
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Phase</th>
+                    <th scope="col">Period</th>
+                    <th scope="col">Scope</th>
+                    <th scope="col">Key Events</th>
+                    <th scope="col">Review Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-weight:600;">Phase 2</td>
+                    <td style="font-family:var(--font-mono)">04:30 – 05:15</td>
+                    <td>Mutual Aid Reception &amp; Foam Deployment</td>
+                    <td>TVFR arrival, expanded foam monitoring, second plume shift documented</td>
+                    <td><span class="call-status status-completed">Reviewed</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">Phase 3</td>
+                    <td style="font-family:var(--font-mono)">05:15 – 05:45</td>
+                    <td>Tank Delta Breach &amp; Pipeline Isolation</td>
+                    <td>Structural failure in Tank Delta, remote valve shutdown initiated, Evacuation Order issued</td>
+                    <td><span class="call-status status-completed">Reviewed</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">Phase 4</td>
+                    <td style="font-family:var(--font-mono)">05:45 – 06:01</td>
+                    <td>Containment Confirmed &amp; Stand Down</td>
+                    <td>Flame suppression achieved, ambient air clearance sampling starts, phased stand-down begins</td>
+                    <td><span class="call-status status-completed">Reviewed</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══ TAB 2: SUMMARY ═══ -->
+      <section class="tab-panel" id="panel-summary" role="tabpanel" aria-labelledby="tab-summary">
+        <div class="panel-inner">
+
+          <!-- Stats Row -->
+          <div class="summary-grid" style="margin-bottom:var(--space-2xl);">
+            <div class="summary-stat">
+              <div class="stat-value">156</div>
+              <div class="stat-label">Total Transmissions</div>
+            </div>
+            <div class="summary-stat">
+              <div class="stat-value">13m 06s</div>
+              <div class="stat-label">Avg Response Latency</div>
+            </div>
+            <div class="summary-stat">
+              <div class="stat-value">34</div>
+              <div class="stat-label">Active Units</div>
+            </div>
+          </div>
+
+          <!-- Breakdown -->
+          <div class="section-block">
+            <div class="section-header">
+              <h3 class="section-title">Transmission Type Breakdown</h3>
+            </div>
+            <div class="call-type-breakdown">
+              <div class="breakdown-item">
+                <div class="breakdown-dot dot-dispatch"></div>
+                <span class="breakdown-count">58</span>
+                <span class="breakdown-label">Dispatches</span>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-dot dot-report"></div>
+                <span class="breakdown-count">71</span>
+                <span class="breakdown-label">Unit Reports</span>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-dot dot-clear"></div>
+                <span class="breakdown-count">14</span>
+                <span class="breakdown-label">Clearances</span>
+              </div>
+              <div class="breakdown-item">
+                <div class="breakdown-dot dot-other"></div>
+                <span class="breakdown-count">13</span>
+                <span class="breakdown-label">Other</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Narrative -->
+          <div class="section-block">
+            <div class="section-header">
+              <h3 class="section-title">Audit Narrative</h3>
+            </div>
+            <div class="field-card">
+              <div class="field-label">Overall Assessment</div>
+              <div class="field-value">
+                <p>This incident required a coordinated multi-agency response over an extended period. The initial dispatch from DCR-Ctrl was prompt and comprehensive, correctly identifying the hazard classification and sending appropriate HazMat resources.</p>
+                <ul>
+                  <li>HazMat-1 provided timely atmospheric readings, enabling proactive shelter-in-place directives before wind shifts compromised adjacent communities.</li>
+                  <li>Police cordons were established efficiently, preventing civilian ingress to the exclusion zone.</li>
+                  <li>The Major Incident declaration was made within 34 minutes of initial alarm — within expected parameters for a facility-based hazardous materials event.</li>
+                  <li>Evacuation of Eastfield Primary School proceeded without incident; all 147 pupils and staff accounted for.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <div class="field-label">Noted Concerns</div>
+              <div class="field-value">
+                <p>Two areas warrant attention in post-incident review:</p>
+                <ul>
+                  <li>The wind-shift advisory at 04:24 introduced a new affected zone but took approximately eight minutes to reach all frontline units. Consider reinforcing secondary broadcast channels for re-directed shelter zones.</li>
+                  <li>Tanker-3's water supply relied on a single site hydrant; if this had failed, the deluge operation would have been disrupted within ninety minutes. Redundancy planning should be flagged for the next joint exercise.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══ TAB 3: CASE NOTES (with inline editing) ═══ -->
+      <section class="tab-panel" id="panel-notes" role="tabpanel" aria-labelledby="tab-notes">
+        <div class="panel-inner">
+
+          <div class="section-header">
+            <h3 class="section-title">Case Notes</h3>
+            <div class="section-actions">
+              <button class="btn btn-sm" onclick="addNote()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Note
+              </button>
+            </div>
+          </div>
+
+          <div class="field-card">
+            <div class="field-label">Lead Auditor</div>
+            <div class="editable-field" id="editor-led">
+              <div class="editable-display" onclick="startEdit('led')">
+                Sgt. Clare Whitaker, NCRS Division 4
+              </div>
+              <div class="editable-input-wrap" id="editor-led-input">
+                <input type="text" class="inline-editor-input" value="Sgt. Clare Whitaker, NCRS Division 4" autofocus>
+                <div class="inline-editor-actions">
+                  <button class="btn btn-sm btn-primary" onclick="saveEdit('led')">Save</button>
+                  <button class="btn btn-sm" onclick="cancelEdit('led')">Cancel</button>
+                </div>
+                <div class="editor-hint">Press Enter to save, Escape to cancel</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-card">
+            <div class="field-label">Audit Methodology</div>
+            <div class="editable-field">
+              <div class="editable-display" onclick="startEdit('methodology')">
+                Full waveform transcription against NGT Standard Operating Procedure v4.2. Cross-referenced with CCTV timestamps and plant SCADA logs.
+              </div>
+            </div>
+          </div>
+
+          <div class="field-card">
+            <div class="field-label">Findings Summary</div>
+            <div class="editable-field">
+              <div class="editable-display" onclick="startEdit('findings')">
+                Communication discipline was strong throughout. Initial dispatch contained all essential intelligence (What, Where, Priority, Resource). HazMat atmospheric reports were precise and directly informed civil protection decisions. The major improvement opportunity relates to alerting reassigned zones — consider implementing an automated push-notification trigger linked to weather service API inputs rather than relying solely on verbal re-broadcast.
+              </div>
+            </div>
+          </div>
+
+          <div class="field-card">
+            <div class="field-label">Recommended Actions</div>
+            <div class="editable-field">
+              <div class="editable-display" onclick="startEdit('actions')">
+                <ul>
+                  <li>Schedule follow-up workshop with Eastfield Petrochemical Works ERT (Emergency Response Team) regarding integration of plant-level radio links with county DCR infrastructure.</li>
+                  <li>Brief Operations Division on dual-water-supply redundancy for future site-specific plans at high-risk industrial premises.</li>
+                  <li>Update Shelter-in-Place re-broadcast protocol for wind-driven incidents (Task Group lead: PC T. Okonkwo).</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ═══ TAB 4: QUALITY METRICS ═══ -->
+      <section class="tab-panel" id="panel-quality" role="tabpanel" aria-labelledby="tab-quality">
+        <div class="panel-inner">
+
+          <!-- Overall Rating -->
+          <div class="section-block">
+            <div class="section-header">
+              <h3 class="section-title">Overall Quality Score</h3>
+            </div>
+            <div class="field-card" style="display:flex;align-items:center;gap:var(--space-2xl);">
+              <div style="text-align:center;">
+                <div style="font-size:var(--font-xl);font-weight:700;color:var(--color-primary);font-family:var(--font-mono);">4.0 / 5</div>
+                <div style="font-size:var(--font-sm);color:var(--color-text-secondary);margin-top:var(--space-xs);">Commendable Performance</div>
+              </div>
+              <div>
+                <div class="quality-meter" style="margin-bottom:var(--space-sm);">
+                  <div class="meter-segment pass"></div>
+                  <div class="meter-segment pass"></div>
+                  <div class="meter-segment pass"></div>
+                  <div class="meter-segment pass"></div>
+                  <div class="meter-segment warn"></div>
+                </div>
+                <div style="font-size:var(--font-xs);color:var(--color-text-muted);">Last updated by M. Hargreaves at 16:42</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Criteria Breakdown -->
+          <div class="section-block">
+            <div class="section-header">
+              <h3 class="section-title">Criteria Assessment</h3>
+            </div>
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Criterion</th>
+                    <th scope="col">Score</th>
+                    <th scope="col">Assessment</th>
+                    <th scope="col">Comment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-weight:600;">Dispatch Accuracy</td>
+                    <td><strong>5 / 5</strong></td>
+                    <td>
+                      <div class="quality-meter">
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                      </div>
+                    </td>
+                    <td>Initial dispatch correctly identified hazard class, assigned appropriate resources, and included clear priority designation. Location reference was precise.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">Situation Reporting</td>
+                    <td><strong>4 / 5</strong></td>
+                    <td>
+                      <div class="quality-meter">
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment"></div>
+                      </div>
+                    </td>
+                    <td>Unit reports were generally well-structured and timely. Minor delay in Eng-23 escalating Tank Delta breach to offensive-to-defensive transition — approximately four-minute lag after visual confirmation.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">Frequency Discipline</td>
+                    <td><strong>4 / 5</strong></td>
+                    <td>
+                      <div class="quality-meter">
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment"></div>
+                      </div>
+                    </td>
+                    <td>Cross-agency handovers occasionally occurred on primary tactical channel. Recommend dedicated mutual-aid coordination sub-channel for future events of this magnitude.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">Civil Communication</td>
+                    <td><strong>5 / 5</strong></td>
+                    <td>
+                      <div class="quality-meter">
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                      </div>
+                    </td>
+                    <td>Shelter-in-place advisories were clear, repeated, and updated promptly following wind shift. Police school evacuation communication was exemplary.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">Command Structure</td>
+                    <td><strong>4 / 5</strong></td>
+                    <td>
+                      <div class="quality-meter">
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment pass"></div>
+                        <div class="meter-segment"></div>
+                      </div>
+                    </td>
+                    <td>Major Incident declaration appropriate. Situation briefings at 15-minute intervals maintained good operational rhythm. Handover between DC DCR operators at 04:45 was smooth.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Annotations -->
+          <div class="section-block">
+            <div class="section-header">
+              <h3 class="section-title">Audio Annotation Points</h3>
+            </div>
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Timecode</th>
+                    <th scope="col">Flag</th>
+                    <th scope="col">Context</th>
+                    <th scope="col">Reviewer Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-family:var(--font-mono);">03:44:07</td>
+                    <td><span class="type-tag type-dispatch" style="background:#e8eaf6;color:#283593;">Info</span></td>
+                    <td>Initial Dispatch</td>
+                    <td>Model dispatch — includes What/Where/Priority/Resources. Benchmark example.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:var(--font-mono);">03:52:10</td>
+                    <td><span class="type-tag type-report" style="background:#f3e5f5;color:#6a1b9a;">Positive</span></td>
+                    <td>PC-Tail-44 School Update</td>
+                    <td>Excellent situational awareness from police liaison. Headcount accurate and conveyed calmly.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:var(--font-mono);">04:15:22</td>
+                    <td><span class="type-tag" style="background:var(--color-danger-bg);color:var(--color-danger);">Action</span></td>
+                    <td>Eng-23 Tank Delta Escalation</td>
+                    <td>Defensive transition announced but implementation appeared delayed. Follow up with Eng-17 CO.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:var(--font-mono);">04:24:33</td>
+                    <td><span class="type-tag" style="background:var(--color-warning-bg);color:var(--color-warning);">Caution</span></td>
+                    <td>HazMat-1 Wind Shift Report</td>
+                    <td>Critical intelligence delivered accurately but zone re-broadcast took 8min to reach all units. Process improvement needed.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="detail-footer">
+      <div class="footer-status">
+        <span class="status-dot"></span>
+        <span>Last synced: 16:42 UTC · Session active</span>
+      </div>
+      <div>
+        Audio recording available: <strong>REC-NCR-0417.wav</strong> (2h 17m, 3 tracks)
+      </div>
+    </footer>
+
+  </main>
+
+</div>
+
+<script>
+// ── Tab Switching ──
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabPanels = document.querySelectorAll('.tab-panel');
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.getAttribute('aria-controls');
+    
+    tabBtns.forEach(b => b.setAttribute('aria-selected', 'false'));
+    tabPanels.forEach(p => p.classList.remove('active'));
+    
+    btn.setAttribute('aria-selected', 'true');
+    document.getElementById(targetId).classList.add('active');
+  });
+  
+  // Keyboard navigation
+  btn.addEventListener('keydown', (e) => {
+    const index = Array.from(tabBtns).indexOf(btn);
+    let newIndex;
+    
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      newIndex = (index + 1) % tabBtns.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      newIndex = (index - 1 + tabBtns.length) % tabBtns.length;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      newIndex = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      newIndex = tabBtns.length - 1;
+    }
+    
+    if (newIndex !== undefined) {
+      tabBtns[newIndex].click();
+      tabBtns[newIndex].focus();
+    }
+  });
+});
+
+// ── Master List Selection ──
+const callEntries = document.querySelectorAll('.call-entry');
+
+callEntries.forEach(entry => {
+  entry.addEventListener('click', () => {
+    callEntries.forEach(e => {
+      e.classList.remove('active');
+      e.removeAttribute('aria-selected');
+    });
+    entry.classList.add('active');
+    entry.setAttribute('aria-selected', 'true');
+  });
+  
+  entry.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      entry.click();
+    }
+  });
+});
+
+// ── Filter Tab Switching ──
+const filterTabs = document.querySelectorAll('.filter-tab');
+
+filterTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    filterTabs.forEach(t => {
+      t.classList.remove('active');
+      t.removeAttribute('aria-selected');
+    });
+    tab.classList.add('active');
+    tab.setAttribute('aria-selected', 'true');
+  });
+});
+
+// ── Inline Editing ──
+function startEdit(fieldId) {
+  const wrapper = document.getElementById('editor-' + fieldId);
+  const display = wrapper.querySelector('.editable-display');
+  const inputWrap = wrapper.querySelector('.editable-input-wrap');
+  const input = inputWrap.querySelector('.inline-editor-input');
+  
+  display.classList.add('hidden');
+  inputWrap.classList.add('visible');
+  input.focus();
+  
+  // Select all text
+  input.select();
+  
+  // Keyboard handlers
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit(fieldId);
+    } else if (e.key === 'Escape') {
+      cancelEdit(fieldId);
+    }
+  };
+}
+
+function saveEdit(fieldId) {
+  const wrapper = document.getElementById('editor-' + fieldId);
+  const display = wrapper.querySelector('.editable-display');
+  const inputWrap = wrapper.querySelector('.editable-input-wrap');
+  const input = inputWrap.querySelector('.inline-editor-input');
+  
+  display.textContent = input.value;
+  display.classList.remove('hidden');
+  inputWrap.classList.remove('visible');
+}
+
+function cancelEdit(fieldId) {
+  const wrapper = document.getElementById('editor-' + fieldId);
+  const display = wrapper.querySelector('.editable-display');
+  const inputWrap = wrapper.querySelector('.editable-input-wrap');
+  
+  display.classList.remove('hidden');
+  inputWrap.classList.remove('visible');
+}
+
+function addNote() {
+  const container = document.getElementById('panel-notes');
+  const sectionBlock = container.querySelector('.section-block:last-of-type');
+  
+  const newCard = document.createElement('div');
+  newCard.className = 'field-card';
+  newCard.style.animation = 'bannerSlide 0.3s ease-out';
+  newCard.innerHTML = `
+    <div class="field-label">New Note</div>
+    <div class="editable-field">
+      <div class="editable-display" onclick="startEdit('dynamic-${Date.now()}')">
+        Click to edit this note…
+      </div>
+    </div>
+  `;
+  
+  container.appendChild(newCard);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patchbay Cloud — Test Webhooks Without Touching Production</title>
+<meta name="description" content="Patchbay Cloud is a developer platform to capture, inspect, replay and debug webhook integrations before production. Join the private beta waitlist.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#070b16;--bg2:#0b1122;--card:#101830;--card2:#0e152b;--border:#1e2a4d;--border2:#2a3a65;
+--text:#eaf0ff;--muted:#93a1c0;--muted2:#6b7a99;
+--mint:#7dffc8;--mint2:#34d399;--violet:#9d8cff;--violet2:#7c6cf5;--cyan:#67e8f9;--amber:#fbbf24;
+--radius:16px;--radius-s:10px;
+--shadow:0 20px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.04) inset;
+--font:Inter,ui-sans-system,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",SFMono-Regular,monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:rgba(125,255,200,.25)}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+.skip{position:absolute;left:-999px;top:0;background:var(--mint);color:#06120c;padding:10px 16px;z-index:200;border-radius:0 0 10px 0;font-weight:700}
+.skip:focus{left:0}
+/* bg decor */
+.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg-glow::before{content:"";position:absolute;width:900px;height:550px;left:50%;top:-220px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(124,108,245,.28),rgba(45,212,191,.14),transparent 70%);filter:blur(10px)}
+.bg-glow::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 80% 55% at 50% 0%,black 30%,transparent 75%)}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5}
+.orb1{width:420px;height:420px;background:rgba(45,212,191,.18);top:10%;left:-140px}
+.orb2{width:420px;height:420px;background:rgba(157,140,255,.18);top:35%;right:-140px}
+/* announcement */
+.announce{position:relative;z-index:5;background:linear-gradient(90deg,#0e1a36,#131f3f);border-bottom:1px solid var(--border);font-size:13.5px;color:#cbd5f0;text-align:center;padding:9px 16px}
+.announce strong{color:var(--mint);font-weight:700;letter-spacing:.06em;font-size:12px;border:1px solid rgba(125,255,200,.3);padding:2px 8px;border-radius:100px;margin-right:10px;background:rgba(125,255,200,.08)}
+.announce a{color:var(--mint);font-weight:600;border-bottom:1px dotted rgba(125,255,200,.5)}
+/* header */
+header{position:sticky;top:0;z-index:50;background:rgba(7,11,22,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(30,42,77,.8)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.02em;font-size:18px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0f1a36,#1a2a5a);border:1px solid var(--border2);display:grid;place-items:center;position:relative;overflow:hidden;flex-shrink:0}
+.logo::after{content:"";position:absolute/inset:0}
+.logo svg{width:22px;height:22px}
+.brand small{display:block;font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--muted);line-height:1;margin-top:2px}
+.links{display:flex;gap:28px;font-size:14.5px;color:var(--muted);font-weight:500}
+.links a:hover{color:var(--text)}
+.nav-cta{display:flex;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14.5px;padding:11px 20px;border-radius:10px;border:1px solid transparent;cursor:pointer;transition:.18s;line-height:1.2;white-space:nowrap}
+.btn-primary{background:var(--mint);color:#06120e;box-shadow:0 8px 24px rgba(125,255,200,.25)}
+.btn-primary:hover{background:#a8ffda;transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,.06);border-color:var(--border2);color:var(--text)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-lg{padding:15px 26px;font-size:15.5px;border-radius:12px}
+.link-arrow{font-weight:700;color:var(--muted);font-size:14.5px}
+.link-arrow:hover{color:var(--mint)}
+.burger{display:none;background:none;border:1px solid var(--border2);border-radius:9px;width:42px;height:42px;color:var(--text);font-size:20px;cursor:pointer}
+/* hero */
+.hero{position:relative;z-index:2;padding:72px 0 36px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--mint);background:rgba(125,255,200,.08);border:1px solid rgba(125,255,200,.22);padding:7px 12px;border-radius:100px;margin-bottom:20px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 6px rgba(125,255,200,.15);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(125,255,200,.18)}50%{box-shadow:0 0 0 8px rgba(125,255,200,.06)}}
+h1{font-size:56px;line-height:1.02;letter-spacing:-.04em;font-weight:800}
+h1 span.grad{background:linear-gradient(90deg,var(--mint) 0%,var(--cyan) 45%,var(--violet) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);font-size:18px;line-height:1.6;margin:20px 0 28px;max-width:540px}
+.sub strong{color:var(--text);font-weight:600}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.hero-form{display:flex;gap:10px;margin-top:18px;background:rgba(255,255,255,.05);border:1px solid var(--border2);padding:6px;border-radius:14px;max-width:520px}
+.hero-form input{flex:1;background:transparent;border:0;color:var(--text);padding:12px 14px;font-size:15px;outline:none;min-width:0}
+.hero-form input::placeholder{color:var(--muted2)}
+.hero-note{display:flex;gap:18px;margin-top:16px;font-size:13px;color:var(--muted2);flex-wrap:wrap}
+.hero-note span{display:flex;align-items:center;gap:7px}
+.check{width:16px;height:16px;border-radius:50%;background:rgba(125,255,200,.15);color:var(--mint);display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
+/* terminal mock */
+.mock{background:linear-gradient(180deg,#131c38,#0d142b);border:1px solid var(--border2);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.mock-bar{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.25)}
+.traffic{display:flex;gap:7px}
+.traffic i{width:11px;height:11px;border-radius:50%;display:block}
+.urlbar{flex:1;background:#080e1f;border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:12.5px;color:#a9b8d9;padding:7px 12px;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
+.urlbar b{color:var(--mint);font-weight:600}
+.live{font-size:11px;font-weight:800;letter-spacing:.1em;background:rgba(251,191,36,.14);color:var(--amber);border:1px solid rgba(251,191,36,.3);padding:4px 9px;border-radius:100px;display:flex;align-items:center;gap:6px}
+.live i{width:7px;height:7px;background:var(--amber);border-radius:50%;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.3}}
+.mock-body{padding:16px}
+.endpoint-row{display:flex;align-items:center;justify-content:space-between;background:rgba(125,255,200,.06);border:1px dashed rgba(125,255,200,.3);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:12.5px;margin-bottom:14px}
+.endpoint-row code{color:var(--mint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-mini{background:rgba(255,255,255,.08);border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer}
+.copy-mini:hover{background:rgba(255,255,255,.14)}
+.events{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.ev{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-family:var(--mono);font-size:12.5px}
+.ev.active{border-color:rgba(125,255,200,.5);background:rgba(125,255,200,.06)}
+.badge{font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:3px 7px;border-radius:6px}
+.b-post{background:rgba(103,232,249,.15);color:var(--cyan);border:1px solid rgba(103,232,249,.3)}
+.b-200{background:rgba(125,255,200,.14);color:var(--mint);border:1px solid rgba(125,255,200,.3)}
+.b-500{background:rgba(251,113,133,.15);color:#fda4af;border:1px solid rgba(251,113,133,.3)}
+.ev-path{color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-time{color:var(--muted2)}
+.payload{background:#070c1b;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.payload-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700}
+.payload-head div{display:flex;gap:8px}
+.pill{font-size:11.5px;padding:4px 10px;border-radius:100px;background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--muted);font-weight:600;cursor:pointer}
+.pill.on{background:rgba(125,255,200,.12);color:var(--mint);border-color:rgba(125,255,200,.4)}
+.payload pre{padding:14px 16px;font-family:var(--mono);font-size:12.8px;line-height:1.7;overflow:auto}
+.k{color:#9d8cff}.s{color:#7dffc8}.n{color:#67e8f9}.p{color:#8b98b8}
+.mock-foot{display:flex;gap:10px;padding:14px 16px;border-top:1px solid var(--border);background:rgba(0,0,0,.2)}
+.mbtn{flex:1;border-radius:9px;padding:10px;font-size:13px;font-weight:700;border:1px solid var(--border2);background:rgba(255,255,255,.06);color:var(--text);cursor:pointer}
+.mbtn.primary{background:var(--mint);color:#06120e;border-color:transparent}
+.mbtn:hover{filter:brightness(1.1)}
+/* logos */
+.logos{position:relative;z-index:2;padding:26px 0;border-top:1px solid rgba(30,42,77,.6);border-bottom:1px solid rgba(30,42,77,.6);margin-top:44px;background:rgba(255,255,255,.015)}
+.logos p{text-align:center;font-size:12px;letter-spacing:.14em;font-weight:700;color:var(--muted2);margin-bottom:16px}
+.logo-row{display:flex;justify-content:center;gap:36px;flex-wrap:wrap;color:#9fb0d0;font-weight:800;font-size:15px;letter-spacing:-.01em;opacity:.9}
+.logo-row span{display:flex;align-items:center;gap:8px}
+.logo-row svg{width:18px;height:18px;opacity:.7}
+/* sections */
+section.block{position:relative;z-index:2;padding:88px 0}
+.sec-eye{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--violet);margin-bottom:12px}
+.sec-eye.mint{color:var(--mint)}
+h2{font-size:38px;line-height:1.1;letter-spacing:-.03em;font-weight:800;max-width:640px}
+.lead{color:var(--muted);font-size:17px;margin-top:14px;max-width:640px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:36px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:36px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid var(--border);border-radius:var(--radius);padding:26px;transition:.2s;position:relative;overflow:hidden}
+.card:hover{border-color:var(--border2);transform:translateY(-3px)}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(125,255,200,.4),transparent)}
+.icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;border:1px solid var(--border2);background:#0b132a;font-size:20px}
+.card h3{font-size:17.5px;letter-spacing:-.01em;margin-bottom:8px}
+.card p{font-size:14.5px;color:var(--muted);line-height:1.6}
+.card ul{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:7px;font-size:13.5px;color:#b9c5e0}
+.card ul li::before{content:"→ ";color:var(--mint);font-weight:800}
+.tag{position:absolute;top:18px;right:18px;font-size:11px;font-weight:800;letter-spacing:.08em;background:rgba(157,140,255,.14);border:1px solid rgba(157,140,255,.35);color:#c4b5fd;padding:3px 9px;border-radius:100px}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:36px;counter-reset:step}
+.step{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;position:relative}
+.step-num{font-family:var(--mono);font-size:13px;color:var(--mint);border:1px solid rgba(125,255,200,.3);display:inline-block;padding:4px 10px;border-radius:100px;margin-bottom:14px;background:rgba(125,255,200,.07)}
+.step h3{font-size:18px;margin-bottom:8px}
+.step p{color:var(--muted);font-size:14.5px}
+.step code{font-family:var(--mono);font-size:12.5px;background:#070c1b;border:1px solid var(--border);padding:2px 7px;border-radius:6px;color:var(--cyan)}
+.step-arrow{display:none}
+/* demo lab */
+.lab{background:linear-gradient(180deg,#0e1630,#0a1024);border:1px solid var(--border2);border-radius:20px;overflow:hidden;margin-top:36px;display:grid;grid-template-columns:340px 1fr;box-shadow:var(--shadow)}
+.lab-side{padding:26px;border-right:1px solid var(--border);background:rgba(0,0,0,.2)}
+.lab-side h3{font-size:16px;margin-bottom:6px}
+.lab-side>p{font-size:13.5px;color:var(--muted);margin-bottom:18px}
+.scenario{width:100%;text-align:left;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:14px 15px;margin-bottom:10px;cursor:pointer;color:var(--text);transition:.15s}
+.scenario b{display:block;font-size:14px;margin-bottom:3px}
+.scenario span{font-size:13px;color:var(--muted)}
+.scenario.on{border-color:rgba(125,255,200,.55);background:rgba(125,255,200,.07)}
+.scenario.on b{color:var(--mint)}
+.lab-main{padding:0;display:flex;flex-direction:column}
+.console-head{display:flex;gap:8px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.console{padding:20px 22px;font-family:var(--mono);font-size:13.2px;line-height:1.75;min-height:340px;background:#060b18}
+.c-dim{color:#5b6a8c}.c-green{color:var(--mint)}.c-cyan{color:var(--cyan)}.c-violet{color:#c4b5fd}.c-amber{color:var(--amber)}.c-red{color:#fda4af}.c-white{color:#e2e8f0}
+/* code section */
+.codewrap{margin-top:32px;display:grid;grid-template-columns:.9fr 1.1fr;gap:28px;align-items:start}
+.benefits{display:flex;flex-direction:column;gap:14px;margin-top:22px}
+.benefit{display:flex;gap:13px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:15px 16px}
+.benefit i{width:32px;height:32px;border-radius:9px;background:rgba(125,255,200,.1);border:1px solid rgba(125,255,200,.25);display:grid;place-items:center;flex-shrink:0;font-style:normal;font-weight:800;color:var(--mint)}
+.benefit b{display:block;font-size:14.5px}
+.benefit p{font-size:13.5px;color:var(--muted)}
+.codecard{background:#060b18;border:1px solid var(--border2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:6px;padding:12px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);flex-wrap:wrap}
+.tab{background:transparent;border:1px solid transparent;color:var(--muted);font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer}
+.tab.on{background:rgba(255,255,255,.08);color:var(--text);border-color:var(--border2)}
+.codecard pre{padding:20px;font-family:var(--mono);font-size:13px;line-height:1.75;overflow:auto;min-height:300px}
+.code-top{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--muted2)}
+.copybtn{background:rgba(255,255,255,.07);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer}
+.copybtn:hover{background:rgba(125,255,200,.15);border-color:rgba(125,255,200,.4)}
+/* teams + beta */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:32px}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid var(--border);border-radius:18px;padding:30px}
+.panel h3{font-size:20px;letter-spacing:-.02em;margin-bottom:10px}
+.panel p{color:var(--muted);font-size:14.5px}
+.checklist{list-style:none;margin-top:18px;display:flex;flex-direction:column;gap:11px;font-size:14px}
+.checklist li{display:flex;gap:10px;align-items:flex-start;color:#cbd5f0}
+.checklist li span:first-child{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;font-size:12px;font-weight:800;margin-top:2px}
+.yes span:first-child{background:rgba(125,255,200,.15);color:var(--mint);border:1px solid rgba(125,255,200,.35)}
+.soon span:first-child{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.muted-li{color:var(--muted2)!important}
+.avatars{display:flex;margin-top:18px;align-items:center;gap:12px}
+.faces{display:flex}
+.faces span{width:34px;height:34px;border-radius:50%;border:2px solid var(--bg);margin-left:-8px;display:grid;place-items:center;font-size:13px;font-weight:800;color:#06120e}
+.faces span:first-child{margin-left:0}
+.quote{background:#080e1f;border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-top:16px;font-size:14px;color:#cbd5f0;font-style:italic}
+.quote b{display:block;margin-top:10px;font-style:normal;font-size:13px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+.stat{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.stat b{font-size:24px;letter-spacing:-.03em;color:var(--mint);display:block}
+.stat span{font-size:12.5px;color:var(--muted)}
+/* faq */
+.faq{max-width:760px;margin:32px auto 0;display:flex;flex-direction:column;gap:12px}
+.faq-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.faq-q{width:100%;background:none;border:0;color:var(--text);text-align:left;padding:18px 20px;font-size:15.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:16px;cursor:pointer}
+.faq-q span:last-child{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);display:grid;place-items:center;flex-shrink:0;transition:.2s;color:var(--mint);font-size:18px;line-height:1}
+.faq-item.open .faq-q span:last-child{transform:rotate(45deg);background:var(--mint);color:#06120e;border-color:var(--mint)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.faq-a-inner{padding:0 20px 20px;color:var(--muted);font-size:14.5px}
+.faq-a-inner code{font-family:var(--mono);background:#080e1f;border:1px solid var(--border);padding:1px 6px;border-radius:6px;color:var(--cyan);font-size:13px}
+/* waitlist */
+.waitlist{background:linear-gradient(180deg,#0d1530 0%,#0a1025 100%);border:1px solid var(--border2);border-radius:24px;padding:0;overflow:hidden;margin-top:36px;display:grid;grid-template-columns:1fr 1fr;box-shadow:var(--shadow);position:relative}
+.waitlist::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--mint),var(--cyan),var(--violet))}
+.wl-left{padding:44px 40px}
+.wl-left h2{font-size:32px}
+.wl-points{margin:22px 0;display:flex;flex-direction:column;gap:12px}
+.wl-points div{display:flex;gap:11px;font-size:14.5px;color:#cbd5f0}
+.counterbox{display:flex;gap:16px;align-items:center;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-top:8px}
+.counterbox b{font-size:28px;color:var(--mint);letter-spacing:-.03em}
+.counterbox span{font-size:13px;color:var(--muted)}
+.wl-right{background:rgba(0,0,0,.25);padding:44px 40px;border-left:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field.full{grid-column:1/-1}
+.field label{font-size:13px;font-weight:700;color:#cbd5f0}
+.field input,.field select,.field textarea{background:#080e1f;border:1px solid var(--border2);border-radius:10px;color:var(--text);padding:12px 13px;font-size:14px;font-family:inherit;outline:none;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--mint);box-shadow:0 0 0 3px rgba(125,255,200,.15)}
+.field textarea{resize:vertical;min-height:72px}
+.error{font-size:12.5px;color:#fda4af;display:none}
+.field.invalid input,.field.invalid select{border-color:#fb7185}
+.field.invalid .error{display:block}
+.consent{display:flex;gap:10px;font-size:13px;color:var(--muted);margin:6px 0 16px;align-items:flex-start}
+.consent input{margin-top:4px;accent-color:var(--mint);width:16px;height:16px}
+.submit{width:100%;padding:15px;font-size:15.5px}
+.fine{font-size:12.5px;color:var(--muted2);text-align:center;margin-top:12px}
+.success{display:none;text-align:center;padding:20px 0}
+.success.show{display:block}
+.success-ic{width:64px;height:64px;border-radius:50%;background:rgba(125,255,200,.12);border:1px solid rgba(125,255,200,.4);display:grid;place-items:center;font-size:28px;margin:0 auto 16px;color:var(--mint)}
+.success h3{font-size:22px;margin-bottom:8px}
+.success p{color:var(--muted);font-size:14.5px}
+.refer{background:#080e1f;border:1px dashed rgba(125,255,200,.35);border-radius:10px;padding:12px;font-family:var(--mono);font-size:13px;color:var(--mint);margin:16px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;word-break:break-all}
+/* footer */
+footer{border-top:1px solid var(--border);padding:48px 0 28px;position:relative;z-index:2;background:rgba(0,0,0,.25)}
+.foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:28px;margin-bottom:32px}
+.foot-grid h4{font-size:13px;letter-spacing:.1em;color:var(--muted2);margin-bottom:14px}
+.foot-grid a{display:block;font-size:14px;color:var(--muted);margin-bottom:9px}
+.foot-grid a:hover{color:var(--mint)}
+.foot-bottom{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--border);padding-top:22px;font-size:13px;color:var(--muted2);flex-wrap:wrap}
+.status{display:flex;align-items:center;gap:8px;background:rgba(125,255,200,.07);border:1px solid rgba(125,255,200,.25);padding:5px 12px;border-radius:100px;color:var(--mint);font-weight:700;font-size:12.5px}
+.status i{width:8px;height:8px;background:var(--mint);border-radius:50%;animation:blink 1.6s infinite}
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:#0f1833;border:1px solid rgba(125,255,200,.4);color:var(--text);padding:13px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:100;transition:.3s;opacity:0;box-shadow:0 12px 40px rgba(0,0,0,.5);max-width:90vw;text-align:center}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.reveal{opacity:0;transform:translateY(22px);transition:.7s ease}
+.reveal.vis{opacity:1;transform:none}
+@media(max-width:1020px){
+h1{font-size:44px}.hero-grid{grid-template-columns:1fr}.grid3,.steps{grid-template-columns:1fr 1fr}.codewrap,.split,.waitlist{grid-template-columns:1fr}.wl-right{border-left:0;border-top:1px solid var(--border)}.lab{grid-template-columns:1fr}.lab-side{border-right:0;border-bottom:1px solid var(--border)}.foot-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:640px){
+.links{display:none}.burger{display:block}.nav-cta .btn-ghost{display:none}
+h1{font-size:36px}h2{font-size:28px}.grid3,.steps,.grid2,.form-grid{grid-template-columns:1fr}.hero{padding:44px 0 20px}section.block{padding:60px 0}.wl-left,.wl-right{padding:28px 22px}.hero-form{flex-direction:column}.hero-form .btn{width:100%}
+.mobile-menu{display:none;flex-direction:column;gap:4px;padding:12px 24px 18px;border-top:1px solid var(--border)}
+.mobile-menu.open{display:flex}.mobile-menu a{padding:11px 0;border-bottom:1px solid rgba(30,42,77,.5);color:var(--muted);font-weight:600}
+}
+.mobile-menu{display:none}
+@media(min-width:641px){.mobile-menu.open{display:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="bg-glow" aria-hidden="true"><div class="orb orb1"></div><div class="orb orb2"></div></div>
+
+<div class="announce"><strong>PRIVATE BETA</strong> Now onboarding teams for HTTP webhooks + HMAC / signature verification &nbsp;·&nbsp; <a href="#waitlist">Join the waitlist →</a></div>
+
+<header>
+<div class="wrap nav">
+<a class="brand" href="#top" aria-label="Patchbay Cloud home">
+<span class="logo" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="4" fill="#1a2a5a" stroke="#7dffc8" stroke-width="1.2"/><circle cx="8" cy="9" r="1.6" fill="#7dffc8"/><circle cx="16" cy="9" r="1.6" fill="#9d8cff"/><circle cx="8" cy="15" r="1.6" fill="#67e8f9"/><circle cx="16" cy="15" r="1.6" fill="#eaf0ff"/><path d="M8 10.6V13.4M9.5 9H14.4M8 9H9.5M16 10.6V13.4" stroke="#7dffc8" stroke-width="1.1" stroke-linecap="round"/></svg>
+</span>
+<span>Patchbay Cloud<small>WEBHOOK SANDBOX</small></span>
+</a>
+<nav class="links" aria-label="Primary">
+<a href="#product">Product</a>
+<a href="#how">How it works</a>
+<a href="#teams">Teams</a>
+<a href="#beta">Beta scope</a>
+<a href="#faq">FAQ</a>
+</nav>
+<div class="nav-cta">
+<a href="#faq" class="link-arrow" style="font-size:13.5px">Sign in</a>
+<a href="#waitlist" class="btn btn-primary">Join waitlist</a>
+<button class="burger" id="burger" aria-expanded="false" aria-controls="mmenu" aria-label="Open menu">☰</button>
+</div>
+</div>
+<div class="wrap mobile-menu" id="mmenu">
+<a href="#product">Product</a>
+<a href="#how">How it works</a>
+<a href="#teams">Teams</a>
+<a href="#beta">Beta scope</a>
+<a href="#faq">FAQ</a>
+<a href="#waitlist" style="color:var(--mint)">Join waitlist →</a>
+</div>
+</header>
+
+<main id="main">
+<!-- HERO -->
+<div class="wrap hero" id="top">
+<div class="hero-grid">
+<div>
+<div class="eyebrow"><span class="dot"></span> PRIVATE BETA · HTTP WEBHOOKS</div>
+<h1>Test webhooks <span class="grad">without touching production.</span></h1>
+<p class="sub">Patchbay Cloud gives every developer a <strong>temporary endpoint</strong> to capture, inspect, replay and debug webhook events — before they ever hit your production systems.</p>
+<div class="hero-actions">
+<a href="#waitlist" class="btn btn-primary btn-lg">Get beta access →</a>
+<a href="#how" class="btn btn-ghost btn-lg">See how it works</a>
+</div>
+<form class="hero-form" id="heroForm" novalidate>
+<label for="heroEmail" class="sr-only" style="position:absolute;left:-9999px">Work email</label>
+<input id="heroEmail" type="email" placeholder="you@company.com — get early access" autocomplete="email" required>
+<button class="btn btn-primary" type="submit">Notify me</button>
+</form>
+<div class="hero-note">
+<span><span class="check">✓</span> Free during beta</span>
+<span><span class="check">✓</span> No prod credentials needed</span>
+<span><span class="check">✓</span> HMAC &amp; signing supported</span>
+</div>
+</div>
+<div>
+<div class="mock" role="img" aria-label="Preview of Patchbay Cloud event inspector showing captured webhook events and JSON payload">
+<div class="mock-bar">
+<div class="traffic"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+<div class="urlbar"><span style="color:#5b6a8c">↗</span> <span><b>hook.patchbay.cloud</b>/pb_8f3ka9_qa</span></div>
+<div class="live"><i></i> LIVE</div>
+</div>
+<div class="mock-body">
+<div class="endpoint-row"><code>https://hook.patchbay.cloud/pb_8f3ka9_qa</code><button class="copy-mini" data-copy="https://hook.patchbay.cloud/pb_8f3ka9_qa">Copy</button></div>
+<div class="events">
+<div class="ev active"><span class="badge b-post">POST</span><span class="ev-path">/stripe → payment_intent.succeeded</span><span class="badge b-200">200</span><span class="ev-time">12ms</span></div>
+<div class="ev"><span class="badge b-post">POST</span><span class="ev-path">/github → push · main</span><span class="badge b-200">200</span><span class="ev-time">38ms</span></div>
+<div class="ev"><span class="badge b-post">POST</span><span class="ev-path">/shopify → orders/create ✎ edited</span><span class="badge b-500">500</span><span class="ev-time">1.2s</span></div>
+</div>
+<div class="payload">
+<div class="payload-head"><span>Payload · payment_intent.succeeded</span><div><button class="pill on">JSON</button><button class="pill">Headers</button><button class="pill">Signature ✓</button></div></div>
+<pre><code><span class="p">{</span>
+  <span class="k">"id"</span><span class="p">:</span> <span class="s">"evt_3O9kL2a9"</span><span class="p">,</span>
+  <span class="k">"type"</span><span class="p">:</span> <span class="s">"payment_intent.succeeded"</span><span class="p">,</span>
+  <span class="k">"amount"</span><span class="p">:</span> <span class="n">4899</span><span class="p">,</span>
+  <span class="k">"customer"</span><span class="p">:</span> <span class="s">"cus_Nf3kQa"</span><span class="p">,</span>
+  <span class="k">"signature"</span><span class="p">:</span> <span class="s">"hmac-sha256 ✓ verified"</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="mock-foot"><button class="mbtn primary" data-toast="Event replayed to localhost:3000/webhooks → 200 OK">↻ Replay event</button><button class="mbtn" data-toast="Payload forked — edit amount, headers and retry safely">✎ Modify payload</button><button class="mbtn" data-toast="Failure scenario armed: 3× timeout + 500 storm">⚡ Test failure</button></div>
+</div>
+<p style="text-align:center;color:var(--muted2);font-size:12.5px;margin-top:12px;font-family:var(--mono)">No deploy · No tunnel · No production risk — inspect in &lt; 2s</p>
+</div>
+</div>
+<div class="logos">
+<p>BUILT FOR TEAMS INTEGRATING</p>
+<div class="logo-row" aria-label="Example integrations">
+<span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"/></svg> Stripe</span>
+<span>◍ GitHub</span>
+<span>⬢ Shopify</span>
+<span>≋ Twilio</span>
+<span>▣ Slack</span>
+<span>⬣ Segment</span>
+<span>◈ Clerk</span>
+</div>
+</div>
+</div>
+
+<!-- PRODUCT -->
+<section class="block" id="product">
+<div class="wrap">
+<div class="sec-eye reveal">✦ THE PLATFORM</div>
+<h2 class="reveal">Everything you need to tame unruly webhooks.</h2>
+<p class="lead reveal">Stop tailing production logs and guessing payloads. Patchbay sits between your providers and your code as a safe debugging layer.</p>
+<div class="grid3">
+<article class="card reveal"><span class="tag">Core</span><div class="icon">🔌</div><h3>Instant temporary endpoints</h3><p>Create a secure, shareable URL in one click. Receive and inspect any HTTP webhook event with headers, body and timing — no tunnels or deploys.</p><ul><li>Auto-expiring sandbox URLs</li><li>Full request inspector</li></ul></article>
+<article class="card reveal"><span class="tag">Power</span><div class="icon">↻</div><h3>Replay, edit &amp; break things</h3><p>Replay any event to localhost or staging. Modify payloads inline and simulate timeouts, retries and 500 storms to test failure scenarios safely.</p><ul><li>One-click replay &amp; fork</li><li>Latency &amp; error injection</li></ul></article>
+<article class="card reveal"><span class="tag">Teams</span><div class="icon">👥</div><h3>Share debugging sessions</h3><p>Stop pasting cURL blobs in Slack. Share live event histories and debugging sessions across engineering and support with a single link.</p><ul><li>Shared timelines &amp; comments</li><li>Support-friendly views</li></ul></article>
+<article class="card reveal"><div class="icon">🧩</div><h3>Code snippets that work</h3><p>The platform generates idiomatic handlers for the exact event you captured — with parsing, verification and retries baked in.</p><ul><li>Node, Python, Go, Ruby</li><li>Copy-paste verified handlers</li></ul></article>
+<article class="card reveal"><div class="icon">🔐</div><h3>Signing, verified</h3><p>Private beta supports HTTP webhooks and common signing methods — HMAC-SHA256, timestamp tolerance and secret rotation included.</p><ul><li>HMAC, Svix-style, Basic</li><li>One-click verify &amp; debug</li></ul></article>
+<article class="card reveal"><div class="icon">🔎</div><h3>Search, filter &amp; diff</h3><p>Filter 10k events by provider, type or status. Diff two deliveries side-by-side to spot the missing field that broke checkout.</p><ul><li>Full-text payload search</li><li>Visual JSON diff</li></ul></article>
+</div>
+</div>
+</section>
+
+<!-- HOW -->
+<section class="block" id="how" style="background:rgba(255,255,255,.015);border-top:1px solid rgba(30,42,77,.6);border-bottom:1px solid rgba(30,42,77,.6)">
+<div class="wrap">
+<div class="sec-eye mint reveal">↗ HOW IT WORKS</div>
+<h2 class="reveal">From chaos to confidence in three steps.</h2>
+<div class="steps">
+<div class="step reveal"><div class="step-num">STEP 01</div><h3>Create an endpoint</h3><p>Run <code>npx patchbay init</code> or click New Endpoint. Get <code>hook.patchbay.cloud/pb_…</code> instantly. Point Stripe, GitHub or any provider at it.</p></div>
+<div class="step reveal"><div class="step-num">STEP 02</div><h3>Fire events &amp; inspect</h3><p>Every delivery is captured with <code>headers + body + signature</code>. Verify HMAC, pretty-print JSON and see exactly what your code will receive.</p></div>
+<div class="step reveal"><div class="step-num">STEP 03</div><h3>Replay &amp; ship</h3><p>Replay to <code>localhost:3000</code>, mutate fields, inject failures — then export a tested handler. Share the session and merge with confidence.</p></div>
+</div>
+<div class="lab reveal">
+<div class="lab-side">
+<h3>⚡ Failure Lab — try it</h3>
+<p>Select a scenario to see how Patchbay helps you reproduce production pain safely.</p>
+<button class="scenario on" data-sc="replay"><b>↻ Replay a Stripe event</b><span>Resend to localhost until it passes</span></button>
+<button class="scenario" data-sc="mutate"><b>✎ Modify the payload</b><span>Edit amount, currency, test edge cases</span></button>
+<button class="scenario" data-sc="fail"><b>⚠ Simulate failing provider</b><span>Timeouts, 500s, duplicate deliveries</span></button>
+</div>
+<div class="lab-main">
+<div class="console-head"><span style="color:#28c840">●</span><span style="color:#febc2e">●</span><span style="color:#ff5f57">●</span> &nbsp; patchbay — sandbox console &nbsp; <span style="margin-left:auto;background:rgba(125,255,200,.1);border:1px solid rgba(125,255,200,.3);color:var(--mint);padding:2px 10px;border-radius:100px">sandbox: pb_8f3ka9</span></div>
+<div class="console" id="console" aria-live="polite"></div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- CODE -->
+<section class="block" id="code">
+<div class="wrap">
+<div class="sec-eye reveal">⌁ SHIP FASTER</div>
+<h2 class="reveal">Captured event → working code in seconds.</h2>
+<p class="lead reveal">No more translating docs. Patchbay generates verified handlers from the real payload you just inspected.</p>
+<div class="codewrap">
+<div class="reveal">
+<div class="benefits">
+<div class="benefit"><i>✓</i><div><b>Verified signatures out of the box</b><p>Every snippet includes HMAC verification tuned to the provider you captured from.</p></div></div>
+<div class="benefit"><i>✓</i><div><b>Idempotency &amp; retries handled</b><p>Dedupe keys, exponential backoff and DLQ patterns included, not TODOs.</p></div></div>
+<div class="benefit"><i>✓</i><div><b>Matches your actual payload</b><p>Types and fixtures are inferred from the live event — not generic examples.</p></div></div>
+</div>
+<div class="grid2" style="margin-top:18px">
+<div class="card" style="padding:18px"><h3 style="font-size:15px">For backend engineers</h3><p>Test webhooks locally without exposing ports or spamming staging.</p></div>
+<div class="card" style="padding:18px"><h3 style="font-size:15px">For support &amp; QA</h3><p>Reproduce a customer’s failed delivery and hand eng a replay link.</p></div>
+</div>
+</div>
+<div class="codecard reveal">
+<div class="code-top"><span id="codeFile">handler.js — from evt_3O9kL2a9</span><button class="copybtn" id="copyCode">⧉ Copy code</button></div>
+<div class="tabs" role="tablist" aria-label="Language">
+<button class="tab on" data-lang="node" role="tab" aria-selected="true">Node.js</button>
+<button class="tab" data-lang="python" role="tab" aria-selected="false">Python</button>
+<button class="tab" data-lang="go" role="tab" aria-selected="false">Go</button>
+<button class="tab" data-lang="curl" role="tab" aria-selected="false">Replay cURL</button>
+</div>
+<pre><code id="codeView"></code></pre>
+</div>
+</div>
+</div>
+</section>
+
+<!-- TEAMS + BETA -->
+<section class="block" id="teams" style="background:rgba(255,255,255,.015);border-top:1px solid rgba(30,42,77,.6);border-bottom:1px solid rgba(30,42,77,.6)">
+<div class="wrap">
+<div class="sec-eye mint reveal">◍ BUILT FOR TEAMS</div>
+<h2 class="reveal">Debugging webhooks is a team sport.</h2>
+<p class="lead reveal">Engineering finds the bug. Support calms the customer. Patchbay gives both the same source of truth.</p>
+<div class="split">
+<div class="panel reveal">
+<h3>💬 One link ends the back-and-forth</h3>
+<p>Share event histories with filters, notes and replays preserved. Support can see what engineering sees — without database access.</p>
+<div class="quote">“Customer said Shopify orders weren’t syncing. Support sent a Patchbay session link — I replayed it locally and found the missing <span style="font-family:var(--mono);color:var(--mint)">line_items[0].sku</span> in 4 minutes.”<b>— Maya R., Backend Lead, design partner</b></div>
+<div class="avatars"><div class="faces"><span style="background:#7dffc8">M</span><span style="background:#9d8cff">J</span><span style="background:#67e8f9">S</span><span style="background:#fbbf24">+9</span></div><span style="font-size:13px;color:var(--muted)">Engineering + Support in one view</span></div>
+</div>
+<div class="panel reveal" id="beta">
+<h3>🧪 Private-beta scope</h3>
+<p>We’re starting focused so we can be excellent. Here’s what’s in on day one:</p>
+<ul class="checklist">
+<li class="yes"><span>✓</span><span><b>HTTP-based webhooks</b> — any provider that POSTs JSON (Stripe, GitHub, Shopify, Twilio…)</span></li>
+<li class="yes"><span>✓</span><span><b>Common signing methods</b> — HMAC-SHA256, timestamped signatures, shared secrets</span></li>
+<li class="yes"><span>✓</span><span><b>Replay, payload editing &amp; failure injection</b> included for every event</span></li>
+<li class="yes"><span>✓</span><span><b>Code snippets</b> for Node, Python, Go + shareable team sessions</span></li>
+<li class="soon muted-li"><span>◷</span><span>WebSockets, gRPC &amp; Kafka — on the roadmap, not in beta</span></li>
+</ul>
+<div class="stats"><div class="stat"><b data-count="2347">0</b><span>on waitlist</span></div><div class="stat"><b>14 days</b><span>avg. beta invite</span></div><div class="stat"><b>100%</b><span>free during beta</span></div></div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- FAQ -->
+<section class="block" id="faq">
+<div class="wrap">
+<div style="text-align:center"><div class="sec-eye reveal">? FAQ</div><h2 class="reveal" style="margin:0 auto;text-align:center">Questions, answered.</h2><p class="lead reveal" style="margin:14px auto 0;text-align:center">Everything teams ask before joining the private beta.</p></div>
+<div class="faq">
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">Do I need to connect production systems?<span>+</span></button><div class="faq-a"><div class="faq-a-inner">No — that’s the point. Patchbay creates isolated temporary endpoints. Point a test or sandbox provider at Patchbay, debug safely, and only wire production when you’re confident. No prod credentials ever required.</div></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">What kinds of webhooks are supported in beta?<span>+</span></button><div class="faq-a"><div class="faq-a-inner">Private beta supports <b style="color:var(--text)">HTTP-based webhooks</b> with JSON payloads and <b style="color:var(--text)">common signing methods</b> including HMAC-SHA256, timestamp-tolerance checks and shared secrets. That covers Stripe, GitHub, Shopify, Twilio, Slack and most modern providers.</div></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">How do replay and failure testing work?<span>+</span></button><div class="faq-a"><div class="faq-a-inner">Any captured event can be replayed to <code>localhost</code> or staging with one click. You can edit headers and body inline, then inject failures — timeouts, 500s, duplicates, out-of-order delivery — to verify retries and idempotency before real traffic does it for you.</div></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">How does sharing work for support teams?<span>+</span></button><div class="faq-a"><div class="faq-a-inner">Every capture creates a shareable session link with event history, filters and notes preserved. Support can view and comment without code access, while engineers can fork the session and replay it locally. No more screenshots of JSON in tickets.</div></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">How much does it cost?<span>+</span></button><div class="faq-a"><div class="faq-a-inner">Free for all private-beta members — generous event retention and unlimited replays. After launch we’ll introduce team plans, but beta users lock in founding-team discounts for 12 months.</div></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">When will I get access?<span>+</span></button><div class="faq-a"><div class="faq-a-inner">We onboard in small cohorts every week to keep quality high. Most teams on the waitlist receive an invite within 14 days. Tell us your provider (e.g. Stripe + Shopify) and we’ll prioritize matching use cases.</div></div></div>
+</div>
+</div>
+</section>
+
+<!-- WAITLIST -->
+<section class="block" id="waitlist" style="padding-top:20px">
+<div class="wrap">
+<div class="waitlist reveal">
+<div class="wl-left">
+<div class="sec-eye mint">✦ PRIVATE BETA WAITLIST</div>
+<h2>Get early access to Patchbay Cloud.</h2>
+<p class="lead" style="font-size:15.5px">Join 2,300+ teams waiting to stop fearing webhooks. Tell us where it hurts — we onboard the most painful use cases first.</p>
+<div class="wl-points">
+<div><span class="check">✓</span> Instant sandbox endpoints + full inspector</div>
+<div><span class="check">✓</span> Replay, payload editing &amp; failure scenarios</div>
+<div><span class="check">✓</span> Team sessions + auto-generated handlers</div>
+</div>
+<div class="counterbox"><b id="wlCount">2,347</b><span>developers already waiting<br><span style="color:var(--mint)">● 38 invites sent this week</span></span></div>
+</div>
+<div class="wl-right">
+<form id="waitForm" novalidate>
+<div id="formFields">
+<div class="form-grid">
+<div class="field" data-f="name"><label for="fName">Full name *</label><input id="fName" name="name" placeholder="Ada Lovelace" autocomplete="name"><span class="error">Please enter your name.</span></div>
+<div class="field" data-f="email"><label for="fEmail">Work email *</label><input id="fEmail" name="email" type="email" placeholder="ada@company.com" autocomplete="email"><span class="error">Enter a valid work email.</span></div>
+</div>
+<div class="form-grid">
+<div class="field" data-f="company"><label for="fCompany">Company *</label><input id="fCompany" name="company" placeholder="Acme Inc." autocomplete="organization"><span class="error">Company is required.</span></div>
+<div class="field"><label for="fSize">Team size</label><select id="fSize" name="size"><option>1–5 engineers</option><option selected>6–20 engineers</option><option>21–100 engineers</option><option>100+ engineers</option></select></div>
+</div>
+<div class="field full" data-f="provider"><label for="fProv">Primary webhook provider *</label><select id="fProv" name="provider"><option value="">Select…</option><option>Stripe</option><option>GitHub</option><option>Shopify</option><option>Twilio / Segment / Slack</option><option>Custom / multiple</option></select><span class="error">Choose your primary provider.</span></div>
+<div class="field full"><label for="fMsg">What are you trying to debug? <span style="color:var(--muted2);font-weight:400">(optional)</span></label><textarea id="fMsg" name="message" placeholder="e.g. Shopify orders/create fails silently, Stripe retries overwhelm us…"></textarea></div>
+<label class="consent"><input type="checkbox" id="fConsent" checked> <span>I agree to receive beta updates about Patchbay Cloud. No spam, unsubscribe anytime.</span></label>
+<button class="btn btn-primary submit" type="submit">Join the waitlist →</button>
+<p class="fine">Free during beta · SOC 2 in progress · Your data stays yours</p>
+</div>
+<div class="success" id="formSuccess" role="status">
+<div class="success-ic">✓</div>
+<h3>You’re on the list! 🎉</h3>
+<p id="successText">Thanks Ada — you’re #2,348 in line. We’ll email ada@company.com within ~14 days.</p>
+<div class="refer"><span id="referLink">patchbay.cloud/r/ACME-8F3K</span><button type="button" class="copybtn" id="copyRefer">Copy</button></div>
+<p style="font-size:13px">Skip the line: share your referral link — teams that refer 2 friends get prioritized.</p>
+<button type="button" class="btn btn-ghost" id="resetForm" style="margin-top:16px;width:100%">Add another teammate</button>
+</div>
+</form>
+</div>
+</div>
+<p style="text-align:center;color:var(--muted2);font-size:13px;margin-top:18px">Prefer email? Reach us at <a href="mailto:beta@patchbay.cloud" style="color:var(--mint);font-weight:700">beta@patchbay.cloud</a> — we reply within a day.</p>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+<div class="foot-grid">
+<div>
+<a class="brand" href="#top" style="margin-bottom:12px"><span class="logo"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="4" fill="#1a2a5a" stroke="#7dffc8" stroke-width="1.2"/><circle cx="8" cy="9" r="1.6" fill="#7dffc8"/><circle cx="16" cy="9" r="1.6" fill="#9d8cff"/><circle cx="8" cy="15" r="1.6" fill="#67e8f9"/><circle cx="16" cy="15" r="1.6" fill="#eaf0ff"/></svg></span><span>Patchbay Cloud<small>WEBHOOK SANDBOX</small></span></a>
+<p style="font-size:13.5px;color:var(--muted);max-width:280px">The safe place to test webhooks before production. Capture, replay, share and ship with confidence.</p>
+<div style="margin-top:14px"><span class="status"><i></i> All systems operational</span></div>
+</div>
+<div><h4>PRODUCT</h4><a href="#product">Features</a><a href="#how">How it works</a><a href="#code">Code snippets</a><a href="#beta">Beta scope</a></div>
+<div><h4>RESOURCES</h4><a href="#faq">FAQ</a><a href="#waitlist">Changelog</a><a href="#waitlist">Docs (soon)</a><a href="#waitlist">Status</a></div>
+<div><h4>COMPANY</h4><a href="#waitlist">About</a><a href="#waitlist">Security</a><a href="mailto:beta@patchbay.cloud">Contact</a><a href="#waitlist">Privacy</a></div>
+</div>
+<div class="foot-bottom"><span>© <span id="year">2026</span> Patchbay Cloud, Inc. — Pre-launch. All rights reserved.</span><span style="font-family:var(--mono)">hook.patchbay.cloud · v0.9-beta</span></div>
+</div>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+var burger=document.getElementById('burger'),mmenu=document.getElementById('mmenu');
+burger.addEventListener('click',function(){var o=mmenu.classList.toggle('open');burger.setAttribute('aria-expanded',o);burger.textContent=o?'✕':'☰';});
+mmenu.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){mmenu.classList.remove('open');burger.textContent='☰';burger.setAttribute('aria-expanded','false');});});
+document.getElementById('year').textContent=new Date().getFullYear();
+var toast=document.getElementById('toast'),tt;
+function showToast(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove('show');},2600);}
+document.querySelectorAll('[data-toast]').forEach(function(b){b.addEventListener('click',function(){showToast(b.getAttribute('data-toast'));});});
+document.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){var t=b.getAttribute('data-copy');if(navigator.clipboard){navigator.clipboard.writeText(t);}showToast('Copied: '+t);});});
+/* reveal */
+var rev=document.querySelectorAll('.reveal');
+if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('vis');io.unobserve(e.target);}});},{threshold:.12});rev.forEach(function(r){io.observe(r);});}else{rev.forEach(function(r){r.classList.add('vis');});}
+/* counters */
+function animateCount(el,target){var s=0,dur=1400,st=null;function f(t){if(!st)st=t;var p=Math.min((t-st)/dur,1);var e=1-Math.pow(1-p,3);el.textContent=Math.floor(target*e).toLocaleString();if(p<1)requestAnimationFrame(f);else el.textContent=target.toLocaleString();}requestAnimationFrame(f);}
+var counted=false;var statEl=document.querySelector('[data-count]');
+if(statEl){var io2=new IntersectionObserver(function(es){if(es[0].isIntersecting&&!counted){counted=true;animateCount(statEl,2347);animateCount(document.getElementById('wlCount'),2347);io2.disconnect();}});io2.observe(statEl);}
+/* lab console */
+var consoles={
+replay:'<div><span class="c-dim">$ patchbay replay evt_3O9kL2a9 --to localhost:3000/webhooks</span><br><span class="c-green">✓ captured</span> <span class="c-white">POST /stripe → payment_intent.succeeded (1.2 KB)</span> <span class="c-dim">12ms ago</span><br><span class="c-cyan">→ POST</span> <span class="c-white">localhost:3000/webhooks</span> <span class="c-dim">attempt 1/3</span><br><span class="c-green">← 200 OK</span> <span class="c-dim">in 84ms · signature verified (hmac-sha256)</span><br><span class="c-violet">✔ handler returned { received: true }</span> <span class="c-dim">· saved to session “stripe-checkout-fix”</span></div>',
+mutate:'<div><span class="c-dim">$ patchbay fork evt_3O9kL2a9 --edit amount=9999 --currency=eur</span><br><span class="c-amber">✎ fork created</span> <span class="c-white">evt_3O9kL2a9 → evt_fork_41c2</span><br><span class="c-dim">diff:</span> <span class="c-red">- "amount": 4899</span> <span class="c-green">+ "amount": 9999</span><br><span class="c-cyan">→ POST</span> <span class="c-white">localhost:3000/webhooks</span> <span class="c-dim">(modified payload)</span><br><span class="c-green">← 200 OK</span> <span class="c-white">edge case passed</span> <span class="c-dim">· snippet updated automatically</span></div>',
+fail:'<div><span class="c-dim">$ patchbay inject evt_3O9kL2a9 --storm timeout,500x3,duplicate</span><br><span class="c-amber">⚠ failure storm armed</span> <span class="c-dim">3 scenarios queued</span><br><span class="c-red">✕ timeout after 5000ms</span> <span class="c-dim">→ retry 1 scheduled (exp. backoff 2s)</span><br><span class="c-red">✕ 500 Internal Error</span> <span class="c-dim">→ retry 2 · idempotency-key deduped ✓</span><br><span class="c-green">← 200 OK</span> <span class="c-white">recovered on attempt 3</span> <span class="c-violet">· report shared with #support</span></div>'};
+var cEl=document.getElementById('console');
+function setConsole(k){cEl.innerHTML=consoles[k];}
+setConsole('replay');
+document.querySelectorAll('.scenario').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.scenario').forEach(function(x){x.classList.remove('on');});b.classList.add('on');setConsole(b.getAttribute('data-sc'));});});
+/* code tabs */
+var codes={
+node:'<span class="c-violet">import</span> <span class="c-white">crypto</span> <span class="c-violet">from</span> <span class="c-s" style="color:#7dffc8">"node:crypto"</span><span class="c-dim">;</span>\n<span class="c-violet">import</span> <span class="c-white">express</span> <span class="c-violet">from</span> <span class="c-s" style="color:#7dffc8">"express"</span><span class="c-dim">;</span>\n<span class="c-dim">// generated from evt_3O9kL2a9 · verified ✓</span>\n<span class="c-violet">const</span> <span class="c-white">app</span> <span class="c-dim">=</span> <span class="c-cyan">express</span><span class="c-white">()</span><span class="c-dim">;</span>\n<span class="c-white">app</span><span class="c-dim">.</span><span class="c-cyan">post</span><span class="c-white">(</span><span style="color:#7dffc8">"/webhooks"</span><span class="c-white">,</span> <span class="c-cyan">express.raw</span><span class="c-white">({</span><span class="c-white">type:</span> <span style="color:#7dffc8">"application/json"</span><span class="c-white">}),</span> <span class="c-white">(req, res)</span> <span class="c-violet">=></span> <span class="c-white">{</span>\n  <span class="c-violet">const</span> <span class="c-white">sig</span> <span class="c-dim">=</span> <span class="c-white">req.headers[</span><span style="color:#7dffc8">"stripe-signature"</span><span class="c-white">];</span>\n  <span class="c-violet">if</span> <span class="c-white">(</span><span class="c-dim">!</span><span class="c-cyan">verifyHmac</span><span class="c-white">(req.body, sig))</span> <span class="c-violet">return</span> <span class="c-white">res.</span><span class="c-cyan">status</span><span class="c-white">(</span><span style="color:#67e8f9">401</span><span class="c-white">).</span><span class="c-cyan">send</span><span class="c-white">(</span><span style="color:#7dffc8">"bad signature"</span><span class="c-white">);</span>\n  <span class="c-violet">const</span> <span class="c-white">event</span> <span class="c-dim">=</span> <span class="c-white">JSON.</span><span class="c-cyan">parse</span><span class="c-white">(req.body);</span> <span class="c-dim">// payment_intent.succeeded</span>\n  <span class="c-violet">await</span> <span class="c-cyan">handleWithIdempotency</span><span class="c-white">(event);</span>\n  <span class="c-white">res.</span><span class="c-cyan">json</span><span class="c-white">({</span> <span class="c-white">received:</span> <span class="c-violet">true</span> <span class="c-white">});</span>\n<span class="c-white">});</span>',
+python:'<span class="c-violet">import</span> <span class="c-white">hmac, hashlib, json</span>\n<span class="c-violet">from</span> <span class="c-white">flask</span> <span class="c-violet">import</span> <span class="c-white">Flask, request, jsonify</span>\n<span class="c-dim"># generated from evt_3O9kL2a9 · verified ✓</span>\n<span class="c-white">app</span> <span class="c-dim">=</span> <span class="c-cyan">Flask</span><span class="c-white">(__name__)</span>\n<span class="c-dim">@app.route(</span><span style="color:#7dffc8">"/webhooks"</span><span class="c-dim">, methods=[</span><span style="color:#7dffc8">"POST"</span><span class="c-dim">])</span>\n<span class="c-violet">def</span> <span class="c-cyan">webhooks</span><span class="c-white">():</span>\n    <span class="c-white">payload</span> <span class="c-dim">=</span> <span class="c-white">request.get_data()</span>\n    <span class="c-white">sig</span> <span class="c-dim">=</span> <span class="c-white">request.headers.get(</span><span style="color:#7dffc8">"stripe-signature"</span><span class="c-white">,</span> <span style="color:#7dffc8">""</span><span class="c-white">)</span>\n    <span class="c-violet">if not</span> <span class="c-cyan">verify_hmac</span><span class="c-white">(payload, sig):</span>\n        <span class="c-violet">return</span> <span style="color:#7dffc8">"bad signature"</span><span class="c-white">,</span> <span style="color:#67e8f9">401</span>\n    <span class="c-white">event</span> <span class="c-dim">=</span> <span class="c-white">json.loads(payload)  </span><span class="c-dim"># payment_intent.succeeded</span>\n    <span class="c-cyan">handle_with_idempotency</span><span class="c-white">(event)</span>\n    <span class="c-violet">return</span> <span class="c-cyan">jsonify</span><span class="c-white">(received=</span><span class="c-violet">True</span><span class="c-white">)</span>',
+go:'<span class="c-violet">package</span> <span class="c-white">main</span>\n<span class="c-violet">import</span> <span class="c-white">(</span><span style="color:#7dffc8">"encoding/json" "net/http" "crypto/hmac"</span><span class="c-white">)</span>\n<span class="c-dim">// generated from evt_3O9kL2a9 · verified ✓</span>\n<span class="c-violet">func</span> <span class="c-cyan">webhookHandler</span><span class="c-white">(w http.ResponseWriter, r *http.Request) {</span>\n  <span class="c-white">body, _ := io.ReadAll(r.Body)</span>\n  <span class="c-violet">if</span> <span class="c-dim">!</span><span class="c-cyan">verifyHMAC</span><span class="c-white">(body, r.Header.Get(</span><span style="color:#7dffc8">"Stripe-Signature"</span><span class="c-white">)) {</span>\n    <span class="c-white">http.Error(w,</span> <span style="color:#7dffc8">"bad signature"</span><span class="c-white">, 401);</span> <span class="c-violet">return</span>\n  <span class="c-white">}</span>\n  <span class="c-violet">var</span> <span class="c-white">evt PaymentIntentSucceeded</span> <span class="c-dim">// inferred from live payload</span>\n  <span class="c-white">json.Unmarshal(body, &evt)</span>\n  <span class="c-cyan">handleWithIdempotency</span><span class="c-white">(evt)</span>\n  <span class="c-white">w.Write([]byte(</span><span style="color:#7dffc8">`{"received":true}`</span><span class="c-white">))</span>\n<span class="c-white">}</span>',
+curl:'<span class="c-dim"># replay any captured event to localhost</span>\n<span class="c-dim">$</span> <span class="c-white">curl -X POST http://localhost:3000/webhooks \\</span>\n  <span class="c-white">-H</span> <span style="color:#7dffc8">"Content-Type: application/json"</span> <span class="c-white">\\</span>\n  <span class="c-white">-H</span> <span style="color:#7dffc8">"stripe-signature: t=1715000000,v1=hmac_8f3k…"</span> <span class="c-white">\\</span>\n  <span class="c-white">-H</span> <span style="color:#7dffc8">"x-patchbay-replay: evt_3O9kL2a9"</span> <span class="c-white">\\</span>\n  <span class="c-white">-d</span> <span style="color:#7dffc8">\'{"id":"evt_3O9kL2a9","type":"payment_intent.succeeded",\'</span>\n  <span style="color:#7dffc8">\'"amount":4899}\'</span>\n<span class="c-green">✓ 200 OK in 84ms · 1 retried, 0 failed</span>'};
+var codeView=document.getElementById('codeView'),codeFile=document.getElementById('codeFile');
+function setLang(l){codeView.innerHTML=codes[l];document.querySelectorAll('.tab').forEach(function(t){var on=t.getAttribute('data-lang')===l;t.classList.toggle('on',on);t.setAttribute('aria-selected',on);});var names={node:'handler.js — from evt_3O9kL2a9',python:'app.py — from evt_3O9kL2a9',go:'webhook.go — from evt_3O9kL2a9',curl:'replay.sh — patchbay CLI'};codeFile.textContent=names[l];}
+setLang('node');
+document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){setLang(t.getAttribute('data-lang'));});});
+document.getElementById('copyCode').addEventListener('click',function(){var txt=codeView.textContent;if(navigator.clipboard)navigator.clipboard.writeText(txt);showToast('Handler copied — paste into your app ✓');});
+/* faq */
+document.querySelectorAll('.faq-item').forEach(function(it){var q=it.querySelector('.faq-q'),a=it.querySelector('.faq-a');q.addEventListener('click',function(){var open=it.classList.contains('open');document.querySelectorAll('.faq-item.open').forEach(function(o){o.classList.remove('open');o.querySelector('.faq-a').style.maxHeight=null;o.querySelector('.faq-q').setAttribute('aria-expanded','false');});if(!open){it.classList.add('open');a.style.maxHeight=a.scrollHeight+'px';q.setAttribute('aria-expanded','true');}});});
+/* forms */
+var heroForm=document.getElementById('heroForm');
+heroForm.addEventListener('submit',function(e){e.preventDefault();var em=document.getElementById('heroEmail').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){showToast('Please enter a valid email to join ✓');document.getElementById('heroEmail').focus();return;}document.getElementById('fEmail').value=em;document.getElementById('waitlist').scrollIntoView({behavior:'smooth'});showToast('Nice — finish your waitlist spot below ✓');document.getElementById('fName').focus({preventScroll:true});});
+var waitForm=document.getElementById('waitForm');
+function setErr(name,bad){var f=waitForm.querySelector('[data-f="'+name+'"]');if(f)f.classList.toggle('invalid',bad);return !bad;}
+waitForm.addEventListener('submit',function(e){e.preventDefault();
+var name=document.getElementById('fName').value.trim(),email=document.getElementById('fEmail').value.trim(),comp=document.getElementById('fCompany').value.trim(),prov=document.getElementById('fProv').value;
+var ok=true;
+ok=setErr('name',name.length<2)&&ok;
+ok=setErr('email',!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))&&ok;
+ok=setErr('company',comp.length<2)&&ok;
+ok=setErr('provider',!prov)&&ok;
+if(!ok){showToast('Please fix the highlighted fields');return;}
+var btn=waitForm.querySelector('.submit');btn.textContent='Joining…';btn.disabled=true;
+setTimeout(function(){
+var pos=(2348+Math.floor(Math.random()*40)).toLocaleString();
+document.getElementById('successText').textContent='Thanks '+name.split(' ')[0]+' — you’re #'+pos+' in line. We’ll email '+email+' within ~14 days.';
+var code=(comp||'TEAM').replace(/[^A-Za-z]/g,'').substring(0,4).toUpperCase()||'TEAM';
+document.getElementById('referLink').textContent='patchbay.cloud/r/'+code+'-'+Math.random().toString(36).substring(2,6).toUpperCase();
+document.getElementById('formFields').style.display='none';
+document.getElementById('formSuccess').classList.add('show');
+showToast('You’re on the waitlist ✓ Welcome to Patchbay!');
+try{localStorage.setItem('pb_waitlist',JSON.stringify({name:name,email:email}));}catch(_){}
+},900);
+});
+document.getElementById('copyRefer').addEventListener('click',function(){var t=document.getElementById('referLink').textContent;if(navigator.clipboard)navigator.clipboard.writeText('https://'+t);showToast('Referral link copied ✓');});
+document.getElementById('resetForm').addEventListener('click',function(){document.getElementById('formFields').style.display='block';document.getElementById('formSuccess').classList.remove('show');var b=waitForm.querySelector('.submit');b.textContent='Join the waitlist →';b.disabled=false;waitForm.reset();});
+})();
+</script>
+</body>
+</html>

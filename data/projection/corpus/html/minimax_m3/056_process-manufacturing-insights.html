@@ -1,0 +1,2870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>YLD-2847 · Yield Variance Investigation · Meridian Insight Studio</title>
+<style>
+:root {
+  /* =========================================================
+     DESIGN TOKENS — every colour, font-size, spacing value,
+     radius and shadow value lives here. var(--name) elsewhere.
+     ========================================================= */
+
+  /* Workspace canvas */
+  --color-canvas: #060810;
+  --color-canvas-dot: rgba(140, 165, 210, 0.06);
+  --color-canvas-glow-a: rgba(108, 140, 255, 0.10);
+  --color-canvas-glow-b: rgba(239, 93, 111, 0.05);
+  --color-canvas-glow-c: rgba(177, 140, 255, 0.06);
+
+  /* Panels & surfaces */
+  --color-panel: #131a2a;
+  --color-panel-2: #1a2233;
+  --color-panel-3: #232c40;
+  --color-panel-deep: #0c1120;
+  --color-panel-inset: #080c16;
+  --color-scrim: rgba(4, 6, 12, 0.55);
+
+  /* Lines */
+  --color-line: #2a3450;
+  --color-line-soft: #1d2538;
+  --color-line-bright: #3d4a6c;
+  --color-line-grid: #1a2235;
+  --color-divider: #202a40;
+
+  /* Text */
+  --color-text: #eaeef7;
+  --color-text-mute: #95a2bc;
+  --color-text-dim: #5d6884;
+  --color-text-faint: #3e475e;
+  --color-text-inverse: #0a0d14;
+
+  /* Brand & accent */
+  --color-accent: #6c8cff;
+  --color-accent-hi: #8aa3ff;
+  --color-accent-deep: #4f6acc;
+  --color-purple: #b18cff;
+  --color-teal: #5edcc1;
+  --color-amber: #fbbf24;
+
+  /* Status semantic */
+  --color-good: #4ade80;
+  --color-good-soft: rgba(74, 222, 128, 0.14);
+  --color-good-line: rgba(74, 222, 128, 0.36);
+  --color-good-glow: rgba(74, 222, 128, 0.22);
+  --color-warn: #f5b048;
+  --color-warn-soft: rgba(245, 176, 72, 0.14);
+  --color-warn-line: rgba(245, 176, 72, 0.36);
+  --color-warn-glow: rgba(245, 176, 72, 0.22);
+  --color-bad: #ef5d6f;
+  --color-bad-soft: rgba(239, 93, 111, 0.18);
+  --color-bad-line: rgba(239, 93, 111, 0.4);
+  --color-bad-glow: rgba(239, 93, 111, 0.30);
+  --color-info: #58c0ff;
+  --color-info-soft: rgba(88, 192, 255, 0.14);
+  --color-info-line: rgba(88, 192, 255, 0.36);
+  --color-neutral: #8896b0;
+  --color-neutral-soft: rgba(136, 150, 176, 0.12);
+  --color-neutral-line: rgba(136, 150, 176, 0.30);
+
+  /* Insight palette */
+  --color-insight-a: #c084fc;
+  --color-insight-b: #fb923c;
+  --color-insight-c: #38bdf8;
+  --color-insight-d: #facc15;
+  --color-insight-e: #34d399;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+
+  --font-2xs: 10px;
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-base: 13px;
+  --font-md: 14px;
+  --font-lg: 16px;
+  --font-xl: 18px;
+  --font-2xl: 22px;
+  --font-3xl: 28px;
+  --font-4xl: 36px;
+  --font-display: 54px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 56px;
+
+  /* Radius */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-pill: 999px;
+
+  /* Shadow */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 8px 22px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 28px 64px rgba(0, 0, 0, 0.7);
+  --shadow-glow-accent: 0 0 28px rgba(108, 140, 255, 0.30);
+  --shadow-glow-bad: 0 0 26px rgba(239, 93, 111, 0.32);
+  --shadow-glow-good: 0 0 18px rgba(74, 222, 128, 0.22);
+  --shadow-glow-warn: 0 0 18px rgba(245, 176, 72, 0.22);
+  --shadow-inset-hi: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-inset-lo: inset 0 -1px 0 rgba(0, 0, 0, 0.30);
+  --shadow-inset-soft: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+/* =========================================================
+   RESET & BASE
+   ========================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-base);
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-canvas);
+  background-image:
+    radial-gradient(circle, var(--color-canvas-dot) 1px, transparent 1px),
+    radial-gradient(ellipse at 18% -8%, var(--color-canvas-glow-a), transparent 48%),
+    radial-gradient(ellipse at 92% 30%, var(--color-canvas-glow-c), transparent 50%),
+    radial-gradient(ellipse at 60% 110%, var(--color-canvas-glow-b), transparent 60%);
+  background-size: 22px 22px, auto, auto, auto;
+  background-attachment: fixed;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input { font-family: inherit; }
+ul, ol { list-style: none; padding: 0; margin: 0; }
+h1, h2, h3, h4, h5 { margin: 0; font-weight: 600; }
+p { margin: 0; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-text-mute); }
+.dim { color: var(--color-text-dim); }
+.faint { color: var(--color-text-faint); }
+.hl { color: var(--color-accent-hi); border-bottom: 1px dashed var(--color-accent-deep); padding-bottom: 1px; }
+.hl-strong { color: var(--color-bad); font-weight: 600; }
+
+/* =========================================================
+   WORKSPACE LAYOUT
+   ========================================================= */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-areas:
+    "topbar  topbar"
+    "hero    facets"
+    "tabs    facets"
+    "table   facets"
+    "audit   audit";
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  max-width: 1320px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.area-topbar { grid-area: topbar; }
+.area-hero { grid-area: hero; }
+.area-facets { grid-area: facets; align-self: stretch; min-height: 0; }
+.area-tabs { grid-area: tabs; }
+.area-table { grid-area: table; }
+.area-audit { grid-area: audit; }
+
+/* =========================================================
+   PANELS (floating cards on canvas)
+   ========================================================= */
+.panel {
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md), var(--shadow-inset-hi);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-line-bright) 50%, transparent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.panel-topbar {
+  background: linear-gradient(180deg, var(--color-panel-2) 0%, var(--color-panel-deep) 100%);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  height: 60px;
+  box-shadow: var(--shadow-sm), var(--shadow-inset-hi);
+}
+
+.panel-hero {
+  padding: var(--space-7);
+  background: linear-gradient(180deg, var(--color-panel) 0%, var(--color-panel-deep) 100%);
+  box-shadow: var(--shadow-lg), var(--shadow-inset-hi), var(--shadow-glow-bad);
+}
+
+.panel-facets {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-panel);
+}
+
+.panel-tabs { padding: 0; }
+.panel-table { padding: 0; }
+.panel-audit { padding: var(--space-6); }
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-right: var(--space-5);
+  border-right: 1px solid var(--color-line-soft);
+  height: 100%;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--color-panel-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glow-accent);
+}
+
+.brand-text { display: flex; flex-direction: column; }
+
+.brand-name { font-size: var(--font-md); font-weight: 600; letter-spacing: -0.01em; }
+.brand-sub { font-size: var(--font-2xs); color: var(--color-text-dim); letter-spacing: 0.06em; }
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+  flex: 1;
+  min-width: 0;
+}
+.crumb { color: var(--color-text-mute); white-space: nowrap; }
+.crumb-sep { color: var(--color-text-faint); }
+.crumb-current {
+  color: var(--color-text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.topbar-tools { display: flex; align-items: center; gap: var(--space-3); }
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-panel-inset);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  width: 260px;
+  height: 36px;
+}
+.search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text);
+  font-size: var(--font-sm);
+  min-width: 0;
+}
+.search input::placeholder { color: var(--color-text-dim); }
+
+.kbd {
+  font-size: var(--font-2xs);
+  padding: 1px var(--space-2);
+  background: var(--color-panel-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-mute);
+}
+
+.icon-button {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-mute);
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.icon-button:hover {
+  background: var(--color-panel-2);
+  color: var(--color-text);
+  border-color: var(--color-line);
+}
+
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--color-bad);
+  color: var(--color-text-inverse);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  min-width: 16px;
+  text-align: center;
+  line-height: 1.3;
+  box-shadow: var(--shadow-glow-bad);
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+}
+.user-chip:hover { border-color: var(--color-line-bright); }
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.avatar-sm { width: 24px; height: 24px; font-size: var(--font-2xs); }
+.avatar-purple { background: var(--color-insight-a); }
+.avatar-teal { background: var(--color-teal); color: var(--color-text-inverse); }
+.avatar-amber { background: var(--color-amber); }
+
+.user-meta { display: flex; flex-direction: column; text-align: left; line-height: 1.2; }
+.user-name { font-size: var(--font-sm); font-weight: 600; }
+.user-role { font-size: var(--font-2xs); color: var(--color-text-dim); letter-spacing: 0.04em; margin-top: 2px; }
+
+/* =========================================================
+   STATUS INDICATORS (global primitives)
+   ========================================================= */
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text-mute);
+  flex-shrink: 0;
+}
+.dot-good { background: var(--color-good); box-shadow: 0 0 8px var(--color-good-glow); }
+.dot-warn { background: var(--color-warn); box-shadow: 0 0 8px var(--color-warn-glow); }
+.dot-bad { background: var(--color-bad); box-shadow: 0 0 8px var(--color-bad-glow); }
+.dot-info { background: var(--color-info); box-shadow: 0 0 8px var(--color-info-line); }
+.dot-accent { background: var(--color-accent); box-shadow: 0 0 8px var(--color-accent); }
+
+.dot-pulse {
+  position: relative;
+  background: var(--color-good);
+  box-shadow: 0 0 0 0 var(--color-good-glow);
+  animation: pulse 2s infinite;
+}
+.dot-pulse.dot-bad { background: var(--color-bad); animation-name: pulse-bad; }
+.dot-pulse.dot-info { background: var(--color-info); animation-name: pulse-info; }
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 var(--color-good-glow); }
+  70% { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
+@keyframes pulse-bad {
+  0% { box-shadow: 0 0 0 0 var(--color-bad-glow); }
+  70% { box-shadow: 0 0 0 8px rgba(239, 93, 111, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 93, 111, 0); }
+}
+@keyframes pulse-info {
+  0% { box-shadow: 0 0 0 0 var(--color-info-line); }
+  70% { box-shadow: 0 0 0 8px rgba(88, 192, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(88, 192, 255, 0); }
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2) 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid;
+  background: var(--color-neutral-soft);
+  color: var(--color-neutral);
+  border-color: var(--color-neutral-line);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.status-tag .dot { width: 5px; height: 5px; }
+.status-tag-good { background: var(--color-good-soft); color: var(--color-good); border-color: var(--color-good-line); }
+.status-tag-warn { background: var(--color-warn-soft); color: var(--color-warn); border-color: var(--color-warn-line); }
+.status-tag-bad  { background: var(--color-bad-soft); color: var(--color-bad); border-color: var(--color-bad-line); }
+.status-tag-info { background: var(--color-info-soft); color: var(--color-info); border-color: var(--color-info-line); }
+.status-tag-accent { background: rgba(108, 140, 255, 0.14); color: var(--color-accent-hi); border-color: rgba(108, 140, 255, 0.36); }
+
+.status-tag-pill {
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+}
+
+.trend-arrow {
+  display: inline-block;
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1;
+}
+.trend-up { color: var(--color-good); }
+.trend-down { color: var(--color-bad); }
+.trend-flat { color: var(--color-text-dim); }
+.trend-up-warn { color: var(--color-warn); }
+.trend-down-warn { color: var(--color-warn); }
+
+/* =========================================================
+   HERO PANEL
+   ========================================================= */
+.hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+.eyebrow-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.eyebrow-tag-bad { background: var(--color-bad-soft); color: var(--color-bad); border: 1px solid var(--color-bad-line); }
+.eyebrow-tag-good { background: var(--color-good-soft); color: var(--color-good); border: 1px solid var(--color-good-line); }
+.eyebrow-meta { color: var(--color-text-dim); letter-spacing: 0.06em; font-size: var(--font-2xs); margin-left: auto; }
+
+.hero-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-7);
+  align-items: end;
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-divider);
+}
+.hero-text { min-width: 0; }
+.hero-title {
+  font-size: var(--font-3xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: var(--space-5);
+}
+.hero-sub {
+  font-size: var(--font-md);
+  color: var(--color-text-mute);
+  line-height: 1.55;
+  max-width: 760px;
+}
+
+.hero-metric {
+  background: var(--color-panel-inset);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  min-width: 280px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-inset-soft);
+}
+.hero-metric::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 120px; height: 120px;
+  background: radial-gradient(circle at 100% 0%, var(--color-bad-glow), transparent 70%);
+  pointer-events: none;
+}
+.metric-label {
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin-bottom: var(--space-3);
+}
+.metric-value {
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--color-bad);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.metric-value .trend-arrow { font-size: var(--font-2xl); }
+.metric-unit {
+  font-size: var(--font-xl);
+  color: var(--color-text-mute);
+  font-weight: 600;
+}
+.metric-context {
+  margin-top: var(--space-4);
+  font-size: var(--font-sm);
+  color: var(--color-text-mute);
+}
+.metric-current {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-line);
+}
+.metric-current .mono { color: var(--color-text); font-weight: 600; }
+.metric-bar {
+  margin-top: var(--space-5);
+  height: 8px;
+  background: var(--color-panel-3);
+  border-radius: var(--radius-pill);
+  position: relative;
+  overflow: hidden;
+}
+.metric-bar-track {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, var(--color-line-soft) 0 1px, transparent 1px 12.5%);
+  opacity: 0.5;
+}
+.metric-bar-fill {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 60%;
+  background: linear-gradient(90deg, var(--color-warn), var(--color-bad));
+  border-radius: var(--radius-pill);
+}
+.metric-bar-marker {
+  position: absolute;
+  top: -3px; bottom: -3px;
+  left: 96.6%;
+  width: 2px;
+  background: var(--color-good);
+  box-shadow: 0 0 6px var(--color-good-glow);
+}
+.metric-bar-marker::after {
+  content: 'Q2';
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--font-2xs);
+  color: var(--color-good);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.hero-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-7);
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.detail-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+.detail-count {
+  color: var(--color-text-mute);
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.driver-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.driver {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-md);
+  border-left-width: 3px;
+}
+.driver-bad  { border-left-color: var(--color-bad); }
+.driver-warn { border-left-color: var(--color-warn); }
+.driver-info { border-left-color: var(--color-info); }
+.driver-icon {
+  width: 22px; height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: var(--font-sm);
+}
+.driver-bad .driver-icon { background: var(--color-bad-soft); color: var(--color-bad); }
+.driver-warn .driver-icon { background: var(--color-warn-soft); color: var(--color-warn); }
+.driver-info .driver-icon { background: var(--color-info-soft); color: var(--color-info); }
+.driver-text { font-size: var(--font-sm); color: var(--color-text); }
+.driver-pct {
+  font-size: var(--font-2xs);
+  color: var(--color-text-mute);
+  padding: 2px var(--space-2);
+  background: var(--color-panel-inset);
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.04em;
+}
+
+.confidence { display: flex; flex-direction: column; }
+.confidence-bar {
+  height: 10px;
+  background: var(--color-panel-inset);
+  border-radius: var(--radius-pill);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+.confidence-fill {
+  height: 100%;
+  width: 94%;
+  background: linear-gradient(90deg, var(--color-good-deep, var(--color-good)), var(--color-good));
+  background: linear-gradient(90deg, var(--color-teal), var(--color-good));
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-glow-good);
+}
+.confidence-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-sm);
+}
+.meta-key { color: var(--color-text-dim); letter-spacing: 0.02em; }
+.meta-val { color: var(--color-text); display: flex; align-items: center; gap: var(--space-2); }
+.confidence-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-2xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-mute);
+  letter-spacing: 0.04em;
+}
+.src-dot {
+  width: 6px; height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--c, var(--color-text-mute));
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-6);
+  flex-wrap: wrap;
+}
+.action-spacer { flex: 1; }
+.action-status {
+  font-size: var(--font-xs);
+  color: var(--color-text-mute);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  border: 1px solid;
+  transition: background 120ms, border-color 120ms, transform 120ms;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent-deep);
+  box-shadow: var(--shadow-glow-accent);
+}
+.btn-primary:hover { background: var(--color-accent-hi); }
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-line);
+}
+.btn-ghost:hover {
+  background: var(--color-panel-2);
+  border-color: var(--color-line-bright);
+}
+.btn-small { padding: var(--space-2) var(--space-4); font-size: var(--font-xs); }
+
+/* =========================================================
+   FACETS PANEL
+   ========================================================= */
+.facets-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+  margin-bottom: var(--space-5);
+}
+.facets-title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-1);
+}
+.facets-sub {
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.08em;
+}
+
+.facets-section {
+  padding-bottom: var(--space-5);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-line-soft);
+}
+.facets-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: var(--space-4);
+}
+.section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin-bottom: var(--space-3);
+}
+.section-meta {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--color-text-mute);
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  font-size: var(--font-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0;
+  text-transform: uppercase;
+}
+.link-btn:hover { color: var(--color-accent-hi); }
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-accent);
+  background: rgba(108, 140, 255, 0.14);
+  border: 1px solid var(--color-info-line);
+  border-radius: var(--radius-md);
+  font-size: var(--font-xs);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.chip-key { color: var(--color-text-dim); }
+.chip-val { color: var(--color-accent-hi); font-weight: 600; }
+.chip-x {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-mute);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-md);
+  line-height: 1;
+  padding: 0;
+}
+.chip-x:hover { background: var(--color-panel-3); color: var(--color-text); }
+
+.filter-chip-add {
+  background: transparent;
+  border: 1px dashed var(--color-line-bright);
+  color: var(--color-text-mute);
+  cursor: pointer;
+}
+.filter-chip-add:hover { color: var(--color-text); border-color: var(--color-accent); }
+.filter-chip-add .plus { color: var(--color-accent); font-weight: 700; }
+
+.facet-list { display: flex; flex-direction: column; gap: var(--space-1); }
+.facet-item {
+  border-radius: var(--radius-sm);
+  transition: background 100ms;
+}
+.facet-item label {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-sm);
+  border-radius: var(--radius-sm);
+}
+.facet-item label:hover { background: var(--color-panel-2); }
+.facet-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-line-bright);
+  border-radius: var(--radius-xs);
+  background: var(--color-panel-inset);
+  display: grid;
+  place-items: center;
+  margin: 0;
+  cursor: pointer;
+}
+.facet-item input[type="checkbox"]:checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.facet-item input[type="checkbox"]:checked::after {
+  content: '';
+  width: 8px;
+  height: 5px;
+  border-left: 1.5px solid var(--color-text-inverse);
+  border-bottom: 1.5px solid var(--color-text-inverse);
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+.facet-item-on .facet-name { color: var(--color-text); font-weight: 500; }
+.facet-name { color: var(--color-text-dim); }
+.facet-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.facet-count {
+  font-size: var(--font-xs);
+  color: var(--color-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+.facet-status { font-size: 8px; line-height: 1; }
+.facet-status-good { color: var(--color-good); }
+.facet-status-warn { color: var(--color-warn); }
+.facet-status-bad { color: var(--color-bad); }
+
+.facet-item-focus {
+  background: var(--color-bad-soft);
+  border: 1px solid var(--color-bad-line);
+}
+.facet-item-focus label { padding-left: var(--space-2); padding-right: var(--space-2); }
+.facet-bar {
+  height: 3px;
+  background: var(--color-panel-inset);
+  margin: 0 var(--space-3) var(--space-2) calc(var(--space-5) + var(--space-2));
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.facet-bar-fill {
+  height: 100%;
+  width: var(--fill, 0%);
+  background: var(--color-bad);
+  border-radius: var(--radius-pill);
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+.product-card {
+  padding: var(--space-3);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.product-card:hover { border-color: var(--color-line-bright); }
+.product-card-on {
+  background: var(--color-bad-soft);
+  border-color: var(--color-bad-line);
+  box-shadow: var(--shadow-glow-bad);
+}
+.product-name {
+  font-size: var(--font-xs);
+  color: var(--color-text);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.product-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.product-meta .mono { font-size: var(--font-md); color: var(--color-text); }
+.product-trend { font-size: var(--font-xs); }
+
+.date-range { display: flex; flex-direction: column; gap: var(--space-3); }
+.date-readout {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-3);
+}
+.date-key {
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+.date-val { font-size: var(--font-sm); color: var(--color-text); font-weight: 600; }
+.date-arrow { color: var(--color-text-dim); font-size: var(--font-md); }
+.date-slider {
+  position: relative;
+  height: 32px;
+  padding: 12px 0;
+}
+.slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0; right: 0;
+  height: 4px;
+  background: var(--color-panel-inset);
+  border-radius: var(--radius-pill);
+  transform: translateY(-50%);
+}
+.slider-fill {
+  position: absolute;
+  top: 50%;
+  left: 8%;
+  right: 12%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-warn), var(--color-bad));
+  border-radius: var(--radius-pill);
+  transform: translateY(-50%);
+  box-shadow: var(--shadow-glow-warn);
+}
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--color-text);
+  border: 2px solid var(--color-canvas);
+  border-radius: var(--radius-pill);
+  transform: translate(-50%, -50%);
+  box-shadow: var(--shadow-sm);
+}
+.slider-thumb-start { left: 8%; }
+.slider-thumb-end { left: 88%; }
+.slider-event {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background: var(--color-bad);
+  border-radius: var(--radius-pill);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px var(--color-bad-glow);
+}
+.date-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.04em;
+  margin-top: var(--space-2);
+}
+
+.severity { display: flex; flex-direction: column; gap: var(--space-2); }
+.sev-btn {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  color: var(--color-text-mute);
+  text-align: left;
+}
+.sev-btn:hover { border-color: var(--color-line-bright); color: var(--color-text); }
+.sev-btn-on {
+  background: var(--color-bad-soft);
+  border-color: var(--color-bad-line);
+  color: var(--color-text);
+}
+.sev-count {
+  font-size: var(--font-2xs);
+  padding: 1px var(--space-2);
+  background: var(--color-panel-inset);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-mute);
+  letter-spacing: 0.04em;
+}
+.sev-btn-on .sev-count { background: var(--color-canvas); color: var(--color-text); }
+
+.facets-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  margin-top: auto;
+  border-top: 1px solid var(--color-line-soft);
+}
+.facets-footer .btn { flex: 1; justify-content: center; }
+
+/* =========================================================
+   TABS + KPIs
+   ========================================================= */
+.tablist-wrap {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-divider);
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.tablist {
+  display: flex;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+.tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-mute);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  margin-bottom: -1px;
+  letter-spacing: 0.01em;
+}
+.tab-button:hover { color: var(--color-text); }
+.tab-button-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+.tab-count {
+  font-size: var(--font-2xs);
+  padding: 1px var(--space-2);
+  background: var(--color-panel-3);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-mute);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.tab-button-active .tab-count { background: var(--color-accent); color: var(--color-text-inverse); }
+
+.tab-tools { padding: var(--space-4) 0; }
+.sync-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-2xs);
+  color: var(--color-text-mute);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tabpanel { padding: var(--space-6); }
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.kpi-card {
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 100px; height: 100px;
+  background: radial-gradient(circle at 100% 0%, var(--kpi-glow, transparent), transparent 70%);
+  pointer-events: none;
+}
+.kpi-card-bad { --kpi-glow: var(--color-bad-glow); border-color: var(--color-bad-line); }
+.kpi-card-warn { --kpi-glow: var(--color-warn-glow); border-color: var(--color-warn-line); }
+.kpi-card-good { --kpi-glow: var(--color-good-glow); border-color: var(--color-good-line); }
+.kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.kpi-label {
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-mute);
+}
+.kpi-value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.kpi-num {
+  font-size: var(--font-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.kpi-trend {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.kpi-context {
+  font-size: var(--font-xs);
+  color: var(--color-text-mute);
+}
+.sparkline {
+  margin-top: auto;
+  height: 32px;
+  width: 100%;
+  display: block;
+}
+
+.quick-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: var(--space-5);
+}
+.quick-block {
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+.quick-label {
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin-bottom: var(--space-4);
+}
+.quick-bar {
+  display: flex;
+  height: 28px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-line-soft);
+}
+.quick-segment {
+  flex-basis: var(--w, 0%);
+  display: grid;
+  place-items: center;
+  font-size: var(--font-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-inverse);
+  position: relative;
+}
+.quick-segment-bad { background: var(--color-bad); }
+.quick-segment-warn { background: var(--color-warn); }
+.quick-segment-good { background: var(--color-good); }
+.quick-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-3);
+  font-size: var(--font-2xs);
+  letter-spacing: 0.06em;
+  color: var(--color-text-mute);
+}
+.quick-legend span:nth-child(1)::before {
+  content: '● ';
+  color: var(--color-bad);
+}
+.quick-legend span:nth-child(2)::before {
+  content: '● ';
+  color: var(--color-warn);
+}
+.quick-legend span:nth-child(3)::before {
+  content: '● ';
+  color: var(--color-good);
+}
+
+.stage-bars { display: flex; flex-direction: column; gap: var(--space-3); }
+.stage-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 40px;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-xs);
+}
+.stage-key { color: var(--color-text-mute); }
+.stage-bar {
+  height: 8px;
+  background: var(--color-panel-inset);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.stage-fill {
+  height: 100%;
+  width: var(--w, 0%);
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+}
+.stage-fill-bad { background: linear-gradient(90deg, var(--color-bad), var(--color-warn)); }
+.stage-val { text-align: right; color: var(--color-text); font-weight: 600; }
+
+/* =========================================================
+   TABLE PANEL
+   ========================================================= */
+.table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-divider);
+}
+.table-title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.table-sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.06em;
+  flex-wrap: wrap;
+}
+.table-tools { display: flex; align-items: center; gap: var(--space-3); }
+
+.filter-pills {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-panel-inset);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+.pill {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  font-size: var(--font-xs);
+  color: var(--color-text-mute);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill:hover { background: var(--color-panel-2); color: var(--color-text); }
+.pill-on { background: var(--color-panel-3); color: var(--color-text); }
+.pill-bad { color: var(--color-bad); }
+.pill-bad.pill-on { background: var(--color-bad-soft); color: var(--color-bad); }
+.pill-warn { color: var(--color-warn); }
+.pill-warn.pill-on { background: var(--color-warn-soft); color: var(--color-warn); }
+.pill-info { color: var(--color-info); }
+.pill-info.pill-on { background: var(--color-info-soft); color: var(--color-info); }
+.pill-good { color: var(--color-good); }
+
+.table-wrap { overflow-x: auto; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+}
+.data-table thead th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-panel-deep);
+  border-bottom: 1px solid var(--color-divider);
+  font-size: var(--font-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+.data-table tbody td,
+.data-table tbody th {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-line-soft);
+  vertical-align: middle;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.data-table tbody th { font-weight: 600; }
+.data-table tbody tr {
+  transition: background 100ms;
+}
+.data-table tbody tr:hover { background: var(--color-panel-2); }
+.data-table tbody tr.row-selected { background: var(--color-info-soft); }
+.data-table tbody tr.row-selected td,
+.data-table tbody tr.row-selected th { border-bottom-color: var(--color-info-line); }
+
+.col-check { width: 36px; }
+.col-check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border: 1px solid var(--color-line-bright);
+  border-radius: var(--radius-xs);
+  background: var(--color-panel-inset);
+  display: grid;
+  place-items: center;
+  margin: 0;
+}
+.col-check input[type="checkbox"]:checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.col-check input[type="checkbox"]:checked::after {
+  content: '';
+  width: 8px; height: 5px;
+  border-left: 1.5px solid var(--color-text-inverse);
+  border-bottom: 1.5px solid var(--color-text-inverse);
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+.col-action { width: 32px; }
+
+.batch-id { font-weight: 600; color: var(--color-text); letter-spacing: 0.02em; }
+.selected-mark { color: var(--color-accent); margin-left: var(--space-1); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.badge-reactor { background: var(--color-panel-3); color: var(--color-text); border: 1px solid var(--color-line); }
+
+.yield-bad { color: var(--color-bad); font-weight: 700; }
+.yield-warn { color: var(--color-warn); font-weight: 700; }
+.yield-good { color: var(--color-good); font-weight: 600; }
+
+.sigma {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+.sigma-bad { color: var(--color-bad); background: var(--color-bad-soft); border-color: var(--color-bad-line); }
+.sigma-warn { color: var(--color-warn); background: var(--color-warn-soft); border-color: var(--color-warn-line); }
+.sigma-good { color: var(--color-good); background: var(--color-good-soft); border-color: var(--color-good-line); }
+
+.cause-chip {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  background: var(--color-panel-3);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-xs);
+  color: var(--color-text-mute);
+}
+
+.conf-row {
+  display: grid;
+  grid-template-columns: 60px 36px;
+  align-items: center;
+  gap: var(--space-2);
+}
+.conf-mini {
+  height: 5px;
+  background: var(--color-panel-inset);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.conf-fill {
+  height: 100%;
+  width: var(--w, 0%);
+  background: linear-gradient(90deg, var(--color-accent), var(--color-good));
+  border-radius: var(--radius-pill);
+}
+.conf-row .mono { font-size: var(--font-xs); color: var(--color-text); font-weight: 600; }
+
+.row-action {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-mute);
+  font-size: var(--font-sm);
+  padding: 0;
+}
+.row-action:hover { background: var(--color-panel-3); color: var(--color-text); border-color: var(--color-line-bright); }
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-panel-deep);
+  border-top: 1px solid var(--color-divider);
+}
+.table-footer-info {
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.06em;
+}
+.table-footer-actions {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+/* =========================================================
+   AUDIT PANEL
+   ========================================================= */
+.audit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-7);
+}
+.audit-trail { min-width: 0; }
+.audit-title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin-top: var(--space-4);
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--color-line-bright), var(--color-line-soft));
+}
+.timeline-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  position: relative;
+}
+.timeline-marker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding-top: 6px;
+}
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-panel);
+  border: 2px solid var(--color-line-bright);
+  position: relative;
+  z-index: 1;
+}
+.timeline-item-done .timeline-dot {
+  background: var(--color-good);
+  border-color: var(--color-good);
+  box-shadow: 0 0 0 3px var(--color-good-soft);
+}
+.timeline-item-pending .timeline-dot {
+  background: var(--color-warn);
+  border-color: var(--color-warn);
+  box-shadow: 0 0 0 3px var(--color-warn-soft);
+}
+.timeline-dot-final::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1px solid var(--color-warn-line);
+  border-radius: var(--radius-pill);
+  animation: pulse-ring 2s infinite;
+}
+@keyframes pulse-ring {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.timeline-title {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+}
+.timeline-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.02em;
+}
+.timeline-date { color: var(--color-text-mute); font-weight: 600; letter-spacing: 0.06em; }
+.timeline-sep { color: var(--color-text-faint); }
+
+.audit-meta { min-width: 0; }
+.meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.meta-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-sm);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-line-soft);
+}
+.meta-row-block {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  border-bottom: none;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-line-soft);
+}
+.meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.meta-block .meta-val {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.meta-block .meta-sub {
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+.meta-val-aux {
+  font-size: var(--font-xs);
+  color: var(--color-text-dim);
+  margin-left: var(--space-2);
+}
+.hash { font-size: var(--font-xs); color: var(--color-text-mute); }
+
+/* =========================================================
+   CONFIRMATION DIALOG (floating)
+   ========================================================= */
+.dialog {
+  position: fixed;
+  top: 84px;
+  right: 24px;
+  width: 360px;
+  background: linear-gradient(180deg, var(--color-panel-2) 0%, var(--color-panel) 100%);
+  border: 1px solid var(--color-good-line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl), var(--shadow-glow-good);
+  z-index: 100;
+  overflow: hidden;
+}
+.dialog::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-good) 50%, transparent);
+  opacity: 0.7;
+}
+.dialog-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-divider);
+  align-items: center;
+}
+.dialog-icon {
+  width: 36px; height: 36px;
+  display: grid;
+  place-items: center;
+  background: var(--color-good-soft);
+  border: 1px solid var(--color-good-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glow-good);
+}
+.dialog-text { min-width: 0; }
+.dialog-title {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-1);
+}
+.dialog-desc {
+  font-size: var(--font-2xs);
+  color: var(--color-text-dim);
+  letter-spacing: 0.06em;
+}
+.dialog-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-mute);
+  font-size: var(--font-xl);
+  line-height: 1;
+  padding: 0;
+  width: 24px; height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+}
+.dialog-close:hover { background: var(--color-panel-3); color: var(--color-text); }
+
+.dialog-body { padding: var(--space-4) var(--space-5); }
+.dialog-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.dialog-item {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--font-xs);
+}
+.dialog-item-text { color: var(--color-text); }
+.dialog-item-status {
+  font-size: var(--font-2xs);
+  color: var(--color-text-mute);
+  letter-spacing: 0.06em;
+  text-align: right;
+}
+.dialog-item-icon .dot { width: 7px; height: 7px; }
+
+.dialog-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-panel-deep);
+  border-top: 1px solid var(--color-divider);
+}
+.dialog-footer .btn { flex: 1; justify-content: center; }
+
+.dialog-progress {
+  height: 3px;
+  background: var(--color-panel-inset);
+}
+.dialog-progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--color-good);
+  box-shadow: var(--shadow-glow-good);
+  animation: dialog-progress 5s linear forwards;
+}
+@keyframes dialog-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Responsive guard - keep 1280px feel even if narrower */
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "hero"
+      "facets"
+      "tabs"
+      "table"
+      "audit";
+  }
+  .dialog { width: calc(100vw - 32px); right: 16px; top: 72px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-main, .hero-detail, .audit-grid, .quick-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+  <main class="workspace" aria-label="Insight investigation workspace">
+
+    <!-- ============================================================
+         TOP BAR (floating strip)
+         ============================================================ -->
+    <header class="panel panel-topbar area-topbar" role="banner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 9 L9 2 L16 9 L9 16 Z" fill="var(--color-accent)"/>
+            <path d="M5 9 L9 5 L13 9 L9 13 Z" fill="var(--color-canvas)"/>
+            <circle cx="9" cy="9" r="1.5" fill="var(--color-accent-hi)"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">Meridian Insight Studio</div>
+          <div class="brand-sub mono">v4.2 · PLANT 04B</div>
+        </div>
+      </div>
+
+      <nav class="breadcrumb" aria-label="Workspace breadcrumb">
+        <span class="crumb">Process Mfg</span>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <span class="crumb">PET Resin · Quality</span>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <span class="crumb">Investigations</span>
+        <span class="crumb-sep" aria-hidden="true">/</span>
+        <span class="crumb crumb-current">
+          YLD-2847
+          <span class="status-tag status-tag-good status-tag-pill">
+            <span class="dot dot-pulse dot-good" aria-hidden="true"></span>
+            LIVE
+          </span>
+        </span>
+      </nav>
+
+      <div class="topbar-tools">
+        <div class="search">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <circle cx="6" cy="6" r="4" stroke="var(--color-text-mute)" fill="none" stroke-width="1.4"/>
+            <path d="M9 9 L12 12" stroke="var(--color-text-mute)" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <input type="search" placeholder="Investigations, batches, tags…" aria-label="Search insights">
+          <kbd class="kbd mono">⌘K</kbd>
+        </div>
+        <button class="icon-button" aria-label="Notifications (3 new)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 1.5 C5.5 1.5 4 3.2 4 6 V9.5 L2.5 11.5 H13.5 L12 9.5 V6 C12 3.2 10.5 1.5 8 1.5 Z" stroke="var(--color-text)" fill="none" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M6 13.5 C6 14.4 6.9 15.2 8 15.2 C9.1 15.2 10 14.4 10 13.5" stroke="var(--color-text)" fill="none" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <span class="notif-badge mono" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-button" aria-label="Help">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" stroke="var(--color-text)" fill="none" stroke-width="1.4"/>
+            <path d="M6 6 C6 4.5 7 3.5 8 3.5 C9 3.5 10 4.5 10 5.5 C10 7 8 7 8 8.5" stroke="var(--color-text)" fill="none" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="8" cy="11" r="0.8" fill="var(--color-text)"/>
+          </svg>
+        </button>
+        <button class="user-chip" aria-label="Account menu">
+          <div class="avatar">SC</div>
+          <div class="user-meta">
+            <span class="user-name">Sarah Chen</span>
+            <span class="user-role">VP MANUFACTURING</span>
+          </div>
+        </button>
+      </div>
+    </header>
+
+    <!-- ============================================================
+         HERO PANEL (the one number + conclusion)
+         ============================================================ -->
+    <section class="panel panel-hero area-hero" aria-labelledby="hero-title">
+      <div class="hero-eyebrow">
+        <span class="eyebrow-tag eyebrow-tag-bad">
+          <span class="dot dot-pulse dot-bad" aria-hidden="true"></span>
+          Investigation concluded
+        </span>
+        <span class="eyebrow-tag eyebrow-tag-good">
+          <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
+            <path d="M1.5 5.5 L4.5 8.5 L9.5 2.5" stroke="var(--color-good)" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Root cause identified
+        </span>
+        <span class="status-tag status-tag-info status-tag-pill">
+          <span class="dot dot-info" aria-hidden="true"></span>
+          Severity critical
+        </span>
+        <span class="eyebrow-meta mono">CASE YLD-2847 · OPENED 14 AUG · CLOSED 22 SEP 2024</span>
+      </div>
+
+      <div class="hero-main">
+        <div class="hero-text">
+          <h1 id="hero-title" class="hero-title">
+            Yield variance in PET resin line traced to
+            <span class="hl">R-4B feed-temperature PID drift</span>
+            across a 39-day window
+          </h1>
+          <p class="hero-sub">
+            A single-reactor excursion is responsible for the
+            <span class="hl-strong">2.4 pp yield gap</span>
+            against the Q2 baseline of 96.6%. Seventeen σ-out-of-tolerance events
+            on feed-temperature TT-401 correlate with <span class="mono">24 of 1,247</span>
+            PET batches between <span class="mono">14 Aug 14:22 UTC</span> and
+            <span class="mono">22 Sep 06:45 UTC</span>.
+            Margin at risk: <span class="mono">$847,200</span> recoverable via CAPA-2024-118.
+          </p>
+        </div>
+
+        <div class="hero-metric" role="group" aria-label="Key metric">
+          <div class="metric-label">Yield gap</div>
+          <div class="metric-value">
+            <span class="trend-arrow trend-down" aria-hidden="true">▼</span>
+            2.4<span class="metric-unit">pp</span>
+          </div>
+          <div class="metric-context">
+            vs Q2 baseline <span class="mono">96.6%</span>
+            <span class="metric-current">
+              now <span class="mono">94.2%</span>
+              <span class="trend-arrow trend-down" aria-hidden="true">▼</span>
+            </span>
+          </div>
+          <div class="metric-bar" aria-hidden="true">
+            <div class="metric-bar-track"></div>
+            <div class="metric-bar-fill"></div>
+            <div class="metric-bar-marker"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-detail">
+        <div class="drivers">
+          <div class="detail-label">
+            <span>Root-cause drivers</span>
+            <span class="detail-count mono">4 of 4 linked</span>
+          </div>
+          <ul class="driver-list">
+            <li class="driver driver-bad">
+              <span class="driver-icon" aria-hidden="true">!</span>
+              <span class="driver-text">R-4B feed temperature exceeded <span class="mono">3.0σ</span> from setpoint on 17 events</span>
+              <span class="driver-pct mono">24/24</span>
+            </li>
+            <li class="driver driver-bad">
+              <span class="driver-icon" aria-hidden="true">!</span>
+              <span class="driver-text">PID controller loop drift — proportional-term offset detected on TT-401</span>
+              <span class="driver-pct mono">24/24</span>
+            </li>
+            <li class="driver driver-warn">
+              <span class="driver-icon" aria-hidden="true">▲</span>
+              <span class="driver-text">IV-GLY feed lot impurity above spec — <span class="mono">8.2</span> vs <span class="mono">≤6.0 ppm</span> aldehyde</span>
+              <span class="driver-pct mono">17/24</span>
+            </li>
+            <li class="driver driver-info">
+              <span class="driver-icon" aria-hidden="true">i</span>
+              <span class="driver-text">Quantified margin at risk: <span class="mono">$847,200</span> recoverable via CAPA-2024-118</span>
+              <span class="driver-pct mono">24/24</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="confidence">
+          <div class="detail-label">
+            <span>Confidence</span>
+            <span class="detail-count mono">94% · high</span>
+          </div>
+          <div class="confidence-bar" role="progressbar" aria-valuenow="94" aria-valuemin="0" aria-valuemax="100" aria-label="Investigation confidence">
+            <div class="confidence-fill"></div>
+          </div>
+          <div class="confidence-meta">
+            <div class="meta-row">
+              <span class="meta-key">Sources used</span>
+              <span class="meta-val mono">4 of 5</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Data points</span>
+              <span class="meta-val mono">12,487</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Cross-checked</span>
+              <span class="meta-val mono">DCS · LIMS · QMS</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Reviewer sign-off</span>
+              <span class="meta-val">
+                <span class="status-tag status-tag-good"><span class="dot dot-good" aria-hidden="true"></span>D. Patel</span>
+              </span>
+            </div>
+          </div>
+          <div class="confidence-sources">
+            <span class="source-chip"><span class="src-dot" style="--c: var(--color-info)"></span>DCS</span>
+            <span class="source-chip"><span class="src-dot" style="--c: var(--color-accent)"></span>LIMS</span>
+            <span class="source-chip"><span class="src-dot" style="--c: var(--color-purple)"></span>QMS</span>
+            <span class="source-chip"><span class="src-dot" style="--c: var(--color-teal)"></span>CMMS</span>
+            <span class="source-chip"><span class="src-dot" style="--c: var(--color-amber)"></span>PI</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button class="btn btn-primary" type="button">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M2 2 H12 V8 L7 12 L2 8 Z" stroke="var(--color-text-inverse)" fill="none" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M5 5 H9 M5 7 H9" stroke="var(--color-text-inverse)" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          Open CAPA plan
+        </button>
+        <button class="btn btn-ghost" type="button">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M2 4 L12 4 L12 11 L2 11 Z M2 4 L7 8 L12 4" stroke="var(--color-text)" fill="none" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+          Notify operations
+        </button>
+        <button class="btn btn-ghost" type="button">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M3 7 H11 M11 7 L8 4 M11 7 L8 10" stroke="var(--color-text)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Export report
+        </button>
+        <button class="btn btn-ghost" type="button">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M7 1 V8 M4 5 L7 8 L10 5 M2 12 H12" stroke="var(--color-text)" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Schedule review
+        </button>
+        <span class="action-spacer"></span>
+        <span class="action-status">
+          <span class="status-tag status-tag-good"><span class="dot dot-pulse dot-good" aria-hidden="true"></span>LIVE</span>
+          <span class="mono">updated 2 min ago</span>
+        </span>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FACETS PANEL (active filters + filter tree)
+         ============================================================ -->
+    <aside class="panel panel-facets area-facets" aria-labelledby="facets-title">
+      <header class="facets-header">
+        <div>
+          <h2 id="facets-title" class="facets-title">Refine investigation</h2>
+          <p class="facets-sub mono">5 ACTIVE · 1,247 BATCHES IN SCOPE</p>
+        </div>
+        <button class="icon-button" aria-label="Reset filters">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M2 7 A5 5 0 1 1 7 12" stroke="var(--color-text-mute)" fill="none" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M2 4 V7 H5" stroke="var(--color-text-mute)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="facets-section">
+        <div class="section-label">
+          <span>Active filters</span>
+          <button class="link-btn" type="button">Clear all (5)</button>
+        </div>
+        <div class="active-filters">
+          <span class="filter-chip">
+            <span class="chip-key">Reactor</span>
+            <span class="chip-val mono">R-4B</span>
+            <button class="chip-x" aria-label="Remove filter Reactor R-4B">×</button>
+          </span>
+          <span class="filter-chip">
+            <span class="chip-key">Product</span>
+            <span class="chip-val mono">PET resin</span>
+            <button class="chip-x" aria-label="Remove filter Product PET resin">×</button>
+          </span>
+          <span class="filter-chip">
+            <span class="chip-key">Period</span>
+            <span class="chip-val mono">Q3 2024</span>
+            <button class="chip-x" aria-label="Remove filter Period Q3 2024">×</button>
+          </span>
+          <span class="filter-chip">
+            <span class="chip-key">Severity</span>
+            <span class="chip-val mono">≥2σ</span>
+            <button class="chip-x" aria-label="Remove filter Severity ≥2σ">×</button>
+          </span>
+          <span class="filter-chip">
+            <span class="chip-key">Stage</span>
+            <span class="chip-val mono">Polymerization</span>
+            <button class="chip-x" aria-label="Remove filter Stage Polymerization">×</button>
+          </span>
+          <button class="filter-chip filter-chip-add" type="button">
+            <span class="plus">+</span> Add facet
+          </button>
+        </div>
+      </div>
+
+      <div class="facets-section">
+        <div class="section-label">
+          <span>Reactor</span>
+          <span class="section-meta mono">5 OF 5 · 547 BATCHES</span>
+        </div>
+        <ul class="facet-list" role="group" aria-label="Reactor filter">
+          <li class="facet-item facet-item-on">
+            <label>
+              <input type="checkbox" checked>
+              <span class="facet-name">R-4A</span>
+              <span class="facet-meta">
+                <span class="facet-status facet-status-good" aria-label="healthy">●</span>
+                <span class="facet-count mono">142</span>
+              </span>
+            </label>
+          </li>
+          <li class="facet-item facet-item-on facet-item-focus">
+            <label>
+              <input type="checkbox" checked>
+              <span class="facet-name">R-4B</span>
+              <span class="facet-meta">
+                <span class="facet-status facet-status-bad" aria-label="critical">●</span>
+                <span class="facet-count mono">24</span>
+              </span>
+            </label>
+            <div class="facet-bar" aria-hidden="true">
+              <div class="facet-bar-fill"></div>
+            </div>
+          </li>
+          <li class="facet-item facet-item-on">
+            <label>
+              <input type="checkbox" checked>
+              <span class="facet-name">R-4C</span>
+              <span class="facet-meta">
+                <span class="facet-status facet-status-good" aria-label="healthy">●</span>
+                <span class="facet-count mono">168</span>
+              </span>
+            </label>
+          </li>
+          <li class="facet-item facet-item-on">
+            <label>
+              <input type="checkbox" checked>
+              <span class="facet-name">R-5A</span>
+              <span class="facet-meta">
+                <span class="facet-status facet-status-warn" aria-label="warning">●</span>
+                <span class="facet-count mono">89</span>
+              </span>
+            </label>
+          </li>
+          <li class="facet-item facet-item-on">
+            <label>
+              <input type="checkbox" checked>
+              <span class="facet-name">R-5B</span>
+              <span class="facet-meta">
+                <span class="facet-status facet-status-good" aria-label="healthy">●</span>
+                <span class="facet-count mono">124</span>
+              </span>
+            </label>
+          </li>
+        </ul>
+      </div>
+
+      <div class="facets-section">
+        <div class="section-label">
+          <span>Stage</span>
+          <span class="section-meta mono">4 OF 7</span>
+        </div>
+        <ul class="facet-list" role="group" aria-label="Stage filter">
+          <li class="facet-item"><label><input type="checkbox"><span class="facet-name">Charging</span><span class="facet-meta"><span class="facet-count mono">47</span></span></label></li>
+          <li class="facet-item facet-item-on facet-item-focus">
+            <label>
+              <input type="checkbox" checked>
+              <span class="facet-name">Polymerization</span>
+              <span class="facet-meta">
+                <span class="facet-status facet-status-bad" aria-label="critical">●</span>
+                <span class="facet-count mono">24</span>
+              </span>
+            </label>
+          </li>
+          <li class="facet-item"><label><input type="checkbox"><span class="facet-name">Separation</span><span class="facet-meta"><span class="facet-count mono">8</span></span></label></li>
+          <li class="facet-item"><label><input type="checkbox"><span class="facet-name">Purification</span><span class="facet-meta"><span class="facet-count mono">12</span></span></label></li>
+        </ul>
+      </div>
+
+      <div class="facets-section">
+        <div class="section-label">
+          <span>Product line</span>
+          <span class="section-meta mono">3 LINES</span>
+        </div>
+        <div class="product-grid">
+          <div class="product-card product-card-on">
+            <span class="product-name">PET resin</span>
+            <div class="product-meta">
+              <span class="mono">24</span>
+              <span class="product-trend trend-down" aria-label="downtrend">▼</span>
+            </div>
+          </div>
+          <div class="product-card">
+            <span class="product-name">PBT</span>
+            <div class="product-meta">
+              <span class="mono">8</span>
+              <span class="product-trend trend-flat" aria-label="flat">—</span>
+            </div>
+          </div>
+          <div class="product-card">
+            <span class="product-name">PA66</span>
+            <div class="product-meta">
+              <span class="mono">3</span>
+              <span class="product-trend trend-up" aria-label="uptrend">▲</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="facets-section">
+        <div class="section-label">
+          <span>Date range</span>
+          <span class="section-meta mono">39 DAYS</span>
+        </div>
+        <div class="date-range">
+          <div class="date-readout">
+            <div class="date-block">
+              <div class="date-key">FROM</div>
+              <div class="date-val mono">Aug 14, 14:22</div>
+            </div>
+            <div class="date-arrow" aria-hidden="true">→</div>
+            <div class="date-block">
+              <div class="date-key">TO</div>
+              <div class="date-val mono">Sep 22, 06:45</div>
+            </div>
+          </div>
+          <div class="date-slider" role="slider" aria-label="Date range" aria-valuemin="0" aria-valuemax="39" aria-valuenow="39" tabindex="0">
+            <div class="slider-track"></div>
+            <div class="slider-fill"></div>
+            <div class="slider-thumb slider-thumb-start" aria-hidden="true"></div>
+            <div class="slider-thumb slider-thumb-end" aria-hidden="true"></div>
+            <span class="slider-event" style="--pos: 14%" aria-label="event"></span>
+            <span class="slider-event" style="--pos: 28%" aria-label="event"></span>
+            <span class="slider-event" style="--pos: 41%" aria-label="event"></span>
+            <span class="slider-event" style="--pos: 58%" aria-label="event"></span>
+            <span class="slider-event" style="--pos: 76%" aria-label="event"></span>
+            <span class="slider-event" style="--pos: 89%" aria-label="event"></span>
+          </div>
+          <div class="date-ticks mono" aria-hidden="true">
+            <span>Aug 14</span>
+            <span>Aug 28</span>
+            <span>Sep 11</span>
+            <span>Sep 22</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="facets-section">
+        <div class="section-label">
+          <span>Severity threshold</span>
+          <span class="section-meta mono">≥2σ</span>
+        </div>
+        <div class="severity" role="group" aria-label="Severity threshold">
+          <button class="sev-btn sev-btn-on" type="button">
+            <span class="dot dot-bad" aria-hidden="true"></span>
+            ≥ 2σ deviations
+            <span class="sev-count mono">24</span>
+          </button>
+          <button class="sev-btn" type="button">
+            <span class="dot dot-bad" aria-hidden="true"></span>
+            ≥ 3σ deviations
+            <span class="sev-count mono">8</span>
+          </button>
+          <button class="sev-btn" type="button">
+            <span class="dot dot-bad" aria-hidden="true"></span>
+            Critical only
+            <span class="sev-count mono">3</span>
+          </button>
+        </div>
+      </div>
+
+      <footer class="facets-footer">
+        <button class="btn btn-ghost btn-small" type="button">Save preset</button>
+        <button class="btn btn-primary btn-small" type="button">Apply · re-run</button>
+      </footer>
+    </aside>
+
+    <!-- ============================================================
+         TABS + KPI PANEL
+         ============================================================ -->
+    <section class="panel panel-tabs area-tabs" aria-labelledby="tabs-title">
+      <h2 id="tabs-title" class="sr-only">Investigation views</h2>
+
+      <div class="tablist-wrap">
+        <div role="tablist" aria-label="Investigation views" class="tablist">
+          <button role="tab" id="tab-overview" aria-selected="true" aria-controls="panel-overview" tabindex="0" class="tab-button tab-button-active" type="button">
+            <span>Overview</span>
+            <span class="tab-count mono"></span>
+          </button>
+          <button role="tab" id="tab-batches" aria-selected="false" aria-controls="panel-batches" tabindex="-1" class="tab-button" type="button">
+            <span>Affected batches</span>
+            <span class="tab-count mono">24</span>
+          </button>
+          <button role="tab" id="tab-trend" aria-selected="false" aria-controls="panel-trend" tabindex="-1" class="tab-button" type="button">
+            <span>Trend analysis</span>
+            <span class="tab-count mono"></span>
+          </button>
+          <button role="tab" id="tab-compare" aria-selected="false" aria-controls="panel-compare" tabindex="-1" class="tab-button" type="button">
+            <span>Compare reactors</span>
+            <span class="tab-count mono"></span>
+          </button>
+          <button role="tab" id="tab-evidence" aria-selected="false" aria-controls="panel-evidence" tabindex="-1" class="tab-button" type="button">
+            <span>Evidence</span>
+            <span class="tab-count mono">12</span>
+          </button>
+          <button role="tab" id="tab-capa" aria-selected="false" aria-controls="panel-capa" tabindex="-1" class="tab-button" type="button">
+            <span>CAPA plan</span>
+            <span class="tab-count mono"></span>
+          </button>
+        </div>
+        <div class="tab-tools">
+          <span class="sync-tag">
+            <span class="dot dot-pulse dot-good" aria-hidden="true"></span>
+            Synced · 14:38 UTC
+          </span>
+        </div>
+      </div>
+
+      <div role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" class="tabpanel">
+        <div class="kpi-grid">
+
+          <div class="kpi-card kpi-card-bad">
+            <div class="kpi-header">
+              <span class="kpi-label">Yield rate</span>
+              <span class="status-tag status-tag-bad"><span class="dot dot-bad" aria-hidden="true"></span>Critical</span>
+            </div>
+            <div class="kpi-value">
+              <span class="kpi-num mono">94.2%</span>
+              <span class="kpi-trend trend-down"><span class="trend-arrow">▼</span>2.4pp</span>
+            </div>
+            <div class="kpi-context">vs Q2 baseline <span class="mono">96.6%</span> · 24 affected batches</div>
+            <svg class="sparkline" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="grad-bad" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="var(--color-bad)" stop-opacity="0.32"/>
+                  <stop offset="1" stop-color="var(--color-bad)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,8 L12,10 L24,12 L36,8 L48,15 L60,18 L72,14 L84,22 L96,20 L108,26 L120,28 L120,32 L0,32 Z" fill="url(#grad-bad)"/>
+              <path d="M0,8 L12,10 L24,12 L36,8 L48,15 L60,18 L72,14 L84,22 L96,20 L108,26 L120,28" stroke="var(--color-bad)" fill="none" stroke-width="1.6"/>
+              <circle cx="120" cy="28" r="2.5" fill="var(--color-bad)"/>
+            </svg>
+          </div>
+
+          <div class="kpi-card kpi-card-bad">
+            <div class="kpi-header">
+              <span class="kpi-label">Out-of-spec rate</span>
+              <span class="status-tag status-tag-bad"><span class="dot dot-bad" aria-hidden="true"></span>Critical</span>
+            </div>
+            <div class="kpi-value">
+              <span class="kpi-num mono">2.1%</span>
+              <span class="kpi-trend trend-down"><span class="trend-arrow">▲</span>1.2pp</span>
+            </div>
+            <div class="kpi-context">Target ≤ <span class="mono">0.8%</span> · 27 OOS events in window</div>
+            <svg class="sparkline" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="grad-bad-2" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="var(--color-bad)" stop-opacity="0.32"/>
+                  <stop offset="1" stop-color="var(--color-bad)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,28 L12,26 L24,22 L36,24 L48,18 L60,20 L72,14 L84,16 L96,8 L108,10 L120,4 L120,32 L0,32 Z" fill="url(#grad-bad-2)"/>
+              <path d="M0,28 L12,26 L24,22 L36,24 L48,18 L60,20 L72,14 L84,16 L96,8 L108,10 L120,4" stroke="var(--color-bad)" fill="none" stroke-width="1.6"/>
+              <circle cx="120" cy="4" r="2.5" fill="var(--color-bad)"/>
+            </svg>
+          </div>
+
+          <div class="kpi-card kpi-card-warn">
+            <div class="kpi-header">
+              <span class="kpi-label">Overall equipment effectiveness</span>
+              <span class="status-tag status-tag-warn"><span class="dot dot-warn" aria-hidden="true"></span>Watch</span>
+            </div>
+            <div class="kpi-value">
+              <span class="kpi-num mono">87.4%</span>
+              <span class="kpi-trend trend-down"><span class="trend-arrow">▼</span>0.4pp</span>
+            </div>
+            <div class="kpi-context">vs Q2 <span class="mono">87.8%</span> · world-class ≥85%</div>
+            <svg class="sparkline" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0,14 L12,12 L24,16 L36,14 L48,18 L60,12 L72,16 L84,14 L96,18 L108,16 L120,14" stroke="var(--color-warn)" fill="none" stroke-width="1.6"/>
+              <circle cx="120" cy="14" r="2.5" fill="var(--color-warn)"/>
+              <path d="M0,20 L120,20" stroke="var(--color-line-soft)" stroke-width="0.5" stroke-dasharray="2 2"/>
+            </svg>
+          </div>
+
+          <div class="kpi-card kpi-card-good">
+            <div class="kpi-header">
+              <span class="kpi-label">Recoverable margin</span>
+              <span class="status-tag status-tag-good"><span class="dot dot-good" aria-hidden="true"></span>Recoverable</span>
+            </div>
+            <div class="kpi-value">
+              <span class="kpi-num mono">$847K</span>
+              <span class="kpi-trend trend-up"><span class="trend-arrow">▲</span>12.4%</span>
+            </div>
+            <div class="kpi-context">Across 24 batches · <span class="mono">$35.3K</span> avg per batch</div>
+            <svg class="sparkline" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="grad-good" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="var(--color-good)" stop-opacity="0.32"/>
+                  <stop offset="1" stop-color="var(--color-good)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,24 L12,22 L24,20 L36,18 L48,16 L60,14 L72,12 L84,10 L96,8 L108,6 L120,4 L120,32 L0,32 Z" fill="url(#grad-good)"/>
+              <path d="M0,24 L12,22 L24,20 L36,18 L48,16 L60,14 L72,12 L84,10 L96,8 L108,6 L120,4" stroke="var(--color-good)" fill="none" stroke-width="1.6"/>
+              <circle cx="120" cy="4" r="2.5" fill="var(--color-good)"/>
+            </svg>
+          </div>
+
+        </div>
+
+        <div class="quick-row">
+          <div class="quick-block">
+            <div class="quick-label">Effect size distribution · 24 batches</div>
+            <div class="quick-bar" aria-label="Effect size stacked bar">
+              <span class="quick-segment quick-segment-bad" style="--w: 35%"><span class="quick-val">−2.4pp</span></span>
+              <span class="quick-segment quick-segment-warn" style="--w: 12%"></span>
+              <span class="quick-segment quick-segment-good" style="--w: 53%"></span>
+            </div>
+            <div class="quick-legend mono" aria-hidden="true">
+              <span>Critical (35%)</span>
+              <span>Borderline (12%)</span>
+              <span>Within spec (53%)</span>
+            </div>
+          </div>
+
+          <div class="quick-block">
+            <div class="quick-label">Deviation by process stage</div>
+            <div class="stage-bars">
+              <div class="stage-row">
+                <span class="stage-key">Charging</span>
+                <div class="stage-bar"><div class="stage-fill" style="--w: 8%"></div></div>
+                <span class="stage-val mono">8%</span>
+              </div>
+              <div class="stage-row">
+                <span class="stage-key">Polymerization</span>
+                <div class="stage-bar"><div class="stage-fill stage-fill-bad" style="--w: 96%"></div></div>
+                <span class="stage-val mono">96%</span>
+              </div>
+              <div class="stage-row">
+                <span class="stage-key">Separation</span>
+                <div class="stage-bar"><div class="stage-fill" style="--w: 4%"></div></div>
+                <span class="stage-val mono">4%</span>
+              </div>
+              <div class="stage-row">
+                <span class="stage-key">Purification</span>
+                <div class="stage-bar"><div class="stage-fill" style="--w: 2%"></div></div>
+                <span class="stage-val mono">2%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         BATCHES TABLE PANEL
+         ============================================================ -->
+    <section class="panel panel-table area-table" aria-labelledby="table-title">
+      <header class="table-header">
+        <div>
+          <h2 id="table-title" class="table-title">
+            Affected batches
+            <span class="status-tag status-tag-bad status-tag-pill">
+              <span class="dot dot-bad" aria-hidden="true"></span>
+              24 of 1,247
+            </span>
+          </h2>
+          <p class="table-sub">
+            <span>SHOWING 6 · SORTED BY σ-DEVIATION DESC</span>
+            <span aria-hidden="true">·</span>
+            <span>SOURCE: DCS · LIMS · QMS</span>
+            <span aria-hidden="true">·</span>
+            <span class="status-tag status-tag-info"><span class="dot dot-pulse dot-info" aria-hidden="true"></span>streaming</span>
+          </p>
+        </div>
+        <div class="table-tools">
+          <div class="filter-pills" role="group" aria-label="Status quick filters">
+            <button class="pill pill-on" type="button">All (24)</button>
+            <button class="pill pill-bad" type="button">Critical (12)</button>
+            <button class="pill pill-warn" type="button">Warn (8)</button>
+            <button class="pill pill-info" type="button">Monitor (4)</button>
+            <button class="pill pill-good" type="button">Resolved (3)</button>
+          </div>
+          <button class="icon-button" aria-label="Export table">
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path d="M7 2 V9 M4 6 L7 9 L10 6 M3 12 H11" stroke="var(--color-text-mute)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Affected batches">
+          <thead>
+            <tr>
+              <th scope="col" class="col-check"><input type="checkbox" aria-label="Select all rows"></th>
+              <th scope="col">Batch ID</th>
+              <th scope="col">Run date</th>
+              <th scope="col">Reactor</th>
+              <th scope="col">Stage</th>
+              <th scope="col">Feed T</th>
+              <th scope="col">Yield</th>
+              <th scope="col">σ-dev</th>
+              <th scope="col">Status</th>
+              <th scope="col">Confidence</th>
+              <th scope="col">Primary cause</th>
+              <th scope="col" class="col-action"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row-critical">
+              <td><input type="checkbox" aria-label="Select batch RX-2871"></td>
+              <th scope="row"><span class="batch-id mono">RX-2871</span></th>
+              <td><span class="mono">Aug 14 14:22</span></td>
+              <td><span class="badge badge-reactor">R-4B</span></td>
+              <td>Polymerization</td>
+              <td><span class="mono">247.8 °C</span></td>
+              <td><span class="mono yield-bad">91.2%</span> <span class="trend-arrow trend-down" aria-label="down">▼</span></td>
+              <td><span class="sigma sigma-bad mono">−3.4σ</span></td>
+              <td><span class="status-tag status-tag-bad"><span class="dot dot-pulse dot-bad" aria-hidden="true"></span>Critical</span></td>
+              <td>
+                <div class="conf-row">
+                  <div class="conf-mini" role="progressbar" aria-valuenow="96" aria-valuemin="0" aria-valuemax="100" aria-label="Confidence 96%"><div class="conf-fill"></div></div>
+                  <span class="mono">96%</span>
+                </div>
+              </td>
+              <td><span class="cause-chip">Feed T drift</span></td>
+              <td><button class="row-action" aria-label="Open batch RX-2871">→</button></td>
+            </tr>
+
+            <tr class="row-critical row-selected">
+              <td><input type="checkbox" checked aria-label="Select batch RX-2874"></td>
+              <th scope="row">
+                <span class="batch-id mono">RX-2874</span>
+                <span class="selected-mark mono" aria-label="selected">●</span>
+              </th>
+              <td><span class="mono">Aug 16 09:01</span></td>
+              <td><span class="badge badge-reactor">R-4B</span></td>
+              <td>Polymerization</td>
+              <td><span class="mono">245.2 °C</span></td>
+              <td><span class="mono yield-bad">92.8%</span> <span class="trend-arrow trend-down" aria-label="down">▼</span></td>
+              <td><span class="sigma sigma-bad mono">−2.9σ</span></td>
+              <td><span class="status-tag status-tag-bad"><span class="dot dot-bad" aria-hidden="true"></span>Critical</span></td>
+              <td>
+                <div class="conf-row">
+                  <div class="conf-mini" role="progressbar" aria-valuenow="94" aria-valuemin="0" aria-valuemax="100" aria-label="Confidence 94%"><div class="conf-fill"></div></div>
+                  <span class="mono">94%</span>
+                </div>
+              </td>
+              <td><span class="cause-chip">PID offset</span></td>
+              <td><button class="row-action" aria-label="Open batch RX-2874">→</button></td>
+            </tr>
+
+            <tr class="row-critical">
+              <td><input type="checkbox" aria-label="Select batch RX-2879"></td>
+              <th scope="row"><span class="batch-id mono">RX-2879</span></th>
+              <td><span class="mono">Aug 19 06:45</span></td>
+              <td><span class="badge badge-reactor">R-4B</span></td>
+              <td>Polymerization</td>
+              <td><span class="mono">244.1 °C</span></td>
+              <td><span class="mono yield-bad">93.1%</span> <span class="trend-arrow trend-down" aria-label="down">▼</span></td>
+              <td><span class="sigma sigma-bad mono">−2.6σ</span></td>
+              <td><span class="status-tag status-tag-bad"><span class="dot dot-bad" aria-hidden="true"></span>Critical</span></td>
+              <td>
+                <div class="conf-row">
+                  <div class="conf-mini" role="progressbar" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100" aria-label="Confidence 89%"><div class="conf-fill"></div></div>
+                  <span class="mono">89%</span>
+                </div>
+              </td>
+              <td><span class="cause-chip">Feed T drift</span></td>
+              <td><button class="row-action" aria-label="Open batch RX-2879">→</button></td>
+            </tr>
+
+            <tr class="row-warn">
+              <td><input type="checkbox" aria-label="Select batch RX-2881"></td>
+              <th scope="row"><span class="batch-id mono">RX-2881</span></th>
+              <td><span class="mono">Aug 22 11:18</span></td>
+              <td><span class="badge badge-reactor">R-4B</span></td>
+              <td>Polymerization</td>
+              <td><span class="mono">242.7 °C</span></td>
+              <td><span class="mono yield-warn">94.7%</span> <span class="trend-arrow trend-down" aria-label="down">▼</span></td>
+              <td><span class="sigma sigma-warn mono">−2.1σ</span></td>
+              <td><span class="status-tag status-tag-warn"><span class="dot dot-warn" aria-hidden="true"></span>Warn</span></td>
+              <td>
+                <div class="conf-row">
+                  <div class="conf-mini" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="Confidence 82%"><div class="conf-fill"></div></div>
+                  <span class="mono">82%</span>
+                </div>
+              </td>
+              <td><span class="cause-chip">IV-GLY impurity</span></td>
+              <td><button class="row-action" aria-label="Open batch RX-2881">→</button></td>
+            </tr>
+
+            <tr class="row-info">
+              <td><input type="checkbox" aria-label="Select batch RX-2888"></td>
+              <th scope="row"><span class="batch-id mono">RX-2888</span></th>
+              <td><span class="mono">Sep 03 18:32</span></td>
+              <td><span class="badge badge-reactor">R-4B</span></td>
+              <td>Polymerization</td>
+              <td><span class="mono">241.3 °C</span></td>
+              <td><span class="mono yield-warn">95.4%</span> <span class="trend-arrow trend-flat" aria-label="flat">—</span></td>
+              <td><span class="sigma sigma-warn mono">−1.4σ</span></td>
+              <td><span class="status-tag status-tag-info"><span class="dot dot-info" aria-hidden="true"></span>Monitor</span></td>
+              <td>
+                <div class="conf-row">
+                  <div class="conf-mini" role="progressbar" aria-valuenow="71" aria-valuemin="0" aria-valuemax="100" aria-label="Confidence 71%"><div class="conf-fill"></div></div>
+                  <span class="mono">71%</span>
+                </div>
+              </td>
+              <td><span class="cause-chip">Loop tuning</span></td>
+              <td><button class="row-action" aria-label="Open batch RX-2888">→</button></td>
+            </tr>
+
+            <tr class="row-good">
+              <td><input type="checkbox" aria-label="Select batch RX-2895"></td>
+              <th scope="row"><span class="batch-id mono">RX-2895</span></th>
+              <td><span class="mono">Sep 19 22:04</span></td>
+              <td><span class="badge badge-reactor">R-4B</span></td>
+              <td>Polymerization</td>
+              <td><span class="mono">240.2 °C</span></td>
+              <td><span class="mono yield-good">96.0%</span> <span class="trend-arrow trend-up" aria-label="up">▲</span></td>
+              <td><span class="sigma sigma-good mono">−0.6σ</span></td>
+              <td><span class="status-tag status-tag-good"><span class="dot dot-good" aria-hidden="true"></span>Resolved</span></td>
+              <td>
+                <div class="conf-row">
+                  <div class="conf-mini" role="progressbar" aria-valuenow="94" aria-valuemin="0" aria-valuemax="100" aria-label="Confidence 94%"><div class="conf-fill"></div></div>
+                  <span class="mono">94%</span>
+                </div>
+              </td>
+              <td><span class="cause-chip">PID re-tuned</span></td>
+              <td><button class="row-action" aria-label="Open batch RX-2895">→</button></td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="table-footer">
+        <div class="table-footer-info mono">
+          SHOWING 6 OF 24 · 18 BATCHES IN WINDOW NOT VISIBLE · 1 ROW SELECTED
+        </div>
+        <div class="table-footer-actions">
+          <button class="link-btn" type="button">View all 24</button>
+          <button class="link-btn" type="button">Export selection</button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- ============================================================
+         AUDIT TRAIL PANEL
+         ============================================================ -->
+    <section class="panel panel-audit area-audit" aria-labelledby="audit-title">
+      <div class="audit-grid">
+        <div class="audit-trail">
+          <div class="section-label">
+            <h2 id="audit-title" class="audit-title">Investigation trail</h2>
+            <span class="section-meta mono">5 STEPS · 39 DAYS · SIGNED</span>
+          </div>
+          <ol class="timeline">
+            <li class="timeline-item timeline-item-done">
+              <div class="timeline-marker" aria-hidden="true"><span class="timeline-dot"></span></div>
+              <div class="timeline-content">
+                <div class="timeline-title">Anomaly detected — R-4B yield deviation below 2σ envelope</div>
+                <div class="timeline-meta">
+                  <span class="timeline-date">AUG 14 14:22</span>
+                  <span class="timeline-sep">·</span>
+                  <span>auto-flagged by Yield Sentinel v3.1</span>
+                  <span class="timeline-sep">·</span>
+                  <span class="status-tag status-tag-info"><span class="dot dot-info" aria-hidden="true"></span>Automated</span>
+                </div>
+              </div>
+            </li>
+
+            <li class="timeline-item timeline-item-done">
+              <div class="timeline-marker" aria-hidden="true"><span class="timeline-dot"></span></div>
+              <div class="timeline-content">
+                <div class="timeline-title">Hypothesis set generated — feed-temperature variance ranked primary</div>
+                <div class="timeline-meta">
+                  <span class="timeline-date">AUG 16 11:04</span>
+                  <span class="timeline-sep">·</span>
+                  <span>3 hypotheses · LLM-assisted triage</span>
+                  <span class="timeline-sep">·</span>
+                  <span class="status-tag status-tag-info"><span class="dot dot-info" aria-hidden="true"></span>Assisted</span>
+                </div>
+              </div>
+            </li>
+
+            <li class="timeline-item timeline-item-done">
+              <div class="timeline-marker" aria-hidden="true"><span class="timeline-dot"></span></div>
+              <div class="timeline-content">
+                <div class="timeline-title">Cross-referenced 47 batches against DCS historian + LIMS</div>
+                <div class="timeline-meta">
+                  <span class="timeline-date">AUG 23 16:48</span>
+                  <span class="timeline-sep">·</span>
+                  <span>12,487 data points · 8,247 features</span>
+                  <span class="timeline-sep">·</span>
+                  <span class="status-tag status-tag-good"><span class="dot dot-good" aria-hidden="true"></span>Confirmed</span>
+                </div>
+              </div>
+            </li>
+
+            <li class="timeline-item timeline-item-done">
+              <div class="timeline-marker" aria-hidden="true"><span class="timeline-dot"></span></div>
+              <div class="timeline-content">
+                <div class="timeline-title">PID drift root cause validated via bench-test on TT-401 sensor</div>
+                <div class="timeline-meta">
+                  <span class="timeline-date">SEP 18 09:30</span>
+                  <span class="timeline-sep">·</span>
+                  <span>Manual bench-test correlation by D. Patel</span>
+                  <span class="timeline-sep">·</span>
+                  <span class="status-tag status-tag-good"><span class="dot dot-good" aria-hidden="true"></span>Confirmed</span>
+                </div>
+              </div>
+            </li>
+
+            <li class="timeline-item timeline-item-pending">
+              <div class="timeline-marker" aria-hidden="true"><span class="timeline-dot timeline-dot-final"></span></div>
+              <div class="timeline-content">
+                <div class="timeline-title">CAPA-2024-118 drafted — pending ops review</div>
+                <div class="timeline-meta">
+                  <span class="timeline-date">SEP 22 06:45</span>
+                  <span class="timeline-sep">·</span>
+                  <span>PID loop retune + IV-GLY lot quarantine</span>
+                  <span class="timeline-sep">·</span>
+                  <span class="status-tag status-tag-warn"><span class="dot dot-pulse dot-warn" aria-hidden="true"></span>Pending</span>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <div class="audit-meta">
+          <div class="section-label">
+            <span>Case metadata</span>
+            <span class="section-meta mono">v3 · IMMUTABLE</span>
+          </div>
+          <div class="meta-list">
+            <div class="meta-row meta-row-block">
+              <div class="meta-block">
+                <div class="meta-key">Investigator</div>
+                <div class="meta-val">
+                  <div class="avatar avatar-sm">SC</div>
+                  <div>
+                    <div>Sarah Chen</div>
+                    <div class="meta-sub mono">VP MANUFACTURING</div>
+                  </div>
+                </div>
+              </div>
+              <div class="meta-block">
+                <div class="meta-key">Reviewer</div>
+                <div class="meta-val">
+                  <div class="avatar avatar-sm avatar-purple">DP</div>
+                  <div>
+                    <div>Daniel Patel</div>
+                    <div class="meta-sub mono">PROCESS ENGINEER</div>
+                  </div>
+                </div>
+              </div>
+              <div class="meta-block">
+                <div class="meta-key">Notified</div>
+                <div class="meta-val">
+                  <div class="avatar avatar-sm avatar-teal">MO</div>
+                  <div>
+                    <div>M. Okonkwo</div>
+                    <div class="meta-sub mono">PLANT OPS LEAD</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="meta-row">
+              <span class="meta-key">Linked CAPA</span>
+              <span class="meta-val">
+                <span class="status-tag status-tag-info"><span class="dot dot-info" aria-hidden="true"></span>CAPA-2024-118</span>
+              </span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">SLA status</span>
+              <span class="meta-val">
+                <span class="status-tag status-tag-good"><span class="dot dot-good" aria-hidden="true"></span>Within SLA</span>
+                <span class="meta-val-aux mono">12 days remaining</span>
+              </span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Last sync</span>
+              <span class="meta-val mono">14:38:42 UTC · 2 min ago</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Version</span>
+              <span class="meta-val mono">v3.2 · signed by D. Patel</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Content hash</span>
+              <span class="meta-val hash mono">0x7f3a · 8c4e9b · d2a1f0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       CONFIRMATION DIALOG (floating, just-promoted notification)
+       ============================================================ -->
+  <div role="dialog" aria-labelledby="dialog-title" aria-describedby="dialog-desc" aria-modal="false" class="dialog">
+    <header class="dialog-header">
+      <div class="dialog-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 22 22">
+          <circle cx="11" cy="11" r="11" fill="var(--color-good-soft)"/>
+          <path d="M6 11 L10 15 L16 7" stroke="var(--color-good)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="dialog-text">
+        <h2 id="dialog-title" class="dialog-title">Investigation promoted to Insight</h2>
+        <p id="dialog-desc" class="dialog-desc mono">YLD-2847 · SAVED 14:38:42 UTC</p>
+      </div>
+      <button class="dialog-close" aria-label="Dismiss notification" type="button">×</button>
+    </header>
+
+    <div class="dialog-body">
+      <div class="dialog-list">
+        <div class="dialog-item">
+          <span class="dialog-item-icon" aria-hidden="true"><span class="dot dot-good"></span></span>
+          <span class="dialog-item-text">YLD-2847 now live in Insight Hub</span>
+          <span class="dialog-item-status mono">SYNCED</span>
+        </div>
+        <div class="dialog-item">
+          <span class="dialog-item-icon" aria-hidden="true"><span class="dot dot-good"></span></span>
+          <span class="dialog-item-text">4 evidence nodes linked to root cause</span>
+          <span class="dialog-item-status mono">+4 NODES</span>
+        </div>
+        <div class="dialog-item">
+          <span class="dialog-item-icon" aria-hidden="true"><span class="dot dot-good"></span></span>
+          <span class="dialog-item-text">2 collaborators notified</span>
+          <span class="dialog-item-status mono">D. PATEL · M. OKONKWO</span>
+        </div>
+        <div class="dialog-item">
+          <span class="dialog-item-icon" aria-hidden="true"><span class="dot dot-info"></span></span>
+          <span class="dialog-item-text">CAPA-2024-118 workflow queued</span>
+          <span class="dialog-item-status mono">QUEUED</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="dialog-footer">
+      <button class="btn btn-ghost btn-small" type="button">Undo</button>
+      <button class="btn btn-primary btn-small" type="button">Open in Hub →</button>
+    </footer>
+
+    <div class="dialog-progress" aria-hidden="true">
+      <div class="dialog-progress-fill"></div>
+    </div>
+  </div>
+
+</body>
+</html>

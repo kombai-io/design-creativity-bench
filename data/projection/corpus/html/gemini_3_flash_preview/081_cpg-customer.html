@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vantage CPG | Customer Directory & Ledger</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-accent: #f1f5f9;
+            --error-red: #ef4444;
+            --error-bg: #fef2f2;
+            --success-green: #22c55e;
+            --warning-amber: #f59e0b;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --accent-blue: #3b82f6;
+            --overlay-bg: rgba(255, 255, 255, 0.85);
+
+            /* Typography */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-size-h1: 2.25rem;
+            --font-size-h2: 1.5rem;
+            --font-size-base: 1rem;
+            --font-size-sm: 0.875rem;
+            --font-size-xl: 1.25rem;
+
+            /* Spacing */
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 2rem;
+            --spacing-lg: 4rem;
+            --spacing-xl: 6rem;
+
+            /* Borders & Shadows */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.75rem;
+            --radius-lg: 1.5rem;
+            --radius-pill: 9999px;
+            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-heavy: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Layout Grid */
+        .app-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            grid-template-rows: 80px 1fr 100px;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Section 1: Header */
+        .header {
+            grid-column: 1 / -1;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-md);
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--accent-blue);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .brand-name {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        /* Section 2: Sidebar (Intro/Onboarding) */
+        .sidebar {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .onboarding-card {
+            background-color: var(--bg-accent);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+        }
+
+        .onboarding-card h2 {
+            font-size: var(--font-size-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .onboarding-card p {
+            font-size: var(--font-size-sm);
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        /* Section 3: Main Data Grid Container */
+        .main-content {
+            position: relative;
+            background-color: var(--bg-primary);
+            overflow: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-secondary);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: var(--spacing-sm) var(--spacing-md);
+            background-color: var(--bg-accent);
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+            font-size: var(--font-size-base);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+
+        .status-active { background-color: var(--bg-accent); color: var(--text-secondary); }
+
+        /* Section 4: Error State Overlay */
+        .error-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: var(--overlay-bg);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+            z-index: 20;
+        }
+
+        .error-card {
+            background-color: var(--bg-secondary);
+            border: 2px solid var(--error-red);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            max-width: 600px;
+            text-align: center;
+            box-shadow: var(--shadow-heavy);
+        }
+
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            background-color: var(--error-bg);
+            color: var(--error-red);
+            border-radius: var(--radius-pill);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--spacing-md);
+        }
+
+        .error-title {
+            font-size: var(--font-size-h2);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .error-message {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+            line-height: 1.6;
+        }
+
+        .action-button {
+            background-color: var(--text-primary);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: var(--font-size-base);
+            transition: opacity 0.2s;
+        }
+
+        .action-button:hover {
+            opacity: 0.9;
+        }
+
+        .secondary-button {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            margin-left: var(--spacing-sm);
+        }
+
+        /* Section 5: Connection Monitor (Footer) */
+        .footer {
+            grid-column: 1 / -1;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-md);
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .pulse {
+            width: 10px;
+            height: 10px;
+            background-color: var(--error-red);
+            border-radius: var(--radius-pill);
+            animation: pulse-animation 2s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.4; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: var(--spacing-lg);
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .metric-value {
+            font-weight: 700;
+            font-size: var(--font-size-sm);
+        }
+
+        /* Section 6: Quick Filters */
+        .filter-strip {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .filter-tag {
+            padding: 4px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .filter-tag.active {
+            background-color: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        /* Visual assets */
+        svg { fill: currentColor; }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- HEADER -->
+        <header class="header">
+            <div class="brand">
+                <div class="brand-icon">V</div>
+                <span class="brand-name">VANTAGE DIRECTORY</span>
+            </div>
+            <div class="user-profile" style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                <div style="text-align: right;">
+                    <p style="font-size: var(--font-size-sm); font-weight: 600;">Marcus Thorne</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);">Logistics Lead</p>
+                </div>
+                <div style="width: 40px; height: 40px; border-radius: var(--radius-pill); background-color: var(--border-color);"></div>
+            </div>
+        </header>
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="onboarding-card">
+                <h2>New to Vantage?</h2>
+                <p>This directory tracks real-time customer engagement across all CPG distribution nodes. Use the grid to filter by regional fulfillment status.</p>
+            </div>
+
+            <div class="onboarding-card">
+                <h2>Quick Shortcuts</h2>
+                <nav>
+                    <ul style="list-style: none; font-size: var(--font-size-sm); color: var(--accent-blue); cursor: pointer;">
+                        <li style="margin-bottom: 8px;">View High-Priority Leads</li>
+                        <li style="margin-bottom: 8px;">Export Region: Midwest</li>
+                        <li>Sync Historical Data</li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div style="margin-top: auto;">
+                <p style="font-size: 0.7rem; color: var(--text-muted);">SYSTEM BUILD: 4.2.1-RELEASE</p>
+            </div>
+        </aside>
+
+        <!-- MAIN DATA AREA -->
+        <main class="main-content" role="main">
+            
+            <!-- THE GRID (Partially hidden by error) -->
+            <table class="data-table" role="table">
+                <thead>
+                    <tr>
+                        <th role="columnheader">Customer Entity</th>
+                        <th role="columnheader">Sector</th>
+                        <th role="columnheader">Region</th>
+                        <th role="columnheader">Last Order</th>
+                        <th role="columnheader">System Status</th>
+                    </tr>
+                </thead>
+                <tbody role="rowgroup">
+                    <tr role="row">
+                        <td><strong>Alpine Organics Co.</strong></td>
+                        <td>Premium Grocery</td>
+                        <td>Pacific Northwest</td>
+                        <td>12 Oct 2023</td>
+                        <td><span class="status-pill status-active">Sync Pending...</span></td>
+                    </tr>
+                    <tr role="row">
+                        <td><strong>Beacon Wholesalers</strong></td>
+                        <td>Bulk Distribution</td>
+                        <td>Great Lakes</td>
+                        <td>14 Oct 2023</td>
+                        <td><span class="status-pill status-active">Sync Pending...</span></td>
+                    </tr>
+                    <tr role="row">
+                        <td><strong>Cedar Grove Markets</strong></td>
+                        <td>Artisanal Retail</td>
+                        <td>New England</td>
+                        <td>15 Oct 2023</td>
+                        <td><span class="status-pill status-active">Sync Pending...</span></td>
+                    </tr>
+                    <!-- More rows would be here -->
+                </tbody>
+            </table>
+
+            <!-- ERROR STATE -->
+            <section class="error-overlay" role="alert" aria-labelledby="error-title" aria-describedby="error-desc">
+                <div class="error-card" role="dialog">
+                    <div class="error-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                    </div>
+                    <h1 id="error-title" class="error-title">Data Stream Interrupted</h1>
+                    <p id="error-desc" class="error-message">
+                        The live customer directory has encountered a synchronization error with the 
+                        <strong>Central Fulfillment API</strong>. This is preventing real-time updates 
+                        for the current session.
+                    </p>
+                    <div class="error-actions">
+                        <button class="action-button" onclick="location.reload()">Attempt Reconnection</button>
+                        <button class="action-button secondary-button">Switch to Cold Storage</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER / STATUS -->
+        <footer class="footer">
+            <div class="sync-status">
+                <div class="pulse"></div>
+                <span>Status: <strong>Disconnected</strong> (Attempting retry in 14s)</span>
+            </div>
+
+            <div class="metrics-bar">
+                <div class="metric-item">
+                    <span class="metric-label">Total Entries</span>
+                    <span class="metric-value">14,202</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Last Sync</span>
+                    <span class="metric-value">4 minutes ago</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Node Latency</span>
+                    <span class="metric-value" style="color: var(--error-red);">1,240ms</span>
+                </div>
+            </div>
+
+            <div class="view-options">
+                <button class="filter-tag">Compact View</button>
+                <button class="filter-tag active">Detailed View</button>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        // Simple interactive elements to demonstrate live-ish behavior
+        console.log("Vantage CPG Ledger: Error State Active. Monitoring reconnection...");
+        
+        let secondsLeft = 14;
+        const statusSpan = document.querySelector('.sync-status span strong');
+        
+        const countdown = setInterval(() => {
+            secondsLeft--;
+            if (secondsLeft <= 0) {
+                secondsLeft = 15;
+                statusSpan.textContent = "Retrying...";
+                setTimeout(() => {
+                    statusSpan.textContent = "Disconnected";
+                }, 1000);
+            }
+            document.querySelector('.sync-status span').innerHTML = `Status: <strong>${statusSpan.textContent}</strong> (Attempting retry in ${secondsLeft}s)`;
+        }, 1000);
+    </script>
+</body>
+</html>
+

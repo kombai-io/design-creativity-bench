@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dispatch Board · Fieldline HVAC</title>
+<style>
+:root{
+  --bg:#f3f5f8;--panel:#fff;--line:#e2e7ee;--line2:#edf0f4;--ink:#15202b;--ink2:#4a5868;--ink3:#7a8797;
+  --brand:#0f2a3d;--accent:#0b7285;--accent-bg:#e2f3f5;
+  --maint:#2f6fdb;--maint-bg:#eaf1fe;--maint-bd:#c4d6f7;
+  --repair:#c2410c;--repair-bg:#fff2e8;--repair-bd:#f6cfb4;
+  --emerg:#c81e1e;--emerg-bg:#fde9e9;--emerg-bd:#f3b9b9;
+  --ctrl:#6d3fd1;--ctrl-bg:#f2edfd;--ctrl-bd:#d8cbf6;
+  --insp:#0e7490;--insp-bg:#e3f5f8;--insp-bd:#b5e1ea;
+  --crit:#c81e1e;--high:#d9480f;--med:#b7791f;--low:#5b6b7c;--ok:#1f8a4c;
+  --lbl:214px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:13px;color:var(--ink);background:var(--bg);display:grid;grid-template-rows:48px auto minmax(0,1fr);height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;color:inherit}
+svg.i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Top bar */
+.topbar{background:var(--brand);color:#dfe8ef;display:flex;align-items:center;gap:22px;padding:0 16px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;color:#fff;font-size:15px;letter-spacing:-.01em}
+.brand em{font-style:normal;font-weight:700;font-size:9.5px;letter-spacing:.14em;color:#8fd3dc;border:1px solid rgba(143,211,220,.4);padding:1px 5px;border-radius:4px}
+.topbar nav{display:flex;gap:2px;height:100%}
+.topbar nav a{display:flex;align-items:center;padding:0 11px;color:#b3c3cf;text-decoration:none;font-weight:500;border-bottom:2px solid transparent;border-top:2px solid transparent}
+.topbar nav a.on{color:#fff;border-bottom-color:#5cc6d0}
+.topbar nav a:hover{color:#fff}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.search{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);border-radius:7px;padding:0 10px;height:30px;width:270px;color:#9fb1bf}
+.search input{background:none;border:0;outline:0;color:#fff;font:inherit;width:100%}
+.search input::placeholder{color:#8ea1b0}
+.sync{font-size:11.5px;color:#9fb1bf;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:#40c057}
+.ibtn{position:relative;background:none;border:0;color:#cfdbe4;padding:4px;display:grid;place-items:center}
+.ibtn svg.i{width:18px;height:18px}
+.ibtn b{position:absolute;top:-1px;right:-3px;background:#e03131;color:#fff;font-size:9px;border-radius:8px;padding:0 4px;line-height:14px}
+.me{display:flex;align-items:center;gap:8px}
+.me .av{width:28px;height:28px;border-radius:50%;background:#5cc6d0;color:#0f2a3d;font-weight:700;display:grid;place-items:center;font-size:11px}
+.me b{display:block;color:#fff;font-size:12.5px;font-weight:600;line-height:1.2}
+.me small{display:block;color:#8ea1b0;font-size:11px}
+
+/* Day bar */
+.daybar{display:flex;align-items:center;gap:14px;padding:9px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.datenav{display:flex;align-items:center;gap:8px;flex:none}
+.nbtn{width:28px;height:28px;border:1px solid var(--line);border-radius:6px;background:#fff;display:grid;place-items:center;color:var(--ink2)}
+.nbtn:hover{background:#f5f7f9}
+.d-main{font-size:17px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.chip-today{font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-bg);border-radius:10px;padding:2px 7px;letter-spacing:.04em;text-transform:uppercase}
+.d-sub{font-size:11.5px;color:var(--ink3);margin-top:2px;white-space:nowrap}
+.kpis{display:flex;flex:1;min-width:0;margin-left:8px}
+.kpi{padding:1px 16px;border-left:1px solid var(--line);min-width:0}
+.kpi .k{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);font-weight:700;white-space:nowrap}
+.kpi .v{font-size:17px;font-weight:700;margin-top:1px;white-space:nowrap;letter-spacing:-.01em}
+.kpi .v small{font-size:11.5px;font-weight:500;color:var(--ink2);letter-spacing:0}
+.kpi .s{font-size:11px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi.crit .v{color:var(--crit)}
+.kpi.ok .v{color:var(--ok)}
+.kpi.warn .v{color:var(--high)}
+.day-actions{display:flex;gap:8px;flex:none}
+.btn{height:30px;padding:0 12px;border:1px solid var(--line);background:#fff;border-radius:7px;font-weight:600;font-size:12.5px;color:var(--ink);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:#f5f7f9}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#09606f}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* Main layout */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 392px;min-height:0}
+.work{overflow:auto;padding:12px 16px 18px;min-width:0}
+.detail{background:#fff;border-left:1px solid var(--line);overflow-y:auto;min-height:0}
+
+/* Issues */
+.sec-h{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.sec-h h2{font-size:14px;margin:0;display:flex;align-items:center;gap:6px}
+.cnt{display:inline-grid;place-items:center;min-width:20px;height:18px;padding:0 5px;border-radius:9px;background:var(--brand);color:#fff;font-size:10.5px;font-weight:700}
+.sev-sum{display:flex;gap:6px}
+.sev-sum span{font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;background:#eef1f4;color:var(--ink2);display:flex;align-items:center;gap:4px}
+.sev-sum span::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.sev-sum .s-crit{color:var(--crit);background:#fdecec}.sev-sum .s-high{color:var(--high);background:#fdf0e7}.sev-sum .s-med{color:var(--med);background:#fbf4e4}.sev-sum .s-low{color:var(--low)}
+.hint{margin-left:auto;font-size:11.5px;color:var(--ink3)}
+.issues{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:8px;margin-bottom:12px}
+.iss{display:flex;gap:9px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-left:3px solid var(--low);border-radius:8px;text-align:left;min-width:0;transition:box-shadow .12s,border-color .12s}
+.iss:hover{box-shadow:0 2px 8px rgba(15,42,61,.09)}
+.iss.on{box-shadow:0 0 0 2px var(--ink);border-color:transparent}
+.iss .ii{width:22px;height:22px;border-radius:6px;flex:none;display:grid;place-items:center;margin-top:1px}
+.iss .ib{min-width:0;display:block}
+.iss .it{display:block;font-size:12px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iss .ix{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;color:var(--ink2);line-height:1.35;margin-top:1px}
+.iss.s-crit{border-left-color:var(--crit)}.iss.s-crit .ii{background:#fdecec;color:var(--crit)}
+.iss.s-high{border-left-color:var(--high)}.iss.s-high .ii{background:#fdf0e7;color:var(--high)}
+.iss.s-med{border-left-color:var(--med)}.iss.s-med .ii{background:#fbf4e4;color:var(--med)}
+.iss.s-low{border-left-color:#9aa6b3}.iss.s-low .ii{background:#eef1f4;color:var(--low)}
+.iss-clear{grid-column:1/-1;padding:12px;border:1px dashed #b9d9c6;background:#f3fbf6;border-radius:8px;color:var(--ok);font-weight:600;display:flex;gap:8px;align-items:center}
+
+/* Board */
+.board{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.board-tb{display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.board-tb h2{font-size:14px;margin:0}
+.bt-sub{color:var(--ink3);font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:4px 10px;font-size:12px;color:var(--ink2);border-left:1px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button.on{background:var(--brand);color:#fff}
+.tog{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink2);cursor:pointer}
+.moved{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--ink3)}
+.moved button{border:1px dashed #c3ccd6;background:#f8fafb;border-radius:12px;padding:2px 8px;font-size:11px;color:var(--ink2)}
+.board-scroll{overflow-x:auto}
+.board-inner{position:relative;min-width:900px}
+.axis{display:grid;grid-template-columns:var(--lbl) 1fr;height:28px;border-bottom:1px solid var(--line);background:#fafbfc}
+.axis .al{border-right:1px solid var(--line);font-size:10px;color:var(--ink3);display:flex;align-items:center;padding:0 12px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;position:sticky;left:0;background:#fafbfc;z-index:11}
+.axis .ah{position:relative}
+.axis .hr{position:absolute;top:0;bottom:0;padding-left:5px;font-size:10.5px;color:var(--ink3);display:flex;align-items:center;border-left:1px solid var(--line);white-space:nowrap;font-weight:500}
+.row{display:grid;grid-template-columns:var(--lbl) 1fr;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.lbl{padding:6px 10px 6px 12px;display:flex;gap:9px;align-items:center;border-right:1px solid var(--line);background:#fff;cursor:pointer;position:sticky;left:0;z-index:11;min-width:0}
+.lbl:hover{background:#f8fafb}
+.row.tsel .lbl{background:#eef7f8;box-shadow:inset 3px 0 0 var(--accent)}
+.row.dim .lbl{opacity:.45}
+.row.dim .lane{opacity:.55}
+.av{width:28px;height:28px;border-radius:50%;color:#fff;font-weight:700;font-size:10.5px;display:grid;place-items:center;flex:none;letter-spacing:.02em}
+.av.un{background:#fde9e9;color:var(--crit)}
+.av.xs{width:20px;height:20px;font-size:8.5px}
+.av.lg{width:44px;height:44px;font-size:15px}
+.ti{min-width:0;flex:1}
+.tn{font-weight:650;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px}
+.tm{font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.tc{display:flex;gap:3px;margin-top:3px;overflow:hidden}
+.tc span{font-size:9px;font-weight:600;color:var(--ink2);background:#eef1f4;border-radius:3px;padding:1px 4px;white-space:nowrap}
+.tu{flex:none;width:38px;text-align:right}
+.tu b{font-size:11.5px;display:block}
+.tu i{display:block;height:4px;background:#e9edf1;border-radius:2px;margin-top:3px;overflow:hidden}
+.tu em{display:block;height:100%;background:#7c8a99;border-radius:2px}
+.tu.over b{color:var(--crit)}.tu.over em{background:var(--crit)}
+.tu.high b{color:var(--high)}.tu.high em{background:var(--high)}
+.tu.low b{color:var(--accent)}.tu.low em{background:var(--accent)}
+.lane{position:relative;height:58px;background-image:linear-gradient(to right,var(--line2) 1px,transparent 1px),linear-gradient(to right,#f6f8fa 1px,transparent 1px);background-size:calc(100%/13) 100%,calc(100%/26) 100%}
+.unrow .lane{background-color:#fffafa}
+.unrow .lbl{background:#fffafa}
+.unrow .tn{color:var(--crit)}
+.off{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,#f2f4f7 0 5px,#e8ecf0 5px 10px);z-index:1}
+.vb{position:absolute;height:40px;border-radius:5px;border:1px solid;border-left-width:3px;padding:3px 6px 3px 5px;overflow:hidden;cursor:pointer;font-size:10.5px;line-height:12px;z-index:3;transition:box-shadow .12s}
+.vb:hover{box-shadow:0 2px 8px rgba(15,42,61,.2);z-index:6}
+.vb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.vb.sel{box-shadow:0 0 0 2px var(--ink),0 4px 12px rgba(0,0,0,.18);z-index:7}
+.vb.dim{opacity:.3}
+.vb .l1{display:flex;gap:4px;align-items:center;color:var(--ink2);font-weight:600;font-size:9.5px;white-space:nowrap;overflow:hidden}
+.vb .l2{font-weight:650;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vb .l3{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vb .mi{display:inline-flex;align-items:center;gap:1px;color:var(--ink3)}
+.vb .mi svg.i{width:10px;height:10px}
+.vb.fl .l1{padding-right:14px}
+.flag{position:absolute;top:3px;right:3px;width:13px;height:13px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:9px;font-weight:800;line-height:1}
+.flag.s-crit{background:var(--crit)}.flag.s-high{background:var(--high)}.flag.s-med{background:var(--med)}.flag.s-low{background:#8593a3}
+.flag.s-crit{animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(200,30,30,.5)}70%{box-shadow:0 0 0 6px rgba(200,30,30,0)}100%{box-shadow:0 0 0 0 rgba(200,30,30,0)}}
+.t-maint{background:var(--maint-bg);border-color:var(--maint-bd);border-left-color:var(--maint)}
+.t-repair{background:var(--repair-bg);border-color:var(--repair-bd);border-left-color:var(--repair)}
+.t-emerg{background:var(--emerg-bg);border-color:var(--emerg-bd);border-left-color:var(--emerg)}
+.t-ctrl{background:var(--ctrl-bg);border-color:var(--ctrl-bd);border-left-color:var(--ctrl)}
+.t-insp{background:var(--insp-bg);border-color:var(--insp-bd);border-left-color:var(--insp)}
+.vb.unas{border-style:dashed;border-left-style:solid}
+.vb.unas.t-emerg{background:repeating-linear-gradient(135deg,#fdeaea 0 8px,#fbdcdc 8px 16px)}
+.vb .pri{font-size:8.5px;padding:0 3px;border-radius:3px}
+.tv{position:absolute;top:17px;height:12px;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.tv::before{content:"";position:absolute;left:1px;right:1px;top:5px;border-top:2px dotted #97a3b1}
+.tv span{position:relative;background:#fff;padding:0 2px;font-size:9px;color:var(--ink3);line-height:10px;border-radius:2px}
+body.no-travel .tv{display:none}
+.ovr{position:absolute;top:5px;height:40px;border:1.5px dashed var(--repair);border-left:0;border-radius:0 5px 5px 0;background:repeating-linear-gradient(135deg,rgba(194,65,12,.17) 0 5px,rgba(194,65,12,.04) 5px 10px);z-index:2;font-size:9.5px;font-weight:700;color:var(--repair);display:flex;align-items:flex-end;padding:0 4px 3px;white-space:nowrap;overflow:hidden;pointer-events:none}
+.cz{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(200,30,30,.16) 0 4px,transparent 4px 9px);border-left:2px solid rgba(200,30,30,.65);border-right:2px solid rgba(200,30,30,.65);z-index:4;pointer-events:none}
+.ghost{position:absolute;top:5px;height:40px;border:2px dashed var(--accent);border-radius:5px;background:rgba(255,255,255,.6);z-index:8;font-size:10px;color:var(--accent);font-weight:700;padding:3px 6px;pointer-events:none;white-space:nowrap;overflow:hidden;transition:background .12s,box-shadow .12s}
+.ghost.hot{background:rgba(226,243,245,.92);box-shadow:0 0 0 3px rgba(11,114,133,.22)}
+.brk{position:absolute;bottom:2px;height:11px;font-size:8.5px;line-height:9px;border-radius:3px;padding:0 4px;white-space:nowrap;overflow:hidden;z-index:5;pointer-events:none;font-weight:600}
+.brk.acc{background:rgba(109,63,209,.1);border:1px solid rgba(109,63,209,.55);color:#5a34b0}
+.brk.win{background:rgba(11,114,133,.08);border:1px solid rgba(11,114,133,.5);color:#0a5f6e}
+.brk.sla{background:rgba(200,30,30,.08);border:1px solid rgba(200,30,30,.5);color:#a11919}
+.un-empty{position:absolute;left:12px;top:18px;color:var(--ok);font-weight:600;display:flex;gap:6px;align-items:center;font-size:12px}
+.caprow .lbl{cursor:default}
+.caprow .lbl:hover{background:#fff}
+.lane.cap{height:30px;display:grid;grid-template-columns:repeat(13,1fr);background-image:none}
+.cc{display:grid;place-items:center;font-size:10.5px;color:var(--ink3);border-left:1px solid var(--line2);margin:3px 0}
+.cc b{font-size:12px;color:var(--ink)}
+.cc.zero{background:#fdecec}.cc.zero b{color:var(--crit)}
+.cc.one{background:#fbf4e4}.cc.one b{color:var(--med)}
+.cc.ok{background:#e9f6f0}.cc.ok b{color:var(--ok)}
+.cc.none{color:#c0c8d1}
+.nowline{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #e03131;z-index:12;pointer-events:none}
+.nowline b{position:absolute;top:6px;left:3px;background:#e03131;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;white-space:nowrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--ink2);background:#fafbfc;align-items:center}
+.legend span{display:flex;align-items:center;gap:5px}
+.sw{width:14px;height:10px;border-radius:2px;border:1px solid;border-left-width:3px;display:inline-block}
+.sw.trv{border:0;border-top:2px dotted #97a3b1;height:0;width:16px;border-radius:0}
+.sw.ovr{border:1px dashed var(--repair);background:repeating-linear-gradient(135deg,rgba(194,65,12,.25) 0 3px,transparent 3px 6px)}
+.sw.cz{border:1px solid rgba(200,30,30,.65);background:repeating-linear-gradient(135deg,rgba(200,30,30,.3) 0 3px,transparent 3px 6px)}
+.sw.off{border:1px solid #dfe4ea;background:repeating-linear-gradient(135deg,#f2f4f7 0 3px,#e1e6ec 3px 6px)}
+.sw.gh{border:1.5px dashed var(--accent);background:#fff}
+.legend .tz{margin-left:auto;color:var(--ink3)}
+
+/* Detail */
+.dh{padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+.dh-top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.vid{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--ink2);font-weight:600}
+.tag{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:10px}
+.tag.t-maint{background:var(--maint-bg);color:var(--maint)}.tag.t-repair{background:var(--repair-bg);color:var(--repair)}.tag.t-emerg{background:var(--emerg-bg);color:var(--emerg)}.tag.t-ctrl{background:var(--ctrl-bg);color:var(--ctrl)}.tag.t-insp{background:var(--insp-bg);color:var(--insp)}
+.pri{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.pri.p1{background:var(--emerg);color:#fff}.pri.p2{background:#fde2cf;color:#9a3412}.pri.p3{background:#e6eaef;color:#4a5868}.pri.p4{background:#f1f3f5;color:#7a8797}
+.st{margin-left:auto;font-size:11.5px;font-weight:650;display:inline-flex;align-items:center;gap:5px}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st.un{color:var(--crit)}.st.ok{color:var(--ok)}.st.wait{color:var(--med)}.st.moved{color:var(--ink3)}
+.dh h2{font-size:17px;margin:9px 0 9px;letter-spacing:-.01em;line-height:1.25}
+.dh-cust{display:flex;gap:8px;color:var(--ink2);font-size:12px;line-height:1.4}
+.dh-cust svg.i{margin-top:2px;color:var(--ink3)}
+.dh-cust b{display:block;color:var(--ink);font-size:13px}
+.dh-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.th{display:flex;gap:12px;align-items:center}
+.th h2{margin:0}
+.tsub{font-size:12px;color:var(--ink2);margin-top:2px}
+.callouts{padding:12px 18px 2px;display:grid;gap:8px}
+.co{display:flex;gap:9px;padding:9px 11px;border-radius:8px;font-size:12px;line-height:1.4}
+.co svg.i{margin-top:2px}
+.co b{display:block;font-size:12.5px}
+.co.s-crit{background:#fdecec;color:#7f1414}.co.s-high{background:#fdf0e7;color:#7c2d0a}.co.s-med{background:#fbf4e4;color:#6b4a0f}.co.s-low{background:#eef1f4;color:#3c4a59}
+.co.info{background:#eef6f7;color:#0b4f5c}
+.sec{padding:14px 18px;border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec h3{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin:0 0 10px;display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
+.sec h3 .h3s{text-transform:none;letter-spacing:0;font-weight:500;font-size:11px}
+.kv{display:grid;grid-template-columns:104px 1fr;gap:7px 12px;margin:0;font-size:12.5px;line-height:1.4}
+.kv dt{color:var(--ink3)}
+.kv dd{margin:0;color:var(--ink);min-width:0}
+.muted{color:var(--ink3);font-size:11.5px}
+.warnTxt{color:var(--repair);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:650;padding:1px 7px;border-radius:9px;margin-left:4px;white-space:nowrap}
+.pill.ok{background:#e6f4ec;color:var(--ok)}.pill.warn{background:#fbf1dc;color:#8a5a0b}.pill.na{background:#eef1f4;color:var(--ink2)}
+.crew{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:2px 8px 2px 2px;font-size:12px;font-weight:600;margin:0 4px 4px 0}
+.crew:hover{border-color:var(--accent)}
+.note{display:flex;gap:8px;margin-top:10px;padding:9px 11px;background:var(--repair-bg);border:1px solid var(--repair-bd);border-radius:8px;font-size:12px;color:#7c2d0a;line-height:1.4}
+.note svg.i{margin-top:2px}
+.fix{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;transition:border-color .12s,box-shadow .12s;background:#fff}
+.fix:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,114,133,.1)}
+.fix.dis{background:#fafbfc}
+.fix.dis:hover{border-color:var(--line);box-shadow:none}
+.fix-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fix-t{font-weight:650;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fix.dis .fix-t{color:var(--ink2)}
+.badge{font-size:9.5px;font-weight:700;background:var(--accent-bg);color:var(--accent);padding:1px 6px;border-radius:9px;text-transform:uppercase;letter-spacing:.04em}
+.fix-s{font-size:11.5px;color:var(--ink2);margin-top:2px}
+.checks{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
+.checks li{display:flex;gap:6px;font-size:11.5px;line-height:1.35;color:var(--ink2)}
+.checks li svg.i{width:13px;height:13px;margin-top:1px}
+.checks .ok svg{color:var(--ok)}.checks .warn svg{color:var(--med)}.checks .bad svg{color:var(--crit)}
+.reason{font-size:11.5px;color:var(--ink3);margin-top:5px;display:flex;gap:6px;align-items:flex-start}
+.reason svg.i{width:13px;height:13px;margin-top:1px}
+.inelig{font-size:11.5px;color:var(--ink3);line-height:1.45;padding:8px 10px;border:1px dashed var(--line);border-radius:8px}
+.inelig b{color:var(--ink2)}
+.req{list-style:none;margin:0;padding:0}
+.req li{display:flex;gap:9px;padding:7px 0;border-top:1px dashed var(--line)}
+.req li:first-child{border-top:0;padding-top:0}
+.rq-i{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;flex:none;margin-top:1px}
+.rq-i svg.i{width:11px;height:11px;stroke-width:2.6}
+.req .ok .rq-i{background:#e6f4ec;color:var(--ok)}.req .bad .rq-i{background:#fdecec;color:var(--crit)}.req .warn .rq-i{background:#fbf1dc;color:var(--med)}.req .na .rq-i{background:#eef1f4;color:#9aa6b3}
+.rq-b{display:block;font-size:12.5px;font-weight:600;line-height:1.3}
+.rq-t{display:block;font-size:11.5px;color:var(--ink2);line-height:1.35}
+.act{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.act li{display:grid;grid-template-columns:78px 1fr;gap:8px;font-size:12px;line-height:1.4}
+.act time{color:var(--ink3);font-size:11px}
+.act b{font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:#f6f8fa;border-radius:8px;padding:8px 10px}
+.stat .k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);font-weight:700}
+.stat .v{font-size:15px;font-weight:700;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips span{font-size:11.5px;background:#eef1f4;color:var(--ink2);border-radius:5px;padding:2px 7px}
+.chips.c span{background:#e2f3f5;color:#0a5f6e;font-weight:600}
+.route{display:grid;gap:0}
+.rt-tr{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);padding:4px 0 4px 10px;border-left:2px dotted #c5ced8;margin-left:8px}
+.rt-v{display:block;width:100%;text-align:left;border:1px solid;border-left-width:3px;border-radius:7px;padding:7px 10px;font-size:12px}
+.rt-v:hover{box-shadow:0 2px 6px rgba(15,42,61,.12)}
+.rt-v .rt-time{display:block;font-size:11px;color:var(--ink2);font-weight:600}
+.rt-v b{display:block;font-size:12.5px}
+.rt-v .rt-m{display:block;font-size:11px;color:var(--ink2)}
+.rt-end{font-size:11px;color:var(--ink3);padding:6px 0 0 20px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,16px);background:#15202b;color:#fff;padding:10px 14px;border-radius:9px;display:flex;gap:10px;align-items:center;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:640px}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast svg.i{color:#69db9c}
+.toast button{background:none;border:0;color:#7fd8e1;font-weight:700;padding:0 2px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#1f7a8c"/><path d="M5 9c2.3-2 4.7-2 7 0s4.7 2 7 0M5 13c2.3-2 4.7-2 7 0s4.7 2 7 0M5 17c2.3-2 4.7-2 7 0s4.7 2 7 0" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+    <span>Fieldline</span><em>HVAC</em>
+  </div>
+  <nav aria-label="Primary">
+    <a href="#" class="on">Dispatch</a><a href="#">Visits</a><a href="#">Technicians</a><a href="#">Customers &amp; sites</a><a href="#">Parts</a><a href="#">Reports</a>
+  </nav>
+  <div class="tb-right">
+    <label class="search"><span id="icSearch"></span><input placeholder="Search visits, sites, technicians…" aria-label="Search"></label>
+    <span class="sync">Synced 6:10 AM</span>
+    <button class="ibtn" aria-label="Notifications" data-toast="3 notifications: new emergency call V-2060, part update for V-2049, confirmation pending for V-2042"><span id="icBell"></span><b>3</b></button>
+    <div class="me"><span class="av">RO</span><div><b>Rachel Ortiz</b><small>Dispatcher · Chicago Metro</small></div></div>
+  </div>
+</header>
+
+<section class="daybar">
+  <div class="datenav">
+    <button class="nbtn" aria-label="Previous day" data-toast="Mon, Mar 17 · 21 visits completed, 0 open">‹</button>
+    <div>
+      <div class="d-main">Tuesday, March 18, 2025 <span class="chip-today">Today</span></div>
+      <div class="d-sub">Crews roll 6:30 AM · now 6:10 AM · 28°F, light snow after 3 PM</div>
+    </div>
+    <button class="nbtn" aria-label="Next day" data-toast="Wed, Mar 19 · 19 visits scheduled, 2 open issues">›</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="day-actions">
+    <button class="btn" data-toast="Route check: no savings over 10 min found without breaking a site access window">Optimize routes</button>
+    <button class="btn primary" id="publishBtn">Publish to crews</button>
+  </div>
+</section>
+
+<div class="main">
+  <main class="work" id="work">
+    <section class="attn" aria-label="Needs attention">
+      <div class="sec-h"><h2>Needs attention <span class="cnt" id="issCount">0</span></h2><div class="sev-sum" id="sevSum"></div><span class="hint">Select an item to review it on the board and see suggested fixes</span></div>
+      <div class="issues" id="issues"></div>
+    </section>
+    <section class="board" aria-label="Crew schedule">
+      <div class="board-tb">
+        <h2>Crew schedule</h2>
+        <span class="bt-sub">8 technicians · 4 territories</span>
+        <div class="seg" id="terrSeg"></div>
+        <label class="tog"><input type="checkbox" id="travelTog" checked> Travel time</label>
+        <div class="moved" id="moved"></div>
+      </div>
+      <div class="board-scroll"><div class="board-inner" id="boardInner"></div></div>
+      <div class="legend">
+        <span><i class="sw t-maint"></i>Maintenance</span>
+        <span><i class="sw t-repair"></i>Repair</span>
+        <span><i class="sw t-emerg"></i>Emergency</span>
+        <span><i class="sw t-ctrl"></i>Controls</span>
+        <span><i class="sw t-insp"></i>Inspection</span>
+        <span><i class="sw trv"></i>Travel</span>
+        <span><i class="sw ovr"></i>Likely overrun</span>
+        <span><i class="sw cz"></i>Conflict</span>
+        <span><i class="sw off"></i>Off shift</span>
+        <span><i class="sw gh"></i>Proposed</span>
+        <span class="tz">Central Time · durations include setup</span>
+      </div>
+    </section>
+  </main>
+  <aside class="detail" id="detail" aria-label="Details"></aside>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Icons ---------- */
+const I={
+ alert:'<svg class="i" viewBox="0 0 24 24"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+ clock:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+ users:'<svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.3c2 .8 3.5 2.8 3.5 5.7"/></svg>',
+ pin:'<svg class="i" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+ phone:'<svg class="i" viewBox="0 0 24 24"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/></svg>',
+ msg:'<svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+ edit:'<svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+ lock:'<svg class="i" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+ box:'<svg class="i" viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></svg>',
+ check:'<svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7"/></svg>',
+ x:'<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+ dot:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>',
+ warn:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.5h.01"/></svg>',
+ car:'<svg class="i" viewBox="0 0 24 24"><path d="M5 17H3v-5l2-5h14l2 5v5h-2"/><path d="M3 12h18"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/></svg>',
+ search:'<svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
+ bell:'<svg class="i" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>',
+ cal:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+ bolt:'<svg class="i" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+ cert:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="m9 13.5-2 7.5 5-3 5 3-2-7.5"/></svg>'
+};
+document.getElementById('icSearch').innerHTML=I.search;
+document.getElementById('icBell').innerHTML=I.bell;
+
+/* ---------- Reference data ---------- */
+const DAY_S=360, DAY_E=1140, SPAN=DAY_E-DAY_S, NOW=370;
+const CERTS={EPA608U:'EPA 608 Universal',EPA608II:'EPA 608 Type II',BOILER:'Boiler / Stationary Engineer',GAS:'Gas burner service',CHILLER:'Centrifugal chiller',VRF:'Mitsubishi VRF (Diamond)',BAS:'Niagara N4 / BACnet',REFRIG:'Commercial refrigeration',LIFT:'Aerial lift (MEWP)',NATE:'NATE Commercial'};
+const CERT_S={EPA608U:'608-U',EPA608II:'608-II',BOILER:'Boiler',GAS:'Gas',CHILLER:'Chiller',VRF:'VRF',BAS:'BAS',REFRIG:'Refrig',LIFT:'Lift',NATE:'NATE'};
+const TYPE={maint:'Planned maintenance',repair:'Repair',emerg:'Emergency',ctrl:'Controls',insp:'Inspection'};
+const PRI={1:'Emergency',2:'High',3:'Standard',4:'Low'};
+const RANK={crit:0,high:1,med:2,low:3};
+const KIND_IC={Unassigned:'alert',Overrun:'clock',Crew:'users',Part:'box',Overtime:'clock',Contact:'phone',Conflict:'alert',Access:'lock',SLA:'bolt',Window:'cal',Cert:'cert',Shift:'clock'};
+
+const TECHS=[
+ {id:'dale',name:'Dale Kowalski',ini:'DK',color:'#2f6f5e',role:'Boiler & hydronic specialist',phone:'(847) 555-0221',truck:'Truck 07',base:'Skokie shop',terr:['North','West'],shift:{s:390,e:900},certs:['BOILER','GAS','EPA608II'],systems:['Boilers','Steam','Hydronic','MAUs'],tools:['Combustion analyzer','Boiler water test kit','Megohmmeter'],stock:['Lochinvar igniter kit 100208410','Flame sensors (assorted)','Condensate neutralizer media','Handhole gasket sets'],week:'31.5 h',otOk:false},
+ {id:'sofia',name:'Sofia Lindqvist',ini:'SL',color:'#7a4fb5',role:'Maintenance technician',phone:'(847) 555-0236',truck:'Truck 11',base:'Skokie shop',terr:['North'],shift:{s:420,e:930},certs:['EPA608II','GAS','LIFT'],systems:['RTUs','MAUs','Exhaust'],tools:['Manometer','Belt tension gauge','Refrigerant scale'],stock:['MERV-13 filters (assorted)','A/B-section belts','MAU filters 24×24×2'],week:'33.0 h',otOk:false},
+ {id:'marcus',name:'Marcus Webb',ini:'MW',color:'#1f5fa8',role:'Senior commercial technician',phone:'(312) 555-0204',truck:'Truck 03',base:'West Loop HQ',terr:['Central','North'],shift:{s:420,e:930},certs:['EPA608U','NATE','CHILLER'],systems:['Chillers','RTUs','Cooling towers'],tools:['Recovery machine','Vibration analyzer','Micron gauge','Nitrogen kit'],stock:['Filter driers (16 cu in)','Oil analysis kits','Contactors & capacitors'],week:'35.0 h',otOk:false},
+ {id:'jenna',name:'Jenna Brooks',ini:'JB',color:'#b0558a',role:'Technician II',phone:'(312) 555-0257',truck:'Truck 14',base:'West Loop HQ',terr:['Central'],shift:{s:420,e:930},certs:['EPA608II'],systems:['RTUs','Split systems','VAV'],tools:['Refrigerant scale','Micron gauge'],stock:['Pleated filters (assorted)','Blower set screws & bearings'],week:'29.5 h',otOk:false},
+ {id:'priya',name:'Priya Raman',ini:'PR',color:'#6d3fd1',role:'Controls specialist',phone:'(312) 555-0213',truck:'Van 05',base:'West Loop HQ',terr:['Central'],shift:{s:480,e:990},certs:['EPA608U','BAS'],systems:['BAS','AHUs','VAV'],tools:['Niagara Workbench laptop','Loop calibrator','Airflow hood'],stock:['Distech ECB-VAVS controllers','CO₂ sensors','Damper actuators'],week:'36.5 h',otOk:false},
+ {id:'tomas',name:'Tomás Herrera',ini:'TH',color:'#b45309',role:'Refrigeration technician',phone:'(773) 555-0248',truck:'Truck 09',base:'Home dispatch · Beverly',terr:['South','Central'],shift:{s:420,e:930},certs:['EPA608U','REFRIG'],systems:['Walk-ins','Rack refrigeration','Ice machines','RTUs'],tools:['Recovery machine','Electronic leak detector','Micron gauge'],stock:['Manitowoc descaler kits','Door gaskets (Kolpak)','TXV power heads'],week:'34.0 h',otOk:false},
+ {id:'andre',name:'Andre Mitchell',ini:'AM',color:'#0b7285',role:'Senior technician · VRF',phone:'(630) 555-0262',truck:'Truck 12',base:'Home dispatch · Downers Grove',terr:['West'],shift:{s:450,e:960},certs:['EPA608U','NATE','VRF'],systems:['VRF','Heat pumps','RTUs'],tools:['Nitrogen kit','Electronic leak detector','Mitsubishi Maintenance Tool','Recovery machine'],stock:['R-410A cylinders (2)','Brazing kit','Branch box fittings'],week:'33.5 h',otOk:false},
+ {id:'kevin',name:'Kevin Oduya',ini:'KO',color:'#3d4a5c',role:'Plant technician · late shift',phone:'(773) 555-0279',truck:'Truck 04',base:'Home dispatch · Bridgeport',terr:['Central','South'],shift:{s:600,e:1110},certs:['EPA608U','BOILER','GAS','CHILLER'],systems:['Chillers','Boilers','Cooling towers','RTUs'],tools:['Combustion analyzer','Vibration analyzer','Recovery machine'],stock:['McDonnell & Miller LWCO','Chiller oil filters','Gasket kits'],week:'30.0 h',otOk:false}
+];
+
+const R=(name,where)=>({name,status:'ready',where});
+const VISITS=[
+ {id:'V-2031',techs:['dale'],start:420,dur:90,travel:{dale:25},type:'maint',pri:3,title:'Boiler plant seasonal maintenance',short:'Boiler PM',customer:'Ridgeview Office Park',address:'1800 Sherman Ave, Evanston, IL 60201',territory:'North',window:{s:420,e:660,label:'7:00–11:00 AM'},access:null,contact:{name:'Tom Bielski',role:'Chief Engineer',phone:'(847) 555-0190',required:false,confirmed:true},equipment:'Cleaver-Brooks ClearFire CFC-E 1500 condensing boilers (×2)',problem:'Seasonal PM per agreement FL-MA-0412: combustion analysis, low-water cutoff test, condensate neutralizer service.',needs:{certs:['BOILER','GAS'],tools:['Combustion analyzer'],parts:[R('Condensate neutralizer media (2 bags)','Truck 07')],crew:1,system:'Boilers'}},
+ {id:'V-2034',techs:['dale'],start:540,dur:180,travel:{dale:20},type:'insp',pri:4,title:'Steam boiler inspection prep',short:'Inspection prep',customer:'Glenview Park District',address:'Community Center, 2400 Chestnut Ave, Glenview, IL 60025',territory:'North',window:{s:480,e:900,label:'Flexible · 8:00 AM–3:00 PM'},access:{s:null,text:'Enter via north service door; door code issued day-of by front desk'},contact:{name:'Angela Russo',role:'Facilities Manager',phone:'(847) 555-0117',required:false,confirmed:true},equipment:'Burnham 4-pass firetube steam boiler, 150 HP',problem:'Prepare for state boiler inspection on Mar 27: open fireside, brush tubes, test safeties and LWCO.',needs:{certs:['BOILER'],tools:['Boiler water test kit'],parts:[R('Handhole gasket set (6)','Truck 07')],crew:1,system:'Boilers'}},
+ {id:'V-2032',techs:['sofia'],start:450,dur:120,travel:{sofia:25},type:'maint',pri:3,title:'Quarterly RTU maintenance — 4 units',short:'RTU PM ×4',customer:'Techny Ridge Business Park',address:'2600 Techny Rd, Northbrook, IL 60062',territory:'North',window:{s:420,e:720,label:'7:00 AM–12:00 PM'},access:null,contact:{name:'Greg Anand',role:'Property Manager',phone:'(847) 555-0154',required:false,confirmed:true},equipment:'Carrier 48TC 10-ton gas/electric RTUs (×4)',problem:'Quarterly PM: filters, belts, coil rinse, economizer and gas valve checks.',needs:{certs:['EPA608II'],tools:['Refrigerant scale'],parts:[R('MERV-13 filters 20×25×2 (32)','Truck 11'),R('A-section belts (4)','Truck 11')],crew:1,system:'RTUs'}},
+ {id:'V-2036',techs:['sofia'],start:600,dur:120,travel:{sofia:25},type:'maint',pri:3,title:'Kitchen MAU & exhaust fan service',short:'MAU/exhaust PM',customer:'Sunrise Kitchen Commissary',address:'7300 N Lehigh Ave, Niles, IL 60714',territory:'North',window:{s:570,e:750,label:'9:30 AM–12:30 PM'},access:{s:570,e:750,text:'Hood & MAU work only 9:30 AM–12:30 PM, between breakfast and lunch production'},contact:{name:'Luis Ortega',role:'Kitchen Manager',phone:'(847) 555-0163',required:true,confirmed:true},equipment:'CaptiveAire gas-fired MAU-1 and 3 upblast exhaust fans',problem:'Semi-annual service: filter change, belt inspection, burner and airflow check.',needs:{certs:['GAS'],tools:['Manometer'],parts:[R('MAU filters 24×24×2 (8)','Truck 11')],crew:1,system:'MAUs'}},
+ {id:'V-2055',techs:['sofia'],start:750,dur:120,travel:{sofia:25,dale:15},type:'repair',pri:2,title:'MAU-1 burner assembly replacement',short:'Burner replacement',customer:'Golf Mill Athletic Club',address:'239 Golf Mill Ctr, Niles, IL 60714',territory:'North',window:{s:720,e:930,label:'12:00–3:30 PM'},access:{s:720,e:900,text:'Natatorium MAU may be shut down only 12:00–3:00 PM while the pool deck is closed'},contact:{name:'Derek Hollis',role:'Operations Manager',phone:'(847) 555-0128',required:true,confirmed:true},equipment:'Reznor RPB-400 natatorium makeup air unit (roof)',problem:'Flame rollout and cracked burner manifold found Mar 11. Unit locked out; pool deck on exhaust-only ventilation.',needs:{certs:['GAS','LIFT'],tools:['Manometer'],parts:[R('Reznor RPB-400 burner assembly (138 lb)','Delivered to site Mar 17')],crew:2,system:'MAUs'},log:[{t:'Mar 11',who:'Sofia Lindqvist',text:'Cracked burner manifold found; unit locked out and tagged.'},{t:'Mar 17, 2:20 PM',who:'Parts desk',text:'Burner assembly delivered to site (138 lb) — two-person roof lift required.'}]},
+ {id:'V-2041',techs:['marcus'],start:450,dur:120,travel:{marcus:25},type:'maint',pri:2,title:'Quarterly chiller maintenance',short:'Chiller PM',customer:'Lakeshore Medical Pavilion',address:'680 N Lake Shore Dr, Chicago, IL 60611',territory:'Central',window:{s:420,e:600,label:'7:00–10:00 AM'},access:{s:420,e:600,text:'Mechanical room requires security escort — available 7:00–10:00 AM only'},contact:{name:'Ray Dutton',role:'Facilities Director',phone:'(312) 555-0148',required:true,confirmed:true},equipment:'Trane CenTraVac CVHF 500-ton centrifugal chiller',problem:'Quarterly PM: oil sample, refrigerant log, purge unit check, condenser approach trending.',needs:{certs:['CHILLER','EPA608U'],tools:['Vibration analyzer'],parts:[R('Oil analysis sample kit','Truck 03')],crew:1,system:'Chillers'}},
+ {id:'V-2046',techs:['marcus','jenna'],start:615,dur:180,travel:{marcus:30,jenna:30},type:'repair',pri:2,title:'RTU-4 compressor replacement',short:'Compressor swap',customer:'Riverside Plaza Tower',address:'2 N Riverside Plaza, Chicago, IL 60606',territory:'Central',window:{s:600,e:900,label:'10:00 AM–3:00 PM'},access:{s:600,e:900,text:'Freight elevator & roof hatch reserved for Fieldline 10:00 AM–3:00 PM'},contact:{name:'Nadia Freeman',role:'Building Engineer',phone:'(312) 555-0172',required:true,confirmed:true},equipment:'Carrier 50TC-D28 27.5-ton RTU (roof, 22nd floor)',problem:'Circuit B compressor grounded (megged 0 Ω to ground Mar 14). Floors 18–20 on reduced cooling.',needs:{certs:['EPA608U'],tools:['Recovery machine','Micron gauge','Nitrogen kit'],parts:[R('Copeland ZP137KCE scroll compressor','Received at site dock Mar 17'),R('Liquid-line filter drier, 16 cu in','Truck 03')],crew:2,system:'RTUs'}},
+ {id:'V-2042',techs:['marcus'],start:825,dur:90,travel:{marcus:20},type:'insp',pri:3,title:'Cooling tower pre-season inspection',short:'Tower inspection',customer:'Wacker Exchange Building',address:'310 W Wacker Dr, Chicago, IL 60606',territory:'Central',window:{s:780,e:960,label:'1:00–4:00 PM'},access:{s:null,text:'Roof access only with building engineer escort'},contact:{name:'Harold Chen',role:'Property Manager',phone:'(312) 555-0109',required:true,confirmed:false},equipment:'BAC Series 3000 cooling tower (2 cells)',problem:'Pre-season inspection: basin, fill, drift eliminators, fan gearbox oil, water-treatment handoff.',needs:{certs:['EPA608U'],tools:['Vibration analyzer'],parts:[],crew:1,system:'Cooling towers'},log:[{t:'Mar 17, 9:15 AM',who:'System',text:'Confirmation SMS sent to Harold Chen — no reply yet.'}]},
+ {id:'V-2040',techs:['jenna'],start:450,dur:120,travel:{jenna:25},type:'maint',pri:3,title:'RTU filter & belt service — 6 units',short:'RTU PM ×6',customer:'Kinzie Street Studios',address:'1000 W Kinzie St, Chicago, IL 60642',territory:'Central',window:{s:420,e:720,label:'7:00 AM–12:00 PM'},access:null,contact:{name:'Maya Patel',role:'Office Manager',phone:'(312) 555-0131',required:false,confirmed:true},equipment:'Lennox Energence 7.5-ton RTUs (×6)',problem:'Quarterly: filters, belts, condensate pans, economizer operation.',needs:{certs:['EPA608II'],tools:['Refrigerant scale'],parts:[R('Pleated filters 16×25×2 (24)','Truck 14')],crew:1,system:'RTUs'}},
+ {id:'V-2043',techs:['priya'],start:510,dur:150,travel:{priya:20},type:'ctrl',pri:2,title:'AHU-2 VAV controller replacement',short:'VAV controllers',customer:'Clinton & Adams Tower',address:'222 S Clinton St, Chicago, IL 60606',territory:'Central',window:{s:480,e:720,label:'8:00 AM–12:00 PM'},access:null,contact:{name:'Omar Siddiqui',role:'Chief Engineer',phone:'(312) 555-0166',required:false,confirmed:true},equipment:'Distech ECB-VAVS controllers (×6) on AHU-2, floor 9',problem:'Six VAV boxes offline since BAS firmware update; hot/cold complaints on floor 9.',needs:{certs:['BAS'],tools:['Niagara Workbench laptop'],parts:[R('Distech ECB-VAVS controllers (6)','Van 05')],crew:1,system:'BAS'}},
+ {id:'V-2044',techs:['priya'],start:690,dur:150,travel:{priya:20},type:'ctrl',pri:3,title:'Niagara N4 migration — 3 AHUs',short:'N4 migration',customer:'Monroe & Wells Building',address:'180 W Monroe St, Chicago, IL 60603',territory:'Central',window:{s:690,e:900,label:'11:30 AM–3:00 PM'},access:{s:690,e:1020,text:'Tenant quiet hours until 11:30 AM — no BAS changes affecting occupied floors before then'},contact:{name:'Beth Kaminski',role:'Facilities Coordinator',phone:'(312) 555-0187',required:false,confirmed:true},equipment:'Tridium JACE 8000; AHU-1/2/3',problem:'Migrate AX station to N4.10, re-map 214 points, verify occupancy schedules and alarms.',needs:{certs:['BAS'],tools:['Niagara Workbench laptop'],parts:[],crew:1,system:'BAS'}},
+ {id:'V-2048',techs:['priya'],start:870,dur:140,travel:{priya:20},type:'ctrl',pri:3,title:'Economizer & CO₂ sensor calibration',short:'Sensor calibration',customer:'Printers Row Charter School',address:'650 S Dearborn St, Chicago, IL 60605',territory:'Central',window:{s:870,e:1020,label:'2:30–5:00 PM'},access:{s:870,e:1080,text:'Classroom access only after 2:30 PM dismissal'},contact:{name:'Carla Jimenez',role:'Operations Director',phone:'(312) 555-0184',required:true,confirmed:true},equipment:'Daikin RoofPak AHUs (×2), 14 wall CO₂ sensors',problem:'CO₂ readings 300–400 ppm high; economizer dampers stuck at minimum. Rooms 204–212 stuffy.',needs:{certs:['BAS'],tools:['Airflow hood','Loop calibrator'],parts:[],crew:1,system:'AHUs'},log:[{t:'Mar 16',who:'Carla Jimenez',text:'Teachers report stuffy classrooms, rooms 204–212.'}]},
+ {id:'V-2049',techs:['tomas'],start:450,dur:120,travel:{tomas:25},type:'repair',pri:2,title:'Walk-in freezer evaporator fan motor',short:'Freezer fan motor',customer:'Pullman Fresh Market',address:'11100 S Cottage Grove Ave, Chicago, IL 60628',territory:'South',window:{s:420,e:900,label:'7:00 AM–3:00 PM'},access:{s:null,text:'Use receiving door on 111th St; avoid 9:00–10:00 AM truck deliveries'},contact:{name:'Denise Carter',role:'Store Manager',phone:'(773) 555-0135',required:true,confirmed:true},equipment:'Heatcraft low-temp evaporator, walk-in freezer (−10°F setpoint)',problem:'1 of 3 evaporator fans seized; box holding +4°F. Frozen product moved to reach-ins.',needs:{certs:['REFRIG'],tools:['Electronic leak detector'],parts:[{name:'Heatcraft ECM fan motor 25317901',short:'ECM fan motor',status:'pending',readyAt:690,where:'Johnstone Supply (Pershing Rd) — will-call ready 11:30 AM'}],crew:1,system:'Walk-ins'},log:[{t:'Mar 17, 3:40 PM',who:'Parts desk',text:'Motor ordered from Johnstone Supply — will-call ready 11:30 AM.'}]},
+ {id:'V-2051',techs:['tomas'],start:600,dur:120,travel:{tomas:20},type:'maint',pri:3,title:'Rack refrigeration quarterly PM',short:'Rack PM',customer:'Southside Food Hub',address:'1500 E 55th St, Chicago, IL 60615',territory:'South',window:{s:540,e:840,label:'9:00 AM–2:00 PM'},access:null,contact:{name:'Keisha Brown',role:'Operations Lead',phone:'(773) 555-0158',required:false,confirmed:true},equipment:'Hussmann Protocol rack, 4 compressors, 11 cases',problem:'Quarterly: leak check, oil levels, condenser coil, case temperature log review.',needs:{certs:['REFRIG','EPA608U'],tools:['Electronic leak detector'],parts:[],crew:1,system:'Rack refrigeration'}},
+ {id:'V-2054',techs:['tomas'],start:750,dur:120,travel:{tomas:25},type:'maint',pri:3,title:'Ice machine & walk-in cooler PM',short:'Ice machine PM',customer:'Chatham Community Hospital',address:'8250 S Cottage Grove Ave, Chicago, IL 60619',territory:'South',window:{s:420,e:900,label:'7:00 AM–3:00 PM'},access:{s:null,text:'Check in at security; contractor badge required in dietary department'},contact:{name:'Victor Nguyen',role:'Food Services Director',phone:'(773) 555-0177',required:false,confirmed:true},equipment:'Manitowoc Indigo NXT ice machines (×2), Kolpak walk-in cooler',problem:'Semi-annual sanitize & descale, condenser cleaning, walk-in door gasket check.',needs:{certs:['REFRIG'],tools:[],parts:[R('Manitowoc descaler & sanitizer kit','Truck 09')],crew:1,system:'Ice machines'}},
+ {id:'V-2050',techs:['andre'],start:495,dur:180,proj:285,travel:{andre:35},type:'repair',pri:2,title:'VRF refrigerant leak search & repair',short:'VRF leak repair',customer:'Oak Brook Commons',address:'1901 S Meyers Rd, Oakbrook Terrace, IL 60181',territory:'West',window:{s:480,e:960,label:'8:00 AM–4:00 PM'},access:null,contact:{name:'Sharon Liu',role:'Property Manager',phone:'(630) 555-0144',required:false,confirmed:true},equipment:'Mitsubishi City Multi R2 (PURY-P144), 22 indoor units',problem:'Low-charge alarm on outdoor unit 2; tenants on floors 3–4 report weak cooling.',projNote:"Likely to run long: Andre's Mar 4 visit logged 2 suspected leak points in branch box BC-2, and the nitrogen standing test alone takes ~60 min. The last 12 VRF leak repairs averaged +1h 40m over estimate.",needs:{certs:['VRF','EPA608U'],tools:['Nitrogen kit','Electronic leak detector','Mitsubishi Maintenance Tool'],parts:[R('R-410A, 25 lb cylinders (2)','Truck 12'),R('Brazing kit & BC-2 fittings','Truck 12')],crew:1,system:'VRF'},log:[{t:'Mar 4',who:'Andre Mitchell',text:'Found 2 suspected leak points in BC-2 branch box; recommended nitrogen standing test.'},{t:'Mar 17, 4:12 PM',who:'System',text:'Overrun risk flagged: similar jobs averaged +1h 40m (12 jobs).'}]},
+ {id:'V-2053',techs:['andre'],start:705,dur:75,travel:{andre:25,kevin:40},type:'maint',pri:3,title:'RTU quarterly PM — 3 units',short:'RTU PM ×3',customer:'Elmhurst Pediatric Associates',address:'133 E Brush Hill Rd, Elmhurst, IL 60126',territory:'West',window:{s:690,e:870,label:'11:30 AM–2:30 PM'},access:{s:690,e:870,text:'Roof hatch is inside the procedure suite — accessible only 11:30 AM–2:30 PM'},contact:{name:'Kelly Moran',role:'Practice Manager',phone:'(630) 555-0152',required:true,confirmed:true},equipment:'Trane Voyager 5-ton RTUs (×3)',problem:'Quarterly: filters, belts, coil cleaning, refrigerant pressures.',needs:{certs:['EPA608II'],tools:[],parts:[R('Pleated filters 20×20×2 (6)','Shop stock')],crew:1,system:'RTUs'}},
+ {id:'V-2057',techs:['andre'],start:810,dur:75,travel:{andre:20},type:'maint',pri:3,title:'Server room heat pump PM',short:'Server room PM',customer:'DuPage Community Credit Union',address:'400 E Roosevelt Rd, Lombard, IL 60148',territory:'West',window:{s:780,e:960,label:'1:00–4:00 PM'},access:{s:null,text:'Server room entry requires escort by branch IT'},contact:{name:'Maria Gomez',role:'Branch IT Lead',phone:'(630) 555-0119',required:true,confirmed:true},equipment:'Mitsubishi PKA-A36 wall-mount heat pumps (×2)',problem:'Semi-annual PM; one unit logged a high-head alarm on Mar 9.',needs:{certs:['EPA608U'],tools:['Electronic leak detector'],parts:[],crew:1,system:'Heat pumps'}},
+ {id:'V-2052',techs:['kevin'],start:630,dur:120,travel:{kevin:25},type:'repair',pri:3,title:'Boiler low-water cutoff replacement',short:'LWCO replacement',customer:'Bronzeville Arts Center',address:'4400 S Michigan Ave, Chicago, IL 60653',territory:'South',window:{s:600,e:900,label:'10:00 AM–3:00 PM'},access:null,contact:{name:'Terrence Hill',role:'Building Manager',phone:'(773) 555-0193',required:true,confirmed:true},equipment:'Weil-McLain 88 series steam boiler',problem:'LWCO probe failing intermittently; boiler short-cycling overnight.',needs:{certs:['BOILER'],tools:['Combustion analyzer'],parts:[R('McDonnell & Miller PS-801 LWCO','Truck 04')],crew:1,system:'Boilers'}},
+ {id:'V-2058',techs:['kevin'],start:930,dur:150,travel:{kevin:25},type:'maint',pri:3,title:'Chiller spring start-up prep',short:'Chiller start-up',customer:'Calumet Logistics Center',address:'2600 S Halsted St, Chicago, IL 60608',territory:'South',window:{s:900,e:1110,label:'3:00–6:30 PM'},access:{s:900,e:1140,text:'Dock active until 3:00 PM — plant room access after 3:00 PM only'},contact:{name:'Ron Petrakis',role:'Plant Supervisor',phone:'(312) 555-0138',required:true,confirmed:true},equipment:'Carrier AquaEdge 23XRV 350-ton chiller',problem:'Pre-season: leak test, oil & filter check, VFD inspection, controls verification before April start-up.',needs:{certs:['CHILLER','EPA608U'],tools:['Vibration analyzer'],parts:[R('Oil filter & gasket kit','Truck 04')],crew:1,system:'Chillers'}},
+ {id:'V-2060',techs:[],start:525,dur:120,travel:{},type:'emerg',pri:1,title:'No heat — Boiler #2 ignition lockout',short:'No heat',customer:'Northshore Senior Living',address:'1420 Chicago Ave, Evanston, IL 60201',territory:'North',received:'6:02 AM today · answering service',window:{s:370,e:600,arriveBy:true,label:'Arrive by 10:00 AM (4-hr emergency SLA)'},access:{s:null,text:'24/7 — sign in at front desk; boiler room via lower-level service corridor'},contact:{name:'Linda Park',role:'Maintenance Supervisor',phone:'(847) 555-0142',required:true,confirmed:true},equipment:'Lochinvar Crest FBN1500 condensing boilers (×2)',problem:'Boiler #2 locked out on ignition failure at 5:40 AM; Boiler #1 at high fire and cannot keep up. East wing at 64°F and falling (outdoor 28°F). 112 residents.',needs:{certs:['BOILER','GAS'],tools:['Combustion analyzer'],parts:[R('Lochinvar igniter kit 100208410 (probable)','Truck 07 · Shop')],crew:1,system:'Boilers'},log:[{t:'6:02 AM',who:'Answering service',text:'Call from Linda Park: Boiler #2 locked out, east wing cold.'},{t:'6:03 AM',who:'System',text:'Auto-classified P1 — heat loss at residential care facility. 4-hr SLA.'},{t:'6:06 AM',who:'System',text:'Remote BMS: Boiler #2 fault “Ignition failure (3 tries)”.'}]},
+ {id:'V-2061',techs:[],start:825,dur:60,travel:{},type:'repair',pri:3,title:'Warranty follow-up — RTU-2 blower noise',short:'Warranty follow-up',customer:'West Loop Dental Group',address:'1101 W Randolph St, Chicago, IL 60607',territory:'Central',window:{s:720,e:1020,label:'12:00–5:00 PM'},access:{s:null,text:'Roof access via rear stairwell; suite open 8 AM–6 PM'},contact:{name:'Jasmine Reyes',role:'Office Manager',phone:'(312) 555-0126',required:false,confirmed:true},equipment:'Carrier WeatherMaker 48FC 6-ton RTU (installed Oct 2024)',problem:'Rattle at blower start-up; likely loose blower wheel set screw. Covered under install warranty.',needs:{certs:['EPA608II'],tools:[],parts:[],crew:1,system:'RTUs'}}
+];
+VISITS.forEach(v=>{if(!v.log)v.log=[{t:'Mar 12',who:'System',text:v.type==='maint'||v.type==='insp'?'Generated from maintenance agreement.':'Service request logged by customer portal.'},{t:'Mar 17',who:'System',text:'Customer confirmation received.'}];});
+
+/* ---------- Helpers ---------- */
+let S={techs:TECHS,visits:VISITS}, ISSUES=[], FIXES=[], FLAGS={}, sel={k:'v',id:'V-2060'}, terr='All', undoStack=[], clockMin=371;
+const $=s=>document.querySelector(s);
+const T=id=>S.techs.find(t=>t.id===id), V=id=>S.visits.find(v=>v.id===id);
+const P=m=>((m-DAY_S)/SPAN*100).toFixed(3)+'%', W=(a,b)=>((b-a)/SPAN*100).toFixed(3)+'%';
+function hm(m){const h=Math.floor(m/60),mm=m%60;return{h12:(h%12)||12,mm:String(mm).padStart(2,'0'),ap:h>=12?'PM':'AM'};}
+const fmt=m=>{const t=hm(m);return `${t.h12}:${t.mm} ${t.ap}`;};
+const fmtS=m=>{const t=hm(m);return t.h12+(t.mm!=='00'?':'+t.mm:'')+(t.ap==='AM'?'a':'p');};
+function rng(a,b){const A=hm(a),B=hm(b);return A.ap===B.ap?`${A.h12}:${A.mm}–${B.h12}:${B.mm} ${B.ap}`:`${fmt(a)}–${fmt(b)}`;}
+function rngS(a,b){const A=hm(a),B=hm(b);return A.ap===B.ap?A.h12+(A.mm!=='00'?':'+A.mm:'')+'–'+fmtS(b):fmtS(a)+'–'+fmtS(b);}
+function dur(m){m=Math.round(m);const h=Math.floor(m/60),r=m%60;return h&&r?`${h}h ${r}m`:h?`${h}h`:`${r}m`;}
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const hasCert=(t,c)=>t.certs.includes(c)||(c==='EPA608II'&&t.certs.includes('EPA608U'));
+const active=()=>S.visits.filter(v=>!v.rescheduled);
+const techVisits=id=>active().filter(v=>v.techs.includes(id)).sort((a,b)=>a.start-b.start);
+const booked=id=>techVisits(id).reduce((a,v)=>a+v.dur+(v.travel[id]||0),0);
+const shiftLen=t=>t.shift.e-t.shift.s;
+const pctAfter=(id,add)=>Math.round((booked(id)+add)/shiftLen(T(id))*100);
+function log(v,text){v.log.push({t:fmt(clockMin),who:'Rachel Ortiz',text});}
+function freeCheck(id,s,e,excl=[]){const t=T(id);if(s<t.shift.s||e>t.shift.e)return{shift:true,t};return techVisits(id).find(v=>!excl.includes(v.id)&&(v.start-(v.travel[id]||0))<e&&(v.start+v.dur)>s)||null;}
+const cf=c=>c.shift?`Outside ${c.t.name.split(' ')[0]}'s shift hours`:`Conflicts with ${c.id} ${c.customer} (${rngS(c.start,c.start+c.dur)})`;
+
+/* ---------- Issue engine ---------- */
+function computeIssues(){
+ const out=[];
+ active().forEach(v=>{
+  if(!v.techs.length){out.push({sev:v.pri===1?'crit':v.pri===2?'high':'low',kind:'Unassigned',title:v.pri===1?'Unassigned emergency call':'Unassigned visit',text:`${v.id} ${v.customer} · ${v.window.arriveBy?'arrive by '+fmt(v.window.e):'window '+rngS(v.window.s,v.window.e)} · ${dur(v.dur)}`,visits:[v.id]});return;}
+  if(v.techs.length<v.needs.crew)out.push({sev:'high',kind:'Crew',title:`Needs ${v.needs.crew} technicians — ${v.techs.length} assigned`,text:`${v.id} ${v.customer} · ${v.short} at ${fmtS(v.start)}; 138 lb burner needs a two-person lift`,visits:[v.id]});
+  const miss=v.needs.certs.filter(c=>!v.techs.some(t=>hasCert(T(t),c)));
+  if(miss.length)out.push({sev:'high',kind:'Cert',title:'Missing certification',text:`${v.id} needs ${miss.map(c=>CERTS[c]).join(', ')}`,visits:[v.id]});
+  const dep=v.start-Math.max(...v.techs.map(t=>v.travel[t]||0));
+  v.needs.parts.forEach(p=>{if(p.status==='pending'&&p.readyAt>dep)out.push({sev:'med',kind:'Part',title:'Part not ready before visit',text:`${v.id} ${v.customer}: ${p.short||p.name} ready ${fmt(p.readyAt)}, visit starts ${fmt(v.start)}`,visits:[v.id]});});
+  if(v.access&&v.access.s!=null&&(v.start<v.access.s||v.start+v.dur>v.access.e))out.push({sev:'high',kind:'Access',title:'Outside site access hours',text:`${v.id} ${v.customer}: ${rngS(v.start,v.start+v.dur)} vs access ${rngS(v.access.s,v.access.e)}`,visits:[v.id]});
+  if(v.window.arriveBy){const a=v.arrive||v.start;if(a>v.window.e)out.push({sev:'crit',kind:'SLA',title:'Emergency SLA will be missed',text:`${v.id} ETA ${fmt(a)} — ${dur(a-v.window.e)} after the ${fmt(v.window.e)} commitment`,visits:[v.id]});}
+  else if(v.start<v.window.s||v.start+v.dur>v.window.e)out.push({sev:'med',kind:'Window',title:'Outside customer service window',text:`${v.id}: ${rngS(v.start,v.start+v.dur)} vs ${v.window.label}`,visits:[v.id]});
+  const c=v.contact;if(c&&c.required&&!c.confirmed)out.push({sev:'low',kind:'Contact',title:'Onsite contact not confirmed',text:c.reminded?`${v.id}: request sent to ${c.name} at ${c.reminded} — awaiting reply`:`${v.id} ${v.customer}: ${c.name} must be present at ${fmt(v.start)}`,visits:[v.id]});
+ });
+ S.techs.forEach(t=>{
+  const L=techVisits(t.id),fn=t.name.split(' ')[0];
+  for(let i=1;i<L.length;i++){const a=L[i-1],b=L[i],bd=b.start-(b.travel[t.id]||0),pe=a.start+a.dur,je=a.start+(a.proj||a.dur);
+   if(bd<pe)out.push({sev:'high',kind:'Conflict',title:`Overlapping jobs — ${fn}`,text:`${a.id} ends ${fmt(pe)}; must leave for ${b.id} by ${fmt(bd)}`,visits:[b.id,a.id],techs:[t.id],zone:{tech:t.id,s:bd,e:pe}});
+   else if(bd<je){const ns=je+(b.travel[t.id]||0),ne=ns+b.dur;let x='';if(b.access&&b.access.e!=null&&ne>b.access.e)x=`, finishing ${fmtS(ne)} — after the ${fmtS(b.access.e)} access cutoff`;out.push({sev:'high',kind:'Overrun',title:'Repair likely to run long',text:`${a.id} ${a.customer} projected to ${fmt(je)} (+${dur(a.proj-a.dur)}). Pushes ${b.id} to ${fmtS(ns)}${x}.`,visits:[a.id,b.id],techs:[t.id],zone:{tech:t.id,s:bd,e:je}});}
+  }
+  if(L.length){const last=L[L.length-1],end=last.start+last.dur;if(end>t.shift.e&&!t.otOk)out.push({sev:'med',kind:'Overtime',title:`Over shift — ${t.name}`,text:`Last job ${last.id} ends ${fmt(end)}, ${dur(end-t.shift.e)} past ${fmt(t.shift.e)} shift end`,visits:[last.id],techs:[t.id]});
+   const f=L[0],fd=f.start-(f.travel[t.id]||0);if(fd<t.shift.s)out.push({sev:'med',kind:'Shift',title:`Starts before shift — ${fn}`,text:`${f.id} requires leaving at ${fmt(fd)}; shift starts ${fmt(t.shift.s)}`,visits:[f.id],techs:[t.id]});}
+ });
+ out.sort((a,b)=>RANK[a.sev]-RANK[b.sev]);ISSUES=out;
+}
+
+/* ---------- Fixes ---------- */
+function daleOpt(re){
+ const b=V('V-2034'),bump=b.techs.includes('dale')&&!b.rescheduled,c=freeCheck('dale',513,645,['V-2034']);
+ return{title:re?'Reassign to Dale Kowalski':'Dale Kowalski',badge:'Best match',sub:'ETA 8:42 AM · on site 8:45–10:45 AM',cta:re?'Reassign':'Assign',primary:true,disabled:!!c,reason:c&&cf(c),
+  checks:[['ok','Boiler + gas certified'],['ok','Home territory: North'],['ok','Combustion analyzer & igniter kit on Truck 07'],['ok','12 min from Ridgeview Office Park (V-2031) — 1h 18m inside SLA']].concat(bump?[['warn','Bumps V-2034 Glenview inspection prep (P4, flexible) to unassigned']]:[]),
+  preview:[{tech:'dale',s:525,e:645,label:'Proposed · V-2060'}],
+  apply(){const e=V('V-2060');e.techs=['dale'];e.start=525;e.arrive=522;e.travel={dale:12};log(e,'Assigned to Dale Kowalski · ETA 8:42 AM. Linda Park notified by SMS.');if(bump){const x=V('V-2034');x.techs=[];log(x,'Unassigned — Dale moved to emergency V-2060.');}},
+  msg:`V-2060 assigned to Dale Kowalski · ETA 8:42 AM${bump?' · V-2034 moved to unassigned':''}`};
+}
+function getFixes(v){
+ const F=[];if(!v||v.rescheduled)return F;
+ const iss=ISSUES.filter(i=>i.visits.includes(v.id)),has=k=>iss.some(i=>i.kind===k);
+ if(v.id==='V-2060'&&!v.techs.length){
+  F.push(daleOpt(false));
+  const b=V('V-2052'),bump=b.techs.includes('kevin')&&!b.rescheduled,c=freeCheck('kevin',600,785,['V-2052']);
+  F.push({title:'Kevin Oduya',sub:'ETA 11:05 AM · on site 11:05 AM–1:05 PM',cta:'Assign',disabled:!!c,reason:c&&cf(c),checks:[['ok','Boiler + gas certified'],['bad','Outside territory — covers Central/South, 45 min drive'],['warn','Shift starts 10:00 AM; shop stop for igniter kit (+20 min)'],['bad','Misses 10:00 AM SLA by 1h 05m']].concat(bump?[['warn','Bumps V-2052 Bronzeville LWCO repair (P3) to unassigned']]:[]),preview:[{tech:'kevin',s:665,e:785,label:'Alt · V-2060'}],
+   apply(){const e=V('V-2060');e.techs=['kevin'];e.start=665;e.arrive=665;e.travel={kevin:65};log(e,'Assigned to Kevin Oduya · ETA 11:05 AM.');if(bump){const x=V('V-2052');x.techs=[];log(x,'Unassigned — Kevin moved to emergency V-2060.');}},msg:'V-2060 assigned to Kevin Oduya · ETA 11:05 AM (SLA miss flagged)'});
+ }
+ if(v.id==='V-2060'&&v.techs.includes('kevin')&&has('SLA'))F.push(daleOpt(true));
+ if(v.id==='V-2061'&&!v.techs.length){
+  const cj=freeCheck('jenna',813,885);
+  F.push({title:'Jenna Brooks',badge:'Best match',sub:'1:45–2:45 PM · after Riverside Plaza compressor job',cta:'Assign',primary:true,disabled:!!cj,reason:cj&&cf(cj),checks:[['ok','Central territory · RTU qualified'],['ok','12 min from Riverside Plaza Tower'],['ok','Inside customer window (12:00–5:00 PM)'],['ok',`Uses idle time — Jenna to ${pctAfter('jenna',72)}% booked`]],preview:[{tech:'jenna',s:825,e:885,label:'Proposed · V-2061'}],apply(){const x=V('V-2061');x.techs=['jenna'];x.start=825;x.travel={jenna:12};log(x,'Assigned to Jenna Brooks · 1:45 PM.');},msg:'V-2061 assigned to Jenna Brooks · 1:45–2:45 PM'});
+  const ck=freeCheck('kevin',750,830);
+  F.push({title:'Kevin Oduya',sub:'12:50–1:50 PM · after Bronzeville Arts Center',cta:'Assign',disabled:!!ck,reason:ck&&cf(ck),checks:[['ok','Central territory · RTU qualified'],['ok','20 min from Bronzeville Arts Center'],['warn',"Uses Kevin's midday gap — also the best cover for V-2053 if Andre runs long"]],preview:[{tech:'kevin',s:770,e:830,label:'Alt · V-2061'}],apply(){const x=V('V-2061');x.techs=['kevin'];x.start=770;x.travel={kevin:20};log(x,'Assigned to Kevin Oduya · 12:50 PM.');},msg:'V-2061 assigned to Kevin Oduya · 12:50–1:50 PM'});
+ }
+ if(v.id==='V-2034'&&!v.techs.length)F.push({title:'Reschedule to Thu, Mar 20 · 9:00 AM',sub:'Dale Kowalski has 8:30 AM–12:30 PM open',cta:'Reschedule',primary:true,checks:[['ok','State inspection on Mar 27 still covered'],['ok','Flexible window — no customer approval needed']],apply(){const x=V('V-2034');x.rescheduled='Thu, Mar 20 · 9:00 AM · Dale Kowalski';log(x,'Rescheduled to Thu, Mar 20 · 9:00 AM.');},msg:'V-2034 moved to Thu, Mar 20 · 9:00 AM'});
+ if(v.id==='V-2052'&&!v.techs.length)F.push({title:'Reschedule to Wed, Mar 19 · 10:30 AM',sub:'Kevin Oduya · first open slot',cta:'Reschedule',primary:true,checks:[['warn','Boiler keeps short-cycling one more night — customer to monitor'],['ok','LWCO part already on Truck 04']],apply(){const x=V('V-2052');x.rescheduled='Wed, Mar 19 · 10:30 AM · Kevin Oduya';log(x,'Rescheduled to Wed, Mar 19 · 10:30 AM.');},msg:'V-2052 moved to Wed, Mar 19 · 10:30 AM'});
+ if(has('Overrun')&&(v.id==='V-2050'||v.id==='V-2053')){
+  const c=freeCheck('kevin',750,865,['V-2053']);
+  F.push({title:'Move V-2053 to Kevin Oduya',badge:'Recommended',sub:'1:10–2:25 PM at Elmhurst Pediatric Associates',cta:'Move',primary:true,disabled:!!c,reason:c&&cf(c),checks:[['ok','RTU qualified · EPA 608 Universal'],['ok','Free after Bronzeville Arts Center (ends 12:30 PM)'],['warn','Outside home territory — 40 min drive west'],['ok','Finishes 5 min before 2:30 PM roof-access cutoff'],['ok','Andre can finish the leak repair without rushing']],preview:[{tech:'kevin',s:790,e:865,label:'Proposed · V-2053'}],apply(){const x=V('V-2053');x.techs=['kevin'];x.start=790;x.travel={kevin:40};log(x,'Reassigned from Andre Mitchell to Kevin Oduya (overrun on V-2050). Kelly Moran notified.');log(V('V-2050'),'Downstream V-2053 moved to Kevin to absorb expected overrun.');},msg:'V-2053 moved to Kevin Oduya · 1:10–2:25 PM'});
+  F.push({title:'Reschedule V-2053 to Thu, Mar 20 · 11:30 AM',sub:'Andre Mitchell · next open roof-access window',cta:'Reschedule',checks:[['ok','Customer offers the same 11:30 AM–2:30 PM window Thursday'],['warn','Quarterly PM slips 2 days (no SLA impact)']],apply(){const x=V('V-2053');x.rescheduled='Thu, Mar 20 · 11:30 AM · Andre Mitchell';log(x,'Rescheduled to Thu, Mar 20 · 11:30 AM.');},msg:'V-2053 moved to Thu, Mar 20 · 11:30 AM'});
+ }
+ if(v.id==='V-2055'&&has('Crew')){
+  const c=freeCheck('dale',735,870),prev=techVisits('dale').filter(x=>x.start+x.dur<=735).pop();
+  F.push({title:'Add Dale Kowalski as 2nd technician',badge:'Best match',sub:'12:30–2:30 PM · joins Sofia on site',cta:'Add to crew',primary:true,disabled:!!c,reason:c&&cf(c),checks:[['ok',prev?`Free from ${fmt(prev.start+prev.dur)} (after ${prev.customer})`:'Open all afternoon'],['ok','North territory — 15 min drive'],['ok','Gas certified · brings combustion analyzer for burner start-up'],['ok',`Raises Dale to ${pctAfter('dale',135)}% booked`]],preview:[{tech:'dale',s:750,e:870,label:'+ Dale · V-2055'}],apply(){const x=V('V-2055');x.techs.push('dale');log(x,'Dale Kowalski added as 2nd technician.');},msg:'Dale Kowalski added to V-2055 crew'});
+  F.push({title:'Jenna Brooks',sub:'Central · Technician II',cta:'Add',disabled:true,reason:'Busy on V-2046 until 1:15 PM — earliest arrival 1:55 PM (38 min drive)',checks:[]});
+ }
+ if(v.id==='V-2049'&&has('Part')){const x=V('V-2054');if(x.techs.includes('tomas')&&x.start===750)F.push({title:'Swap order with V-2054 Chatham Community Hospital',badge:'Recommended',sub:'V-2054 → 7:30 AM · V-2049 → 12:30 PM',cta:'Swap',primary:true,checks:[['ok','Both sites accept any time 7:00 AM–3:00 PM'],['ok','Tomás picks up motor at Johnstone Supply en route (ready 11:30 AM)'],['ok',"No change to Tomás's shift end or total drive time"],['warn','Freezer runs on 2 of 3 fans ~5 more hours — Denise Carter notified']],preview:[{tech:'tomas',s:750,e:870,label:'Moved · V-2049'}],apply(){const a=V('V-2054'),b=V('V-2049');a.start=450;a.travel={tomas:25};b.start=750;b.travel={tomas:30};log(b,'Moved to 12:30 PM; motor pickup at Johnstone Supply added to route.');log(a,'Moved to 7:30 AM (swap with V-2049).');},msg:"Swapped V-2049 and V-2054 · motor pickup added to Tomás's route"});}
+ if(v.id==='V-2048'&&has('Overtime')){
+  F.push({title:'Approve 20 min overtime for Priya',sub:'Finish at 4:50 PM',cta:'Approve',primary:true,checks:[['ok','Priya at 36.5 h this week — stays under 40 h'],['ok','Inside school window (until 5:00 PM)']],apply(){T('priya').otOk=true;log(V('V-2048'),'Overtime approved for Priya Raman (+20 min).');},msg:'Overtime approved · Priya Raman until 4:50 PM'});
+  F.push({title:'Reschedule to Wed, Mar 19 · 2:30 PM',sub:'Priya Raman · afternoon open',cta:'Reschedule',checks:[['warn','CO₂ complaints continue another day'],['ok','Frees Priya at 2:00 PM for BAS callbacks']],apply(){const x=V('V-2048');x.rescheduled='Wed, Mar 19 · 2:30 PM · Priya Raman';log(x,'Rescheduled to Wed, Mar 19 · 2:30 PM.');},msg:'V-2048 moved to Wed, Mar 19 · 2:30 PM'});
+ }
+ if(v.id==='V-2042'&&has('Contact')){
+  if(!v.contact.reminded)F.push({title:'Send confirmation request to Harold Chen',sub:'SMS + email · (312) 555-0109',cta:'Send',primary:true,checks:[['ok','Auto-escalates to building engineer if no reply by 11:00 AM']],apply(){const x=V('V-2042');x.contact.reminded=fmt(clockMin);log(x,'Confirmation request sent to Harold Chen.');},msg:'Confirmation request sent to Harold Chen'});
+  F.push({title:'Mark contact as confirmed',sub:'Use if confirmed by phone',cta:'Confirm',checks:[],apply(){const x=V('V-2042');x.contact.confirmed=true;log(x,'Harold Chen confirmed by phone for 1:45 PM.');},msg:'Harold Chen confirmed for 1:45 PM'});
+ }
+ return F;
+}
+function techFixes(t){const ids=[...new Set(ISSUES.filter(i=>(i.techs||[]).includes(t.id)).map(i=>i.visits[0]))];let F=[];ids.forEach(id=>F=F.concat(getFixes(V(id))));return F;}
+
+/* ---------- Render ---------- */
+function renderKPIs(){
+ const act=active(),asg=act.filter(v=>v.techs.length).length,un=act.length-asg,mv=S.visits.length-act.length;
+ let bk=0,cap=0;S.techs.forEach(t=>{cap+=shiftLen(t);bk+=booked(t.id);});
+ const c=ISSUES.filter(i=>i.sev==='crit').length,h=ISSUES.filter(i=>i.sev==='high').length;
+ const e=V('V-2060');let sla;
+ if(!e.techs.length)sla={c:'crit',v:`${dur(e.window.e-NOW)} left`,s:'Northshore Senior Living · unassigned'};
+ else{const a=e.arrive||e.start,ok=a<=e.window.e;sla={c:ok?'ok':'crit',v:ok?`ETA ${fmt(a)}`:`Late ${dur(a-e.window.e)}`,s:`${T(e.techs[0]).name} · due by 10:00 AM`};}
+ let tot=0,rdy=0;act.forEach(v=>v.needs.parts.forEach(p=>{tot++;if(p.status!=='pending')rdy++;else if(v.techs.length&&p.readyAt<=v.start-Math.max(...v.techs.map(t=>v.travel[t]||0)))rdy++;}));
+ const u=Math.round(bk/cap*100);
+ $('#kpis').innerHTML=`<div class="kpi"><div class="k">Visits today</div><div class="v">${act.length}</div><div class="s">${asg} assigned · ${un} unassigned${mv?` · ${mv} moved`:''}</div></div>
+ <div class="kpi ${u>90?'warn':''}"><div class="k">Booked capacity</div><div class="v">${u}% <small>${(bk/60).toFixed(1)} of ${cap/60} h</small></div><div class="s">8 technicians on shift · incl. travel</div></div>
+ <div class="kpi ${c?'crit':h?'warn':'ok'}"><div class="k">Open issues</div><div class="v">${ISSUES.length}</div><div class="s">${c} critical · ${h} high</div></div>
+ <div class="kpi ${sla.c}"><div class="k">Emergency SLA</div><div class="v">${sla.v}</div><div class="s">${sla.s}</div></div>
+ <div class="kpi ${rdy<tot?'warn':'ok'}"><div class="k">Parts ready</div><div class="v">${rdy} <small>of ${tot}</small></div><div class="s">${rdy<tot?`${tot-rdy} not ready for start`:'All ready for start'}</div></div>`;
+}
+function renderIssues(){
+ $('#issCount').textContent=ISSUES.length;
+ const cnt={crit:0,high:0,med:0,low:0};ISSUES.forEach(i=>cnt[i.sev]++);
+ $('#sevSum').innerHTML=[['crit','critical'],['high','high'],['med','medium'],['low','low']].filter(([k])=>cnt[k]).map(([k,l])=>`<span class="s-${k}">${cnt[k]} ${l}</span>`).join('');
+ $('#issues').innerHTML=ISSUES.length?ISSUES.map(i=>`<button class="iss s-${i.sev} ${sel.k==='v'&&i.visits.includes(sel.id)?'on':''}" data-issue="${i.visits[0]}"><span class="ii">${I[KIND_IC[i.kind]]}</span><span class="ib"><span class="it">${i.title}</span><span class="ix">${i.text}</span></span></button>`).join(''):`<div class="iss-clear">${I.check} No open issues — schedule is ready to publish</div>`;
+}
+function selBr(v){
+ if(v.window.arriveBy)return{s:NOW,e:v.window.e,l:'SLA · arrive by '+fmtS(v.window.e),c:'sla'};
+ if(v.access&&v.access.s!=null)return{s:v.access.s,e:v.access.e,l:'Site access '+rngS(v.access.s,v.access.e),c:'acc'};
+ return{s:v.window.s,e:v.window.e,l:'Service window '+rngS(v.window.s,v.window.e),c:'win'};
+}
+function brHTML(v){const b=selBr(v),s=Math.max(b.s,DAY_S),e=Math.min(b.e,DAY_E);return `<div class="brk ${b.c}" style="left:${P(s)};width:${W(s,e)}">${b.l}</div>`;}
+function block(v,top){
+ const un=!v.techs.length,s=un?Math.max(v.window.s,DAY_S):v.start,e=un?Math.min(v.window.e,DAY_E):v.start+v.dur,f=FLAGS[v.id];
+ const isSel=sel.k==='v'&&sel.id===v.id,dim=terr!=='All'&&v.territory!==terr;
+ const ic=(v.needs.crew>1?`<span class="mi">${I.users}${v.techs.length}/${v.needs.crew}</span>`:'')+(v.access&&v.access.s!=null?`<span class="mi">${I.lock}</span>`:'');
+ const l3=un?(v.window.arriveBy?`Arrive by ${fmtS(v.window.e)}`:`Window ${rngS(v.window.s,v.window.e)}`)+` · ${dur(v.dur)} est.`:v.proj?`${rngS(s,e)} → ~${fmtS(v.start+v.proj)}`:`${rngS(s,e)} · ${v.short}`;
+ const tip=`${v.id} · ${v.title}&#10;${v.customer} — ${v.address}&#10;${un?v.window.label:rng(s,e)}${v.techs.length?' · '+v.techs.map(x=>T(x).name).join(' + '):''}`;
+ return `<div class="vb t-${v.type} ${un?'unas':''} ${isSel?'sel':''} ${f?'fl':''} ${dim?'dim':''}" role="button" tabindex="0" data-v="${v.id}" style="top:${top}px;left:${P(s)};width:${W(s,e)}" title="${esc(tip).replace(/&amp;#10;/g,'&#10;')}"><div class="l1"><span>${v.id}</span><span class="pri p${v.pri}">P${v.pri}</span>${ic}</div><div class="l2">${v.customer}</div><div class="l3">${l3}</div>${f?`<span class="flag s-${f}">!</span>`:''}</div>`;
+}
+function renderBoard(){
+ const act=active(),selV=sel.k==='v'?V(sel.id):null;
+ FLAGS={};ISSUES.forEach(i=>i.visits.forEach(id=>{if(!FLAGS[id]||RANK[i.sev]<RANK[FLAGS[id]])FLAGS[id]=i.sev;}));
+ let h=`<div class="axis"><div class="al">Technician · booked</div><div class="ah">`;
+ for(let hr=6;hr<=18;hr++)h+=`<div class="hr" style="left:${P(hr*60)}">${(hr%12)||12} ${hr>=12?'PM':'AM'}</div>`;
+ h+=`</div></div>`;
+ const un=act.filter(v=>!v.techs.length).sort((a,b)=>a.window.s-b.window.s),lanes=[];
+ un.forEach(v=>{const s=Math.max(v.window.s,DAY_S);let L=lanes.find(l=>l.end<=s);if(!L){L={end:0,items:[]};lanes.push(L);}L.items.push(v);L.end=v.window.e;});
+ let ul='';lanes.forEach((L,li)=>L.items.forEach(v=>ul+=block(v,5+li*50)));
+ if(!un.length)ul=`<div class="un-empty">${I.check} All visits assigned</div>`;
+ const pc=un.filter(v=>v.pri===1).length;
+ h+=`<div class="row unrow"><div class="lbl"><span class="av un">${I.alert}</span><div class="ti"><div class="tn">Unassigned <span class="cnt" style="background:var(--crit)">${un.length}</span></div><div class="tm">${pc?pc+' emergency · ':''}${un.length-pc} other</div></div></div><div class="lane" style="height:${Math.max(1,lanes.length)*50+8}px">${ul}</div></div>`;
+ S.techs.forEach(t=>{
+  const L=techVisits(t.id),bk=booked(t.id),u=Math.round(bk/shiftLen(t)*100),uc=u>100?'over':u>=90?'high':u<70?'low':'';
+  let ln='';
+  if(t.shift.s>DAY_S)ln+=`<div class="off" style="left:0;width:${W(DAY_S,t.shift.s)}"></div>`;
+  if(t.shift.e<DAY_E)ln+=`<div class="off" style="left:${P(t.shift.e)};right:0"></div>`;
+  L.forEach(v=>{const tr=v.travel[t.id]||0;if(tr)ln+=`<div class="tv" style="left:${P(v.start-tr)};width:${W(v.start-tr,v.start)}">${tr>=20?`<span>${tr}m</span>`:''}</div>`;ln+=block(v,5);if(v.proj&&v.proj>v.dur)ln+=`<div class="ovr" style="left:${P(v.start+v.dur)};width:${W(v.start+v.dur,v.start+v.proj)}">+${dur(v.proj-v.dur)} likely</div>`;});
+  ISSUES.filter(i=>i.zone&&i.zone.tech===t.id).forEach(i=>ln+=`<div class="cz" style="left:${P(i.zone.s)};width:${W(i.zone.s,i.zone.e)}"></div>`);
+  let gh=false;FIXES.forEach((f,idx)=>(f.preview||[]).forEach(p=>{if(p.tech===t.id&&!f.disabled){gh=true;ln+=`<div class="ghost" data-g="${idx}" style="left:${P(p.s)};width:${W(p.s,p.e)}">${p.label}</div>`;}}));
+  if(selV&&(selV.techs.includes(t.id)||gh)&&!selV.rescheduled)ln+=brHTML(selV);
+  const dimRow=terr!=='All'&&!t.terr.includes(terr);
+  h+=`<div class="row ${dimRow?'dim':''} ${sel.k==='t'&&sel.id===t.id?'tsel':''}"><div class="lbl" data-t="${t.id}" title="${t.name} · ${t.role}"><span class="av" style="background:${t.color}">${t.ini}</span><div class="ti"><div class="tn">${t.name}</div><div class="tm">${t.terr.join(' / ')} · ${rngS(t.shift.s,t.shift.e)}</div><div class="tc">${t.certs.filter(c=>c!=='NATE').slice(0,3).map(c=>`<span>${CERT_S[c]}</span>`).join('')}</div></div><div class="tu ${uc}" title="${dur(bk)} booked incl. travel of ${dur(shiftLen(t))} shift"><b>${u}%</b><i><em style="width:${Math.min(u,100)}%"></em></i></div></div><div class="lane">${ln}</div></div>`;
+ });
+ let cc='';for(let hr=6;hr<=18;hr++){const a=hr*60,b=a+60;let on=0,fr=0;S.techs.forEach(t=>{const L=techVisits(t.id);let o=0,f=0;for(let m=a;m<b;m++){if(m<t.shift.s||m>=t.shift.e)continue;o++;if(!L.some(v=>m>=v.start-(v.travel[t.id]||0)&&m<v.start+v.dur))f++;}if(o>=30){on++;if(f>=30)fr++;}});
+  const cl=on===0?'none':fr===0?(on>=3?'zero':''):fr===1?'one':'ok';cc+=`<div class="cc ${cl}" title="${fr} of ${on} on-shift technicians have 30+ free minutes">${on?`<span><b>${fr}</b>/${on}</span>`:'—'}</div>`;}
+ h+=`<div class="row caprow"><div class="lbl"><div class="ti"><div class="tn">Free technicians</div><div class="tm">30+ open minutes in the hour</div></div></div><div class="lane cap">${cc}</div></div>`;
+ h+=`<div class="nowline" style="left:calc(var(--lbl) + (100% - var(--lbl)) * ${((NOW-DAY_S)/SPAN).toFixed(4)})"><b>Now 6:10</b></div>`;
+ $('#boardInner').innerHTML=h;
+ $('#terrSeg').innerHTML=['All','North','Central','South','West'].map(x=>`<button data-terr="${x}" class="${terr===x?'on':''}">${x}</button>`).join('');
+ const mv=S.visits.filter(v=>v.rescheduled);
+ $('#moved').innerHTML=mv.length?'Moved off today:'+mv.map(v=>`<button data-v="${v.id}">${v.id} → ${v.rescheduled.split(' · ').slice(0,2).join(' ')}</button>`).join(''):'';
+}
+function fixCard(f,i){
+ const ic={ok:I.check,warn:I.warn,bad:I.x};
+ return `<div class="fix ${f.disabled?'dis':''}" data-fix="${i}"><div class="fix-h"><div><div class="fix-t">${f.title}${f.badge&&!f.disabled?` <span class="badge">${f.badge}</span>`:''}</div><div class="fix-s">${f.sub}</div></div><button class="btn sm ${f.primary&&!f.disabled?'primary':''}" data-apply="${i}" ${f.disabled?'disabled':''}>${f.cta}</button></div>${f.checks.length?`<ul class="checks">${f.checks.map(([s,t])=>`<li class="${s}">${ic[s]}<span>${t}</span></li>`).join('')}</ul>`:''}${f.disabled&&f.reason?`<div class="reason">${I.x}<span>${f.reason}</span></div>`:''}</div>`;
+}
+function reqList(v){
+ const asg=v.techs.map(T),A=asg.length>0;
+ const row=(st,l,t)=>`<li class="${st}"><span class="rq-i">${st==='ok'?I.check:st==='bad'?I.x:st==='warn'?I.warn:I.dot}</span><div><span class="rq-b">${l}</span><span class="rq-t">${t}</span></div></li>`;
+ let h='';
+ v.needs.certs.forEach(c=>{const w=asg.filter(t=>hasCert(t,c));h+=row(!A?'na':w.length?'ok':'bad',CERTS[c],!A?'Required certification':w.length?w.map(t=>t.name).join(', '):'No assigned technician holds this');});
+ {const w=asg.filter(t=>t.systems.includes(v.needs.system));h+=row(!A?'na':w.length?'ok':'warn',`System: ${v.needs.system}`,!A?'Commercial system experience required':w.length?'Serviced by '+w.map(t=>t.name.split(' ')[0]).join(', '):'Assigned crew has no logged experience');}
+ v.needs.tools.forEach(tl=>{const w=asg.filter(t=>t.tools.includes(tl));h+=row(!A?'na':w.length?'ok':'bad',tl,!A?'Diagnostic equipment':w.length?'On '+w.map(t=>t.truck).join(', '):'Not on assigned trucks — pick up at shop');});
+ v.needs.parts.forEach(p=>{let st='ok',t=p.where;if(p.status==='pending'){const d=A?v.start-Math.max(...v.techs.map(x=>v.travel[x]||0)):0;st=A&&p.readyAt<=d?'ok':'bad';if(st==='ok')t+=' · picked up en route';}h+=row(st,p.name,t);});
+ h+=row(!A?'na':v.techs.length>=v.needs.crew?'ok':'bad',`Crew: ${v.needs.crew} technician${v.needs.crew>1?'s':''}`,`${v.techs.length} assigned`);
+ return h;
+}
+function visitDetail(v){
+ const iss=ISSUES.filter(i=>i.visits.includes(v.id)),c=v.contact,A=v.techs.length>0;
+ const st=v.rescheduled?['moved','Rescheduled']:!A?['un','Unassigned']:c&&c.required&&!c.confirmed?['wait','Awaiting contact']:['ok','Confirmed'];
+ let inel='';
+ if(!A&&!v.rescheduled){const bad=S.techs.filter(t=>v.needs.certs.some(x=>!hasCert(t,x)));if(bad.length)inel=`<div class="inelig"><b>${bad.length} not eligible</b> — missing ${[...new Set(bad.flatMap(t=>v.needs.certs.filter(x=>!hasCert(t,x))))].map(x=>CERTS[x].toLowerCase()).join(' / ')}: ${bad.map(t=>t.name).join(', ')}</div>`;}
+ return `<div class="dh"><div class="dh-top"><span class="vid">${v.id}</span><span class="tag t-${v.type}">${TYPE[v.type]}</span><span class="pri p${v.pri}">P${v.pri} · ${PRI[v.pri]}</span><span class="st ${st[0]}">${st[1]}</span></div>
+ <h2>${v.title}</h2><div class="dh-cust">${I.pin}<div><b>${v.customer}</b>${v.address} · ${v.territory} territory</div></div>
+ <div class="dh-actions"><button class="btn sm" data-toast="Calling ${esc(c.name)} · ${c.phone}">${I.phone} Call contact</button>${A?`<button class="btn sm" data-toast="Message sent to ${esc(v.techs.map(x=>T(x).name).join(' & '))}">${I.msg} Message crew</button>`:''}<button class="btn sm" data-toast="Opening visit editor for ${v.id}">${I.edit} Edit</button></div></div>
+ ${v.rescheduled?`<div class="callouts"><div class="co info">${I.cal}<div><b>Moved off today's board</b>${v.rescheduled}</div></div></div>`:''}
+ ${iss.length?`<div class="callouts">${iss.map(i=>`<div class="co s-${i.sev}">${I[KIND_IC[i.kind]]}<div><b>${i.title}</b>${i.text}</div></div>`).join('')}</div>`:''}
+ ${FIXES.length?`<section class="sec"><h3>${!A?'Recommended technicians':'Suggested fixes'}<span class="h3s">Ranked by fit, travel &amp; SLA</span></h3>${FIXES.map(fixCard).join('')}${inel}</section>`:inel?`<section class="sec">${inel}</section>`:''}
+ <section class="sec"><h3>Schedule</h3><dl class="kv">
+ ${v.received?`<dt>Reported</dt><dd>${v.received}</dd>`:''}
+ <dt>Service window</dt><dd>${v.window.label}</dd>
+ <dt>Planned</dt><dd>${v.rescheduled?v.rescheduled:A?rng(v.start,v.start+v.dur):'<span class="warnTxt" style="color:var(--crit)">Not scheduled</span>'}</dd>
+ ${A&&v.arrive?`<dt>Arrival ETA</dt><dd>${fmt(v.arrive)}</dd>`:''}
+ <dt>Est. duration</dt><dd>${dur(v.dur)}${v.proj?` <span class="warnTxt">· likely ${dur(v.proj)} (ends ~${fmt(v.start+v.proj)})</span>`:''}</dd>
+ <dt>Crew</dt><dd>${A?v.techs.map(x=>{const t=T(x);return `<button class="crew" data-t="${x}"><span class="av xs" style="background:${t.color}">${t.ini}</span>${t.name}</button>`;}).join(''):''}<span class="muted">${v.techs.length} of ${v.needs.crew} required</span></dd>
+ ${A?`<dt>Travel in</dt><dd>${v.techs.map(x=>`${T(x).name.split(' ')[0]} ${v.travel[x]||0} min`).join(' · ')}</dd>`:''}
+ </dl>${v.projNote?`<div class="note">${I.clock}<span>${v.projNote}</span></div>`:''}</section>
+ <section class="sec"><h3>Site access &amp; contact</h3><dl class="kv"><dt>Access</dt><dd>${v.access?v.access.text:'Standard business hours · no restrictions'}</dd>
+ <dt>Onsite contact</dt><dd><b>${c.name}</b>, ${c.role}<br>${c.phone} ${c.required?(c.confirmed?'<span class="pill ok">Required · confirmed</span>':'<span class="pill warn">Required · not confirmed</span>'):'<span class="pill na">Optional</span>'}</dd></dl></section>
+ <section class="sec"><h3>Equipment &amp; problem</h3><dl class="kv"><dt>Equipment</dt><dd>${v.equipment}</dd><dt>System</dt><dd>${v.needs.system}</dd><dt>Reported</dt><dd>${v.problem}</dd></dl></section>
+ <section class="sec"><h3>Requirements<span class="h3s">${A?'Checked against assigned crew':'Needed from assigned tech'}</span></h3><ul class="req">${reqList(v)}</ul></section>
+ <section class="sec"><h3>Activity</h3><ul class="act">${v.log.slice().reverse().map(l=>`<li><time>${l.t}</time><div><b>${l.who}</b> — ${l.text}</div></li>`).join('')}</ul></section>`;
+}
+function techDetail(t){
+ const L=techVisits(t.id),sh=shiftLen(t),wk=L.reduce((a,v)=>a+v.dur,0),tr=L.reduce((a,v)=>a+(v.travel[t.id]||0),0),u=Math.round((wk+tr)/sh*100);
+ const iss=ISSUES.filter(i=>(i.techs||[]).includes(t.id)||i.visits.some(id=>V(id).techs.includes(t.id)));
+ const last=L.length?L[L.length-1]:null;
+ return `<div class="dh"><div class="th"><span class="av lg" style="background:${t.color}">${t.ini}</span><div><h2>${t.name}</h2><div class="tsub">${t.role} · ${t.truck}</div></div></div>
+ <div class="dh-actions"><button class="btn sm" data-toast="Calling ${t.name} · ${t.phone}">${I.phone} ${t.phone}</button><button class="btn sm" data-toast="Message sent to ${t.name}'s mobile app">${I.msg} Message</button></div></div>
+ ${iss.length?`<div class="callouts">${iss.map(i=>`<div class="co s-${i.sev}">${I[KIND_IC[i.kind]]}<div><b>${i.title}</b>${i.text}</div></div>`).join('')}</div>`:''}
+ ${FIXES.length?`<section class="sec"><h3>Suggested fixes</h3>${FIXES.map(fixCard).join('')}</section>`:''}
+ <section class="sec"><div class="stats"><div class="stat"><div class="k">Booked</div><div class="v" style="color:${u>100?'var(--crit)':u>=90?'var(--high)':'inherit'}">${u}%</div></div><div class="stat"><div class="k">On site</div><div class="v">${dur(wk)}</div></div><div class="stat"><div class="k">Driving</div><div class="v">${dur(tr)}</div></div><div class="stat"><div class="k">Open</div><div class="v">${dur(Math.max(0,sh-wk-tr))}</div></div></div></section>
+ <section class="sec"><h3>Profile</h3><dl class="kv"><dt>Shift</dt><dd>${rng(t.shift.s,t.shift.e)}${t.otOk?' <span class="pill ok">OT approved</span>':''}</dd><dt>Territory</dt><dd>${t.terr.join(', ')}</dd><dt>Starts from</dt><dd>${t.base}</dd><dt>This week</dt><dd>${t.week} worked</dd></dl></section>
+ <section class="sec"><h3>Certifications</h3><div class="chips c">${t.certs.map(c=>`<span>${CERTS[c]}</span>`).join('')}</div><h3 style="margin-top:14px">Systems serviced</h3><div class="chips">${t.systems.map(s=>`<span>${s}</span>`).join('')}</div><h3 style="margin-top:14px">Diagnostic equipment · ${t.truck}</h3><div class="chips">${t.tools.map(s=>`<span>${s}</span>`).join('')}</div><h3 style="margin-top:14px">Truck stock highlights</h3><div class="chips">${t.stock.map(s=>`<span>${s}</span>`).join('')}</div></section>
+ <section class="sec"><h3>Today's route<span class="h3s">${L.length} stops</span></h3><div class="route">${L.map(v=>`<div class="rt-tr">${I.car} ${v.travel[t.id]||0} min drive</div><button class="rt-v t-${v.type}" data-v="${v.id}"><span class="rt-time">${rng(v.start,v.start+v.dur)}${v.proj?` · likely to ${fmtS(v.start+v.proj)}`:''}</span><b>${v.customer}</b><span class="rt-m">${v.id} · ${v.short}${FLAGS[v.id]?' · needs attention':''}</span></button>`).join('')}</div>${last?`<div class="rt-end">Last job ends ${fmt(last.start+last.dur)} · shift ends ${fmt(t.shift.e)}</div>`:''}</section>`;
+}
+function renderDetail(){$('#detail').innerHTML=sel.k==='t'?techDetail(T(sel.id)):visitDetail(V(sel.id));}
+function renderAll(){computeIssues();FIXES=sel.k==='v'?getFixes(V(sel.id)):techFixes(T(sel.id));renderKPIs();renderIssues();renderBoard();renderDetail();}
+
+/* ---------- Actions ---------- */
+function toast(msg,undo){const t=$('#toast');t.innerHTML=`${I.check}<span>${msg}</span>${undo?'<button id="undoBtn">Undo</button>':''}`;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),6000);}
+function applyFix(i){const f=FIXES[i];if(!f||f.disabled)return;undoStack.push(JSON.stringify(S));f.apply();clockMin++;renderAll();toast(f.msg,true);}
+function selectVisit(id,scroll){sel={k:'v',id};renderAll();$('#detail').scrollTop=0;if(scroll){const b=document.querySelector(`.vb[data-v="${id}"]`);if(b)b.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'});}}
+document.addEventListener('click',e=>{
+ const a=e.target.closest('[data-apply]');if(a){applyFix(+a.dataset.apply);return;}
+ if(e.target.closest('#undoBtn')){if(undoStack.length){S=JSON.parse(undoStack.pop());renderAll();toast('Change undone',false);}return;}
+ if(e.target.closest('#publishBtn')){toast(`Schedule published to 8 technicians' mobile app · ${ISSUES.length} open issue${ISSUES.length===1?'':'s'} still flagged`,false);return;}
+ const is=e.target.closest('[data-issue]');if(is){selectVisit(is.dataset.issue,true);return;}
+ const v=e.target.closest('[data-v]');if(v){selectVisit(v.dataset.v);return;}
+ const t=e.target.closest('[data-t]');if(t){sel={k:'t',id:t.dataset.t};renderAll();$('#detail').scrollTop=0;return;}
+ const tr=e.target.closest('[data-terr]');if(tr){terr=tr.dataset.terr;renderAll();return;}
+ const ts=e.target.closest('[data-toast]');if(ts){toast(ts.dataset.toast,false);}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.closest&&e.target.closest('.vb[data-v]');if(v)selectVisit(v.dataset.v);}});
+document.addEventListener('mouseover',e=>{const f=e.target.closest('.fix[data-fix]');document.querySelectorAll('.ghost.hot').forEach(g=>g.classList.remove('hot'));if(f)document.querySelectorAll(`.ghost[data-g="${f.dataset.fix}"]`).forEach(g=>g.classList.add('hot'));});
+$('#travelTog').addEventListener('change',e=>document.body.classList.toggle('no-travel',!e.target.checked));
+renderAll();
+</script>
+</body>
+</html>

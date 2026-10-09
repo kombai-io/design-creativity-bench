@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Branchglass — How it works</title>
+<meta name="description" content="Branchglass turns every pull request into an isolated, production-like preview environment — and tears it down on merge.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23C8F55A'/%3E%3C/svg%3E">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+:root{
+  --bg:#0A0E13; --bg2:#0D1219; --panel:#0F151D; --panel2:#121A24;
+  --line:#1D2836; --line2:#2A3A50;
+  --text:#E7EDF5; --muted:#93A1B4; --faint:#5C6B7E;
+  --lime:#C8F55A; --green:#4ADE80; --amber:#F5B84B; --cyan:#6EE7F0; --violet:#B39DFF; --red:#F87171;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular","Menlo","Cascadia Code","JetBrains Mono",Consolas,"Liberation Mono",monospace;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:rgba(200,245,90,.25)}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px;border-radius:4px}
+
+/* ---------- ambience ---------- */
+.bg-grid{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:linear-gradient(rgba(148,163,184,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.045) 1px,transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 95% 62% at 50% 0%,#000 15%,transparent 72%);
+  mask-image:radial-gradient(ellipse 95% 62% at 50% 0%,#000 15%,transparent 72%);}
+.noise{position:fixed;inset:0;z-index:70;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.62'/%3E%3C/svg%3E");}
+
+/* ---------- header ---------- */
+.site-head{position:sticky;top:0;z-index:50;background:rgba(10,14,19,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.head-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:30px;padding:13px 24px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:15px;letter-spacing:-.01em}
+.brand svg{color:var(--lime);flex:none}
+.brand .thin{color:var(--muted);font-weight:450}
+.nav{display:flex;gap:24px;margin-left:8px}
+.nav a{font-size:13.5px;color:var(--muted);padding:4px 0;position:relative}
+.nav a:hover{color:var(--text)}
+.nav a.cur{color:var(--text)}
+.nav a.cur::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:var(--lime)}
+.head-cta{margin-left:auto;font-size:13px;font-weight:600;color:#0A0E13;background:var(--lime);padding:8px 15px;border-radius:8px;border:0;transition:filter .2s}
+.head-cta:hover{filter:brightness(1.08)}
+
+/* ---------- intro ---------- */
+.hiw{position:relative;background:
+  radial-gradient(900px 480px at 10% -6%,rgba(200,245,90,.07),transparent 60%),
+  radial-gradient(720px 430px at 98% 14%,rgba(110,231,240,.05),transparent 60%);}
+.hiw-intro{position:relative;max-width:1180px;margin:0 auto;padding:74px 24px 34px;z-index:1}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--lime)}
+.eyebrow .sq{width:7px;height:7px;background:var(--lime);animation:blinkSq 1.4s steps(1) infinite}
+@keyframes blinkSq{50%{opacity:.15}}
+h1.display{font-size:clamp(34px,5.2vw,60px);line-height:1.05;letter-spacing:-.03em;font-weight:700;max-width:860px;margin:20px 0 18px}
+h1 em{font-family:var(--serif);font-style:italic;font-weight:500;color:var(--lime);letter-spacing:0}
+.lede{max-width:660px;color:var(--muted);font-size:16.5px}
+.lede b{color:var(--text);font-weight:600}
+
+.graph{position:absolute;right:16px;top:44px;width:min(44%,470px);opacity:.9;pointer-events:none;z-index:0}
+.graph text{font-family:var(--mono)}
+@media(max-width:1080px){.graph{display:none}}
+
+/* ---------- core two-column ---------- */
+.hiw-core{max-width:1180px;margin:26px auto 0;padding:0 24px;display:grid;grid-template-columns:minmax(330px,440px) 1fr;gap:40px;align-items:start}
+.sim-col{min-width:0}
+.sim{position:sticky;top:84px}
+
+/* transport */
+.transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.btn-ctl{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--lime);background:rgba(200,245,90,.06);border:1px solid rgba(200,245,90,.35);border-radius:8px;padding:8px 13px;transition:background .2s,border-color .2s}
+.btn-ctl:hover{background:rgba(200,245,90,.14)}
+.btn-ctl.muted{color:var(--muted);border-color:var(--line2);background:transparent}
+.btn-ctl.muted:hover{color:var(--text)}
+.tstat{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.05em}
+
+/* steps */
+.steps{list-style:none;position:relative}
+.rail,.rail-fill{position:absolute;left:16px;width:2px}
+.rail{top:20px;bottom:20px;background:var(--line)}
+.rail-fill{top:20px;height:0;background:linear-gradient(180deg,var(--lime),var(--green));transition:height .55s cubic-bezier(.4,0,.2,1);box-shadow:0 0 12px rgba(200,245,90,.35)}
+.step{display:flex;gap:15px;width:100%;text-align:left;background:none;border:0;color:inherit;padding:13px 10px 13px 0;border-radius:10px;position:relative;z-index:1;transition:background .25s}
+.step:hover{background:rgba(255,255,255,.025)}
+.step.active{background:linear-gradient(90deg,rgba(200,245,90,.07),transparent 75%)}
+.step-num{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);display:grid;place-items:center;font-family:var(--mono);font-size:11.5px;color:var(--faint);transition:border-color .3s,color .3s,box-shadow .3s}
+.step.active .step-num{border-color:var(--lime);color:var(--lime);box-shadow:0 0 0 4px rgba(200,245,90,.09)}
+.step.done .step-num{border-color:rgba(74,222,128,.5);color:var(--green)}
+.step-main{min-width:0;padding-top:2px}
+.step-title{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-weight:650;font-size:15.5px;letter-spacing:-.01em}
+.step.active .step-title{color:var(--text)}
+.step-tag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);border:1px solid var(--line);padding:1.5px 8px;border-radius:999px;font-weight:400}
+.step.active .step-tag{color:var(--lime);border-color:rgba(200,245,90,.35)}
+.step-desc{display:block;color:var(--muted);font-size:13.5px;margin-top:4px;max-width:360px;font-weight:400}
+.phase{display:flex;align-items:center;gap:12px;margin:6px 0 6px 50px;font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.phase::before{content:"";width:26px;height:1px;background:var(--line2)}
+
+/* ---------- simulation ---------- */
+.sim-label{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.sim-rec{width:8px;height:8px;border-radius:50%;background:var(--red);--pc:rgba(248,113,113,.4);animation:pulse 1.6s ease-out infinite}
+.term{border:1px solid var(--line);border-radius:12px;background:#0B1017;overflow:hidden;box-shadow:0 34px 70px -34px rgba(0,0,0,.7)}
+.term-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);background:#0E141D}
+.tdot{width:10px;height:10px;border-radius:50%}
+.tdot.r{background:#F87171}.tdot.y{background:#F5B84B}.tdot.g{background:#4ADE80}
+.term-title{margin-left:8px;font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+.term-badge{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--cyan);border:1px solid rgba(110,231,240,.25);padding:2px 9px;border-radius:6px;background:rgba(110,231,240,.06);white-space:nowrap}
+.term-body{height:296px;overflow-y:auto;padding:14px 16px;font-family:var(--mono);font-size:12.5px;line-height:1.8;scrollbar-width:thin;scrollbar-color:#22304A transparent}
+.term-body::-webkit-scrollbar{width:8px}
+.term-body::-webkit-scrollbar-thumb{background:#22304A;border-radius:4px}
+.tl{white-space:pre-wrap;word-break:break-word;min-height:1em}
+.tl-cmd{color:var(--text)}
+.tl-cmd::before{content:"$ ";color:var(--lime)}
+.tl-ok{color:var(--green)}
+.tl-info{color:var(--cyan)}
+.tl-warn{color:var(--amber)}
+.tl-dim{color:var(--faint)}
+.cursor{display:inline-block;width:7px;height:13px;background:var(--lime);vertical-align:-2px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.sim-cards{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:16px 16px 14px;position:relative}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.card-label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint)}
+.status{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+@keyframes pulse{from{box-shadow:0 0 0 0 var(--pc)}to{box-shadow:0 0 0 9px transparent}}
+.s-link{color:var(--cyan);border-color:rgba(110,231,240,.3);background:rgba(110,231,240,.06)}.s-link .sdot{background:var(--cyan)}
+.s-wait{color:var(--amber);border-color:rgba(245,184,75,.3);background:rgba(245,184,75,.07)}.s-wait .sdot{background:var(--amber);--pc:rgba(245,184,75,.35);animation:pulse 1.6s ease-out infinite}
+.s-ready{color:var(--green);border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.07)}.s-ready .sdot{background:var(--green);--pc:rgba(74,222,128,.35);animation:pulse 2.4s ease-out infinite}
+.s-up{color:var(--cyan);border-color:rgba(110,231,240,.35);background:rgba(110,231,240,.07)}.s-up .sdot{background:var(--cyan);--pc:rgba(110,231,240,.35);animation:pulse 1.1s ease-out infinite}
+.s-off{color:var(--faint);border-color:var(--line)}.s-off .sdot{background:var(--faint)}
+.env-id{font-family:var(--mono);font-size:15px;letter-spacing:.01em;margin-bottom:9px}
+.url-chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#0B1119;transition:border-color .3s,box-shadow .3s}
+.url-txt{font-family:var(--mono);font-size:12px;color:var(--cyan);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.url-chip.off{border-style:dashed}.url-chip.off .url-txt{color:var(--faint)}
+.url-chip.hot{border-color:rgba(200,245,90,.55);box-shadow:0 0 0 3px rgba(200,245,90,.1)}
+.url-chip.dead .url-txt{color:var(--faint);text-decoration:line-through}
+.copy-btn{flex:none;font-family:var(--mono);font-size:10.5px;color:var(--faint);background:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;transition:color .2s,border-color .2s}
+.copy-btn:hover{color:var(--lime);border-color:rgba(200,245,90,.4)}
+.copy-btn.ok{color:var(--green);border-color:rgba(74,222,128,.4)}
+.env-note{margin-top:10px;font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.02em;min-height:1.4em}
+.env-meta{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+.env-meta dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.env-meta dd{font-family:var(--mono);font-size:12px;margin-top:2px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.pr-title{font-size:14.5px;font-weight:650;letter-spacing:-.01em;margin-bottom:7px}
+.pr-byline{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:10px}
+.avatar{width:20px;height:20px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--mono);font-size:10px;color:#0A0E13;background:linear-gradient(135deg,var(--lime),var(--cyan));font-weight:700}
+.branch-pill{font-family:var(--mono);font-size:11px;color:var(--muted);background:#0B1119;border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.pr-state{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;padding:3px 10px;border-radius:999px;border:1px solid rgba(200,245,90,.35);color:var(--lime);background:rgba(200,245,90,.06)}
+.pr-state.merged{border-color:rgba(179,157,255,.4);color:var(--violet);background:rgba(179,157,255,.07)}
+.pr-stats{display:flex;gap:12px;font-family:var(--mono);font-size:12px;margin:11px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:9px 0}
+.pr-stats .add{color:var(--green)}.pr-stats .del{color:var(--red)}.pr-stats .cm{color:var(--muted)}
+.pr-check{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);color:var(--faint);transition:color .4s,border-color .4s,background .4s}
+.pr-check.ok{color:var(--green);border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.05)}
+.noscript{margin-top:14px;border:1px dashed var(--line2);border-radius:10px;padding:14px;font-size:13px;color:var(--muted)}
+
+/* ---------- blocks ---------- */
+.block{max-width:1180px;margin:88px auto 0;padding:0 24px}
+.block-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:28px}
+.block-head .eyebrow{margin-bottom:12px}
+h2.sec{font-size:clamp(24px,3.2vw,34px);letter-spacing:-.02em;line-height:1.15}
+.side-note{font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.06em;padding-bottom:4px;white-space:nowrap}
+.lm{display:block;overflow:hidden}
+.lm>span{display:block;transform:translateY(112%);transition:transform .9s cubic-bezier(.22,.75,.2,1)}
+.in .lm>span{transform:none}
+.js .reveal{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s cubic-bezier(.22,.75,.2,1)}
+.js .reveal.in{opacity:1;transform:none}
+
+.g-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g-card{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:22px 20px;position:relative;transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .35s,background .35s}
+.g-card:hover{transform:translateY(-4px);border-color:rgba(200,245,90,.35);background:var(--panel2)}
+.js .g-grid .g-card{opacity:0}
+.js .g-grid.in .g-card{animation:rise .65s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i)*80ms)}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.g-card svg{width:21px;height:21px;stroke:var(--lime);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.g-num{position:absolute;top:17px;right:18px;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.g-card h3{font-size:15.5px;letter-spacing:-.01em;margin:14px 0 6px}
+.g-card p{font-size:13.5px;color:var(--muted)}
+
+/* marquee */
+.mq{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);padding:6px 0}
+.mq-track{display:flex;width:max-content;animation:mq 42s linear infinite}
+.mq.rev .mq-track{animation-direction:reverse;animation-duration:50s}
+.mq:hover .mq-track{animation-play-state:paused}
+@keyframes mq{to{transform:translateX(-50%)}}
+.mq-group{display:flex;gap:12px;padding-right:12px}
+.pill{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:8px 16px;white-space:nowrap;transition:color .25s,border-color .25s}
+.pill:hover{color:var(--lime);border-color:rgba(200,245,90,.4)}
+.mq-note{text-align:center;margin-top:18px;font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+.stat{padding:28px 26px;border-left:1px solid var(--line)}
+.stat:first-child{border-left:0}
+.stat-num{font-family:var(--mono);font-size:clamp(30px,3.8vw,44px);color:var(--lime);letter-spacing:-.02em;line-height:1}
+.stat-lab{margin-top:10px;font-size:13px;color:var(--muted)}
+
+/* cta */
+.cta{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;padding:54px 44px;display:flex;align-items:center;justify-content:space-between;gap:36px;background:radial-gradient(640px 320px at 88% -10%,rgba(200,245,90,.1),transparent 62%),radial-gradient(420px 260px at 4% 110%,rgba(110,231,240,.06),transparent 60%),var(--panel)}
+.cta h2{font-size:clamp(22px,3vw,32px);letter-spacing:-.02em;line-height:1.18;margin-bottom:10px}
+.cta p{color:var(--muted);font-size:14.5px;max-width:460px}
+.cta-right{display:flex;flex-direction:column;gap:14px;align-items:flex-start;flex:none}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap}
+.btn-primary{background:var(--lime);color:#0A0E13;font-weight:650;font-size:14px;border:0;border-radius:9px;padding:12px 21px;transition:filter .2s,transform .2s}
+.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-ghost{border:1px solid var(--line2);color:var(--text);font-size:14px;border-radius:9px;padding:12px 19px;background:transparent;transition:border-color .2s,background .2s}
+.btn-ghost:hover{border-color:var(--faint);background:rgba(255,255,255,.03)}
+.install{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12.5px;color:var(--muted);border:1px solid var(--line);background:#0B1119;border-radius:9px;padding:9px 12px}
+.install .p{color:var(--lime)}
+
+/* footer */
+footer{border-top:1px solid var(--line);margin-top:96px}
+.foot-in{max-width:1180px;margin:0 auto;padding:26px 24px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--faint)}
+.foot-links a{margin-left:18px;transition:color .2s}
+.foot-links a:hover{color:var(--lime)}
+
+/* ---------- responsive ---------- */
+@media(max-width:980px){
+  .hiw-core{grid-template-columns:1fr;gap:34px}
+  .sim-col{order:-1}
+  .sim{position:static}
+  .step-desc{max-width:none}
+}
+@media(max-width:860px){
+  .nav{display:none}
+  .g-grid{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat:nth-child(3){border-left:0}
+  .stat:nth-child(n+3){border-top:1px solid var(--line)}
+  .cta{flex-direction:column;align-items:flex-start;padding:38px 26px}
+}
+@media(max-width:600px){
+  .hiw-intro{padding-top:52px}
+  .g-grid{grid-template-columns:1fr}
+  .sim-cards{grid-template-columns:1fr}
+  .term-body{height:238px}
+  .block-head{flex-direction:column;align-items:flex-start;gap:8px}
+  .tstat{margin-left:0;width:100%}
+}
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+  .js .reveal{opacity:1;transform:none}
+  .js .g-grid .g-card{opacity:1}
+  .lm>span{transform:none}
+  .cursor{display:none}
+  .mq-track{animation:none!important;flex-wrap:wrap;width:auto}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="noise" aria-hidden="true"></div>
+
+<header class="site-head">
+  <div class="head-in">
+    <a class="brand" href="#">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <circle cx="6" cy="5" r="2.3"/><circle cx="6" cy="19" r="2.3"/><circle cx="18" cy="9" r="2.3"/>
+        <path d="M6 7.3v9.4M18 11.3c0 3.4-4.4 3.1-7.3 4.4-1.6.7-3 1.2-4.7 1.6"/>
+      </svg>
+      Branchglass<span class="thin"></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#">Product</a>
+      <a href="#how-it-works" class="cur" aria-current="page">How it works</a>
+      <a href="#">Docs</a>
+      <a href="#">Pricing</a>
+    </nav>
+    <button class="head-cta" type="button">Get access</button>
+  </div>
+</header>
+
+<main>
+<section class="hiw" id="how-it-works" aria-labelledby="hiw-title">
+
+  <div class="hiw-intro">
+    <svg class="graph" viewBox="0 0 430 150" fill="none" aria-hidden="true">
+      <line x1="0" y1="122" x2="430" y2="122" stroke="#2A3A50" stroke-width="1.5"/>
+      <path d="M92 122 C122 122 122 52 152 52 H286 C316 52 316 122 346 122" stroke="#C8F55A" stroke-width="1.5" opacity=".55"/>
+      <rect x="172" y="32" width="94" height="40" rx="20" stroke="#C8F55A" stroke-opacity=".4" fill="#C8F55A" fill-opacity=".05"/>
+      <circle cx="92" cy="122" r="4" fill="#C8F55A"/>
+      <circle cx="346" cy="122" r="4" fill="#C8F55A"/>
+      <circle cx="219" cy="52" r="3.5" fill="#C8F55A"/>
+      <circle cx="180" cy="52" r="2.5" fill="#C8F55A" opacity=".6"/>
+      <circle cx="258" cy="52" r="2.5" fill="#C8F55A" opacity=".6"/>
+      <text x="6" y="112" font-size="10" fill="#5C6B7E">main</text>
+      <text x="219" y="88" font-size="9" fill="#5C6B7E" text-anchor="middle">eph-482-a1.branchglass.app</text>
+      <text x="356" y="112" font-size="10" fill="#5C6B7E">merged ✓</text>
+    </svg>
+
+    <p class="eyebrow"><span class="sq" aria-hidden="true"></span>How it works</p>
+    <h1 class="display" id="hl">Every pull request gets its own production.</h1>
+    <p class="lede">Branchglass sits between your repository and your cloud account. <b>Open a pull request</b> and an isolated, production-like environment appears with a link your whole team can test — <b>every commit redeploys in place</b>, and <b>merging tears it all down</b>.</p>
+  </div>
+
+  <div class="hiw-core">
+    <!-- left: steps -->
+    <div class="steps-col">
+      <div class="transport">
+        <button class="btn-ctl" id="playBtn" type="button" aria-pressed="false">
+          <svg class="ico-play" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 1l7.5 4-7.5 4z" fill="currentColor"/></svg>
+          <svg class="ico-pause" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style="display:none"><rect x="1.5" y="1" width="2.6" height="8" fill="currentColor"/><rect x="6" y="1" width="2.6" height="8" fill="currentColor"/></svg>
+          <span id="playLabel">Run walkthrough</span>
+        </button>
+        <button class="btn-ctl muted" id="replayBtn" type="button" title="Restart the walkthrough">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3"/><path d="M3.5 4.5v5h5"/></svg>
+          Restart
+        </button>
+        <span class="tstat" id="tStat">standing by</span>
+      </div>
+
+      <ol class="steps" id="stepsList">
+        <span class="rail" aria-hidden="true"></span>
+        <span class="rail-fill" id="railFill" aria-hidden="true"></span>
+        <li>
+          <button class="step" type="button" data-i="0">
+            <span class="step-num" data-n="01">01</span>
+            <span class="step-main">
+              <span class="step-title">Connect once <span class="step-tag">one-time</span></span>
+              <span class="step-desc">Install the app on your repository and point it at your cloud account. Branchglass maps services, datastores, and secrets once — not per pull request.</span>
+            </span>
+          </button>
+        </li>
+        <li class="phase" aria-hidden="true"><span>then — on every pull request</span></li>
+        <li>
+          <button class="step" type="button" data-i="1">
+            <span class="step-num" data-n="02">02</span>
+            <span class="step-main">
+              <span class="step-title">A pull request opens <span class="step-tag">trigger</span></span>
+              <span class="step-desc">A webhook fires the moment the PR opens. An isolated environment is queued — no tickets, no fighting over a shared staging slot.</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="step" type="button" data-i="2">
+            <span class="step-num" data-n="03">03</span>
+            <span class="step-main">
+              <span class="step-title">A production-like replica appears <span class="step-tag">~90s</span></span>
+              <span class="step-desc">Provisioned in your own cloud with production config, your real service topology, and safe synthetic data. Secrets are stubbed; PII is never copied.</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="step" type="button" data-i="3">
+            <span class="step-num" data-n="04">04</span>
+            <span class="step-main">
+              <span class="step-title">Everyone gets one URL <span class="step-tag">share</span></span>
+              <span class="step-desc">Developers, designers, and reviewers test the same link — click through flows, watch recorded sessions, and pin comments to code lines.</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="step" type="button" data-i="4">
+            <span class="step-num" data-n="05">05</span>
+            <span class="step-main">
+              <span class="step-title">Push again — it follows <span class="step-tag">auto-sync</span></span>
+              <span class="step-desc">New commits redeploy in place in seconds. The URL never changes, so reviewers never chase links and stale builds never linger.</span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button class="step" type="button" data-i="5">
+            <span class="step-num" data-n="06">06</span>
+            <span class="step-main">
+              <span class="step-title">Merge — and it’s gone <span class="step-tag">teardown</span></span>
+              <span class="step-desc">When the PR merges or closes, the environment drains, is destroyed, and spend returns to zero. Nothing to remember to clean up, ever.</span>
+            </span>
+          </button>
+        </li>
+      </ol>
+    </div>
+
+    <!-- right: simulation -->
+    <div class="sim-col">
+      <div class="sim">
+        <div class="sim-label"><span class="sim-rec" aria-hidden="true"></span> live walkthrough — the lifecycle of PR #482</div>
+        <div class="term">
+          <div class="term-bar">
+            <span class="tdot r"></span><span class="tdot y"></span><span class="tdot g"></span>
+            <span class="term-title">branchglass · control-plane tail</span>
+            <span class="term-badge" id="termBadge">—</span>
+          </div>
+          <div class="term-body" id="termBody">
+            <div class="tl tl-dim">· walkthrough requires JavaScript — the six steps on the left tell the whole story</div>
+          </div>
+        </div>
+
+        <div class="sim-cards">
+          <div class="card" aria-label="Preview environment state">
+            <div class="card-head">
+              <span class="card-label">PREVIEW ENVIRONMENT</span>
+              <span class="status s-off" id="envStatus"><i class="sdot"></i>Idle</span>
+            </div>
+            <div class="env-id" id="envId">—</div>
+            <div class="url-chip off" id="urlChip">
+              <span class="url-txt" id="urlTxt">no environment yet</span>
+              <button class="copy-btn" id="copyUrl" type="button">copy</button>
+            </div>
+            <div class="env-note" id="envNote">awaiting setup</div>
+            <dl class="env-meta">
+              <div><dt>Branch</dt><dd id="mBranch">—</dd></div>
+              <div><dt>Commit</dt><dd id="mCommit">—</dd></div>
+              <div><dt>Build</dt><dd id="mRev">—</dd></div>
+              <div><dt>Uptime</dt><dd id="mUptime">—</dd></div>
+            </dl>
+          </div>
+
+          <div class="card" aria-label="Pull request state">
+            <div class="card-head">
+              <span class="card-label">PULL REQUEST</span>
+              <span class="pr-state" id="prState">OPEN</span>
+            </div>
+            <div class="pr-title">#482 · Add Apple Pay support</div>
+            <div class="pr-byline">
+              <span class="avatar" aria-hidden="true">M</span>
+              mira@acme · <span class="branch-pill">feat/apple-pay → main</span>
+            </div>
+            <div class="pr-stats">
+              <span class="add">+412</span><span class="del">−87</span><span class="cm" id="prCommits">6 commits</span>
+            </div>
+            <div class="pr-check" id="prCheck">○ branchglass preview · waiting for setup</div>
+          </div>
+        </div>
+        <noscript>
+          <div class="noscript"><strong>The loop in one breath:</strong> connect your repo and cloud once → opening a PR provisions an isolated, production-like environment → everyone tests one shareable URL → commits redeploy in place → merging deletes everything.</div>
+        </noscript>
+      </div>
+    </div>
+  </div>
+
+  <!-- guarantees -->
+  <div class="block reveal">
+    <div class="block-head">
+      <div>
+        <p class="eyebrow">What you can count on</p>
+        <h2 class="sec"><span class="lm"><span>Defaults engineered for real review.</span></span></h2>
+      </div>
+      <span class="side-note">six defaults · zero config required</span>
+    </div>
+    <div class="g-grid">
+      <article class="g-card" style="--i:0">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.6-3 7.6-7 9.2C8 18.6 5 15.6 5 11V6l7-3z"/></svg>
+        <span class="g-num">01</span>
+        <h3>Isolated by construction</h3>
+        <p>Every PR gets dedicated compute, its own database seed, and its own secrets vault. Two pull requests never share state.</p>
+      </article>
+      <article class="g-card" style="--i:1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13.5l9 5 9-5"/></svg>
+        <span class="g-num">02</span>
+        <h3>Production-like, not production</h3>
+        <p>Same images, config, feature flags, and topology as prod — pointed at safe data. What you review is what ships.</p>
+      </article>
+      <article class="g-card" style="--i:2">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+        <span class="g-num">03</span>
+        <h3>Safe test data</h3>
+        <p>Rows are synthetic or masked at the source. Real PII never enters a preview environment, and secrets are stubbed, never copied.</p>
+      </article>
+      <article class="g-card" style="--i:3">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3v3.5l4 5 4-5V3M8 21v-3.5l4-5 4 5V21"/></svg>
+        <span class="g-num">04</span>
+        <h3>Ephemeral on purpose</h3>
+        <p>Merge and close hooks plus hard TTLs guarantee teardown. An environment can outlive its PR only if you explicitly pin it.</p>
+      </article>
+      <article class="g-card" style="--i:4">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15l4.2-4.2"/><path d="M3 19h18"/></svg>
+        <span class="g-num">05</span>
+        <h3>Cost stays capped</h3>
+        <p>Per-environment budgets, idle detection, and spot-friendly scheduling keep previews from becoming a line item.</p>
+      </article>
+      <article class="g-card" style="--i:5">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M4.5 21L19.5 5.5"/></svg>
+        <span class="g-num">06</span>
+        <h3>Zero new YAML</h3>
+        <p>No pipeline files committed to the repo. Defaults live in one config surface your platform team controls.</p>
+      </article>
+    </div>
+  </div>
+
+  <!-- integrations -->
+  <div class="block reveal">
+    <div class="block-head">
+      <div>
+        <p class="eyebrow">Works with</p>
+        <h2 class="sec"><span class="lm"><span>It plugs into the stack you already run.</span></span></h2>
+      </div>
+      <span class="side-note">two-way hooks · event-driven</span>
+    </div>
+    <div class="mq" aria-label="Supported source control and cloud providers">
+      <div class="mq-track">
+        <div class="mq-group">
+          <span class="pill">GitHub</span><span class="pill">GitLab</span><span class="pill">Bitbucket</span><span class="pill">Azure DevOps</span><span class="pill">AWS</span><span class="pill">Google Cloud</span><span class="pill">Microsoft Azure</span><span class="pill">Terraform</span><span class="pill">Pulumi</span>
+        </div>
+        <div class="mq-group" aria-hidden="true">
+          <span class="pill">GitHub</span><span class="pill">GitLab</span><span class="pill">Bitbucket</span><span class="pill">Azure DevOps</span><span class="pill">AWS</span><span class="pill">Google Cloud</span><span class="pill">Microsoft Azure</span><span class="pill">Terraform</span><span class="pill">Pulumi</span>
+        </div>
+      </div>
+    </div>
+    <div class="mq rev" aria-label="Supported runtime, data, and collaboration tools">
+      <div class="mq-track">
+        <div class="mq-group">
+          <span class="pill">Kubernetes</span><span class="pill">Docker</span><span class="pill">PostgreSQL</span><span class="pill">Redis</span><span class="pill">Kafka</span><span class="pill">Datadog</span><span class="pill">Sentry</span><span class="pill">Slack</span><span class="pill">Linear</span><span class="pill">Jira</span><span class="pill">SAML SSO</span>
+        </div>
+        <div class="mq-group" aria-hidden="true">
+          <span class="pill">Kubernetes</span><span class="pill">Docker</span><span class="pill">PostgreSQL</span><span class="pill">Redis</span><span class="pill">Kafka</span><span class="pill">Datadog</span><span class="pill">Sentry</span><span class="pill">Slack</span><span class="pill">Linear</span><span class="pill">Jira</span><span class="pill">SAML SSO</span>
+        </div>
+      </div>
+    </div>
+    <p class="mq-note">…and anything that speaks Docker, Kubernetes, or a webhook.</p>
+  </div>
+
+  <!-- stats -->
+  <div class="block reveal" id="statsBlock">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num"><span class="cnt" data-target="90" data-prefix="~" data-suffix="s">~90s</span></div>
+        <div class="stat-lab">median time from PR open to a ready, shareable URL</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span class="cnt" data-target="1" data-prefix="" data-suffix="">1</span></div>
+        <div class="stat-lab">stable URL per pull request — every commit redeploys behind it</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span class="cnt" data-target="0" data-prefix="$" data-suffix="">$0</span></div>
+        <div class="stat-lab">idle spend — environments tear down the moment the PR merges</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span class="cnt" data-target="100" data-prefix="" data-suffix="%">100%</span></div>
+        <div class="stat-lab">isolated — dedicated compute, data, and secrets per PR</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- cta -->
+  <div class="block reveal">
+    <div class="cta">
+      <div>
+        <h2>Watch it happen on one of your own PRs.</h2>
+        <p>Connect a repository, open a pull request, and a preview appears before your CI finishes. Free for teams of five or fewer.</p>
+      </div>
+      <div class="cta-right">
+        <div class="btn-row">
+          <button class="btn-primary" type="button">Connect a repository</button>
+          <button class="btn-ghost" type="button">Read the docs →</button>
+        </div>
+        <div class="install">
+          <span><span class="p">$</span> npx branchglass init</span>
+          <button class="copy-btn" id="copyInit" type="button">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <span>© 2025 Branchglass — environments as ephemeral as branches.</span>
+    <span class="foot-links"><a href="#">Status</a><a href="#">Security</a><a href="#">Changelog</a><a href="#">Contact</a></span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+  var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- data ---------- */
+  var URL_STR = 'https://eph-482-a1.branchglass.app';
+  var phases = ['Connect','Trigger','Provision','Review','Update','Teardown'];
+  var steps = [
+    { lines: [
+      ['cmd','branchglass connect acme/checkout'],
+      ['ok','✓ GitHub app installed — webhooks enabled on acme/checkout'],
+      ['ok','✓ cloud role assumed · scope: preview:* only'],
+      ['dim','  service graph: 4 services · 2 queues · 1 database']
+    ]},
+    { lines: [
+      ['info','⚑ webhook pull_request.opened → #482 "Add Apple Pay support"'],
+      ['dim','  author: mira@acme · feat/apple-pay → main'],
+      ['ok','✓ reservation eph-482-a1 confirmed']
+    ]},
+    { lines: [
+      ['cmd','provision eph-482-a1 --profile production-like'],
+      ['dim','  ▸ cloning feat/apple-pay @ 3f9c21d'],
+      ['dim','  ▸ 4 services · postgres (seeded) · redis — in your VPC'],
+      ['dim','  ▸ seeding 250k synthetic rows · stubbing 14 secrets'],
+      ['ok','✓ ready in 87s — TLS + custom domain attached']
+    ]},
+    { lines: [
+      ['info','→ url posted to #pr-482-reviews'],
+      ['ok','  ' + URL_STR],
+      ['dim','  ● mira (design) opened /checkout — session recording'],
+      ['dim','  ✎ comment pinned → OrderSummary.tsx:42 "fee looks off"']
+    ]},
+    { lines: [
+      ['info','⚑ push — 2 commits added to feat/apple-pay'],
+      ['dim','  ▸ delta redeploy: checkout-service only'],
+      ['ok','✓ redeployed in 22s — URL unchanged · rev 3']
+    ]},
+    { lines: [
+      ['info','⚑ pull_request.merged → #482'],
+      ['dim','  ▸ draining 2 live sessions… done'],
+      ['dim','  ▸ destroying eph-482-a1 · releasing compute + data'],
+      ['ok','✓ torn down — lifetime 4h 12m · total cost $1.37']
+    ]}
+  ];
+
+  /* ---------- refs ---------- */
+  var $ = function(id){ return document.getElementById(id); };
+  var termBody=$('termBody'), termBadge=$('termBadge'), envStatus=$('envStatus'), envId=$('envId'),
+      urlChip=$('urlChip'), urlTxt=$('urlTxt'), envNote=$('envNote'),
+      mBranch=$('mBranch'), mCommit=$('mCommit'), mRev=$('mRev'), mUptime=$('mUptime'),
+      prState=$('prState'), prCheck=$('prCheck'), prCommits=$('prCommits'),
+      playBtn=$('playBtn'), playLabel=$('playLabel'), replayBtn=$('replayBtn'), tStat=$('tStat'),
+      railFill=$('railFill');
+  var icoPlay = playBtn.querySelector('.ico-play'), icoPause = playBtn.querySelector('.ico-pause');
+  var stepBtns = Array.prototype.slice.call(document.querySelectorAll('.step'));
+
+  /* ---------- helpers ---------- */
+  var runId = 0, cur = -1, playing = false;
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  function addLine(parent, type, text){
+    var d = document.createElement('div');
+    d.className = 'tl tl-' + type;
+    d.textContent = text;
+    parent.appendChild(d);
+    return d;
+  }
+  function scrollTerm(){ termBody.scrollTop = termBody.scrollHeight; }
+
+  function typeLine(type, text, my){
+    return new Promise(function(resolve){
+      var d = document.createElement('div');
+      d.className = 'tl tl-' + type;
+      termBody.appendChild(d);
+      var c = document.createElement('span');
+      c.className = 'cursor';
+      d.appendChild(c);
+      var spd = (type === 'cmd') ? 24 : 8, i = 0;
+      (function tick(){
+        if (my !== runId) { resolve(); return; }
+        if (i >= text.length) { c.remove(); resolve(); return; }
+        c.insertAdjacentText('beforebegin', text.charAt(i));
+        i++; scrollTerm();
+        setTimeout(tick, spd);
+      })();
+    });
+  }
+
+  /* ---------- environment state ---------- */
+  function setStatus(txt, cls){
+    envStatus.className = 'status ' + cls;
+    envStatus.innerHTML = '<i class="sdot"></i>' + txt;
+  }
+  function setUrl(mode, text){
+    urlChip.className = 'url-chip' + (mode ? ' ' + mode : '');
+    urlTxt.textContent = text;
+  }
+  function setMeta(b,c,r,u){ mBranch.textContent=b; mCommit.textContent=c; mRev.textContent=r; mUptime.textContent=u; }
+
+  var upT = null;
+  function fmt(s){ return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+  function startUptime(){
+    stopUptime();
+    if (RM) { mUptime.textContent = '01:24'; return; }
+    var s = 0; mUptime.textContent = '00:00';
+    upT = setInterval(function(){ s++; mUptime.textContent = fmt(s); }, 1000);
+  }
+  function stopUptime(){ if (upT) clearInterval(upT); upT = null; }
+
+  function prOpen(){ prState.textContent = 'OPEN'; prState.className = 'pr-state'; }
+  function prMerged(){ prState.textContent = 'MERGED'; prState.className = 'pr-state merged'; }
+  function check(txt, ok){ prCheck.textContent = txt; prCheck.className = 'pr-check' + (ok ? ' ok' : ''); }
+
+  function applyEnv(i, ph){
+    if (i === 0) {
+      setStatus('Linked','s-link'); termBadge.textContent = '—';
+      envId.textContent = '—'; setUrl('off','no environment yet');
+      envNote.textContent = 'no environments yet — ready when you are';
+      setMeta('—','—','—','—'); stopUptime();
+      prOpen(); prCommits.textContent = '6 commits';
+      check('○ branchglass preview · waiting for setup', false);
+    } else if (i === 1) {
+      setStatus('Queued','s-wait'); termBadge.textContent = 'queued';
+      envId.textContent = 'eph-482-a1'; setUrl('off','awaiting provisioning…');
+      envNote.textContent = 'queued — waiting for scheduler slot';
+      setMeta('feat/apple-pay','—','—','—');
+    } else if (i === 2) {
+      termBadge.textContent = 'eph-482-a1';
+      if (ph === 'enter') {
+        setStatus('Provisioning','s-wait');
+        setMeta('feat/apple-pay','3f9c21d · building','—','—');
+        envNote.textContent = 'building in your cloud account…';
+      } else {
+        setStatus('Ready','s-ready');
+        setUrl('on', URL_STR);
+        setMeta('feat/apple-pay','3f9c21d','rev 1','00:00');
+        startUptime();
+        envNote.textContent = 'production config · synthetic data · stubbed secrets';
+        check('✓ preview ready · eph-482-a1', true);
+      }
+    } else if (i === 3) {
+      setStatus('Ready','s-ready');
+      setUrl('hot', URL_STR);
+      envNote.textContent = 'mira (design) is clicking through /checkout — recording';
+    } else if (i === 4) {
+      if (ph === 'enter') {
+        setStatus('Redeploying','s-up');
+        envNote.textContent = 'delta redeploy — checkout-service only';
+      } else {
+        setStatus('Ready','s-ready');
+        setUrl('on', URL_STR);
+        mCommit.textContent = 'b77e02a'; mRev.textContent = 'rev 3';
+        envNote.textContent = 'rev 3 live — URL unchanged since creation';
+        prCommits.textContent = '8 commits';
+        check('✓ preview updated · rev 3', true);
+      }
+    } else if (i === 5) {
+      if (ph === 'enter') {
+        setStatus('Draining','s-wait');
+        envNote.textContent = 'draining 2 live sessions…';
+      } else {
+        stopUptime();
+        setStatus('Removed','s-off'); termBadge.textContent = 'released';
+        setUrl('dead', URL_STR);
+        mUptime.textContent = '—';
+        envNote.textContent = 'resources released — idle cost $0.00 · lifetime 4h 12m';
+        prMerged();
+        check('✓ environment archived with the PR', false);
+      }
+    }
+  }
+
+  /* ---------- step chrome ---------- */
+  function renderStepClasses(){
+    stepBtns.forEach(function(b, idx){
+      b.classList.toggle('active', idx === cur);
+      b.classList.toggle('done', idx < cur);
+      if (idx === cur) b.setAttribute('aria-current','step'); else b.removeAttribute('aria-current');
+      var num = b.querySelector('.step-num');
+      num.textContent = (idx < cur) ? '✓' : num.dataset.n;
+    });
+  }
+  function railTo(){
+    var b = stepBtns[Math.max(0, cur)];
+    if (!b) { railFill.style.height = '0px'; return; }
+    railFill.style.height = Math.max(0, b.offsetTop + b.offsetHeight * 0.5 - 18) + 'px';
+  }
+  function updateTransport(){
+    playBtn.setAttribute('aria-pressed', String(playing));
+    icoPlay.style.display = playing ? 'none' : 'block';
+    icoPause.style.display = playing ? 'block' : 'none';
+    playLabel.textContent = playing ? 'Pause walkthrough' : 'Run walkthrough';
+    tStat.textContent = (cur < 0) ? 'standing by'
+      : 'step ' + String(cur+1).padStart(2,'0') + '/06 — ' + phases[cur];
+  }
+
+  /* ---------- engine ---------- */
+  async function gotoStep(i, animate){
+    runId++; var my = runId;
+    cur = i;
+    renderStepClasses(); railTo(); updateTransport();
+
+    termBody.innerHTML = '';
+    for (var j = 0; j < i; j++) {
+      steps[j].lines.forEach(function(l){ addLine(termBody, l[0], l[1]); });
+    }
+    scrollTerm();
+    applyEnv(i, 'enter');
+
+    if (animate && !RM) {
+      var lines = steps[i].lines;
+      for (var k = 0; k < lines.length; k++) {
+        await sleep(lines[k][0] === 'cmd' ? 380 : 230);
+        if (my !== runId) return;
+        await typeLine(lines[k][0], lines[k][1], my);
+        if (my !== runId) return;
+      }
+    } else {
+      steps[i].lines.forEach(function(l){ addLine(termBody, l[0], l[1]); });
+      scrollTerm();
+    }
+
+    applyEnv(i, 'done');
+    updateTransport();
+
+    if (!playing) return;
+    await sleep(i === steps.length - 1 ? 3400 : 2100);
+    if (my !== runId || !playing) return;
+    gotoStep(cur === steps.length - 1 ? 0 : cur + 1, animate);
+  }
+
+  /* ---------- controls ---------- */
+  playBtn.addEventListener('click', function(){
+    if (playing) {
+      playing = false; updateTransport();
+    } else {
+      playing = true; updateTransport();
+      gotoStep(cur < 0 ? 0 : cur, !RM);
+    }
+  });
+  replayBtn.addEventListener('click', function(){
+    playing = true; updateTransport();
+    gotoStep(0, !RM);
+  });
+  stepBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      gotoStep(parseInt(b.dataset.i, 10), !RM);
+    });
+  });
+  window.addEventListener('resize', railTo);
+
+  /* ---------- copy buttons ---------- */
+  function bindCopy(btn, text){
+    btn.addEventListener('click', function(){
+      try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch(e){}
+      var old = btn.textContent;
+      btn.textContent = 'copied ✓'; btn.classList.add('ok');
+      setTimeout(function(){ btn.textContent = old; btn.classList.remove('ok'); }, 1400);
+    });
+  }
+  bindCopy($('copyUrl'), URL_STR);
+  bindCopy($('copyInit'), 'npx branchglass init');
+
+  /* ---------- headline scramble ---------- */
+  (function(){
+    var el = $('hl');
+    var finalHTML = 'Every pull request gets its own <em>production</em>.';
+    var plain = 'Every pull request gets its own production.';
+    if (RM) { el.innerHTML = finalHTML; return; }
+    var chars = '#%{}[]<>/=+*', frame = 0;
+    var iv = setInterval(function(){
+      frame++;
+      var reveal = Math.floor(frame * 1.4), out = '';
+      for (var i = 0; i < plain.length; i++) {
+        out += (i < reveal) ? plain[i]
+             : (plain[i] === ' ' ? ' ' : chars[Math.floor(Math.random()*chars.length)]);
+      }
+      el.textContent = out;
+      if (reveal >= plain.length) { clearInterval(iv); el.innerHTML = finalHTML; }
+    }, 24);
+  })();
+
+  /* ---------- reveals ---------- */
+  var reveals = document.querySelectorAll('.reveal');
+  if (RM || !('IntersectionObserver' in window)) {
+    reveals.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.15 });
+    reveals.forEach(function(el){ io.observe(el); });
+  }
+
+  /* ---------- count-up stats ---------- */
+  function countUp(el){
+    var t = parseInt(el.dataset.target, 10),
+        p = el.dataset.prefix || '', s = el.dataset.suffix || '';
+    if (RM || t === 0) { el.textContent = p + t + s; return; }
+    var d = 1200, st = performance.now();
+    (function f(now){
+      var k = Math.min(1, (now - st) / d), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = p + Math.round(t * e) + s;
+      if (k < 1) requestAnimationFrame(f);
+    })(st);
+  }
+  var counters = document.querySelectorAll('.cnt');
+  if (!('IntersectionObserver' in window)) {
+    counters.forEach(countUp);
+  } else {
+    var sio = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if (e.isIntersecting) {
+          e.target.querySelectorAll('.cnt').forEach(countUp);
+          sio.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    sio.observe($('statsBlock'));
+  }
+
+  /* ---------- boot ---------- */
+  renderStepClasses(); updateTransport();
+  if (RM) {
+    gotoStep(3, false);
+  } else {
+    termBody.innerHTML = '';
+    addLine(termBody, 'dim', '· standing by — press run, or just watch…');
+    setTimeout(function(){ playing = true; updateTransport(); gotoStep(0, true); }, 900);
+  }
+})();
+</script>
+</body>
+</html>

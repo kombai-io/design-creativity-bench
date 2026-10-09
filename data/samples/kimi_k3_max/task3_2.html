@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Invite member · Acme Corp workspace — PulseNotify</title>
+<style>
+  :root{
+    --brand:#6C4CF1;
+    --brand-dark:#5538D6;
+    --brand-light:#F1EEFD;
+    --brand-ring:rgba(108,76,241,.16);
+    --bg:#F5F6FA;
+    --surface:#FFFFFF;
+    --text:#1B1F2A;
+    --text-2:#5B6172;
+    --text-3:#8A90A2;
+    --border:#E4E6EF;
+    --border-strong:#D3D6E3;
+    --danger:#E5484D;
+    --success:#2F9E6E;
+    --amber-bg:#FDF3E3;
+    --amber-text:#9A5B07;
+    --green-bg:#E7F6EF;
+    --green-text:#1F7A52;
+    --radius:10px;
+    --shadow-lg:0 24px 64px rgba(20,22,40,.22), 0 4px 14px rgba(20,22,40,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.modal-open{overflow:hidden}
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit;color:inherit}
+  svg{display:block}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    height:60px;background:var(--surface);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:14px;padding:0 20px;
+    position:sticky;top:0;z-index:30;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15.5px;letter-spacing:-.01em}
+  .logo-mark{
+    width:30px;height:30px;border-radius:8px;flex:none;
+    background:linear-gradient(135deg,#8B5CF6 0%,#5B6DF0 60%,#4F8DFF 100%);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 6px rgba(108,76,241,.35);
+  }
+  .topbar-spacer{flex:1}
+  .ws-switch{
+    display:flex;align-items:center;gap:10px;background:var(--surface);
+    border:1px solid var(--border);border-radius:10px;padding:6px 12px 6px 8px;color:var(--text);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .ws-switch:hover{border-color:var(--border-strong);box-shadow:0 1px 3px rgba(20,22,40,.06)}
+  .ws-icon{
+    width:28px;height:28px;border-radius:7px;background:#EEF1FB;color:var(--brand-dark);
+    font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .ws-text{text-align:left;line-height:1.2}
+  .ws-text strong{display:block;font-size:13px;font-weight:600}
+  .ws-text small{display:block;font-size:11px;color:var(--text-3)}
+  .icon-btn{
+    width:34px;height:34px;border-radius:9px;border:1px solid transparent;background:transparent;
+    display:flex;align-items:center;justify-content:center;color:var(--text-2);
+    transition:background .15s,color .15s;position:relative;flex:none;
+  }
+  .icon-btn:hover{background:#F0F1F7;color:var(--text)}
+  .bell-dot{position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:#F04452;border:1.5px solid var(--surface)}
+  .avatar{
+    width:32px;height:32px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#fff;letter-spacing:.02em;
+  }
+  .av-1{background:#6C4CF1}.av-2{background:#0E9F8A}.av-3{background:#E07B39}.av-4{background:#3E7BD9}.av-5{background:#C2477E}
+
+  /* ---------- Layout ---------- */
+  .layout{display:flex;min-height:calc(100vh - 60px)}
+  .sidebar{
+    width:232px;flex:none;background:var(--surface);border-right:1px solid var(--border);
+    padding:16px 12px;position:sticky;top:60px;height:calc(100vh - 60px);overflow:auto;
+  }
+  .nav-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);padding:14px 10px 6px}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+    color:var(--text-2);font-weight:500;font-size:13.5px;text-decoration:none;margin-bottom:2px;
+    transition:background .12s,color .12s;
+  }
+  .nav-item:hover{background:#F3F4F9;color:var(--text)}
+  .nav-item.active{background:var(--brand-light);color:var(--brand-dark);font-weight:600}
+  .nav-item svg{flex:none}
+
+  .content{flex:1;padding:28px 32px 56px;min-width:0}
+  .content-inner{max-width:1020px;margin:0 auto}
+  .crumbs{font-size:12.5px;color:var(--text-3);margin-bottom:10px}
+  .crumbs span{margin:0 6px;color:var(--border-strong)}
+  .crumbs b{color:var(--text-2);font-weight:600}
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .page-head h1{font-size:22px;font-weight:700;letter-spacing:-.02em}
+  .page-sub{color:var(--text-2);margin-top:3px;font-size:13.5px}
+  .stat-row{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 20px}
+  .stat{
+    background:var(--surface);border:1px solid var(--border);border-radius:999px;
+    padding:4px 12px;font-size:12.5px;color:var(--text-2);display:inline-flex;gap:5px;align-items:center;
+  }
+  .stat strong{color:var(--text);font-weight:700}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+  .card-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .card-head h2{font-size:14.5px;font-weight:650}
+  .card-head p{font-size:12.5px;color:var(--text-3);margin-top:1px}
+
+  table{width:100%;border-collapse:collapse}
+  th{
+    text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--text-3);padding:10px 18px;border-bottom:1px solid var(--border);background:#FAFBFD;white-space:nowrap;
+  }
+  td{padding:13px 18px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr{transition:background .1s}
+  tbody tr:hover{background:#FAFBFE}
+  .td-email{font-weight:600;color:var(--text)}
+  .td-muted{color:var(--text-2);white-space:nowrap}
+  .member-cell{display:flex;align-items:center;gap:11px}
+  .member-cell .avatar{width:34px;height:34px}
+  .member-name{font-weight:600;font-size:13.5px;line-height:1.25}
+  .member-name .you{font-size:11px;font-weight:600;color:var(--brand-dark);background:var(--brand-light);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+  .member-mail{font-size:12.5px;color:var(--text-3)}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap}
+  .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .badge-pending{background:var(--amber-bg);color:var(--amber-text)}
+  .badge-active{background:var(--green-bg);color:var(--green-text)}
+  .role-badge{display:inline-block;font-size:12px;font-weight:600;border-radius:7px;padding:3px 9px;white-space:nowrap}
+  .rb-admin{background:#EFE9FD;color:#5B34C9}
+  .rb-marketing{background:#E4EDFD;color:#2D5CB8}
+  .rb-analyst{background:#DFF5EE;color:#0E7A66}
+  .rb-viewer{background:#EFF0F4;color:#5B6172}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;justify-content:center;
+    font-weight:600;font-size:13.5px;border-radius:9px;padding:9px 16px;
+    border:1px solid transparent;transition:background .15s,border-color .15s,box-shadow .15s,color .15s;
+    white-space:nowrap;
+  }
+  .btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+  .btn-primary{background:var(--brand);color:#fff;box-shadow:0 1px 2px rgba(108,76,241,.4)}
+  .btn-primary:hover{background:var(--brand-dark)}
+  .btn-ghost{background:var(--surface);border-color:var(--border-strong);color:var(--text)}
+  .btn-ghost:hover{background:#F4F5FA}
+  .btn-secondary{background:var(--brand-light);color:var(--brand-dark)}
+  .btn-secondary:hover{background:#E6DFFC}
+  .btn-text{background:transparent;border:none;color:var(--brand-dark);font-weight:600;font-size:13px;padding:5px 9px;border-radius:7px}
+  .btn-text:hover{background:var(--brand-light)}
+  .btn-text.danger{color:var(--danger)}
+  .btn-text.danger:hover{background:#FDECEC}
+  .btn.loading{pointer-events:none;opacity:.9}
+  .btn.loading .btn-ic{display:none}
+  .btn.loading::before{content:"";width:14px;height:14px;flex:none;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{
+    position:fixed;inset:0;z-index:50;background:rgba(17,19,32,.48);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s;
+  }
+  .modal-backdrop.open{opacity:1;visibility:visible}
+  .modal{
+    width:100%;max-width:580px;max-height:calc(100vh - 48px);
+    background:var(--surface);border-radius:16px;box-shadow:var(--shadow-lg);
+    display:flex;flex-direction:column;overflow:hidden;
+    transform:translateY(10px) scale(.985);transition:transform .2s cubic-bezier(.2,.8,.3,1);
+  }
+  .modal-backdrop.open .modal{transform:none}
+  .modal-header{
+    display:flex;align-items:center;gap:13px;padding:20px 22px 16px;border-bottom:1px solid var(--border);flex:none;
+  }
+  .modal-ws-icon{
+    width:42px;height:42px;border-radius:11px;flex:none;color:#fff;font-weight:700;font-size:17px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#8B5CF6,#4F8DFF);box-shadow:0 3px 8px rgba(108,76,241,.3);
+  }
+  .modal-header h2{font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .modal-sub{font-size:12.5px;color:var(--text-3);margin-top:1px}
+  .modal-close{margin-left:auto}
+  .modal-body{padding:20px 22px;overflow-y:auto}
+  .modal-footer{
+    flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:15px 22px;border-top:1px solid var(--border);background:#FAFBFD;
+  }
+  .expiry-note{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-3)}
+  .footer-actions{display:flex;gap:10px}
+
+  .field{margin-bottom:18px}
+  .field-label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+  .field-label .optional{font-weight:500;color:var(--text-3);font-size:12px;margin-left:5px}
+  .field-hint{font-size:12px;color:var(--text-3);margin-top:6px}
+  .field-error{font-size:12.5px;color:var(--danger);margin-top:6px;display:flex;align-items:center;gap:5px;font-weight:500}
+
+  .chip-input{
+    display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+    border:1.5px solid var(--border-strong);border-radius:10px;padding:6px 8px;min-height:44px;
+    background:var(--surface);cursor:text;transition:border-color .15s,box-shadow .15s;
+  }
+  .chip-input:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-ring)}
+  .chip-input.invalid{border-color:var(--danger)}
+  .chip-input.invalid:focus-within{box-shadow:0 0 0 3px rgba(229,72,77,.14)}
+  .chip-input input{flex:1;min-width:150px;border:none;outline:none;background:transparent;padding:5px 4px;font-size:13.5px}
+  .chip{
+    display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand-dark);
+    border-radius:999px;padding:4px 6px 4px 11px;font-size:12.5px;font-weight:600;
+  }
+  .chip-x{
+    border:none;background:transparent;color:inherit;width:17px;height:17px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;
+  }
+  .chip-x:hover{background:rgba(108,76,241,.2)}
+
+  .role-group{border:none;margin-bottom:18px}
+  .role-group legend,.extra-access legend{font-size:13px;font-weight:600;margin-bottom:8px;padding:0}
+  .role-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .role-cards input{position:absolute;opacity:0;width:1px;height:1px}
+  .role-card{
+    display:block;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;cursor:pointer;
+    transition:border-color .15s,background .15s,box-shadow .15s;background:var(--surface);
+  }
+  .role-card:hover{border-color:var(--border-strong)}
+  .role-name{display:block;font-weight:650;font-size:13.5px}
+  .role-desc{display:block;font-size:12px;color:var(--text-3);margin-top:2px;line-height:1.4}
+  .role-cards input:checked + .role-card{border-color:var(--brand);background:var(--brand-light);box-shadow:0 0 0 3px var(--brand-ring)}
+  .role-cards input:checked + .role-card .role-name{color:var(--brand-dark)}
+  .role-cards input:focus-visible + .role-card{outline:2px solid var(--brand);outline-offset:2px}
+
+  .perm-panel{background:#F8F9FD;border:1px solid var(--border);border-radius:10px;padding:13px 15px;margin-bottom:18px}
+  .perm-head{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;color:var(--text-2);margin-bottom:9px}
+  .perm-head span{color:var(--brand-dark)}
+  .perm-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+  .perm-list li{display:flex;align-items:center;gap:7px;font-size:12.5px}
+  .perm-list li.ok{color:var(--text)}
+  .perm-list li.no{color:var(--text-3)}
+  .perm-list li svg{flex:none}
+  .perm-list li.ok svg{color:var(--success)}
+  .perm-list li.no svg{color:#C2C6D4}
+
+  .select-wrap{position:relative}
+  .select-wrap select{
+    width:100%;appearance:none;-webkit-appearance:none;border:1.5px solid var(--border-strong);border-radius:10px;
+    background:var(--surface);padding:10px 36px 10px 12px;font-size:13.5px;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+  }
+  .select-wrap select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-ring)}
+  .select-caret{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-3)}
+
+  .extra-access{border:none;margin-bottom:18px}
+  .check{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--text-2);padding:5px 0;cursor:pointer}
+  .check input{width:16px;height:16px;accent-color:var(--brand);cursor:pointer;flex:none}
+
+  textarea{
+    width:100%;border:1.5px solid var(--border-strong);border-radius:10px;padding:10px 12px;font-size:13.5px;
+    resize:vertical;min-height:74px;transition:border-color .15s,box-shadow .15s;
+  }
+  textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-ring)}
+
+  .invite-link{border-top:1px dashed var(--border-strong);padding-top:16px}
+  .invite-link-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;margin-bottom:8px}
+  .invite-link-row{display:flex;gap:8px}
+  .invite-link-row input{
+    flex:1;border:1px solid var(--border);border-radius:9px;background:#F7F8FC;color:var(--text-2);
+    padding:9px 12px;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;min-width:0;
+  }
+  .invite-link-row input:focus{outline:none;border-color:var(--brand)}
+  .btn-secondary.copied{background:var(--green-bg);color:var(--green-text)}
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,16px);z-index:80;
+    background:#20243A;color:#fff;border-radius:11px;padding:11px 18px 11px 13px;
+    display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:550;
+    box-shadow:0 12px 32px rgba(15,17,30,.35);opacity:0;visibility:hidden;
+    transition:opacity .22s,transform .22s,visibility .22s;max-width:min(92vw,480px);pointer-events:none;
+  }
+  .toast.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
+  .toast-icon{
+    width:22px;height:22px;border-radius:50%;background:var(--success);flex:none;
+    display:flex;align-items:center;justify-content:center;color:#fff;
+  }
+
+  @media (max-width:920px){
+    .sidebar{display:none}
+    .content{padding:20px 16px 48px}
+    .perm-list{grid-template-columns:1fr}
+  }
+  @media (max-width:560px){
+    .role-cards{grid-template-columns:1fr}
+    .ws-text{display:none}
+    .modal-footer{flex-direction:column-reverse;align-items:stretch}
+    .footer-actions{display:flex}
+    .footer-actions .btn{flex:1}
+    .expiry-note{justify-content:center}
+    th:nth-child(4),td:nth-child(4){display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== Top bar ===================== -->
+<header class="topbar">
+  <div class="brand">
+    <span class="logo-mark" aria-hidden="true">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12h4l2.5-7 5 14 2.5-7h4"/></svg>
+    </span>
+    PulseNotify
+  </div>
+
+  <div class="topbar-spacer"></div>
+
+  <button class="ws-switch" type="button" aria-label="Switch workspace">
+    <span class="ws-icon" aria-hidden="true">A</span>
+    <span class="ws-text"><strong>Acme Corp</strong><small>Ad account workspace</small></span>
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5 8 10l4-3.5"/></svg>
+  </button>
+
+  <button class="icon-btn" type="button" aria-label="Notifications">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>
+    <span class="bell-dot" aria-hidden="true"></span>
+  </button>
+  <span class="avatar av-1" title="Alex Rivera" aria-label="Alex Rivera">AR</span>
+</header>
+
+<div class="layout">
+  <!-- ===================== Sidebar ===================== -->
+  <aside class="sidebar" aria-label="Workspace navigation">
+    <div class="nav-label">Workspace</div>
+    <a class="nav-item" href="#">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
+      Overview
+    </a>
+    <a class="nav-item" href="#">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3l5.5 4v-13L7 9.5H4z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path d="M18 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>
+      Campaigns
+    </a>
+    <a class="nav-item" href="#">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.6 19c.6-3 2.8-4.6 5.4-4.6s4.8 1.6 5.4 4.6"/><path d="M15.6 5.4a3.2 3.2 0 0 1 0 5.9"/><path d="M17.4 14.7c1.9.5 3 1.8 3.4 3.8"/></svg>
+      Audiences
+    </a>
+    <a class="nav-item" href="#">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.6 6H15a3.2 3.2 0 0 1 0 6.4H9a3.2 3.2 0 0 0 0 6.4h6.4"/></svg>
+      Journeys
+    </a>
+    <a class="nav-item" href="#">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8.5 16v-4.5"/><path d="M12.5 16V8"/><path d="M16.5 16v-3"/></svg>
+      Analytics
+    </a>
+
+    <div class="nav-label">Settings</div>
+    <a class="nav-item active" href="#" aria-current="page">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.9v2.5M12 18.6v2.5M2.9 12h2.5M18.6 12h2.5M5.2 5.2l1.8 1.8M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/></svg>
+      Workspace settings
+    </a>
+    <a class="nav-item" href="#">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13.5" rx="2.2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
+      Billing
+    </a>
+    <a class="nav-item" href="#">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v4.5M15 3v4.5"/><path d="M7 7.5h10v4.3a5 5 0 0 1-10 0V7.5z"/><path d="M12 16.8V21"/></svg>
+      Integrations
+    </a>
+  </aside>
+
+  <!-- ===================== Main content ===================== -->
+  <main class="content">
+    <div class="content-inner">
+      <nav class="crumbs" aria-label="Breadcrumb">Settings<span>/</span><b>Members &amp; access</b></nav>
+
+      <div class="page-head">
+        <div>
+          <h1>Members &amp; access</h1>
+          <p class="page-sub">Manage who can access the Acme Corp ad account workspace.</p>
+        </div>
+        <button class="btn btn-primary" id="inviteBtn" type="button">
+          <svg class="btn-ic" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11"/></svg>
+          Invite member
+        </button>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat"><strong>12</strong> members</span>
+        <span class="stat"><strong id="pendingCount">2</strong> pending invitations</span>
+        <span class="stat"><strong>3</strong> connected ad accounts</span>
+      </div>
+
+      <section class="card" aria-labelledby="pendingTitle">
+        <div class="card-head">
+          <div>
+            <h2 id="pendingTitle">Pending invitations</h2>
+            <p>Invitations expire automatically if not accepted.</p>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Email</th>
+                <th scope="col">Role</th>
+                <th scope="col">Ad account access</th>
+                <th scope="col">Invited</th>
+                <th scope="col">Status</th>
+                <th scope="col" style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pendingBody">
+              <tr data-email="j.ortiz@brandco.com">
+                <td class="td-email">j.ortiz@brandco.com</td>
+                <td><span class="role-badge rb-analyst">Analyst</span></td>
+                <td class="td-muted">All ad accounts</td>
+                <td class="td-muted">2 days ago</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+                <td><div class="row-actions">
+                  <button class="btn-text resend" type="button">Resend</button>
+                  <button class="btn-text danger revoke" type="button">Revoke</button>
+                </div></td>
+              </tr>
+              <tr data-email="t.nguyen@brandco.com">
+                <td class="td-email">t.nguyen@brandco.com</td>
+                <td><span class="role-badge rb-viewer">Viewer</span></td>
+                <td class="td-muted">US · Brand Awareness</td>
+                <td class="td-muted">5 days ago</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+                <td><div class="row-actions">
+                  <button class="btn-text resend" type="button">Resend</button>
+                  <button class="btn-text danger revoke" type="button">Revoke</button>
+                </div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="membersTitle">
+        <div class="card-head">
+          <div>
+            <h2 id="membersTitle">Members</h2>
+            <p>People with active access to this workspace.</p>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Member</th>
+                <th scope="col">Role</th>
+                <th scope="col">Ad account access</th>
+                <th scope="col">Member since</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="member-cell"><span class="avatar av-1">AR</span><div><div class="member-name">Alex Rivera<span class="you">You</span></div><div class="member-mail">alex@pulsenotify.io</div></div></div></td>
+                <td><span class="role-badge rb-admin">Admin</span></td>
+                <td class="td-muted">All ad accounts</td>
+                <td class="td-muted">Mar 2023</td>
+                <td><span class="badge badge-active">Active</span></td>
+              </tr>
+              <tr>
+                <td><div class="member-cell"><span class="avatar av-2">PN</span><div><div class="member-name">Priya Nair</div><div class="member-mail">priya@acmecorp.com</div></div></div></td>
+                <td><span class="role-badge rb-marketing">Marketing Manager</span></td>
+                <td class="td-muted">All ad accounts</td>
+                <td class="td-muted">Jun 2023</td>
+                <td><span class="badge badge-active">Active</span></td>
+              </tr>
+              <tr>
+                <td><div class="member-cell"><span class="avatar av-3">MC</span><div><div class="member-name">Marcus Chen</div><div class="member-mail">marcus@acmecorp.com</div></div></div></td>
+                <td><span class="role-badge rb-analyst">Analyst</span></td>
+                <td class="td-muted">US · Brand Awareness, EU · Retargeting</td>
+                <td class="td-muted">Nov 2024</td>
+                <td><span class="badge badge-active">Active</span></td>
+              </tr>
+              <tr>
+                <td><div class="member-cell"><span class="avatar av-4">SD</span><div><div class="member-name">Sofia Duarte</div><div class="member-mail">sofia@acmecorp.com</div></div></div></td>
+                <td><span class="role-badge rb-viewer">Viewer</span></td>
+                <td class="td-muted">APAC · Seasonal</td>
+                <td class="td-muted">Jan 2025</td>
+                <td><span class="badge badge-active">Active</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ===================== Invite modal ===================== -->
+<div class="modal-backdrop open" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <form id="inviteForm" novalidate>
+      <div class="modal-header">
+        <span class="modal-ws-icon" aria-hidden="true">A</span>
+        <div>
+          <h2 id="modalTitle">Invite to Acme Corp</h2>
+          <p class="modal-sub">Ad account workspace · 12 members · 3 ad accounts</p>
+        </div>
+        <button class="icon-btn modal-close" id="closeBtn" type="button" aria-label="Close dialog">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Email chips -->
+        <div class="field">
+          <label class="field-label" for="emailInput">Email addresses</label>
+          <div class="chip-input" id="chipBox">
+            <input id="emailInput" type="text" inputmode="email" autocomplete="off" spellcheck="false" placeholder="name@company.com" aria-describedby="emailHint emailError">
+          </div>
+          <p class="field-error" id="emailError" role="alert" hidden>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5M8 11h.01"/></svg>
+            <span id="emailErrorText"></span>
+          </p>
+          <p class="field-hint" id="emailHint">Press Enter or comma to add multiple people.</p>
+        </div>
+
+        <!-- Role selection -->
+        <fieldset class="role-group">
+          <legend>Role</legend>
+          <div class="role-cards">
+            <input type="radio" name="role" id="role-admin" value="admin">
+            <label class="role-card" for="role-admin">
+              <span class="role-name">Admin</span>
+              <span class="role-desc">Full access, incl. billing &amp; member management.</span>
+            </label>
+
+            <input type="radio" name="role" id="role-marketing" value="marketing" checked>
+            <label class="role-card" for="role-marketing">
+              <span class="role-name">Marketing Manager</span>
+              <span class="role-desc">Runs campaigns, journeys &amp; audiences. No billing access.</span>
+            </label>
+
+            <input type="radio" name="role" id="role-analyst" value="analyst">
+            <label class="role-card" for="role-analyst">
+              <span class="role-name">Analyst</span>
+              <span class="role-desc">Builds reports and exports data. Can't edit campaigns.</span>
+            </label>
+
+            <input type="radio" name="role" id="role-viewer" value="viewer">
+            <label class="role-card" for="role-viewer">
+              <span class="role-name">Viewer</span>
+              <span class="role-desc">Read-only dashboards and campaign results.</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- Permissions summary -->
+        <div class="perm-panel" aria-live="polite">
+          <div class="perm-head">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 5.8v5.4c0 4.4 3 7.6 7 9.3 4-1.7 7-4.9 7-9.3V5.8L12 3z"/><path d="M9.3 12l2 2 3.6-3.8"/></svg>
+            Included permissions — <span id="permRoleName">Marketing Manager</span>
+          </div>
+          <ul class="perm-list" id="permList"></ul>
+        </div>
+
+        <!-- Ad account access -->
+        <div class="field">
+          <label class="field-label" for="accessSelect">Ad account access</label>
+          <div class="select-wrap">
+            <select id="accessSelect">
+              <option selected>All ad accounts (3)</option>
+              <option>US · Brand Awareness (act_1042)</option>
+              <option>EU · Retargeting (act_2390)</option>
+              <option>APAC · Seasonal (act_3871)</option>
+            </select>
+            <span class="select-caret" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 8 10l4-3.5"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Extra access -->
+        <fieldset class="extra-access">
+          <legend>Additional access</legend>
+          <label class="check"><input type="checkbox" id="optSpend"> Approve ad spend cap changes</label>
+          <label class="check"><input type="checkbox" id="optExport"> Export audience segment data</label>
+        </fieldset>
+
+        <!-- Expiry -->
+        <div class="field">
+          <label class="field-label" for="expirySelect">Invitation expiry</label>
+          <div class="select-wrap">
+            <select id="expirySelect">
+              <option value="7" selected>Expires in 7 days</option>
+              <option value="14">Expires in 14 days</option>
+              <option value="30">Expires in 30 days</option>
+            </select>
+            <span class="select-caret" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5 8 10l4-3.5"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Personal note -->
+        <div class="field">
+          <label class="field-label" for="msgInput">Personal note <span class="optional">optional</span></label>
+          <textarea id="msgInput" rows="3" maxlength="500" placeholder="Hi! Join our PulseNotify workspace so we can collaborate on the upcoming launch campaigns…"></textarea>
+        </div>
+
+        <!-- Invite link -->
+        <div class="invite-link">
+          <span class="invite-link-label">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7.1 0l2.4-2.4a5 5 0 0 0-7.1-7.1L11 5.9"/><path d="M14 10a5 5 0 0 0-7.1 0l-2.4 2.4a5 5 0 0 0 7.1 7.1L13 18.1"/></svg>
+            Or share an invite link
+          </span>
+          <div class="invite-link-row">
+            <input id="linkInput" type="text" readonly value="" aria-label="Invite link">
+            <button class="btn btn-secondary" id="copyBtn" type="button">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span class="expiry-note" id="expiryNote">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
+          <span id="expiryText">Invitations expire in 7 days</span>
+        </span>
+        <div class="footer-actions">
+          <button class="btn btn-ghost" id="cancelBtn" type="button">Cancel</button>
+          <button class="btn btn-primary" id="sendBtn" type="submit">
+            <svg class="btn-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4 3 11.2l6.8 2.4L12.2 20 21 4z"/><path d="M9.8 13.6 21 4"/></svg>
+            <span id="sendLabel">Send invitation</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== Toast ===================== -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span class="toast-icon" aria-hidden="true">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.3 4.3 6.5 11 2.7 7.4"/></svg>
+  </span>
+  <span id="toastText"></span>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Data ---------- */
+  var PERMISSIONS = [
+    { key:"campaigns", label:"Create & manage campaigns" },
+    { key:"journeys",  label:"Build journeys & automations" },
+    { key:"audiences", label:"Edit audience segments" },
+    { key:"analytics", label:"View analytics & reports" },
+    { key:"exports",   label:"Export reports & data" },
+    { key:"billing",   label:"Manage billing & invoices" },
+    { key:"members",   label:"Invite & manage members" }
+  ];
+  var ROLES = {
+    admin:     { name:"Admin",             badge:"rb-admin",     allowed:["campaigns","journeys","audiences","analytics","exports","billing","members"] },
+    marketing: { name:"Marketing Manager", badge:"rb-marketing", allowed:["campaigns","journeys","audiences","analytics"] },
+    analyst:   { name:"Analyst",           badge:"rb-analyst",   allowed:["analytics","exports"] },
+    viewer:    { name:"Viewer",            badge:"rb-viewer",    allowed:["analytics"] }
+  };
+  var ICON_OK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.3 4.3 6.5 11 2.7 7.4"/></svg>';
+  var ICON_NO = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+
+  /* ---------- Elements ---------- */
+  var backdrop     = document.getElementById("modalBackdrop");
+  var form         = document.getElementById("inviteForm");
+  var chipBox      = document.getElementById("chipBox");
+  var emailInput   = document.getElementById("emailInput");
+  var emailError   = document.getElementById("emailError");
+  var emailErrorTx = document.getElementById("emailErrorText");
+  var permList     = document.getElementById("permList");
+  var permRoleName = document.getElementById("permRoleName");
+  var accessSelect = document.getElementById("accessSelect");
+  var expirySelect = document.getElementById("expirySelect");
+  var expiryText   = document.getElementById("expiryText");
+  var msgInput     = document.getElementById("msgInput");
+  var optSpend     = document.getElementById("optSpend");
+  var optExport    = document.getElementById("optExport");
+  var sendBtn      = document.getElementById("sendBtn");
+  var sendLabel    = document.getElementById("sendLabel");
+  var cancelBtn    = document.getElementById("cancelBtn");
+  var closeBtn     = document.getElementById("closeBtn");
+  var inviteBtn    = document.getElementById("inviteBtn");
+  var linkInput    = document.getElementById("linkInput");
+  var copyBtn      = document.getElementById("copyBtn");
+  var pendingBody  = document.getElementById("pendingBody");
+  var pendingCount = document.getElementById("pendingCount");
+  var toast        = document.getElementById("toast");
+  var toastText    = document.getElementById("toastText");
+
+  var state = { emails: [] };
+  var toastTimer = null;
+
+  /* ---------- Helpers ---------- */
+  function isValidEmail(e){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+  }
+  function setError(msg){
+    emailErrorTx.textContent = msg;
+    emailError.hidden = false;
+    chipBox.classList.add("invalid");
+  }
+  function clearError(){
+    emailError.hidden = true;
+    chipBox.classList.remove("invalid");
+  }
+  function showToast(msg){
+    toastText.textContent = msg;
+    toast.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove("show"); }, 3400);
+  }
+  function randomToken(){
+    var chars = "abcdefghjkmnpqrstuvwxyz23456789", out = "";
+    for (var i = 0; i < 8; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+    return out;
+  }
+  function refreshLink(){
+    linkInput.value = "https://app.pulsenotify.io/invite/acme-corp/" + randomToken();
+  }
+
+  /* ---------- Permissions panel ---------- */
+  function renderPerms(roleKey){
+    var role = ROLES[roleKey];
+    permRoleName.textContent = role.name;
+    permList.innerHTML = "";
+    PERMISSIONS.forEach(function(p){
+      var ok = role.allowed.indexOf(p.key) !== -1;
+      var li = document.createElement("li");
+      li.className = ok ? "ok" : "no";
+      li.innerHTML = ok ? ICON_OK : ICON_NO;
+      li.appendChild(document.createTextNode(p.label));
+      permList.appendChild(li);
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="role"]'), function(r){
+    r.addEventListener("change", function(e){
+      if (e.target.checked) renderPerms(e.target.value);
+    });
+  });
+
+  /* ---------- Email chips ---------- */
+  function updateSendLabel(){
+    var n = state.emails.length;
+    sendLabel.textContent = n > 1 ? ("Send " + n + " invitations") : "Send invitation";
+  }
+  function renderChips(){
+    Array.prototype.forEach.call(chipBox.querySelectorAll(".chip"), function(c){ c.remove(); });
+    state.emails.forEach(function(email){
+      var chip = document.createElement("span");
+      chip.className = "chip";
+      var label = document.createElement("span");
+      label.textContent = email;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip-x";
+      btn.setAttribute("aria-label", "Remove " + email);
+      btn.innerHTML = "&times;";
+      btn.addEventListener("click", function(){
+        state.emails = state.emails.filter(function(e){ return e !== email; });
+        renderChips();
+        emailInput.focus();
+      });
+      chip.appendChild(label);
+      chip.appendChild(btn);
+      chipBox.insertBefore(chip, emailInput);
+    });
+    updateSendLabel();
+  }
+  function addEmail(raw){
+    var email = (raw || "").trim().replace(/[,;]+$/, "").toLowerCase();
+    if (!email) return false;
+    if (!isValidEmail(email)){
+      setError("\u201C" + email + "\u201D isn\u2019t a valid email address.");
+      return false;
+    }
+    if (state.emails.indexOf(email) !== -1){
+      setError("That email address has already been added.");
+      return false;
+    }
+    state.emails.push(email);
+    clearError();
+    renderChips();
+    return true;
+  }
+  function tryAddFromInput(){
+    var v = emailInput.value;
+    if (!v.trim()) return true;
+    var ok = addEmail(v);
+    if (ok) emailInput.value = "";
+    return ok;
+  }
+
+  emailInput.addEventListener("keydown", function(e){
+    if (e.key === "Enter" || e.key === ","){
+      e.preventDefault();
+      if (emailInput.value.trim()){
+        tryAddFromInput();
+      } else if (state.emails.length){
+        form.requestSubmit ? form.requestSubmit() : sendBtn.click();
+      }
+    } else if (e.key === "Backspace" && !emailInput.value && state.emails.length){
+      state.emails.pop();
+      renderChips();
+    }
+  });
+  emailInput.addEventListener("input", clearError);
+  emailInput.addEventListener("paste", function(e){
+    e.preventDefault();
+    var text = (e.clipboardData || window.clipboardData).getData("text") || "";
+    text.split(/[\s,;]+/).forEach(function(part){ if (part.trim()) addEmail(part); });
+    emailInput.value = "";
+  });
+  chipBox.addEventListener("click", function(){ emailInput.focus(); });
+
+  /* ---------- Modal open / close ---------- */
+  function openModal(){
+    backdrop.classList.add("open");
+    document.body.classList.add("modal-open");
+    setTimeout(function(){ emailInput.focus(); }, 60);
+  }
+  function closeModal(){
+    backdrop.classList.remove("open");
+    document.body.classList.remove("modal-open");
+    inviteBtn.focus();
+  }
+  cancelBtn.addEventListener("click", closeModal);
+  closeBtn.addEventListener("click", closeModal);
+  backdrop.addEventListener("mousedown", function(e){
+    if (e.target === backdrop) closeModal();
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && backdrop.classList.contains("open")) closeModal();
+  });
+  inviteBtn.addEventListener("click", openModal);
+
+  /* ---------- Pending invitations ---------- */
+  function updateCounts(){
+    pendingCount.textContent = pendingBody.querySelectorAll("tr").length;
+  }
+  function addPendingRow(email, role, access){
+    var tr = document.createElement("tr");
+    tr.setAttribute("data-email", email);
+
+    var tdEmail = document.createElement("td");
+    tdEmail.className = "td-email";
+    tdEmail.textContent = email;
+
+    var tdRole = document.createElement("td");
+    var rb = document.createElement("span");
+    rb.className = "role-badge " + role.badge;
+    rb.textContent = role.name;
+    tdRole.appendChild(rb);
+
+    var tdAccess = document.createElement("td");
+    tdAccess.className = "td-muted";
+    tdAccess.textContent = access;
+
+    var tdWhen = document.createElement("td");
+    tdWhen.className = "td-muted";
+    tdWhen.textContent = "Just now";
+
+    var tdStatus = document.createElement("td");
+    var st = document.createElement("span");
+    st.className = "badge badge-pending";
+    st.textContent = "Pending";
+    tdStatus.appendChild(st);
+
+    var tdActions = document.createElement("td");
+    var wrap = document.createElement("div");
+    wrap.className = "row-actions";
+    var resend = document.createElement("button");
+    resend.type = "button"; resend.className = "btn-text resend"; resend.textContent = "Resend";
+    var revoke = document.createElement("button");
+    revoke.type = "button"; revoke.className = "btn-text danger revoke"; revoke.textContent = "Revoke";
+    wrap.appendChild(resend); wrap.appendChild(revoke);
+    tdActions.appendChild(wrap);
+
+    tr.appendChild(tdEmail); tr.appendChild(tdRole); tr.appendChild(tdAccess);
+    tr.appendChild(tdWhen); tr.appendChild(tdStatus); tr.appendChild(tdActions);
+    pendingBody.insertBefore(tr, pendingBody.firstChild);
+  }
+  pendingBody.addEventListener("click", function(e){
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    var tr = btn.closest("tr");
+    var email = tr.getAttribute("data-email");
+    if (btn.classList.contains("resend")){
+      showToast("Invitation resent to " + email);
+    } else if (btn.classList.contains("revoke")){
+      tr.remove();
+      updateCounts();
+      showToast("Invitation to " + email + " revoked");
+    }
+  });
+
+  /* ---------- Submit ---------- */
+  function resetForm(){
+    state.emails = [];
+    renderChips();
+    emailInput.value = "";
+    msgInput.value = "";
+    optSpend.checked = false;
+    optExport.checked = false;
+    document.getElementById("role-marketing").checked = true;
+    renderPerms("marketing");
+    accessSelect.selectedIndex = 0;
+    expirySelect.selectedIndex = 0;
+    expiryText.textContent = "Invitations expire in 7 days";
+    clearError();
+    sendBtn.disabled = false;
+    sendBtn.classList.remove("loading");
+    updateSendLabel();
+    refreshLink();
+  }
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    if (!tryAddFromInput()){
+      emailInput.focus();
+      return;
+    }
+    if (state.emails.length === 0){
+      setError("Add at least one email address to continue.");
+      emailInput.focus();
+      return;
+    }
+    var roleKey = document.querySelector('input[name="role"]:checked').value;
+    var role = ROLES[roleKey];
+    var access = accessSelect.options[accessSelect.selectedIndex].text;
+
+    sendBtn.disabled = true;
+    sendBtn.classList.add("loading");
+    sendLabel.textContent = "Sending\u2026";
+
+    setTimeout(function(){
+      var recipients = state.emails.slice();
+      recipients.forEach(function(email){ addPendingRow(email, role, access); });
+      updateCounts();
+      showToast(recipients.length === 1
+        ? "Invitation sent to " + recipients[0]
+        : recipients.length + " invitations sent");
+      resetForm();
+      closeModal();
+    }, 750);
+  });
+
+  /* ---------- Copy invite link ---------- */
+  copyBtn.addEventListener("click", function(){
+    var text = linkInput.value;
+    function done(){
+      showToast("Invite link copied to clipboard");
+      var original = copyBtn.textContent;
+      copyBtn.textContent = "Copied";
+      copyBtn.classList.add("copied");
+      setTimeout(function(){
+        copyBtn.textContent = original;
+        copyBtn.classList.remove("copied");
+      }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){
+        linkInput.select();
+        document.execCommand("copy");
+        done();
+      });
+    } else {
+      linkInput.select();
+      document.execCommand("copy");
+      done();
+    }
+  });
+
+  /* ---------- Expiry note ---------- */
+  expirySelect.addEventListener("change", function(){
+    expiryText.textContent = "Invitations expire in " + expirySelect.value + " days";
+  });
+
+  /* ---------- Init ---------- */
+  renderPerms("marketing");
+  updateCounts();
+  refreshLink();
+  updateSendLabel();
+  setTimeout(function(){ emailInput.focus(); }, 80);
+})();
+</script>
+</body>
+</html>

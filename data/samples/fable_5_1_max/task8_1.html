@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MorrowSpec — Realistic mock APIs from your OpenAPI spec</title>
+<meta name="description" content="MorrowSpec turns an OpenAPI specification into a hosted, realistic mock API with errors and test scenarios, so frontend, backend, QA, and product teams can build and test before the backend is ready. Join the private-beta waitlist.">
+<meta name="theme-color" content="#f7f5f0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314171f'/%3E%3Cpath d='M8 19a8 8 0 0 1 16 0z' fill='%23f0763a'/%3E%3Crect x='6' y='21.5' width='20' height='2.5' rx='1.25' fill='%23ffffff'/%3E%3C/svg%3E">
+<script>document.documentElement.className += ' js';</script>
+<style>
+:root{
+  --bg:#f7f5f0;--bg-2:#efece5;--surface:#ffffff;
+  --ink:#14171f;--ink-2:#2b303b;--muted:#5d6474;
+  --line:#e4dfd5;--line-2:#d3ccbf;
+  --accent:#e4552b;--accent-ink:#b9401a;--accent-soft:#fbe9e1;
+  --code-bg:#0e1219;--code-line:#222a3a;--code-fg:#d7dce6;--code-muted:#7d86a0;
+  --c-key:#8fb6ff;--c-str:#7fe0a6;--c-num:#ffb46b;--c-prop:#c8d0e6;
+  --radius:16px;
+  --shadow-sm:0 1px 2px rgba(20,23,31,.06),0 1px 1px rgba(20,23,31,.04);
+  --shadow-md:0 14px 34px -14px rgba(20,23,31,.18);
+  --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;font-family:var(--font);font-size:16px;line-height:1.55;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,h4,p,ul,ol{margin:0}
+a{color:inherit}
+svg{display:block}
+button,input,select{font:inherit;color:inherit;margin:0}
+button{cursor:pointer}
+code{font-family:var(--mono);font-size:.88em;background:var(--bg-2);padding:.1em .38em;border-radius:5px;color:var(--ink-2)}
+strong{font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skip{position:absolute;left:1rem;top:-100px;z-index:100;background:var(--ink);color:#fff;padding:.6rem 1rem;border-radius:8px;text-decoration:none;font-weight:600}
+.skip:focus{top:1rem}
+.container{width:min(1120px,100% - 2.5rem);margin-inline:auto}
+section[id]{scroll-margin-top:84px}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.25rem;border-radius:10px;font-weight:600;font-size:.95rem;line-height:1;border:1px solid transparent;text-decoration:none;white-space:nowrap;transition:background-color .15s,border-color .15s,transform .15s,box-shadow .15s}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:var(--ink);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),var(--shadow-sm)}
+.btn-primary:hover{background:#262c39}
+.btn-primary:active{transform:translateY(1px)}
+.btn-sm{padding:.62rem .95rem;font-size:.9rem}
+.btn-light{background:#fff;color:var(--ink)}
+.btn-light:hover{background:#f1ede4}
+
+/* ---------- Nav ---------- */
+.nav{position:sticky;top:0;z-index:50;background:rgba(247,245,240,.84);-webkit-backdrop-filter:saturate(1.4) blur(12px);backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid transparent;transition:border-color .2s}
+.nav.scrolled{border-bottom-color:var(--line)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px;gap:1rem}
+.brand{display:inline-flex;align-items:center;gap:.6rem;text-decoration:none;font-weight:700;letter-spacing:-.02em;font-size:1.1rem;color:var(--ink)}
+.logo{width:30px;height:30px;flex:none}
+.nav-menu{display:flex;align-items:center;gap:1.75rem}
+.nav-menu a:not(.btn){text-decoration:none;color:var(--ink-2);font-weight:500;font-size:.95rem;transition:color .15s}
+.nav-menu a:not(.btn):hover{color:var(--ink)}
+.menu-btn{display:none;width:42px;height:42px;border-radius:10px;border:1px solid var(--line-2);background:#fff;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0}
+.menu-btn span{display:block;width:18px;height:2px;background:var(--ink);border-radius:2px;transition:transform .2s}
+.nav.open .menu-btn span:first-child{transform:translateY(3.5px) rotate(45deg)}
+.nav.open .menu-btn span:last-child{transform:translateY(-3.5px) rotate(-45deg)}
+
+/* ---------- Type helpers ---------- */
+.eyebrow{display:inline-flex;align-items:center;gap:.55rem;font-family:var(--mono);font-size:.74rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-ink)}
+.eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#ff8a5b,var(--accent));box-shadow:0 0 0 3px rgba(228,85,43,.15);flex:none}
+.lead{color:var(--muted);font-size:1.1rem}
+.section{padding:6rem 0}
+.section.alt{background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line);--card-bg:var(--bg)}
+.section-head{max-width:720px;margin-bottom:3rem}
+.section-head.center{text-align:center;margin-inline:auto}
+.section-head h2{font-size:clamp(1.85rem,3.4vw,2.6rem);line-height:1.1;letter-spacing:-.03em;font-weight:700;margin:.9rem 0 1rem}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;padding:5.5rem 0 4rem;overflow:hidden}
+.hero::before{content:"";position:absolute;left:-10%;right:-10%;top:-22%;height:72%;z-index:-1;pointer-events:none;background:
+  radial-gradient(60% 55% at 50% 0%,rgba(228,85,43,.20),transparent 70%),
+  radial-gradient(35% 40% at 18% 12%,rgba(255,179,71,.16),transparent 70%),
+  radial-gradient(35% 40% at 82% 12%,rgba(255,140,90,.12),transparent 70%)}
+.hero-grid{position:absolute;left:0;right:0;top:0;height:560px;z-index:-1;pointer-events:none;background-image:radial-gradient(rgba(20,23,31,.09) 1px,transparent 1.3px);background-size:22px 22px;-webkit-mask-image:radial-gradient(60% 70% at 50% 0%,#000 25%,transparent 100%);mask-image:radial-gradient(60% 70% at 50% 0%,#000 25%,transparent 100%)}
+.hero-inner{text-align:center;max-width:820px;margin:0 auto 3.5rem}
+.hero h1{font-size:clamp(2.5rem,5.6vw,4.25rem);line-height:1.04;letter-spacing:-.035em;font-weight:700;margin:1.1rem 0 1.25rem}
+.hero h1 em{font-style:italic;font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:500;letter-spacing:-.02em;color:var(--accent-ink)}
+.hero .lead{font-size:clamp(1.05rem,1.6vw,1.2rem);max-width:660px;margin:0 auto 2rem}
+.fineprint{font-size:.85rem;color:var(--muted);margin-top:.9rem}
+
+/* ---------- Waitlist form ---------- */
+.waitlist{max-width:540px;margin:0 auto}
+.waitlist .fields{display:flex;gap:.35rem;padding:.35rem;background:#fff;border:1px solid var(--line-2);border-radius:14px;box-shadow:var(--shadow-sm);transition:border-color .15s,box-shadow .15s;text-align:left}
+.waitlist .fields:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(20,23,31,.08)}
+.waitlist input,.waitlist select{flex:1;min-width:0;border:0;background:transparent;padding:.75rem .9rem;border-radius:10px;font-size:1rem;color:var(--ink)}
+.waitlist input::placeholder{color:#8a9099}
+.waitlist input:focus,.waitlist select:focus{outline:none}
+.waitlist .btn{padding:.8rem 1.2rem}
+.waitlist.invalid .fields{border-color:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,.12)}
+.form-status{margin:.75rem 0 0;font-size:.9rem;color:var(--muted);min-height:1.3em}
+.form-status:focus{outline:none}
+.waitlist.invalid .form-status{color:#b3261e}
+.waitlist.done .fields{display:none}
+.waitlist.done .form-status{display:inline-flex;align-items:center;gap:.7rem;padding:.95rem 1.2rem;background:#fff;border:1px solid var(--line);border-radius:14px;color:var(--ink);font-size:1rem;margin:0;text-align:left;box-shadow:var(--shadow-sm)}
+.form-status .ok-ic{width:24px;height:24px;padding:5px;border-radius:50%;background:#e8f7ee;color:#1c7c47;flex:none}
+.waitlist-lg{max-width:720px}
+.waitlist-lg .fields{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) auto}
+.select-wrap{position:relative;display:flex;align-items:center;border-left:1px solid var(--line)}
+.select-wrap select{-webkit-appearance:none;appearance:none;width:100%;padding-right:2.3rem;cursor:pointer}
+.select-wrap::after{content:"";position:absolute;right:1rem;top:50%;width:7px;height:7px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+
+/* ---------- Demo window ---------- */
+.demo{position:relative;background:var(--code-bg);color:var(--code-fg);border:1px solid #232b3b;border-radius:18px;box-shadow:0 40px 90px -30px rgba(20,23,31,.45),0 12px 30px -12px rgba(20,23,31,.25);overflow:hidden}
+.demo-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;padding:.75rem 1rem;background:#0a0e15;border-bottom:1px solid var(--code-line);font-family:var(--mono);font-size:.78rem;color:var(--code-muted)}
+.dots{display:inline-flex;gap:6px}
+.dots i{width:10px;height:10px;border-radius:50%;display:block}
+.dots i:nth-child(1){background:#ff5f57}.dots i:nth-child(2){background:#febc2e}.dots i:nth-child(3){background:#28c840}
+.demo-title{color:#aeb6c6}
+.demo-title .sep{margin:0 .5rem;color:#3f4759}
+.demo-status{margin-left:auto;display:inline-flex;align-items:center;gap:.5rem;padding:.3rem .7rem;border-radius:999px;background:#131a27;border:1px solid var(--code-line);color:#b8c0d0;transition:background .3s,border-color .3s,color .3s}
+.demo-status.flash{background:#14301f;border-color:#2b6a45;color:#9df0bd}
+.pulse{width:7px;height:7px;border-radius:50%;background:#37d67a;flex:none;animation:pulse 2.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(55,214,122,.55)}70%{box-shadow:0 0 0 7px rgba(55,214,122,0)}100%{box-shadow:0 0 0 0 rgba(55,214,122,0)}}
+.demo-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.pane{min-width:0}
+.pane+.pane{border-left:1px solid var(--code-line)}
+.pane-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.55rem .9rem;border-bottom:1px solid var(--code-line);font-family:var(--mono);font-size:.76rem;color:var(--code-muted);min-height:46px}
+.pane-file{display:inline-flex;align-items:center;gap:.5rem;color:#c9d0de;min-width:0}
+.pane-file svg{width:14px;height:14px;color:var(--code-muted);flex:none}
+.rev{padding:.1rem .45rem;border-radius:6px;background:#1a2130;color:#9aa5bd;font-size:.7rem}
+.spec-toggle{display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .75rem;border-radius:999px;border:1px solid #33405a;background:#161d2b;color:#d7dce6;font-family:var(--mono);font-size:.72rem;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.spec-toggle:hover{background:#1c2536;border-color:#4a5a7a}
+.spec-toggle code{background:rgba(127,224,166,.12);color:var(--c-str);font-size:1em;padding:.05em .35em}
+.spec-toggle .off{display:none}
+.demo.spec-changed .spec-toggle .on{display:none}
+.demo.spec-changed .spec-toggle .off{display:inline}
+.demo.spec-changed .spec-toggle{border-color:#2b6a45;background:#12291d;color:#9df0bd}
+.code{position:relative;margin:0;padding:.75rem 0 .9rem;font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:normal;overflow-x:auto;counter-reset:line;tab-size:2}
+.ln{display:block;white-space:pre;padding:0 1rem 0 .6rem}
+.code.plain .ln{padding-left:1rem}
+.code.numbered .ln::before{counter-increment:line;content:counter(line);display:inline-block;width:2ch;margin-right:1.1rem;text-align:right;color:#3f4759;-webkit-user-select:none;user-select:none}
+.ln.added{display:none;background:rgba(127,224,166,.09);box-shadow:inset 3px 0 0 var(--c-str)}
+.demo.spec-changed .ln.added{display:block}
+.code.numbered .ln.added::before{content:"+";color:var(--c-str)}
+.ln.hl{background:rgba(127,224,166,.09);box-shadow:inset 3px 0 0 var(--c-str)}
+.k{color:var(--c-key)}.s{color:var(--c-str)}.n{color:var(--c-num)}.p{color:var(--c-prop)}.h{color:#a3adc2}.c{color:var(--code-muted);font-style:italic}
+.req{display:inline-flex;align-items:center;gap:.5rem;color:#c9d0de;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.method{color:var(--c-str);font-weight:700}
+.send{display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .8rem;border-radius:8px;border:1px solid #33405a;background:#1a2231;color:#fff;font-family:var(--mono);font-size:.72rem;font-weight:600;transition:background .15s}
+.send svg{width:12px;height:12px;color:var(--c-num)}
+.send:hover{background:#232d40}
+.scen{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;padding:.6rem .9rem;border-bottom:1px solid var(--code-line)}
+.scen-label{font-family:var(--mono);font-size:.68rem;color:var(--code-muted);margin-right:.25rem;text-transform:uppercase;letter-spacing:.08em}
+.scen button{display:inline-flex;align-items:center;gap:.45rem;padding:.32rem .65rem;border-radius:999px;border:1px solid var(--code-line);background:transparent;color:#aab3c5;font-family:var(--mono);font-size:.72rem;transition:background .15s,color .15s,border-color .15s}
+.scen button:hover{border-color:#3a4763;color:#fff}
+.scen button[aria-pressed="true"]{background:#1b2333;border-color:#3f4d6b;color:#fff}
+.st{width:7px;height:7px;border-radius:50%;background:#6f7890;display:inline-block;flex:none}
+.st.ok{background:#37d67a}.st.warn{background:#ffb46b}.st.err{background:#ff6b6b}.st.slow{background:#8fb6ff}
+.st.fe{background:#e4552b}.st.be{background:#3b6fd4}.st.qa{background:#2aa365}.st.pm{background:#8b5cf6}
+.progress{height:2px;background:linear-gradient(90deg,var(--accent),#ffb347);transform:scaleX(0);transform-origin:left center;opacity:0}
+.progress.run{opacity:1}
+.resp{transition:opacity .15s}
+.resp.loading{opacity:.45}
+.status{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.8rem 1rem .15rem;font-family:var(--mono);font-size:12.5px;color:#aab3c5}
+.status b{font-weight:600}
+.status .ok{color:var(--c-str)}.status .warn{color:var(--c-num)}.status .err{color:#ff7b7b}
+.latency{color:var(--code-muted)}
+.latency.slow{color:#8fb6ff}
+.code.headers{padding:.15rem 0 .35rem}
+.code.headers .ln{color:#8d97ad}
+.code.body{padding-top:.25rem;min-height:210px}
+.demo-caption{text-align:center;font-size:.85rem;color:var(--muted);margin-top:1.1rem}
+
+/* ---------- Steps ---------- */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.25rem}
+.step{position:relative;padding:1.6rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--card-bg,#fff);display:flex;flex-direction:column;gap:.9rem}
+.step:not(:last-child)::after{content:"";position:absolute;right:-1.25rem;top:50%;width:1.25rem;height:1px;background:var(--line-2)}
+.step-top{display:flex;align-items:center;justify-content:space-between}
+.step-num{font-family:var(--mono);font-size:.74rem;font-weight:600;letter-spacing:.08em;color:var(--accent-ink)}
+.step-icon{width:36px;height:36px;border-radius:10px;background:var(--bg-2);display:grid;place-items:center;color:var(--ink-2)}
+.step-icon svg{width:17px;height:17px}
+.step h3{font-size:1.15rem;letter-spacing:-.015em}
+.step p{color:var(--muted);font-size:.95rem}
+.step-visual{margin-top:auto;padding:.9rem;border-radius:12px;background:var(--bg-2);border:1px dashed var(--line-2);display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;font-family:var(--mono);font-size:.74rem;color:var(--ink-2)}
+.alt .step-visual{background:#fff}
+.chip{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .6rem;border-radius:8px;background:#fff;border:1px solid var(--line);white-space:nowrap;color:var(--ink-2)}
+.chip svg{width:13px;height:13px;color:var(--muted);flex:none}
+.chip.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.or,.arrow{color:var(--muted);font-size:.72rem;padding:0 .1rem}
+.urlbar{display:flex;align-items:center;gap:.5rem;width:100%;padding:.4rem .6rem;border-radius:8px;background:#fff;border:1px solid var(--line);min-width:0}
+.urlbar svg{width:12px;height:12px;color:#1c7c47;flex:none}
+.urlbar .url{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+.urlbar .path{color:var(--accent-ink)}
+.badge{padding:.12rem .45rem;border-radius:6px;font-size:.68rem;font-weight:600}
+.badge.ok{background:#e8f7ee;color:#1c7c47}
+
+/* ---------- Features ---------- */
+.features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.25rem}
+.feature{padding:1.6rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--card-bg,#fff);transition:transform .2s,box-shadow .2s,border-color .2s}
+.feature:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--line-2)}
+.icon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink);border:1px solid rgba(185,64,26,.12)}
+.icon svg{width:20px;height:20px}
+.feature h3{font-size:1.08rem;letter-spacing:-.015em;margin:1.1rem 0 .45rem}
+.feature p{color:var(--muted);font-size:.95rem}
+
+/* ---------- Split layouts ---------- */
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4rem;align-items:center}
+.split .section-head{margin-bottom:0}
+.teams-split{grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr);align-items:start}
+.checks{list-style:none;padding:0;margin:1.6rem 0 0;display:grid;gap:.8rem}
+.checks li{display:flex;gap:.75rem;align-items:flex-start;color:var(--ink-2)}
+.checks svg{flex:none;width:20px;height:20px;padding:4px;border-radius:50%;background:#e8f7ee;color:#1c7c47;margin-top:.15rem}
+
+/* ---------- Timeline ---------- */
+.timeline{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-md);overflow:hidden}
+.timeline-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.85rem 1.1rem;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.76rem;color:var(--muted);background:var(--bg)}
+.tl-repo{display:inline-flex;align-items:center;gap:.5rem;color:var(--ink-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-repo svg{width:14px;height:14px;flex:none;color:var(--muted)}
+.tl-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .6rem;border-radius:999px;background:#e8f7ee;color:#1c7c47;font-size:.7rem;white-space:nowrap}
+.timeline ol{list-style:none;margin:0;padding:1.2rem 1.1rem 1.3rem}
+.tl{position:relative;padding:0 0 1.3rem 2.1rem}
+.tl:last-child{padding-bottom:0}
+.tl::before{content:"";position:absolute;left:10px;top:24px;bottom:-2px;width:2px;background:var(--line)}
+.tl:last-child::before{display:none}
+.tl-dot{position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--bg-2);border:1px solid var(--line-2);color:var(--muted)}
+.tl-dot svg{width:11px;height:11px}
+.tl-dot.accent{background:var(--accent-soft);border-color:#f2c8b8;color:var(--accent-ink)}
+.tl-dot.ok{background:#e8f7ee;border-color:#c9e8d5;color:#1c7c47}
+.tl-title{font-weight:600;font-size:.95rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;line-height:1.4}
+.rev-light{font-family:var(--mono);font-size:.72rem;font-weight:500;padding:.1rem .45rem;border-radius:6px;background:var(--bg-2);color:var(--ink-2);border:1px solid var(--line)}
+.tl-meta{font-size:.87rem;color:var(--muted);margin-top:.2rem}
+.diff{margin-top:.65rem;font-family:var(--mono);font-size:.74rem;border-radius:8px;overflow:auto;border:1px solid var(--line)}
+.diff div{padding:.28rem .7rem;white-space:pre}
+.diff .add{background:#e8f7ee;color:#14532d}
+.diff .ctx{background:#faf9f6;color:var(--muted)}
+
+/* ---------- Teams ---------- */
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.role{padding:1.4rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--card-bg,#fff);display:flex;flex-direction:column;gap:.6rem}
+.role-tag{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.3rem .65rem;border-radius:999px;width:max-content}
+.role-tag i{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+.tag-fe{background:#fdece5;color:#b9401a}
+.tag-be{background:#e8f0fe;color:#1e4fb8}
+.tag-qa{background:#e8f7ee;color:#1c7c47}
+.tag-pm{background:#f1e9fb;color:#6b3fa0}
+.role h3{font-size:1.05rem;letter-spacing:-.01em;margin-top:.2rem}
+.role p{color:var(--muted);font-size:.93rem}
+.snip{display:block;margin-top:auto;padding:.6rem .75rem;border-radius:8px;background:var(--code-bg);color:#c9d0de;font-size:.74rem;overflow-x:auto;white-space:nowrap}
+.snip .k{color:var(--c-key)}.snip .s{color:var(--c-str)}.snip .c{color:var(--code-muted)}
+
+/* ---------- Beta ---------- */
+.beta-panel{position:relative;overflow:hidden;background:var(--ink);color:#e8eaf0;border-radius:24px;padding:3.5rem;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:3rem;align-items:start}
+.beta-panel::before{content:"";position:absolute;right:-12%;top:-45%;width:60%;height:130%;background:radial-gradient(closest-side,rgba(228,85,43,.32),transparent);pointer-events:none}
+.beta-panel>*{position:relative}
+.beta-panel .eyebrow{color:#ffa07a}
+.beta-panel .eyebrow::before{box-shadow:0 0 0 3px rgba(255,160,122,.2)}
+.beta-panel h2{color:#fff}
+.beta-panel .lead{color:#b5bbc9}
+.beta-panel .btn-light{margin-top:1.75rem}
+.beta-list{list-style:none;padding:0;margin:0;display:grid;gap:.75rem}
+.beta-list li{display:flex;gap:.8rem;align-items:flex-start;padding:.9rem 1rem;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.beta-list svg{flex:none;width:18px;height:18px;color:#7fe0a6;margin-top:.2rem}
+.beta-list strong{display:block;color:#fff;font-weight:600}
+.beta-list span{color:#aab1c0;font-size:.9rem}
+.note{margin-top:1rem;padding:1rem 1.1rem;border-radius:12px;border:1px dashed rgba(255,255,255,.2);color:#c8cdd9;font-size:.92rem}
+.note strong{color:#fff}
+
+/* ---------- FAQ ---------- */
+.faq{max-width:780px;margin:0 auto}
+.faq details{border-top:1px solid var(--line)}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.2rem 0;cursor:pointer;font-weight:600;font-size:1.05rem;letter-spacing:-.01em;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::marker{content:""}
+.chev{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;color:var(--muted);transition:transform .2s,background .2s,color .2s,border-color .2s}
+.chev svg{width:14px;height:14px}
+.faq details[open] .chev{transform:rotate(45deg);background:var(--ink);color:#fff;border-color:var(--ink)}
+.faq details p{color:var(--muted);padding:0 3rem 1.4rem 0;max-width:680px}
+
+/* ---------- CTA ---------- */
+.cta{position:relative;text-align:center;padding:7rem 0;overflow:hidden}
+.cta::before{content:"";position:absolute;left:-10%;right:-10%;bottom:-35%;height:85%;z-index:-1;pointer-events:none;background:radial-gradient(50% 60% at 50% 100%,rgba(228,85,43,.18),transparent 70%)}
+.cta .section-head{margin-bottom:0}
+.cta .waitlist{margin-top:2rem}
+
+/* ---------- Footer ---------- */
+footer{border-top:1px solid var(--line);padding:2.5rem 0 3rem;color:var(--muted);font-size:.9rem;background:var(--bg)}
+.foot{display:flex;flex-wrap:wrap;gap:1.5rem 3rem;align-items:flex-start;justify-content:space-between}
+.foot-tag{margin-top:.75rem;max-width:320px}
+.foot-links{display:flex;flex-wrap:wrap;gap:1.25rem}
+.foot-links a{text-decoration:none;color:var(--muted);transition:color .15s}
+.foot-links a:hover{color:var(--ink)}
+.foot-bottom{margin-top:2rem;padding-top:1.25rem;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem 2rem;font-size:.82rem}
+
+/* ---------- Reveal ---------- */
+.js .reveal{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
+.js .reveal.in{opacity:1;transform:none}
+.js .reveal:nth-child(2){transition-delay:.08s}
+.js .reveal:nth-child(3){transition-delay:.16s}
+.js .reveal:nth-child(4){transition-delay:.24s}
+
+/* ---------- Responsive ---------- */
+@media (max-width:900px){
+  .steps,.features{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .step::after{display:none}
+  .split,.teams-split{grid-template-columns:1fr;gap:2.5rem}
+  .beta-panel{grid-template-columns:1fr;padding:2.5rem;gap:2.25rem}
+}
+@media (max-width:860px){
+  .menu-btn{display:inline-flex}
+  .nav-menu{display:none;position:absolute;left:0;right:0;top:68px;flex-direction:column;align-items:stretch;gap:0;background:var(--bg);border-bottom:1px solid var(--line);padding:.25rem 1.25rem 1.25rem;box-shadow:0 20px 40px -20px rgba(20,23,31,.25)}
+  .nav.open .nav-menu{display:flex}
+  .nav-menu a:not(.btn){padding:.9rem 0;border-bottom:1px solid var(--line)}
+  .nav-menu .btn{margin-top:1rem}
+}
+@media (max-width:820px){
+  .demo-body{grid-template-columns:1fr}
+  .pane+.pane{border-left:0;border-top:1px solid var(--code-line)}
+  .code{font-size:11.5px}
+  #spec-code{max-height:320px;overflow:auto}
+  .pane-head{flex-wrap:wrap}
+}
+@media (max-width:720px){
+  .section{padding:4.25rem 0}
+  .hero{padding:3.5rem 0 3rem}
+  .hero-inner{margin-bottom:2.5rem}
+  .cta{padding:5rem 0}
+  .section-head{margin-bottom:2.25rem}
+}
+@media (max-width:600px){
+  .steps,.features,.roles{grid-template-columns:1fr}
+  .beta-panel{padding:1.75rem;border-radius:18px}
+  .faq details p{padding-right:0}
+}
+@media (max-width:560px){
+  .waitlist .fields,.waitlist-lg .fields{display:flex;flex-direction:column;padding:.5rem;gap:.4rem}
+  .waitlist .btn{width:100%}
+  .select-wrap{border-left:0;border-top:1px solid var(--line)}
+}
+@media (max-width:480px){
+  .demo-title .sep,.demo-title .env{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .js .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<svg aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+  <defs>
+    <linearGradient id="lg-dawn" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#e4552b"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
+  </defs>
+  <symbol id="i-logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#14171f"/><path d="M8 19a8 8 0 0 1 16 0z" fill="url(#lg-dawn)"/><rect x="6" y="21.5" width="20" height="2.5" rx="1.25" fill="#fff" opacity=".92"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+  <symbol id="i-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+</svg>
+
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top" aria-label="MorrowSpec — home">
+      <svg class="logo" aria-hidden="true" focusable="false"><use href="#i-logo"/></svg>
+      <span>MorrowSpec</span>
+    </a>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Toggle navigation menu"><span></span><span></span></button>
+    <nav class="nav-menu" id="nav-menu" aria-label="Primary">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#teams">Teams</a>
+      <a href="#beta">Private beta</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn btn-primary btn-sm" href="#waitlist">Join the waitlist</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <div class="hero-grid" aria-hidden="true"></div>
+    <div class="container">
+      <div class="hero-inner">
+        <p class="eyebrow">Private beta · OpenAPI-based REST</p>
+        <h1 id="hero-title">Build and test against APIs that <em>don't exist yet.</em></h1>
+        <p class="lead">MorrowSpec turns an OpenAPI specification into a hosted, realistic mock API — with believable data, real error cases, and test scenarios — so frontend, backend, QA, and product can work in parallel while the real service is still being built.</p>
+        <form class="waitlist" id="form-hero" novalidate>
+          <div class="fields">
+            <label class="sr-only" for="email-hero">Work email</label>
+            <input id="email-hero" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@company.com" required>
+            <button class="btn btn-primary" type="submit">Join the waitlist</button>
+          </div>
+          <p class="form-status" role="status"></p>
+        </form>
+        <p class="fineprint">Invites go out in small batches. The private beta initially supports OpenAPI-based REST APIs.</p>
+      </div>
+
+      <div class="demo" id="demo">
+        <div class="demo-bar">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="demo-title">payments-api<span class="sep">/</span><span class="env">shared environment</span></span>
+          <span class="demo-status" id="sync-status"><span class="pulse" aria-hidden="true"></span><span id="sync-text">Synced with main · 2 min ago</span></span>
+        </div>
+        <div class="demo-body">
+          <section class="pane" aria-label="OpenAPI specification">
+            <div class="pane-head">
+              <span class="pane-file"><svg aria-hidden="true" focusable="false"><use href="#i-file"/></svg>openapi.yaml <span class="rev" id="rev-label">b7d2e10</span></span>
+              <button type="button" class="spec-toggle" id="spec-toggle"><span class="on">Apply commit: add <code>currency</code></span><span class="off">Revert commit</span></button>
+            </div>
+            <pre class="code numbered" id="spec-code"><span class="ln"><span class="k">openapi</span>: <span class="s">3.1.0</span></span><span class="ln"><span class="k">info</span>:</span><span class="ln">  <span class="k">title</span>: <span class="s">Payments API</span></span><span class="ln">  <span class="k">version</span>: <span class="s">2.4.0</span></span><span class="ln"><span class="k">paths</span>:</span><span class="ln">  <span class="k">/v1/orders/{orderId}</span>:</span><span class="ln">    <span class="k">get</span>:</span><span class="ln">      <span class="k">operationId</span>: <span class="s">getOrder</span></span><span class="ln">      <span class="k">responses</span>:</span><span class="ln">        <span class="s">'200'</span>: { <span class="k">$ref</span>: <span class="s">'#/components/responses/Order'</span> }</span><span class="ln">        <span class="s">'404'</span>: { <span class="k">$ref</span>: <span class="s">'#/components/responses/NotFound'</span> }</span><span class="ln">        <span class="s">'429'</span>: { <span class="k">$ref</span>: <span class="s">'#/components/responses/RateLimited'</span> }</span><span class="ln"><span class="k">components</span>:</span><span class="ln">  <span class="k">schemas</span>:</span><span class="ln">    <span class="k">Order</span>:</span><span class="ln">      <span class="k">type</span>: <span class="s">object</span></span><span class="ln">      <span class="k">required</span>: [<span class="s">id</span>, <span class="s">status</span>, <span class="s">amount</span>]</span><span class="ln">      <span class="k">properties</span>:</span><span class="ln">        <span class="k">id</span>:         { <span class="k">type</span>: <span class="s">string</span>, <span class="k">pattern</span>: <span class="s">'^ord_'</span> }</span><span class="ln">        <span class="k">status</span>:     { <span class="k">type</span>: <span class="s">string</span>, <span class="k">enum</span>: [<span class="s">pending</span>, <span class="s">paid</span>, <span class="s">refunded</span>] }</span><span class="ln">        <span class="k">amount</span>:     { <span class="k">type</span>: <span class="s">integer</span>, <span class="k">minimum</span>: <span class="n">0</span> }</span><span class="ln added">        <span class="k">currency</span>:   { <span class="k">type</span>: <span class="s">string</span>, <span class="k">example</span>: <span class="s">EUR</span> }</span><span class="ln">        <span class="k">customer</span>:   { <span class="k">$ref</span>: <span class="s">'#/components/schemas/Customer'</span> }</span><span class="ln">        <span class="k">created_at</span>: { <span class="k">type</span>: <span class="s">string</span>, <span class="k">format</span>: <span class="s">date-time</span> }</span></pre>
+          </section>
+          <section class="pane" aria-label="Mock response">
+            <div class="pane-head">
+              <span class="req"><span class="method">GET</span><span class="path">/v1/orders/ord_8f3kq2</span></span>
+              <button type="button" class="send" id="send-btn"><svg aria-hidden="true" focusable="false"><use href="#i-zap"/></svg>Send</button>
+            </div>
+            <div class="scen" role="group" aria-label="Test scenario">
+              <span class="scen-label">Scenario</span>
+              <button type="button" data-scenario="success" aria-pressed="true"><i class="st ok"></i>200 Success</button>
+              <button type="button" data-scenario="notfound" aria-pressed="false"><i class="st warn"></i>404 Not found</button>
+              <button type="button" data-scenario="ratelimit" aria-pressed="false"><i class="st warn"></i>429 Rate limited</button>
+              <button type="button" data-scenario="slow" aria-pressed="false"><i class="st slow"></i>Slow network</button>
+            </div>
+            <div class="progress" id="progress" aria-hidden="true"></div>
+            <div class="resp" id="resp">
+              <div class="status"><span id="status-line">HTTP/1.1 <b class="ok">200 OK</b></span><span class="latency" id="latency">38 ms</span></div>
+              <pre class="code plain headers" id="resp-headers"><span class="ln"><span class="h">content-type</span>: application/json</span><span class="ln"><span class="h">x-morrowspec-scenario</span>: success</span><span class="ln"><span class="h">x-morrowspec-revision</span>: b7d2e10</span></pre>
+              <pre class="code plain body" id="resp-body"><span class="ln">{</span><span class="ln">  <span class="p">"id"</span>: <span class="s">"ord_8f3kq2"</span>,</span><span class="ln">  <span class="p">"status"</span>: <span class="s">"paid"</span>,</span><span class="ln">  <span class="p">"amount"</span>: <span class="n">4820</span>,</span><span class="ln">  <span class="p">"customer"</span>: {</span><span class="ln">    <span class="p">"id"</span>: <span class="s">"cus_1m9xv"</span>,</span><span class="ln">    <span class="p">"email"</span>: <span class="s">"dana@example.com"</span></span><span class="ln">  },</span><span class="ln">  <span class="p">"created_at"</span>: <span class="s">"2025-03-14T09:12:44Z"</span></span><span class="ln">}</span></pre>
+            </div>
+            <p class="sr-only" id="resp-announce" role="status"></p>
+          </section>
+        </div>
+      </div>
+      <p class="demo-caption">Interactive preview — switch scenarios, hit Send, or apply a spec change to watch the mock update.</p>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section class="section" id="how" aria-labelledby="how-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">How it works</p>
+        <h2 id="how-title">From spec to shared mock in three steps</h2>
+        <p class="lead">No fixtures to hand-write, no mock server to babysit. Point MorrowSpec at your OpenAPI specification and the rest is generated — and kept current.</p>
+      </div>
+      <div class="steps">
+        <article class="step reveal">
+          <div class="step-top"><span class="step-num">STEP 01</span><span class="step-icon"><svg aria-hidden="true" focusable="false"><use href="#i-upload"/></svg></span></div>
+          <h3>Import or sync your spec</h3>
+          <p>Upload an OpenAPI specification, or connect the code repository where it lives. MorrowSpec reads the contract — paths, schemas, examples, and error responses.</p>
+          <div class="step-visual" aria-hidden="true">
+            <span class="chip"><svg><use href="#i-file"/></svg>openapi.yaml</span>
+            <span class="or">or</span>
+            <span class="chip"><svg><use href="#i-branch"/></svg>acme/payments-api · main</span>
+          </div>
+        </article>
+        <article class="step reveal">
+          <div class="step-top"><span class="step-num">STEP 02</span><span class="step-icon"><svg aria-hidden="true" focusable="false"><use href="#i-globe"/></svg></span></div>
+          <h3>Get a hosted mock endpoint</h3>
+          <p>Every operation gets a live URL that returns realistic responses shaped by your schemas, along with the error cases and test scenarios your team needs to exercise.</p>
+          <div class="step-visual" aria-hidden="true">
+            <span class="urlbar"><svg><use href="#i-lock"/></svg><span class="url">payments.mock.morrowspec.dev<span class="path">/v1/orders</span></span><span class="badge ok">200</span></span>
+            <span class="chip">realistic data</span><span class="chip">errors</span><span class="chip">scenarios</span>
+          </div>
+        </article>
+        <article class="step reveal">
+          <div class="step-top"><span class="step-num">STEP 03</span><span class="step-icon"><svg aria-hidden="true" focusable="false"><use href="#i-users"/></svg></span></div>
+          <h3>Share one environment</h3>
+          <p>Frontend, backend, QA, and product all point at the same environment. When the spec changes, the mock updates — no regenerating fixtures, no drift.</p>
+          <div class="step-visual" aria-hidden="true">
+            <span class="chip"><i class="st fe"></i>Frontend</span>
+            <span class="chip"><i class="st be"></i>Backend</span>
+            <span class="chip"><i class="st qa"></i>QA</span>
+            <span class="chip"><i class="st pm"></i>Product</span>
+            <span class="arrow">→</span>
+            <span class="chip dark">one shared environment</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
+  <section class="section alt" id="features" aria-labelledby="features-title">
+    <div class="container">
+      <div class="section-head center reveal">
+        <p class="eyebrow">What you get</p>
+        <h2 id="features-title">Mocks that behave like the real thing</h2>
+        <p class="lead">Static stubs return the same happy-path JSON forever. MorrowSpec produces a mock that is realistic, adversarial when you need it to be, and always tied to the contract.</p>
+      </div>
+      <div class="features">
+        <article class="feature reveal">
+          <div class="icon"><svg aria-hidden="true" focusable="false"><use href="#i-database"/></svg></div>
+          <h3>Realistic responses</h3>
+          <p>Data that respects your schemas — formats, enums, ranges, nested objects and arrays. Screens look real before a single row exists in production.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="icon"><svg aria-hidden="true" focusable="false"><use href="#i-alert"/></svg></div>
+          <h3>Errors on demand</h3>
+          <p>Every 4xx and 5xx response in your spec is one request away, so error states get designed, built, and tested instead of discovered later.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="icon"><svg aria-hidden="true" focusable="false"><use href="#i-sliders"/></svg></div>
+          <h3>Test scenarios</h3>
+          <p>Name the situations that matter — rate limits, empty results, slow responses, expired sessions — and switch between them per request.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="icon"><svg aria-hidden="true" focusable="false"><use href="#i-refresh"/></svg></div>
+          <h3>Always current</h3>
+          <p>Sync from your repository and the mock updates whenever the specification changes. What your team builds against is always the current contract.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="icon"><svg aria-hidden="true" focusable="false"><use href="#i-users"/></svg></div>
+          <h3>Shared environments</h3>
+          <p>One hosted environment for frontend, backend, QA, and product. Everyone sees the same API, the same data, and the same scenarios.</p>
+        </article>
+        <article class="feature reveal">
+          <div class="icon"><svg aria-hidden="true" focusable="false"><use href="#i-layers"/></svg></div>
+          <h3>Spec-first, by design</h3>
+          <p>The OpenAPI specification is the single source of truth for the mock, which keeps teams honest about the contract and surfaces gaps in the spec early.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SPEC SYNC ============ -->
+  <section class="section" id="sync" aria-labelledby="sync-title">
+    <div class="container split">
+      <div class="section-head reveal">
+        <p class="eyebrow">Spec sync</p>
+        <h2 id="sync-title">The mock follows the spec. Not the other way around.</h2>
+        <p class="lead">Hand-maintained mocks drift. A field gets renamed, someone forgets to update the fixtures, and the frontend ships against last month's contract. MorrowSpec syncs with your code repository and updates the hosted mock whenever the specification changes.</p>
+        <ul class="checks">
+          <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Import a spec file directly, or connect a repository and follow a branch.</span></li>
+          <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Changes to the specification are reflected in the hosted mock — no manual regeneration.</span></li>
+          <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>Every consumer — frontend, backend, QA, product — is on the same version of the contract.</span></li>
+        </ul>
+      </div>
+      <div class="timeline reveal">
+        <div class="timeline-head">
+          <span class="tl-repo"><svg aria-hidden="true" focusable="false"><use href="#i-branch"/></svg>acme/payments-api · main</span>
+          <span class="tl-pill"><i class="st ok"></i>Auto-sync on</span>
+        </div>
+        <ol>
+          <li class="tl">
+            <span class="tl-dot accent"><svg aria-hidden="true" focusable="false"><use href="#i-branch"/></svg></span>
+            <div class="tl-title">Commit pushed <span class="rev-light">4e1c9a2</span></div>
+            <div class="tl-meta">Add <code>currency</code> to the Order schema</div>
+            <div class="diff" aria-label="Diff of the change">
+              <div class="ctx">  amount:   { type: integer, minimum: 0 }</div>
+              <div class="add">+ currency: { type: string, example: EUR }</div>
+              <div class="ctx">  customer: { $ref: '#/components/schemas/Customer' }</div>
+            </div>
+          </li>
+          <li class="tl">
+            <span class="tl-dot"><svg aria-hidden="true" focusable="false"><use href="#i-file"/></svg></span>
+            <div class="tl-title">Spec parsed and validated</div>
+            <div class="tl-meta">1 property added · 0 breaking changes</div>
+          </li>
+          <li class="tl">
+            <span class="tl-dot ok"><svg aria-hidden="true" focusable="false"><use href="#i-refresh"/></svg></span>
+            <div class="tl-title">Mock updated</div>
+            <div class="tl-meta"><code>GET /v1/orders/{orderId}</code> now returns <code>currency</code></div>
+          </li>
+          <li class="tl">
+            <span class="tl-dot"><svg aria-hidden="true" focusable="false"><use href="#i-users"/></svg></span>
+            <div class="tl-title">Shared environment refreshed</div>
+            <div class="tl-meta">Frontend, backend, QA, and product all see the same change</div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TEAMS ============ -->
+  <section class="section alt" id="teams" aria-labelledby="teams-title">
+    <div class="container split teams-split">
+      <div class="section-head reveal">
+        <p class="eyebrow">Built for the whole team</p>
+        <h2 id="teams-title">One environment. Four ways to use it.</h2>
+        <p class="lead">The same mock serves everyone who touches the API, so nobody is blocked waiting on anybody else — and everyone is working from the same contract.</p>
+      </div>
+      <div class="roles">
+        <article class="role reveal">
+          <span class="role-tag tag-fe"><i></i>Frontend</span>
+          <h3>Build every state, not just the happy path</h3>
+          <p>Wire up screens against data shaped exactly like production — including loading, empty, and error states — before the backend lands.</p>
+          <code class="snip"><span class="k">API_BASE_URL</span>=<span class="s">https://payments.mock.morrowspec.dev</span></code>
+        </article>
+        <article class="role reveal">
+          <span class="role-tag tag-be"><i></i>Backend</span>
+          <h3>Publish the contract first</h3>
+          <p>Consumers integrate against the mock while you implement. Contract gaps and awkward shapes surface before code review, not after.</p>
+          <code class="snip">git push origin main  <span class="c"># mock updates from the spec</span></code>
+        </article>
+        <article class="role reveal">
+          <span class="role-tag tag-qa"><i></i>QA</span>
+          <h3>Reproduce edge cases on demand</h3>
+          <p>Write tests against deterministic scenarios and trigger a 429, a timeout, or an empty list whenever you need to — no environment wrangling.</p>
+          <code class="snip"><span class="k">X-MorrowSpec-Scenario</span>: <span class="s">rate_limited</span></code>
+        </article>
+        <article class="role reveal">
+          <span class="role-tag tag-pm"><i></i>Product</span>
+          <h3>Demo real flows, early</h3>
+          <p>Click through prototypes and demos with realistic data, without waiting on services or seeding databases by hand.</p>
+          <code class="snip">/checkout<span class="k">?scenario=</span><span class="s">empty_cart</span></code>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PRIVATE BETA ============ -->
+  <section class="section" id="beta" aria-labelledby="beta-title">
+    <div class="container">
+      <div class="beta-panel reveal">
+        <div>
+          <p class="eyebrow">Private beta</p>
+          <h2 id="beta-title" style="font-size:clamp(1.85rem,3.4vw,2.6rem);line-height:1.1;letter-spacing:-.03em;margin:.9rem 0 1rem">What's in the private beta</h2>
+          <p class="lead">We're opening MorrowSpec to a limited number of teams. The beta initially supports OpenAPI-based REST APIs and includes everything described on this page — import or sync a spec, get a hosted mock, and share it across your team.</p>
+          <a class="btn btn-light" href="#waitlist">Request an invite <svg aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+        </div>
+        <div>
+          <ul class="beta-list">
+            <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><strong>OpenAPI specifications</strong><span>Import a spec file, or sync it from your code repository.</span></div></li>
+            <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><strong>Hosted mock endpoints</strong><span>Realistic responses derived from your schemas, live at a shareable URL.</span></div></li>
+            <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><strong>Errors and test scenarios</strong><span>Defined error responses and named scenarios you can trigger per request.</span></div></li>
+            <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><strong>Automatic updates</strong><span>The mock updates when the underlying specification changes.</span></div></li>
+            <li><svg aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><strong>Shared team environments</strong><span>One environment for frontend, backend, QA, and product.</span></div></li>
+          </ul>
+          <p class="note"><strong>Initially OpenAPI-based REST only.</strong> Working with other API styles? Join the waitlist anyway and tell us what you'd need — it shapes what comes next.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section" id="faq" aria-labelledby="faq-title">
+    <div class="container">
+      <div class="section-head center reveal">
+        <p class="eyebrow">FAQ</p>
+        <h2 id="faq-title">Questions teams ask before joining</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>What exactly does MorrowSpec generate?<span class="chev" aria-hidden="true"><svg><use href="#i-plus"/></svg></span></summary>
+          <p>A hosted mock of your API, derived from your OpenAPI specification. Every operation in the spec gets a live endpoint that returns realistic responses matching your schemas, plus the error responses you've defined and test scenarios you can trigger per request.</p>
+        </details>
+        <details>
+          <summary>Which kinds of APIs are supported in the private beta?<span class="chev" aria-hidden="true"><svg><use href="#i-plus"/></svg></span></summary>
+          <p>The private beta initially supports OpenAPI-based REST APIs. If your team relies on other API styles or specification formats, join the waitlist and tell us — it directly informs what we build next.</p>
+        </details>
+        <details>
+          <summary>How does the mock stay up to date with the spec?<span class="chev" aria-hidden="true"><svg><use href="#i-plus"/></svg></span></summary>
+          <p>Import a spec file directly, or sync it from your code repository. When the specification changes, the hosted mock updates to match, so what your team builds against is always the current contract.</p>
+        </details>
+        <details>
+          <summary>Can it return errors and edge cases, not just happy paths?<span class="chev" aria-hidden="true"><svg><use href="#i-plus"/></svg></span></summary>
+          <p>Yes. The error responses defined in your spec — 4xx and 5xx — are available on demand, and test scenarios let you exercise specific situations such as rate limiting, empty results, or slow responses.</p>
+        </details>
+        <details>
+          <summary>Who on the team uses it?<span class="chev" aria-hidden="true"><svg><use href="#i-plus"/></svg></span></summary>
+          <p>Everyone who touches the API. Frontend developers build against it, backend developers publish the contract to it, QA scripts tests against its scenarios, and product uses it for realistic prototypes and demos — all from one shared environment.</p>
+        </details>
+        <details>
+          <summary>What happens after I join the waitlist?<span class="chev" aria-hidden="true"><svg><use href="#i-plus"/></svg></span></summary>
+          <p>We're inviting teams in small batches. When your spot opens, you'll receive an email with access details and what you need to import your first spec. Program details, including pricing, are shared with teams when they're invited.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA / WAITLIST ============ -->
+  <section class="section cta" id="waitlist" aria-labelledby="waitlist-title">
+    <div class="container">
+      <div class="section-head center">
+        <p class="eyebrow">Waitlist</p>
+        <h2 id="waitlist-title">Join the private beta</h2>
+        <p class="lead">Tell us where to send your invite. We're onboarding teams in small batches, starting with those building on OpenAPI-based REST APIs.</p>
+      </div>
+      <form class="waitlist waitlist-lg" id="form-cta" novalidate>
+        <div class="fields">
+          <label class="sr-only" for="email-cta">Work email</label>
+          <input id="email-cta" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@company.com" required>
+          <div class="select-wrap">
+            <label class="sr-only" for="role-cta">Your role</label>
+            <select id="role-cta" name="role">
+              <option value="">Your role (optional)</option>
+              <option value="frontend">Frontend</option>
+              <option value="backend">Backend</option>
+              <option value="qa">QA / Test</option>
+              <option value="product">Product</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="submit">Request an invite</button>
+        </div>
+        <p class="form-status" role="status"></p>
+      </form>
+      <p class="fineprint">We'll only email you about MorrowSpec access. Unsubscribe anytime.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="foot">
+      <div>
+        <a class="brand" href="#top"><svg class="logo" aria-hidden="true" focusable="false"><use href="#i-logo"/></svg><span>MorrowSpec</span></a>
+        <p class="foot-tag">Realistic, shareable mock APIs from your OpenAPI specification — so teams can build and test before the backend is ready.</p>
+      </div>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#teams">Teams</a>
+        <a href="#beta">Private beta</a>
+        <a href="#faq">FAQ</a>
+        <a href="#waitlist">Waitlist</a>
+      </nav>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="year">2025</span> MorrowSpec. All rights reserved.</span>
+      <span>OpenAPI is a trademark of The Linux Foundation.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var doc = document;
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function each(list, fn) { Array.prototype.forEach.call(list, fn); }
+
+  /* ---------- Footer year ---------- */
+  var yearEl = doc.getElementById('year');
+  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+  /* ---------- Nav: scrolled state + mobile menu ---------- */
+  var nav = doc.getElementById('nav');
+  var menuBtn = doc.getElementById('menu-btn');
+  var menu = doc.getElementById('nav-menu');
+  function onScroll() { nav.classList.toggle('scrolled', window.scrollY > 6); }
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+  function closeMenu() { nav.classList.remove('open'); menuBtn.setAttribute('aria-expanded', 'false'); }
+  menuBtn.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  menu.addEventListener('click', function (e) { if (e.target.closest('a')) closeMenu(); });
+  doc.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && nav.classList.contains('open')) { closeMenu(); menuBtn.focus(); }
+  });
+
+  /* ---------- Waitlist forms ---------- */
+  each(doc.querySelectorAll('form.waitlist'), function (form) {
+    var input = form.querySelector('input[type="email"]');
+    var status = form.querySelector('.form-status');
+    function clearError() {
+      if (form.classList.contains('invalid')) {
+        form.classList.remove('invalid');
+        input.removeAttribute('aria-invalid');
+        status.textContent = '';
+      }
+    }
+    input.addEventListener('input', clearError);
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var value = input.value.trim();
+      if (!value || !input.checkValidity()) {
+        form.classList.add('invalid');
+        input.setAttribute('aria-invalid', 'true');
+        status.textContent = 'Please enter a valid work email address.';
+        input.focus();
+        return;
+      }
+      clearError();
+      form.classList.add('done');
+      status.innerHTML = '<svg class="ok-ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>' +
+        '<span>You\u2019re on the list. We\u2019ll email <strong>' + esc(value) + '</strong> when your invite is ready.</span>';
+      status.setAttribute('tabindex', '-1');
+      status.focus();
+    });
+  });
+
+  /* ---------- Reveal on scroll ---------- */
+  var reveals = doc.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.06 });
+    each(reveals, function (el) { io.observe(el); });
+  } else {
+    each(reveals, function (el) { el.classList.add('in'); });
+  }
+
+  /* ---------- Interactive demo ---------- */
+  var demo = doc.getElementById('demo');
+  if (!demo) return;
+
+  var specToggle = doc.getElementById('spec-toggle');
+  var sendBtn = doc.getElementById('send-btn');
+  var scenBtns = demo.querySelectorAll('.scen button');
+  var statusLine = doc.getElementById('status-line');
+  var latencyEl = doc.getElementById('latency');
+  var headersEl = doc.getElementById('resp-headers');
+  var bodyEl = doc.getElementById('resp-body');
+  var respEl = doc.getElementById('resp');
+  var progress = doc.getElementById('progress');
+  var syncStatus = doc.getElementById('sync-status');
+  var syncText = doc.getElementById('sync-text');
+  var revLabel = doc.getElementById('rev-label');
+  var announce = doc.getElementById('resp-announce');
+  var specCode = doc.getElementById('spec-code');
+
+  var REV = { base: 'b7d2e10', changed: '4e1c9a2' };
+  var current = 'success';
+  var specChanged = false;
+  var timer = null;
+  var flashTimer = null;
+
+  function order(withCurrency) {
+    var o = { id: 'ord_8f3kq2', status: 'paid', amount: 4820 };
+    if (withCurrency) o.currency = 'EUR';
+    o.customer = { id: 'cus_1m9xv', email: 'dana@example.com' };
+    o.created_at = '2025-03-14T09:12:44Z';
+    return o;
+  }
+
+  var SCENARIOS = {
+    success: {
+      label: '200 Success', slug: 'success', status: 200, text: 'OK', latency: 38,
+      headers: { 'content-type': 'application/json' },
+      body: order
+    },
+    notfound: {
+      label: '404 Not found', slug: 'not_found', status: 404, text: 'Not Found', latency: 31,
+      headers: { 'content-type': 'application/json' },
+      body: function () {
+        return { error: { code: 'order_not_found', message: "No order matches 'ord_8f3kq2'.", request_id: 'req_0v2ka7t' } };
+      }
+    },
+    ratelimit: {
+      label: '429 Rate limited', slug: 'rate_limited', status: 429, text: 'Too Many Requests', latency: 24,
+      headers: { 'content-type': 'application/json', 'retry-after': '12' },
+      body: function () {
+        return { error: { code: 'rate_limited', message: 'Too many requests. Retry after 12 seconds.', retry_after: 12 } };
+      }
+    },
+    slow: {
+      label: 'Slow network', slug: 'slow_network', status: 200, text: 'OK', latency: 1800,
+      headers: { 'content-type': 'application/json' },
+      body: order
+    }
+  };
+
+  function render(v, ind) {
+    var pad = '  '.repeat(ind), padIn = '  '.repeat(ind + 1);
+    if (v === null) return '<span class="n">null</span>';
+    if (typeof v === 'string') return '<span class="s">"' + esc(v) + '"</span>';
+    if (typeof v === 'number') return '<span class="n">' + v + '</span>';
+    if (typeof v === 'boolean') return '<span class="n">' + v + '</span>';
+    if (Array.isArray(v)) {
+      if (!v.length) return '[]';
+      return '[\n' + v.map(function (x) { return padIn + render(x, ind + 1); }).join(',\n') + '\n' + pad + ']';
+    }
+    var keys = Object.keys(v);
+    if (!keys.length) return '{}';
+    return '{\n' + keys.map(function (k) {
+      return padIn + '<span class="p">"' + esc(k) + '"</span>: ' + render(v[k], ind + 1);
+    }).join(',\n') + '\n' + pad + '}';
+  }
+
+  function paint(sc) {
+    var cls = sc.status < 300 ? 'ok' : (sc.status < 500 ? 'warn' : 'err');
+    statusLine.innerHTML = 'HTTP/1.1 <b class="' + cls + '">' + sc.status + ' ' + esc(sc.text) + '</b>';
+    latencyEl.textContent = sc.latency.toLocaleString('en-US') + ' ms';
+    latencyEl.classList.toggle('slow', current === 'slow');
+
+    var headers = Object.assign({}, sc.headers, {
+      'x-morrowspec-scenario': sc.slug,
+      'x-morrowspec-revision': specChanged ? REV.changed : REV.base
+    });
+    headersEl.innerHTML = Object.keys(headers).map(function (k) {
+      return '<span class="ln"><span class="h">' + esc(k) + '</span>: ' + esc(headers[k]) + '</span>';
+    }).join('');
+
+    var lines = render(sc.body(specChanged), 0).split('\n');
+    bodyEl.innerHTML = lines.map(function (l) {
+      var hl = specChanged && l.indexOf('"currency"') !== -1;
+      return '<span class="ln' + (hl ? ' hl' : '') + '">' + l + '</span>';
+    }).join('');
+
+    announce.textContent = sc.label + ': the mock responded ' + sc.status + ' ' + sc.text + ' in ' + sc.latency + ' ms.';
+  }
+
+  function run(immediate) {
+    var sc = SCENARIOS[current];
+    clearTimeout(timer);
+    if (immediate) { paint(sc); return; }
+    var wait = current === 'slow' ? 1800 : 260;
+    respEl.classList.add('loading');
+    progress.style.transition = 'none';
+    progress.style.transform = 'scaleX(0)';
+    progress.classList.add('run');
+    void progress.offsetWidth;
+    progress.style.transition = 'transform ' + wait + 'ms linear';
+    progress.style.transform = 'scaleX(1)';
+    timer = setTimeout(function () {
+      paint(sc);
+      respEl.classList.remove('loading');
+      progress.classList.remove('run');
+      progress.style.transition = 'none';
+      progress.style.transform = 'scaleX(0)';
+    }, wait);
+  }
+
+  each(scenBtns, function (btn) {
+    btn.addEventListener('click', function () {
+      current = btn.getAttribute('data-scenario');
+      each(scenBtns, function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+      run();
+    });
+  });
+
+  sendBtn.addEventListener('click', function () { run(); });
+
+  specToggle.addEventListener('click', function () {
+    specChanged = !specChanged;
+    demo.classList.toggle('spec-changed', specChanged);
+    revLabel.textContent = specChanged ? REV.changed : REV.base;
+    syncText.textContent = 'Synced with main \u00b7 just now';
+    syncStatus.classList.add('flash');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { syncStatus.classList.remove('flash'); }, 1800);
+    var added = specCode.querySelector('.ln.added');
+    if (specChanged && added && specCode.scrollHeight > specCode.clientHeight + 4) {
+      specCode.scrollTop = Math.max(0, added.offsetTop - specCode.clientHeight / 2);
+    }
+    run();
+  });
+
+  run(true);
+})();
+</script>
+</body>
+</html>

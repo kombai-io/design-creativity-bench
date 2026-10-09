@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maya Chen — Candidate Deep-Dive · TalentPulse</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234f46e5'/%3E%3Cpath d='M5 13h3l2-6 4 10 2-4h3' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f3f5fa; --card:#fff; --border:#e6e9f2; --border-strong:#d7dce8;
+  --text:#16203a; --muted:#66708c; --faint:#98a1b8;
+  --primary:#4f46e5; --primary-600:#4338ca; --primary-soft:#eef2ff;
+  --green:#059669; --red:#dc2626;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  --shadow-lg:0 24px 60px rgba(13,18,34,.28);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overflow-x:hidden}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font:inherit;color:inherit}
+a{color:var(--primary);text-decoration:none}
+ul,ol{list-style:none}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
+::selection{background:#c7d2fe}
+body.modal-open{overflow:hidden}
+.icon{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon.xs{width:12px;height:12px}.icon.sm{width:14px;height:14px}.icon.lg{width:20px;height:20px}
+/* Sidebar */
+.sidebar{position:fixed;inset:0 auto 0 0;width:250px;background:linear-gradient(180deg,#131c33,#0c1222);display:flex;flex-direction:column;z-index:50;color:#a7b1cc}
+.logo{display:flex;align-items:center;gap:11px;padding:18px 20px 16px;color:#fff}
+.logo-badge{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#6366f1,#9333ea);display:grid;place-items:center;color:#fff;box-shadow:0 6px 14px rgba(99,102,241,.45)}
+.logo-badge .icon{width:19px;height:19px}
+.logo-name{font-size:17.5px;font-weight:700;letter-spacing:.2px}
+.logo-name b{color:#a5b4fc;font-weight:800}
+.nav{flex:1;overflow-y:auto;padding:4px 12px 12px}
+.nav-label{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#5d6a8c;margin:18px 10px 7px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;font-size:13.5px;font-weight:500;color:#a7b1cc;margin-bottom:2px;transition:.15s}
+.nav-item .icon{width:17px;height:17px;color:#7f8bad}
+.nav-item:hover{background:rgba(148,163,184,.09);color:#e2e8f5}
+.nav-item.active{background:linear-gradient(90deg,rgba(99,102,241,.25),rgba(99,102,241,.08));color:#fff;font-weight:600}
+.nav-item.active .icon{color:#a5b4fc}
+.nav-item .cnt{margin-left:auto;font-size:11px;font-weight:600;background:rgba(148,163,184,.14);color:#c0c9de;padding:1.5px 8px;border-radius:999px}
+.nav-item.active .cnt{background:rgba(129,140,248,.35);color:#e0e7ff}
+.sub .nav-item{padding:7px 11px 7px 38px;font-size:12.5px}
+.user-card{margin:12px;padding:11px 12px;border-radius:12px;background:rgba(148,163,184,.09);display:flex;align-items:center;gap:10px}
+.u-meta{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.u-meta b{font-size:13px;color:#e8ecf7;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.u-meta span{font-size:11.5px;color:#8792af}
+/* Avatars */
+.av{width:34px;height:34px;border-radius:50%;display:inline-grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex:none}
+.av-sm{width:30px;height:30px;font-size:11px}
+.av-1{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+.av-2{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
+.av-3{background:linear-gradient(135deg,#8b5cf6,#d946ef)}
+.av-stack{display:inline-flex}
+.av-stack .av{border:2px solid #fff;margin-left:-9px}
+.av-stack .av:first-child{margin-left:0}
+/* Topbar */
+.main{margin-left:250px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;height:58px;padding:0 26px;background:rgba(247,248,252,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.logo-mobile{display:none;align-items:center;gap:9px;font-weight:800;font-size:15px;color:var(--text)}
+.logo-mobile .logo-badge{width:30px;height:30px;border-radius:9px}
+.logo-mobile .logo-badge .icon{width:16px;height:16px}
+.logo-mobile b{color:var(--primary-600)}
+.crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);font-weight:500}
+.crumbs a:hover{color:var(--primary)}
+.crumbs .icon{width:13px;height:13px;color:#b6bdcf}
+.crumbs .cur{color:var(--text);font-weight:600}
+.search{margin-left:auto;position:relative;width:280px;max-width:30vw}
+.search .icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
+.search input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--border);border-radius:9px;background:#fff;font-size:13px}
+.search input:focus{outline:none;border-color:#a5b4fc;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.icon-btn{width:34px;height:34px;border-radius:9px;display:inline-grid;place-items:center;color:var(--muted);border:1px solid transparent;position:relative;transition:.15s;flex:none}
+.icon-btn:hover{background:#fff;border-color:var(--border);color:var(--text);box-shadow:var(--shadow)}
+.dot-badge{position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:#ef4444;border:1.5px solid #fff}
+.tb-divider{width:1px;height:24px;background:var(--border)}
+.tb-user{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:10px}
+.tb-name{font-size:13px;font-weight:600}
+.tb-user .icon{width:14px;height:14px;color:var(--faint)}
+/* Cards */
+.page{width:100%;max-width:1300px;margin:0 auto;padding:22px 26px 24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);animation:rise .45s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}.d4{animation-delay:.2s}.d5{animation-delay:.25s}.d6{animation-delay:.3s}.d7{animation-delay:.35s}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.card-title{display:flex;align-items:center;gap:11px;min-width:0}
+.card-title h2{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.card-title p{font-size:12px;color:var(--muted);margin-top:1px}
+.ct-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+.card-body{padding:14px 20px 18px}
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-top:1px solid var(--border);background:#fafbfe;border-radius:0 0 14px 14px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.head-icons{display:flex;gap:6px}
+/* Helpers */
+.b-indigo{background:#eef2ff;color:#4f46e5}.b-purple{background:#f5f3ff;color:#7c3aed}.b-green{background:#ecfdf5;color:#059669}.b-blue{background:#eff6ff;color:#2563eb}.b-amber{background:#fff7e6;color:#b45309}.b-slate{background:#f1f5f9;color:#64748b}.b-teal{background:#f0fdfa;color:#0f766e}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.p-blue{background:#eef2ff;color:#4338ca}.p-green{background:#ecfdf5;color:#047857}.p-amber{background:#fff7e6;color:#b45309}.p-red{background:#fef2f2;color:#b91c1c}.p-gray{background:#eef1f6;color:#52607a}.p-purple{background:#f5f3ff;color:#6d28d9}.p-indigo{background:#e0e7ff;color:#3730a3}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#4f46e5;animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,70,229,.45)}70%{box-shadow:0 0 0 6px rgba(79,70,229,0)}100%{box-shadow:0 0 0 0 rgba(79,70,229,0)}}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8.5px 14px;border-radius:9px;font-size:13px;font-weight:600;border:1px solid transparent;transition:.15s;white-space:nowrap}
+.btn .icon{width:15px;height:15px}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 1px 2px rgba(79,70,229,.35)}
+.btn-primary:hover{background:var(--primary-600)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+.btn-ghost{background:#fff;border-color:var(--border-strong);color:#3a4664}
+.btn-ghost:hover{border-color:#b9c2d8;background:#f8fafc}
+.btn-soft{background:var(--primary-soft);color:var(--primary-600)}
+.btn-soft:hover{background:#e0e7ff}
+.btn.sm{padding:6px 11px;font-size:12.5px;border-radius:8px}
+.link-btn{display:inline-flex;align-items:center;gap:5px;color:var(--primary);font-weight:600;font-size:12.5px;border-radius:6px}
+.link-btn:hover{text-decoration:underline}
+.link-btn .icon{transition:transform .2s}
+.link-btn.open .icon{transform:rotate(180deg)}
+/* Hero */
+.hero{margin-bottom:20px}
+.hero-top{display:flex;align-items:flex-start;gap:18px;padding:22px 24px 20px;flex-wrap:wrap}
+.avatar-wrap{position:relative;flex:none}
+.avatar{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:grid;place-items:center;font-weight:800;font-size:22px;letter-spacing:.5px;box-shadow:0 8px 18px rgba(99,102,241,.35)}
+.online{position:absolute;right:-2px;bottom:-2px;width:15px;height:15px;border-radius:50%;background:#22c55e;border:2.5px solid #fff}
+.hero-id{min-width:230px;flex:1}
+.hero-name-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hero-name-row h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.hero-sub{font-size:13.5px;color:var(--muted);margin-top:3px}
+.hero-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:12.5px;color:var(--muted)}
+.hero-meta span{display:inline-flex;align-items:center;gap:5px}
+.hero-meta .icon{width:13.5px;height:13.5px;color:var(--faint)}
+.hero-meta .sep{color:#cdd4e3}
+.hero-actions{margin-left:auto;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.hero-steps{display:flex;align-items:center;gap:26px;border-top:1px solid var(--border);padding:20px 24px 16px}
+.stepper{display:flex;flex:1;min-width:0}
+.step{flex:1;position:relative;text-align:center;padding-top:36px;min-width:0}
+.step::before{content:"";position:absolute;top:14px;left:calc(-50% + 15px);width:calc(100% - 30px);height:2.5px;border-radius:2px;background:var(--border-strong)}
+.step:first-child::before{display:none}
+.s-dot{position:absolute;top:0;left:50%;transform:translateX(-50%);width:29px;height:29px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:#fff;border:2px solid var(--border-strong);color:var(--faint)}
+.s-dot .icon{stroke-width:3;width:13px;height:13px}
+.s-name{display:block;font-size:12.5px;font-weight:600;color:var(--muted)}
+.s-sub{display:block;font-size:11px;color:var(--faint);margin-top:1px}
+.step.done .s-dot{background:var(--primary);border-color:var(--primary);color:#fff}
+.step.done::before{background:var(--primary)}
+.step.done .s-name{color:var(--text)}
+.step.current .s-dot{border-color:var(--primary);color:var(--primary);box-shadow:0 0 0 4px #e0e7ff}
+.step.current .s-name{color:var(--primary-600);font-weight:700}
+.step.current::before{background:linear-gradient(90deg,var(--primary) 0%,#a5b4fc 60%,var(--border-strong))}
+.steps-side{flex:none;width:250px;border-left:1px solid var(--border);padding-left:24px}
+.steps-stats{display:flex;gap:22px;margin-bottom:10px;flex-wrap:wrap}
+.stat b{display:block;font-size:15px;font-weight:800;letter-spacing:-.01em}
+.stat span{font-size:11.5px;color:var(--muted)}
+.mini-track{height:6px;border-radius:99px;background:#e9edf5;overflow:hidden}
+.mini-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6)}
+.steps-note{margin-top:8px;font-size:11.5px;color:var(--muted)}
+/* Grid */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+/* Next meeting */
+.meet{border-color:#c7d2fe;background:linear-gradient(180deg,#fbfcff 0%,#fff 55%)}
+.meet .card-head{border-bottom-color:#e4e9ff}
+.meet-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.meet-title-row h3{font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+.meet-row{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed #e6e9f4}
+.meet-row:last-child{border-bottom:none}
+.mr-ico{width:32px;height:32px;border-radius:9px;background:#eef2ff;color:#4f46e5;display:grid;place-items:center;flex:none}
+.mr-label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--faint)}
+.mr-val{display:block;font-size:13.5px;font-weight:600;margin-top:2px}
+.mr-val a{color:var(--primary)}
+.panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.panel-names{font-size:12.5px;font-weight:500;color:var(--muted)}
+.panel-names b{color:var(--text);font-weight:600}
+.meet-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.meet-actions .btn{flex:1;min-width:180px}
+.invite-box{margin-top:12px;border:1px dashed #c7d2fe;background:#f6f8ff;border-radius:11px;padding:12px}
+.ib-top{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--muted);margin-bottom:9px}
+.ib-top .icon{color:var(--primary);margin-top:2px}
+.ib-top b{color:var(--text);font-size:12.5px;display:block}
+.ib-row{display:flex;gap:9px}
+.ib-row input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--border-strong);border-radius:9px;background:#fff;font-size:12.5px;color:#3a4664;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* Activities */
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px 0}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5.5px 12px;border-radius:999px;border:1px solid var(--border-strong);background:#fff;font-size:12px;font-weight:600;color:var(--muted);transition:.15s}
+.chip:hover{border-color:#b9c2d8;color:var(--text)}
+.chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.chip .c{font-weight:700;opacity:.65;font-size:11px}
+.chip.active .c{opacity:.85}
+.activity-list{padding:4px 20px 6px}
+.activity-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px dashed #e6e9f4;align-items:flex-start}
+.activity-item:last-child{border-bottom:none}
+.act-ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none}
+.act-main{flex:1;min-width:0}
+.act-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t-badge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2.5px 7px;border-radius:6px}
+.t-call{background:#ecfdf5;color:#047857}.t-email{background:#eff6ff;color:#1d4ed8}.t-scorecard{background:#f5f3ff;color:#6d28d9}.t-assessment{background:#eef2ff;color:#4338ca}.t-note{background:#f1f5f9;color:#52607a}.t-application{background:#f0fdfa;color:#0f766e}
+.act-title{font-size:13.5px;font-weight:650;color:var(--text)}
+.act-desc{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.act-time{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:11.5px;color:var(--faint);padding-top:2px;text-align:right}
+.act-time b{font-size:12px;color:var(--muted);font-weight:700}
+/* Jobs */
+.job-list{padding:2px 20px 6px}
+.job-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px dashed #e6e9f4}
+.job-row:last-child{border-bottom:none}
+.job-extra{display:none}
+.job-list.expanded .job-extra{display:grid}
+.m{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;color:#fff;font-size:13.5px;font-weight:800}
+.m-high{background:linear-gradient(135deg,#10b981,#059669)}
+.m-mid{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.m-low{background:linear-gradient(135deg,#94a3b8,#64748b)}
+.job-info{min-width:0}
+.job-title{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.job-title .pill{font-size:10.5px;padding:2px 8px}
+.job-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.job-comp{text-align:right}
+.job-comp b{display:block;font-size:13px;font-weight:700}
+.job-comp span{font-size:11px;color:var(--faint)}
+/* Info rows */
+.info-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9.5px 0;border-bottom:1px dashed #e6e9f4}
+.info-row:last-child{border-bottom:none}
+.il{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);font-weight:500;flex:none}
+.il .icon{width:14px;height:14px;color:var(--faint)}
+.iv{font-size:13.5px;font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere}
+.iv a{color:var(--primary-600)}
+.iv a:hover{text-decoration:underline}
+.iv-sub{color:var(--faint);font-weight:500;font-size:12px}
+.attach-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fafbfe}
+.attach{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:#3a4664;min-width:0}
+.attach .icon{color:var(--muted)}
+.attach .size{color:var(--faint);font-weight:500;font-size:11.5px}
+/* Timeline */
+.auth-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0}
+.auth-row .pill{font-size:11.5px}
+.tl-label{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin:12px 0 2px}
+.timeline{margin-top:6px}
+.tl-item{position:relative;display:flex;gap:11px;padding:0 0 16px 2px}
+.tl-item::before{content:"";position:absolute;left:8px;top:18px;bottom:2px;width:2px;background:#e6e9f4;border-radius:2px}
+.tl-item:last-child{padding-bottom:2px}
+.tl-item:last-child::before{display:none}
+.tl-dot{position:relative;z-index:1;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #cbd5e1;flex:none;display:grid;place-items:center;color:#fff;margin-top:1px}
+.tl-dot .icon{width:10px;height:10px;stroke-width:3}
+.tl-item.ok .tl-dot{background:var(--green);border-color:var(--green)}
+.tl-item.warn .tl-dot{border-color:#f59e0b;background:#fffbeb}
+.tl-item.warn .tl-dot::after{content:"";width:6px;height:6px;border-radius:50%;background:#f59e0b}
+.tl-body{flex:1;min-width:0}
+.tl-title{display:block;font-size:13px;font-weight:600}
+.tl-sub{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.tl-date{flex:none;font-size:11px;font-weight:700;color:var(--faint);padding-top:2px;white-space:nowrap}
+/* Tasks */
+.task-list{padding:2px 20px 8px}
+.task-item{display:flex;gap:11px;padding:11px 0;border-bottom:1px dashed #e6e9f4;align-items:flex-start}
+.task-item:last-child{border-bottom:none}
+.task-item.done{opacity:.62}
+.task-item.done .task-title{text-decoration:line-through;color:var(--faint)}
+.tk{position:relative;flex:none;margin-top:1px;cursor:pointer}
+.tk input{position:absolute;inset:0;opacity:0;cursor:pointer;margin:0}
+.tk-box{width:19px;height:19px;border-radius:6px;border:1.5px solid #c3cbdc;background:#fff;display:grid;place-items:center;color:#fff;transition:.15s}
+.tk-box .icon{width:11px;height:11px;stroke-width:3;opacity:0}
+.tk input:checked + .tk-box{background:var(--primary);border-color:var(--primary)}
+.tk input:checked + .tk-box .icon{opacity:1}
+.tk input:focus-visible + .tk-box{outline:2px solid var(--primary);outline-offset:2px}
+.task-main{flex:1;min-width:0}
+.task-title{font-size:13px;font-weight:600;line-height:1.4}
+.task-meta{display:flex;align-items:center;gap:9px;margin-top:5px}
+.task-meta .pill{font-size:10.5px;padding:2px 8px}
+.due{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--muted)}
+.due .icon{width:12px;height:12px}
+.due.overdue{color:#dc2626}
+.due.due-today{color:#b45309}
+/* Modals */
+.backdrop{position:fixed;inset:0;z-index:70;background:rgba(13,18,34,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .18s ease}
+.backdrop.open{opacity:1}
+.modal{width:min(540px,100%);background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);transform:translateY(12px) scale(.985);transition:transform .18s ease;max-height:calc(100vh - 40px);display:flex;flex-direction:column}
+.backdrop.open .modal{transform:none}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex:none}
+.modal-head h3{font-size:15.5px;font-weight:700}
+.modal-body{padding:18px 20px;overflow-y:auto}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border);background:#fafbfe;border-radius:0 0 16px 16px;flex:none}
+.modal-sub{font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.f-label{display:block;font-size:12px;font-weight:600;color:#3a4664;margin:14px 0 6px}
+.modal-body input,.modal-body select,.modal-body textarea{width:100%;padding:9px 12px;border:1px solid var(--border-strong);border-radius:9px;font-size:13.5px;background:#fff}
+.modal-body textarea{resize:vertical;min-height:70px}
+.modal-body input:focus,.modal-body select:focus,.modal-body textarea:focus{outline:none;border-color:#a5b4fc;box-shadow:0 0 0 3px rgba(99,102,241,.14)}
+.f-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opts{display:flex;flex-direction:column;gap:9px;margin:14px 0 2px}
+.opt{display:flex;align-items:center;gap:9px;font-size:13px;color:#3a4664;cursor:pointer}
+.opt input{width:15px;height:15px;accent-color:var(--primary)}
+.slots{display:flex;flex-direction:column;gap:8px}
+.slot{display:flex;align-items:center;gap:11px;border:1.5px solid var(--border);border-radius:11px;padding:10px 13px;cursor:pointer;transition:.15s;background:#fff}
+.slot:hover{border-color:#b9c2d8}
+.slot.checked{border-color:var(--primary);background:var(--primary-soft);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.slot input{width:16px;height:16px;accent-color:var(--primary);flex:none}
+.slot-main{flex:1;min-width:0}
+.slot-main b{display:block;font-size:13px;font-weight:650}
+.slot-main span{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
+.slot.disabled{opacity:.55;cursor:not-allowed;background:#f8fafc}
+.current-slot{display:flex;gap:9px;align-items:flex-start;background:#f6f8ff;border:1px solid #dfe5fb;border-radius:10px;padding:10px 13px;font-size:12.5px;color:#3a4664;margin-bottom:4px}
+.current-slot .icon{color:var(--primary);margin-top:2px}
+.current-slot b{font-weight:700}
+/* Toasts */
+#toasts{position:fixed;right:20px;bottom:20px;z-index:90;display:flex;flex-direction:column;gap:8px}
+.toast{display:flex;gap:9px;align-items:center;background:#111827;color:#fff;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);animation:toastIn .25s ease;max-width:360px}
+.toast .icon{color:#34d399}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}}
+.toast.hide{opacity:0;transform:translateY(6px);transition:.3s}
+.page-foot{max-width:1300px;margin:0 auto;padding:0 26px 26px;font-size:11.5px;color:var(--faint);text-align:center}
+/* Responsive */
+@media (max-width:1240px){.steps-side{width:210px}}
+@media (max-width:1150px){.grid{grid-template-columns:1fr}}
+@media (max-width:1000px){.sidebar{display:none}.main{margin-left:0}.logo-mobile{display:flex}.steps-side{display:none}.search{display:none}}
+@media (max-width:640px){
+  .page{padding:16px 14px 16px}
+  .topbar{padding:0 14px}
+  .hero-top{padding:18px 16px}
+  .card-head,.card-body,.chips,.activity-list,.job-list,.task-list,.card-foot{padding-left:16px;padding-right:16px}
+  .hero-steps{padding:16px 10px 12px;overflow-x:auto}
+  .stepper{min-width:520px}
+  .job-row{grid-template-columns:40px minmax(0,1fr)}
+  .job-comp{grid-column:2;text-align:left}
+  .job-row .btn{grid-column:2;justify-self:start}
+  .m{width:40px;height:40px;font-size:12px}
+  .meet-actions .btn{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
+  <symbol id="i-bar" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-dollar" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+  <symbol id="i-check-square" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+</svg>
+
+<div class="app">
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <a class="logo" href="#">
+      <span class="logo-badge"><svg class="icon"><use href="#i-activity"/></svg></span>
+      <span class="logo-name">Talent<b>Pulse</b></span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a class="nav-item" href="#"><svg class="icon"><use href="#i-grid"/></svg>Dashboard</a>
+      <a class="nav-item" href="#"><svg class="icon"><use href="#i-briefcase"/></svg>Jobs</a>
+      <a class="nav-item active" href="#" aria-current="page"><svg class="icon"><use href="#i-users"/></svg>Candidates</a>
+      <a class="nav-item" href="#"><svg class="icon"><use href="#i-video"/></svg>Interviews</a>
+      <a class="nav-item" href="#"><svg class="icon"><use href="#i-clipboard"/></svg>Assessments</a>
+      <a class="nav-item" href="#"><svg class="icon"><use href="#i-bar"/></svg>Reports</a>
+      <div class="nav-label">Pipeline · Sr. Frontend Eng.</div>
+      <div class="sub">
+        <a class="nav-item" href="#">Sourced <span class="cnt">24</span></a>
+        <a class="nav-item" href="#">Applied <span class="cnt">132</span></a>
+        <a class="nav-item" href="#">Screening <span class="cnt">46</span></a>
+        <a class="nav-item active" href="#" aria-current="page">Interviewing <span class="cnt">18</span></a>
+        <a class="nav-item" href="#">Offers <span class="cnt">6</span></a>
+        <a class="nav-item" href="#">Hired <span class="cnt">3</span></a>
+      </div>
+      <div class="nav-label">General</div>
+      <a class="nav-item" href="#"><svg class="icon"><use href="#i-settings"/></svg>Settings</a>
+      <a class="nav-item" href="#"><svg class="icon"><use href="#i-help"/></svg>Help &amp; docs</a>
+    </nav>
+    <div class="user-card">
+      <span class="av av-3 av-sm">AM</span>
+      <span class="u-meta"><b>Alex Morgan</b><span>Senior Tech Recruiter</span></span>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN ==================== -->
+  <div class="main">
+    <header class="topbar">
+      <span class="logo-mobile"><span class="logo-badge"><svg class="icon"><use href="#i-activity"/></svg></span>Talent<b>Pulse</b></span>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a href="#">Candidates</a>
+        <svg class="icon"><use href="#i-chev-r"/></svg>
+        <a href="#">Interviewing</a>
+        <svg class="icon"><use href="#i-chev-r"/></svg>
+        <span class="cur">Maya Chen</span>
+      </nav>
+      <div class="search">
+        <svg class="icon"><use href="#i-search"/></svg>
+        <input id="search-input" type="text" placeholder="Search candidates, jobs, reqs…" aria-label="Search">
+      </div>
+      <button class="icon-btn" id="btn-bell" aria-label="Notifications">
+        <svg class="icon"><use href="#i-bell"/></svg><span class="dot-badge"></span>
+      </button>
+      <span class="tb-divider"></span>
+      <div class="tb-user">
+        <span class="av av-3 av-sm">AM</span>
+        <span class="tb-name">Alex Morgan</span>
+        <svg class="icon"><use href="#i-chev-d"/></svg>
+      </div>
+    </header>
+
+    <div class="page">
+      <!-- ========== HERO: IDENTITY + PIPELINE STAGE STEPPER ========== -->
+      <section class="card hero">
+        <div class="hero-top">
+          <div class="avatar-wrap">
+            <div class="avatar">MC</div>
+            <span class="online" title="Active in pipeline"></span>
+          </div>
+          <div class="hero-id">
+            <div class="hero-name-row">
+              <h1>Maya Chen</h1>
+              <span class="pill p-blue"><span class="live-dot"></span>Interviewing</span>
+              <span class="pill p-gray">REQ-1042</span>
+            </div>
+            <p class="hero-sub">Senior Frontend Engineer @ NovaPay · 8 yrs experience · San Francisco, CA</p>
+            <div class="hero-meta">
+              <span><svg class="icon"><use href="#i-calendar"/></svg>Applied Feb 12, 2025</span><span class="sep">·</span>
+              <span><svg class="icon"><use href="#i-users"/></svg>Owner: Alex Morgan</span><span class="sep">·</span>
+              <span><svg class="icon"><use href="#i-clock"/></svg>Last activity 5h ago</span>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="btn btn-ghost" id="btn-addnote"><svg class="icon"><use href="#i-edit"/></svg>Add note</button>
+            <a class="btn btn-ghost" href="mailto:maya.chen@gmail.com" aria-label="Email Maya"><svg class="icon"><use href="#i-mail"/></svg>Email</a>
+            <button class="btn btn-primary" data-open="modalShare"><svg class="icon"><use href="#i-share"/></svg>Share profile</button>
+          </div>
+        </div>
+        <div class="hero-steps">
+          <ol class="stepper" aria-label="Pipeline progress">
+            <li class="step done"><span class="s-dot"><svg class="icon xs"><use href="#i-check"/></svg></span><span class="s-name">Applied</span><span class="s-sub">Feb 12</span></li>
+            <li class="step done"><span class="s-dot"><svg class="icon xs"><use href="#i-check"/></svg></span><span class="s-name">Screening</span><span class="s-sub">Passed · Feb 24</span></li>
+            <li class="step current" aria-current="step"><span class="s-dot">3</span><span class="s-name">Interviewing</span><span class="s-sub">Round 2 of 3</span></li>
+            <li class="step"><span class="s-dot">4</span><span class="s-name">Offer</span><span class="s-sub">Pending</span></li>
+            <li class="step"><span class="s-dot">5</span><span class="s-name">Hired</span><span class="s-sub">—</span></li>
+          </ol>
+          <div class="steps-side">
+            <div class="steps-stats">
+              <div class="stat"><b>8 days</b><span>in Interviewing</span></div>
+              <div class="stat"><b>2 / 3</b><span>rounds complete</span></div>
+              <div class="stat"><b>21 days</b><span>in pipeline</span></div>
+            </div>
+            <div class="mini-track" title="Interview progress 67%"><span style="width:67%"></span></div>
+            <p class="steps-note">Interview progress — next up: System Design (Round 2)</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <!-- ========== MAIN COLUMN ========== -->
+        <div class="col col-main">
+
+          <!-- Next meeting -->
+          <section class="card meet d1">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="ct-ico b-indigo"><svg class="icon"><use href="#i-calendar"/></svg></span>
+                <div><h2>Next meeting</h2><p>Upcoming interview in the pipeline</p></div>
+              </div>
+              <span class="pill p-indigo" id="chip-when">Tomorrow · 2:00 PM PT</span>
+            </div>
+            <div class="card-body">
+              <div class="meet-title-row">
+                <h3>Technical Interview — System Design &amp; Architecture</h3>
+                <span class="pill p-blue">Interviewing · Round 2 of 3</span>
+              </div>
+              <div class="meet-row">
+                <span class="mr-ico"><svg class="icon"><use href="#i-clock"/></svg></span>
+                <div><span class="mr-label">Date &amp; time</span><span class="mr-val" id="meet-time-val">Thursday, March 6 · 2:00 – 3:00 PM (PT)</span></div>
+              </div>
+              <div class="meet-row">
+                <span class="mr-ico"><svg class="icon"><use href="#i-video"/></svg></span>
+                <div><span class="mr-label">Location</span><span class="mr-val"><a href="#" id="link-meet">Google Meet — meet.google.com/pxy-mkdj-woq</a></span></div>
+              </div>
+              <div class="meet-row">
+                <span class="mr-ico"><svg class="icon"><use href="#i-users"/></svg></span>
+                <div><span class="mr-label">Interviewers</span>
+                  <span class="mr-val panel">
+                    <span class="av-stack"><span class="av av-1" title="Daniel Park">DP</span><span class="av av-2" title="Priya Nair">PN</span><span class="av av-3" title="Alex Morgan (observer)">AM</span></span>
+                    <span class="panel-names"><b>Daniel Park</b> — Engineering Manager · <b>Priya Nair</b> — Staff Engineer · <b>You</b> — Observer</span>
+                  </span>
+                </div>
+              </div>
+              <div class="meet-actions">
+                <button class="btn btn-primary" id="btn-invite"><svg class="icon"><use href="#i-link"/></svg><span>Get calendar invite link</span></button>
+                <button class="btn btn-ghost" data-open="modalReschedule"><svg class="icon"><use href="#i-rotate"/></svg>Reschedule interview</button>
+              </div>
+              <div class="invite-box" id="invite-box" hidden>
+                <div class="ib-top">
+                  <svg class="icon sm"><use href="#i-calendar"/></svg>
+                  <div><b>Calendar invite link</b><span>Anyone with this link can view event details and join the meeting.</span></div>
+                </div>
+                <div class="ib-row">
+                  <input id="invite-link" readonly value="https://cal.talentpulse.io/i/8f42k1/tech-round-2-maya-chen.ics" aria-label="Calendar invite link">
+                  <button class="btn btn-soft" data-copy="#invite-link"><svg class="icon"><use href="#i-copy"/></svg>Copy</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Activities -->
+          <section class="card d2">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="ct-ico b-purple"><svg class="icon"><use href="#i-activity"/></svg></span>
+                <div><h2>Activities</h2><p>Calls, emails, scorecards &amp; assessment results</p></div>
+              </div>
+              <button class="btn btn-soft sm" data-open="modalActivity"><svg class="icon"><use href="#i-plus"/></svg>Add activity</button>
+            </div>
+            <div class="chips" id="act-chips" role="tablist" aria-label="Filter activities">
+              <button class="chip active" data-filter="all">All <span class="c">10</span></button>
+              <button class="chip" data-filter="call">Calls <span class="c">2</span></button>
+              <button class="chip" data-filter="email">Emails <span class="c">2</span></button>
+              <button class="chip" data-filter="scorecard">Scorecards <span class="c">2</span></button>
+              <button class="chip" data-filter="assessment">Assessments <span class="c">1</span></button>
+              <button class="chip" data-filter="note">Notes <span class="c">2</span></button>
+            </div>
+            <ul class="activity-list" id="activity-list">
+              <li class="activity-item" data-type="scorecard">
+                <span class="act-ico b-purple"><svg class="icon"><use href="#i-file"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-scorecard">Scorecard</span><span class="act-title">Design Round — Hire (4.1 / 5)</span></div>
+                  <p class="act-desc">Submitted by Aisha Bello, Product Designer · Craft 4/5 · Collaboration 4/5 — “Thoughtful systems thinker; strong accessibility instincts.”</p>
+                </div>
+                <time class="act-time"><b>Mar 3</b><span>5:40 PM</span></time>
+              </li>
+              <li class="activity-item" data-type="scorecard">
+                <span class="act-ico b-purple"><svg class="icon"><use href="#i-file"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-scorecard">Scorecard</span><span class="act-title">Phone Screen — Strong Hire (4.6 / 5)</span></div>
+                  <p class="act-desc">Submitted by Lena Ortiz, Recruiter · Communication 5/5 · Motivation 5/5 — recommended to fast-track to technical rounds.</p>
+                </div>
+                <time class="act-time"><b>Feb 27</b><span>4:12 PM</span></time>
+              </li>
+              <li class="activity-item" data-type="assessment">
+                <span class="act-ico b-indigo"><svg class="icon"><use href="#i-code"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-assessment">Assessment</span><span class="act-title">React Coding Challenge — 86 / 100</span></div>
+                  <p class="act-desc">Auto-scored · 94th percentile of 1,243 candidates · 71 min completion · No plagiarism flags detected.</p>
+                </div>
+                <time class="act-time"><b>Feb 24</b><span>2:30 PM</span></time>
+              </li>
+              <li class="activity-item" data-type="call">
+                <span class="act-ico b-green"><svg class="icon"><use href="#i-phone"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-call">Call</span><span class="act-title">Recruiter screen call — 32 min</span></div>
+                  <p class="act-desc">Covered comp expectations ($165–185k base), hybrid preference and team structure. Maya to prep for the system design round.</p>
+                </div>
+                <time class="act-time"><b>Feb 21</b><span>11:05 AM</span></time>
+              </li>
+              <li class="activity-item" data-type="email">
+                <span class="act-ico b-blue"><svg class="icon"><use href="#i-mail"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-email">Email</span><span class="act-title">Sent: Role overview &amp; interview prep guide</span></div>
+                  <p class="act-desc">Opened 3× · Clicked “Interview loop &amp; rubric” attachment · Delivered to maya.chen@gmail.com.</p>
+                </div>
+                <time class="act-time"><b>Feb 20</b><span>9:15 AM</span></time>
+              </li>
+              <li class="activity-item" data-type="email" data-extra="true">
+                <span class="act-ico b-blue"><svg class="icon"><use href="#i-mail"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-email">Email</span><span class="act-title">Received: Availability confirmed</span></div>
+                  <p class="act-desc">“Thu &amp; Fri afternoons work best next week — looking forward to it!” — maya.chen@gmail.com</p>
+                </div>
+                <time class="act-time"><b>Feb 19</b><span>6:02 PM</span></time>
+              </li>
+              <li class="activity-item" data-type="note" data-extra="true">
+                <span class="act-ico b-slate"><svg class="icon"><use href="#i-edit"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-note">Note</span><span class="act-title">Internal note added</span></div>
+                  <p class="act-desc">Alex Morgan: Strong design-systems background at NovaPay; asked about growth path — flag for Staff-level reqs.</p>
+                </div>
+                <time class="act-time"><b>Feb 18</b><span>3:44 PM</span></time>
+              </li>
+              <li class="activity-item" data-type="call" data-extra="true">
+                <span class="act-ico b-green"><svg class="icon"><use href="#i-phone"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-call">Call</span><span class="act-title">Outbound call — no answer</span></div>
+                  <p class="act-desc">Voicemail left with screening scheduling link · Follow-up SMS sent.</p>
+                </div>
+                <time class="act-time"><b>Feb 17</b><span>10:22 AM</span></time>
+              </li>
+              <li class="activity-item" data-type="note" data-extra="true">
+                <span class="act-ico b-slate"><svg class="icon"><use href="#i-edit"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-note">Note</span><span class="act-title">Resume review completed</span></div>
+                  <p class="act-desc">8 yrs frontend · Leads design-systems guild · TypeScript, React, WebGL, performance work at scale.</p>
+                </div>
+                <time class="act-time"><b>Feb 13</b><span>1:30 PM</span></time>
+              </li>
+              <li class="activity-item" data-type="application" data-extra="true">
+                <span class="act-ico b-teal"><svg class="icon"><use href="#i-external"/></svg></span>
+                <div class="act-main">
+                  <div class="act-line"><span class="t-badge t-application">Application</span><span class="act-title">Applied via LinkedIn</span></div>
+                  <p class="act-desc">Senior Frontend Engineer (REQ-1042) · Resume + portfolio received · Auto-match score 91.</p>
+                </div>
+                <time class="act-time"><b>Feb 12</b><span>8:02 AM</span></time>
+              </li>
+            </ul>
+            <div class="card-foot">
+              <span id="act-showing">Showing recent 5 of 10 activities</span>
+              <button class="link-btn" id="btn-history"><span class="lbl">Show full history</span><svg class="icon xs"><use href="#i-chev-d"/></svg></button>
+            </div>
+          </section>
+
+          <!-- Matched requisitions -->
+          <section class="card d3">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="ct-ico b-green"><svg class="icon"><use href="#i-briefcase"/></svg></span>
+                <div><h2>Matched job requisitions</h2><p>Ranked by skill-match against Maya’s profile</p></div>
+              </div>
+              <span class="pill p-gray">7 matches</span>
+            </div>
+            <ul class="job-list" id="job-list">
+              <li class="job-row">
+                <span class="m m-high">92%</span>
+                <div class="job-info">
+                  <div class="job-title">Senior Frontend Engineer <span class="pill p-green">Open</span></div>
+                  <div class="job-meta">Engineering · San Francisco, CA · Hybrid</div>
+                </div>
+                <div class="job-comp"><b>$160k – $190k</b><span>base / yr</span></div>
+                <button class="btn btn-ghost sm js-req" data-req="REQ-2031" data-title="Senior Frontend Engineer">View</button>
+              </li>
+              <li class="job-row">
+                <span class="m m-high">88%</span>
+                <div class="job-info">
+                  <div class="job-title">Staff Frontend Engineer, Design Systems <span class="pill p-green">Open</span></div>
+                  <div class="job-meta">Engineering · Remote (US)</div>
+                </div>
+                <div class="job-comp"><b>$175k – $205k</b><span>base / yr</span></div>
+                <button class="btn btn-ghost sm js-req" data-req="REQ-1877" data-title="Staff Frontend Engineer, Design Systems">View</button>
+              </li>
+              <li class="job-row">
+                <span class="m m-mid">74%</span>
+                <div class="job-info">
+                  <div class="job-title">Full-Stack Engineer (React) <span class="pill p-green">Open</span></div>
+                  <div class="job-meta">Growth · Austin, TX · Onsite</div>
+                </div>
+                <div class="job-comp"><b>$150k – $175k</b><span>base / yr</span></div>
+                <button class="btn btn-ghost sm js-req" data-req="REQ-2140" data-title="Full-Stack Engineer (React)">View</button>
+              </li>
+              <li class="job-row job-extra">
+                <span class="m m-mid">71%</span>
+                <div class="job-info">
+                  <div class="job-title">Frontend Engineer II <span class="pill p-green">Open</span></div>
+                  <div class="job-meta">Engineering · San Francisco, CA</div>
+                </div>
+                <div class="job-comp"><b>$140k – $165k</b><span>base / yr</span></div>
+                <button class="btn btn-ghost sm js-req" data-req="REQ-2225" data-title="Frontend Engineer II">View</button>
+              </li>
+              <li class="job-row job-extra">
+                <span class="m m-mid">68%</span>
+                <div class="job-info">
+                  <div class="job-title">Lead Frontend Engineer <span class="pill p-blue">Interviewing</span></div>
+                  <div class="job-meta">Platform · Seattle, WA · Hybrid</div>
+                </div>
+                <div class="job-comp"><b>$180k – $210k</b><span>base / yr</span></div>
+                <button class="btn btn-ghost sm js-req" data-req="REQ-1902" data-title="Lead Frontend Engineer">View</button>
+              </li>
+              <li class="job-row job-extra">
+                <span class="m m-low">61%</span>
+                <div class="job-info">
+                  <div class="job-title">Web Performance Engineer <span class="pill p-green">Open</span></div>
+                  <div class="job-meta">Engineering · Remote (US)</div>
+                </div>
+                <div class="job-comp"><b>$155k – $180k</b><span>base / yr</span></div>
+                <button class="btn btn-ghost sm js-req" data-req="REQ-2288" data-title="Web Performance Engineer">View</button>
+              </li>
+              <li class="job-row job-extra">
+                <span class="m m-low">57%</span>
+                <div class="job-info">
+                  <div class="job-title">Frontend Engineer, Mobile Web <span class="pill p-amber">On hold</span></div>
+                  <div class="job-meta">Consumer · New York, NY · Hybrid</div>
+                </div>
+                <div class="job-comp"><b>$145k – $170k</b><span>base / yr</span></div>
+                <button class="btn btn-ghost sm js-req" data-req="REQ-2011" data-title="Frontend Engineer, Mobile Web">View</button>
+              </li>
+            </ul>
+            <div class="card-foot">
+              <span>Ranked by skill match · Synced 2 days ago</span>
+              <button class="link-btn" id="btn-jobs"><span class="lbl">View full list (7)</span><svg class="icon xs"><use href="#i-chev-d"/></svg></button>
+            </div>
+          </section>
+        </div>
+
+        <!-- ========== SIDE COLUMN ========== -->
+        <div class="col col-side">
+
+          <!-- Basic information -->
+          <section class="card d4">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="ct-ico b-indigo"><svg class="icon"><use href="#i-user"/></svg></span>
+                <div><h2>Basic information</h2></div>
+              </div>
+              <div class="head-icons">
+                <a class="icon-btn" href="tel:+14155550132" aria-label="Call Maya" title="Call"><svg class="icon"><use href="#i-phone"/></svg></a>
+                <a class="icon-btn" href="mailto:maya.chen@gmail.com" aria-label="Email Maya" title="Email"><svg class="icon"><use href="#i-mail"/></svg></a>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-user"/></svg>Full name</span><span class="iv">Maya Chen <span class="iv-sub">(she/her)</span></span></div>
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-phone"/></svg>Phone</span><span class="iv"><a href="tel:+14155550132">(415) 555-0132</a></span></div>
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-mail"/></svg>Email</span><span class="iv"><a href="mailto:maya.chen@gmail.com">maya.chen@gmail.com</a></span></div>
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-external"/></svg>Source</span><span class="iv">LinkedIn <span class="iv-sub">· Applied Feb 12, 2025</span></span></div>
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-map-pin"/></svg>Location</span><span class="iv">San Francisco, CA</span></div>
+              <div class="attach-row">
+                <span class="attach"><svg class="icon sm"><use href="#i-file"/></svg>MayaChen_Resume.pdf <span class="size">· 132 KB</span></span>
+                <a href="#" class="link-btn" id="dl-resume">Download</a>
+              </div>
+            </div>
+          </section>
+
+          <!-- Looking for -->
+          <section class="card d5">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="ct-ico b-amber"><svg class="icon"><use href="#i-target"/></svg></span>
+                <div><h2>What she’s looking for</h2></div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-briefcase"/></svg>Target role</span><span class="iv">Senior / Staff Frontend Engineer</span></div>
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-dollar"/></svg>Target salary</span><span class="iv">$165k – $185k <span class="iv-sub">base / yr</span></span></div>
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-clock"/></svg>Notice period</span><span class="iv">2 weeks’ notice <span class="iv-sub">· free from Mar 19, 2025</span></span></div>
+              <div class="info-row"><span class="il"><svg class="icon"><use href="#i-home"/></svg>Work model</span><span class="iv">Hybrid (2–3 days onsite) <span class="iv-sub">· open to remote-US</span></span></div>
+            </div>
+          </section>
+
+          <!-- Work authorization & clearance -->
+          <section class="card d6">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="ct-ico b-green"><svg class="icon"><use href="#i-shield"/></svg></span>
+                <div><h2>Work authorization &amp; clearance</h2></div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="auth-row"><span class="il"><svg class="icon"><use href="#i-briefcase"/></svg>Visa / work auth</span><span class="pill p-amber">H-1B · Sponsorship required</span></div>
+              <div class="auth-row"><span class="il"><svg class="icon"><use href="#i-check-square"/></svg>Background check</span><span class="pill p-green">Passed · Feb 20, 2025</span></div>
+              <div class="auth-row"><span class="il"><svg class="icon"><use href="#i-shield"/></svg>Clearance level</span><span class="pill p-purple">Public Trust — Active</span></div>
+              <div class="tl-label">Status timeline</div>
+              <ul class="timeline">
+                <li class="tl-item ok">
+                  <span class="tl-dot"><svg class="icon"><use href="#i-check"/></svg></span>
+                  <div class="tl-body"><span class="tl-title">Work authorization verified</span><span class="tl-sub">I-94 &amp; approval notice on file</span></div>
+                  <span class="tl-date">Mar 3</span>
+                </li>
+                <li class="tl-item ok">
+                  <span class="tl-dot"><svg class="icon"><use href="#i-check"/></svg></span>
+                  <div class="tl-body"><span class="tl-title">Background check cleared</span><span class="tl-sub">Checkr package — no adverse findings</span></div>
+                  <span class="tl-date">Feb 20</span>
+                </li>
+                <li class="tl-item warn">
+                  <span class="tl-dot"></span>
+                  <div class="tl-body"><span class="tl-title">H-1B expiration — Sep 12, 2027</span><span class="tl-sub">Renewal window opens Jan 2027 · 30 months remaining</span></div>
+                  <span class="tl-date">2027</span>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <!-- Open tasks -->
+          <section class="card d7">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="ct-ico b-amber"><svg class="icon"><use href="#i-check-square"/></svg></span>
+                <div><h2>Open tasks</h2></div>
+              </div>
+              <button class="btn btn-soft sm" data-open="modalTask"><svg class="icon"><use href="#i-plus"/></svg>Add task</button>
+            </div>
+            <ul class="task-list" id="task-list">
+              <li class="task-item">
+                <label class="tk"><input type="checkbox"><span class="tk-box"><svg class="icon xs"><use href="#i-check"/></svg></span></label>
+                <div class="task-main">
+                  <p class="task-title">Send H-1B sponsorship docs to Legal for review</p>
+                  <div class="task-meta"><span class="pill p-red">High</span><span class="due overdue"><svg class="icon xs"><use href="#i-clock"/></svg>Overdue · Mar 4</span></div>
+                </div>
+              </li>
+              <li class="task-item">
+                <label class="tk"><input type="checkbox"><span class="tk-box"><svg class="icon xs"><use href="#i-check"/></svg></span></label>
+                <div class="task-main">
+                  <p class="task-title">Share system-design prep guide with Maya</p>
+                  <div class="task-meta"><span class="pill p-amber">Medium</span><span class="due due-today"><svg class="icon xs"><use href="#i-clock"/></svg>Due today</span></div>
+                </div>
+              </li>
+              <li class="task-item">
+                <label class="tk"><input type="checkbox"><span class="tk-box"><svg class="icon xs"><use href="#i-check"/></svg></span></label>
+                <div class="task-main">
+                  <p class="task-title">Collect panel feedback for the Design round</p>
+                  <div class="task-meta"><span class="pill p-amber">Medium</span><span class="due"><svg class="icon xs"><use href="#i-clock"/></svg>Mar 7</span></div>
+                </div>
+              </li>
+              <li class="task-item">
+                <label class="tk"><input type="checkbox"><span class="tk-box"><svg class="icon xs"><use href="#i-check"/></svg></span></label>
+                <div class="task-main">
+                  <p class="task-title">Draft onsite schedule for the final round</p>
+                  <div class="task-meta"><span class="pill p-gray">Low</span><span class="due"><svg class="icon xs"><use href="#i-clock"/></svg>Mar 10</span></div>
+                </div>
+              </li>
+            </ul>
+            <div class="card-foot">
+              <span id="task-summary">4 open · 1 overdue · 1 due today</span>
+              <span>Assigned to you</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">TalentPulse ATS · Candidate view · Data refreshed 2 minutes ago</footer>
+  </div>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+<div class="backdrop" id="modalShare" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+    <div class="modal-head"><h3 id="shareTitle">Share candidate profile</h3><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="modal-body">
+      <p class="modal-sub">Recipients can view Maya’s profile, resume and interview progress.</p>
+      <label class="f-label" for="share-link">Shareable link</label>
+      <div class="ib-row">
+        <input id="share-link" readonly value="https://app.talentpulse.io/c/maya-chen-8f42">
+        <button class="btn btn-soft" data-copy="#share-link"><svg class="icon"><use href="#i-copy"/></svg>Copy</button>
+      </div>
+      <div class="opts">
+        <label class="opt"><input type="checkbox" checked> Include scorecards &amp; interview feedback</label>
+        <label class="opt"><input type="checkbox" checked> Include technical assessment results</label>
+        <label class="opt"><input type="checkbox"> Allow hiring team to add comments</label>
+      </div>
+      <label class="f-label" for="share-exp">Link expires</label>
+      <select id="share-exp"><option>In 7 days</option><option selected>In 30 days</option><option>Never</option></select>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close>Done</button>
+      <button type="button" class="btn btn-primary" id="btn-share-copy"><svg class="icon"><use href="#i-share"/></svg>Copy &amp; share</button>
+    </div>
+  </div>
+</div>
+
+<div class="backdrop" id="modalReschedule" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rsTitle">
+    <div class="modal-head"><h3 id="rsTitle">Reschedule — Technical Round 2</h3><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="modal-body">
+      <div class="current-slot">
+        <svg class="icon sm"><use href="#i-calendar"/></svg>
+        <div><b>Current:</b> Thu, Mar 6 · 2:00 – 3:00 PM (PT) · Google Meet — Daniel Park, Priya Nair</div>
+      </div>
+      <div class="f-label">Proposed slots — panel availability</div>
+      <div class="slots">
+        <label class="slot"><input type="radio" name="slot" data-label="Thu, Mar 6 · 4:00 – 5:00 PM"><span class="slot-main"><b>Thu, Mar 6 · 4:00 – 5:00 PM</b><span>Tomorrow · keeps momentum in the loop</span></span><span class="pill p-green">All available</span></label>
+        <label class="slot"><input type="radio" name="slot" data-label="Fri, Mar 7 · 10:00 – 11:00 AM"><span class="slot-main"><b>Fri, Mar 7 · 10:00 – 11:00 AM</b><span>Panel prefers morning slots</span></span><span class="pill p-green">All available</span></label>
+        <label class="slot disabled"><input type="radio" name="slot" disabled><span class="slot-main"><b>Mon, Mar 10 · 1:30 – 2:30 PM</b><span>Priya Nair is out of office</span></span><span class="pill p-gray">Unavailable</span></label>
+        <label class="slot"><input type="radio" name="slot" data-label="Tue, Mar 11 · 9:00 – 10:00 AM"><span class="slot-main"><b>Tue, Mar 11 · 9:00 – 10:00 AM</b><span>Includes debrief buffer after</span></span><span class="pill p-green">All available</span></label>
+      </div>
+      <label class="f-label" for="rs-reason">Reason (shared with candidate)</label>
+      <select id="rs-reason"><option>Panel scheduling conflict</option><option>Candidate request</option><option>Interviewer unavailability</option><option>Other</option></select>
+      <label class="f-label" for="rs-note">Note to candidate (optional)</label>
+      <textarea id="rs-note" rows="2" placeholder="e.g., Apologies — the panel had a conflict. Happy to work around your schedule."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-confirm-rs" disabled><svg class="icon"><use href="#i-send"/></svg>Send reschedule request</button>
+    </div>
+  </div>
+</div>
+
+<div class="backdrop" id="modalActivity" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="actTitle">
+    <div class="modal-head"><h3 id="actTitle">Log new activity</h3><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <form id="form-activity" class="modal-body">
+      <div class="f-2col">
+        <div>
+          <label class="f-label" for="act-type">Type</label>
+          <select id="act-type"><option value="note">Note</option><option value="call">Call</option><option value="email">Email</option><option value="scorecard">Scorecard</option><option value="assessment">Assessment</option></select>
+        </div>
+        <div>
+          <label class="f-label" for="act-when">Date &amp; time</label>
+          <input type="text" id="act-when" readonly>
+        </div>
+      </div>
+      <label class="f-label" for="act-details">Details</label>
+      <textarea id="act-details" rows="4" placeholder="Summarize the call, email, or feedback…" required></textarea>
+      <div class="modal-foot" style="margin:16px -20px -18px;border-radius:0 0 16px 16px">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-plus"/></svg>Log activity</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="backdrop" id="modalTask" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="taskTitle">
+    <div class="modal-head"><h3 id="taskTitle">Add task</h3><button class="icon-btn" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <form id="form-task" class="modal-body">
+      <label class="f-label" for="task-title">Task</label>
+      <input type="text" id="task-title" placeholder="e.g., Send offer packet to hiring manager" required>
+      <div class="f-2col">
+        <div>
+          <label class="f-label" for="task-pri">Priority</label>
+          <select id="task-pri"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
+        </div>
+        <div>
+          <label class="f-label" for="task-due">Due date</label>
+          <input type="date" id="task-due">
+        </div>
+      </div>
+      <div class="modal-foot" style="margin:16px -20px -18px;border-radius:0 0 16px 16px">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary"><svg class="icon"><use href="#i-plus"/></svg>Add task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s);};
+var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
+var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function esc(t){return String(t).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function fmtTime(d){var h=d.getHours();var ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(d.getMinutes()).padStart(2,'0')+' '+ap;}
+function nowStamp(){var d=new Date();return MONTHS[d.getMonth()]+' '+d.getDate()+', '+fmtTime(d);}
+function isoPlus(n){var d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+/* Toasts */
+function toast(msg){var t=document.createElement('div');t.className='toast';t.innerHTML='<svg class="icon"><use href="#i-check-circle"/></svg><span></span>';t.lastElementChild.textContent=msg;$('#toasts').appendChild(t);setTimeout(function(){t.classList.add('hide');setTimeout(function(){t.remove();},350);},3000);}
+
+/* Clipboard */
+function copyText(txt){
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).catch(function(){fallbackCopy(txt);});}
+  else{fallbackCopy(txt);}
+}
+function fallbackCopy(txt){var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();}
+
+/* Modals */
+function openModal(bd){
+  if(!bd)return;
+  if(bd.id==='modalActivity'){$('#act-when').value=nowStamp();}
+  bd.hidden=false;document.body.classList.add('modal-open');
+  requestAnimationFrame(function(){bd.classList.add('open');});
+  var f=bd.querySelector('input:not([type=radio]):not([type=checkbox]),select,textarea');
+  if(f){setTimeout(function(){f.focus();},140);}
+}
+function closeModal(bd){
+  if(!bd||bd.hidden)return;
+  bd.classList.remove('open');document.body.classList.remove('modal-open');
+  setTimeout(function(){bd.hidden=true;},190);
+}
+$$('.backdrop').forEach(function(bd){
+  bd.addEventListener('mousedown',function(e){if(e.target===bd)closeModal(bd);});
+  $$('[data-close]').forEach(function(){});
+  Array.prototype.slice.call(bd.querySelectorAll('[data-close]')).forEach(function(btn){btn.addEventListener('click',function(){closeModal(bd);});});
+});
+$$('[data-open]').forEach(function(btn){btn.addEventListener('click',function(){openModal(document.getElementById(btn.getAttribute('data-open')));});});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')$$('.backdrop.open').forEach(closeModal);});
+
+/* Copy buttons */
+$$('[data-copy]').forEach(function(btn){btn.addEventListener('click',function(){var el=$(btn.getAttribute('data-copy'));if(el){copyText(el.value);toast('Copied to clipboard');}});});
+
+/* Neutralize demo links */
+$$('a[href="#"]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();});});
+
+/* Topbar */
+$('#btn-bell').addEventListener('click',function(){toast('You\u2019re all caught up \u2014 no new notifications');});
+$('#search-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&this.value.trim()){toast('Searching \u201c'+this.value.trim()+'\u201d \u2014 demo workspace');}});
+
+/* Activities: filters + history */
+var activeFilter='all',historyOpen=false;
+var chips=$$('#act-chips .chip');
+chips.forEach(function(ch){ch.addEventListener('click',function(){activeFilter=ch.getAttribute('data-filter');chips.forEach(function(c){c.classList.toggle('active',c===ch);});applyFilter();});});
+function applyFilter(){
+  var items=$$('#activity-list .activity-item');var vis=0;
+  items.forEach(function(it){
+    var typeOk=activeFilter==='all'||it.getAttribute('data-type')===activeFilter;
+    var extraOk=it.getAttribute('data-extra')!=='true'||historyOpen;
+    var show=typeOk&&extraOk;
+    it.style.display=show?'':'none';
+    if(show)vis++;
+  });
+  $('#act-showing').textContent='Showing '+vis+' of '+items.length+' activities';
+}
+$('#btn-history').addEventListener('click',function(){
+  historyOpen=!historyOpen;
+  this.querySelector('.lbl').textContent=historyOpen?'Show recent only':'Show full history';
+  this.classList.toggle('open',historyOpen);
+  applyFilter();
+});
+function refreshCounts(){
+  var items=$$('#activity-list .activity-item');var counts={all:items.length};
+  items.forEach(function(i){var k=i.getAttribute('data-type');counts[k]=(counts[k]||0)+1;});
+  chips.forEach(function(ch){var el=ch.querySelector('.c');var k=ch.getAttribute('data-filter');if(el&&counts[k]!=null)el.textContent=counts[k];});
+}
+
+/* Add activity */
+var ACT={
+  note:{ic:'i-edit',b:'b-slate',t:'t-note',l:'Note'},
+  call:{ic:'i-phone',b:'b-green',t:'t-call',l:'Call'},
+  email:{ic:'i-mail',b:'b-blue',t:'t-email',l:'Email'},
+  scorecard:{ic:'i-file',b:'b-purple',t:'t-scorecard',l:'Scorecard'},
+  assessment:{ic:'i-code',b:'b-indigo',t:'t-assessment',l:'Assessment'}
+};
+$('#form-activity').addEventListener('submit',function(e){
+  e.preventDefault();
+  var type=$('#act-type').value;var text=$('#act-details').value.trim();
+  if(!text)return;
+  var m=ACT[type]||ACT.note;
+  var li=document.createElement('li');
+  li.className='activity-item';li.setAttribute('data-type',type);
+  var title=text.length>72?text.slice(0,72)+'\u2026':text;
+  li.innerHTML='<span class="act-ico '+m.b+'"><svg class="icon"><use href="#'+m.ic+'"/></svg></span>'+
+    '<div class="act-main"><div class="act-line"><span class="t-badge '+m.t+'">'+m.l+'</span><span class="act-title">'+esc(title)+'</span></div>'+
+    '<p class="act-desc">'+esc(text)+'</p></div>'+
+    '<time class="act-time"><b>Today</b><span>'+fmtTime(new Date())+'</span></time>';
+  $('#activity-list').prepend(li);
+  this.reset();
+  if(activeFilter!=='all'){activeFilter='all';chips.forEach(function(c){c.classList.toggle('active',c.getAttribute('data-filter')==='all');});}
+  refreshCounts();applyFilter();
+  closeModal($('#modalActivity'));
+  toast('Activity logged to the timeline');
+});
+
+/* Hero: add note (prefill) */
+$('#btn-addnote').addEventListener('click',function(){$('#act-type').value='note';openModal($('#modalActivity'));});
+
+/* Calendar invite link */
+var inviteBox=$('#invite-box'),inviteLink=$('#invite-link'),btnInvite=$('#btn-invite'),inviteShown=false;
+btnInvite.addEventListener('click',function(){
+  inviteBox.hidden=!inviteBox.hidden;
+  if(!inviteBox.hidden&&!inviteShown){inviteShown=true;copyText(inviteLink.value);toast('Calendar invite link copied \u2014 ready to share');}
+  btnInvite.querySelector('span').textContent=inviteBox.hidden?'Get calendar invite link':'Hide invite link';
+});
+
+/* Reschedule */
+var btnConfirm=$('#btn-confirm-rs');
+$$('#modalReschedule input[name="slot"]').forEach(function(r){
+  r.addEventListener('change',function(){
+    $$('#modalReschedule .slot').forEach(function(s){s.classList.toggle('checked',s.querySelector('input').checked);});
+    btnConfirm.disabled=false;
+  });
+});
+btnConfirm.addEventListener('click',function(){
+  var sel=$('#modalReschedule input[name="slot"]:checked');
+  if(!sel)return;
+  var label=sel.getAttribute('data-label');
+  $('#meet-time-val').textContent=label+' (PT) \u2014 reschedule requested';
+  var chip=$('#chip-when');chip.className='pill p-amber';chip.textContent='Reschedule pending';
+  closeModal($('#modalReschedule'));
+  toast('Reschedule request sent to Maya and the panel');
+});
+
+/* Share profile */
+$('#btn-share-copy').addEventListener('click',function(){copyText($('#share-link').value);toast('Profile link copied \u2014 ready to paste');});
+
+/* Matched jobs */
+$('#btn-jobs').addEventListener('click',function(){
+  var list=$('#job-list');list.classList.toggle('expanded');
+  var ex=list.classList.contains('expanded');
+  this.querySelector('.lbl').textContent=ex?'Show top matches only':'View full list (7)';
+  this.classList.toggle('open',ex);
+});
+$$('.js-req').forEach(function(b){b.addEventListener('click',function(){toast('Opening '+b.getAttribute('data-req')+' \u2014 '+b.getAttribute('data-title'));});});
+
+/* Tasks */
+var PRI={high:['p-red','High'],medium:['p-amber','Medium'],low:['p-gray','Low']};
+function dueLabel(v){
+  if(!v)return{txt:'No due date',cls:''};
+  var today=new Date();today.setHours(0,0,0,0);
+  var d=new Date(v+'T00:00:00');
+  var diff=Math.round((d-today)/864e5);
+  var s=MONTHS[d.getMonth()]+' '+d.getDate();
+  if(diff<0)return{txt:'Overdue \u00b7 '+s,cls:'overdue'};
+  if(diff===0)return{txt:'Due today',cls:'due-today'};
+  return{txt:s,cls:''};
+}
+function updateTaskSummary(){
+  var items=$$('#task-list .task-item');
+  var open=items.filter(function(i){return !i.querySelector('input').checked;});
+  var over=open.filter(function(i){return i.querySelector('.due.overdue');});
+  var td=open.filter(function(i){return i.querySelector('.due.due-today');});
+  var parts=[open.length+' open'];
+  if(over.length)parts.push(over.length+' overdue');
+  if(td.length)parts.push(td.length+' due today');
+  $('#task-summary').textContent=parts.join(' \u00b7 ');
+}
+$('#task-list').addEventListener('change',function(e){
+  var li=e.target.closest('.task-item');
+  if(li){li.classList.toggle('done',e.target.checked);updateTaskSummary();}
+});
+$('#form-task').addEventListener('submit',function(e){
+  e.preventDefault();
+  var title=$('#task-title').value.trim();
+  if(!title)return;
+  var pri=$('#task-pri').value;var dl=dueLabel($('#task-due').value);var p=PRI[pri];
+  var li=document.createElement('li');li.className='task-item';
+  li.innerHTML='<label class="tk"><input type="checkbox"><span class="tk-box"><svg class="icon xs"><use href="#i-check"/></svg></span></label>'+
+    '<div class="task-main"><p class="task-title">'+esc(title)+'</p>'+
+    '<div class="task-meta"><span class="pill '+p[0]+'">'+p[1]+'</span>'+
+    '<span class="due '+dl.cls+'"><svg class="icon xs"><use href="#i-clock"/></svg>'+esc(dl.txt)+'</span></div></div>';
+  $('#task-list').prepend(li);
+  this.reset();$('#task-due').value=isoPlus(2);
+  closeModal($('#modalTask'));
+  updateTaskSummary();
+  toast('Task added');
+});
+
+/* Misc */
+$('#dl-resume').addEventListener('click',function(e){e.preventDefault();toast('Downloading MayaChen_Resume.pdf\u2026');});
+$('#link-meet').addEventListener('click',function(e){e.preventDefault();toast('Opening Google Meet room\u2026');});
+
+/* Init */
+$('#task-due').value=isoPlus(2);
+refreshCounts();applyFilter();updateTaskSummary();
+})();
+</script>
+</body>
+</html>

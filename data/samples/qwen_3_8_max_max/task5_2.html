@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LedgerNorth — Integrations</title>
+<style>
+  :root{
+    --paper:#F5EFE2;
+    --paper2:#FCF8EE;
+    --ink:#182720;
+    --ink2:#41534A;
+    --soft:#5C6B60;
+    --red:#BE3D2A;
+    --brass:#A6722A;
+    --brass-lt:#E7C77B;
+    --green:#2F6B4F;
+    --line:rgba(24,39,32,.16);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:"Avenir Next",Avenir,"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",SFMono-Regular,"Cascadia Code",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font:15px/1.55 var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:rgba(166,114,42,.28)}
+  button{font-family:inherit;color:inherit}
+  :focus-visible{outline:2px dashed var(--red);outline-offset:3px}
+
+  /* ---------- section shell : ledger paper ---------- */
+  .section{
+    position:relative;
+    padding:0 0 72px;
+    background-color:var(--paper);
+    background-image:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(28,54,86,.055) 31px 32px);
+  }
+  .margin-rule{position:absolute;top:0;bottom:0;left:max(18px,calc(50% - 676px));width:1px;background:rgba(190,61,42,.35);z-index:0}
+  .margin-rule::after{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;background:rgba(190,61,42,.18)}
+  .noise{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{max-width:1280px;margin:0 auto;padding:0 48px;position:relative;z-index:1}
+
+  /* ---------- reveals & masks ---------- */
+  html.js [data-reveal]{opacity:0;transform:translateY(18px);transition:opacity .7s ease var(--d,0s),transform .8s cubic-bezier(.2,.7,.2,1) var(--d,0s)}
+  html.js [data-reveal].in{opacity:1;transform:none}
+  .mask{display:block;overflow:hidden;padding-bottom:.12em;margin-bottom:-.12em}
+  html.js .mask > span{display:block;transform:translateY(112%);transition:transform .95s cubic-bezier(.2,.7,.2,1) var(--d,0s)}
+  html.js .in .mask > span{transform:none}
+
+  /* ---------- section header strip ---------- */
+  .top-strip{display:flex;justify-content:space-between;align-items:baseline;padding:26px 0 12px;border-bottom:3px double var(--ink)}
+  .eyebrow{font:600 11px/1 var(--mono);letter-spacing:.24em;color:var(--red)}
+  .strip-right{font:500 10px/1 var(--mono);letter-spacing:.2em;color:var(--soft)}
+
+  .hero{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:64px;align-items:end;margin-top:44px}
+  .hero-title{font:400 60px/1.04 var(--serif);letter-spacing:-.012em;margin:14px 0 0}
+  .hero-title em{font-style:italic;color:var(--brass)}
+  .lede{font-size:17px;line-height:1.65;color:var(--ink2);max-width:58ch;margin:22px 0 0}
+
+  .spec{position:relative;border:1px solid var(--ink);background:var(--paper2);padding:22px 24px 18px;box-shadow:7px 7px 0 rgba(24,39,32,.08)}
+  .spec::before,.spec::after{content:"";position:absolute;width:7px;height:7px;background:var(--brass)}
+  .spec::before{top:-4px;left:-4px}
+  .spec::after{bottom:-4px;right:-4px}
+  .spec h2{margin:0 0 12px;font:600 10px/1 var(--mono);letter-spacing:.26em;color:var(--soft)}
+  .spec-row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px dotted rgba(24,39,32,.3);font-size:13px}
+  .spec-row dt{font:500 10.5px/1.6 var(--mono);letter-spacing:.12em;color:var(--soft)}
+  .spec-row dd{margin:0;font-weight:600;text-align:right}
+  .spec-note{margin:14px 0 0;font:italic 13px/1.5 var(--serif);color:var(--brass)}
+
+  /* ---------- connector map ---------- */
+  .mapgrid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:34px;align-items:start;margin-top:64px}
+  .map-panel{border:1px solid var(--ink);background:var(--paper2);box-shadow:9px 9px 0 rgba(24,39,32,.08)}
+  .map-head{display:flex;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--ink);font:600 10px/1 var(--mono);letter-spacing:.2em;color:var(--soft)}
+  .map-head b{color:var(--red);font-weight:600}
+  .map{position:relative;height:600px;background-image:radial-gradient(rgba(24,39,32,.09) 1px,transparent 1px);background-size:23px 23px}
+  .map-lines{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
+  .line{fill:none;stroke:rgba(24,39,32,.16);stroke-width:1.3;transition:stroke .25s}
+  .line.hover{stroke:rgba(24,39,32,.45)}
+  .line.active{stroke:var(--red);stroke-width:1.8;stroke-dasharray:7 7;animation:flow 1.1s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-28}}
+
+  .cluster{position:absolute;z-index:1;font:600 9.5px/1 var(--mono);letter-spacing:.24em;color:var(--soft);display:flex;align-items:center;gap:8px}
+  .cluster::before{content:"";width:14px;height:1px;background:var(--soft)}
+
+  .node{position:absolute;z-index:2;display:flex;align-items:center;gap:9px;padding:10px 13px;background:var(--paper2);border:1px solid rgba(24,39,32,.45);border-radius:3px;font:600 13px/1 var(--sans);cursor:pointer;box-shadow:3px 3px 0 rgba(24,39,32,.12);transition:transform .18s ease,box-shadow .18s ease,border-color .18s,background .18s;text-align:left}
+  .node:hover{transform:translate(-1px,-2px);box-shadow:5px 6px 0 rgba(24,39,32,.16)}
+  .node.active{border-color:var(--red);background:#fff;box-shadow:4px 4px 0 rgba(190,61,42,.25)}
+  .node .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .node .code{font:500 9px/1 var(--mono);letter-spacing:.1em;color:var(--soft)}
+  .node.flash{animation:flash .9s ease-out 2}
+  @keyframes flash{0%{box-shadow:0 0 0 0 rgba(190,61,42,.5)}100%{box-shadow:0 0 0 16px rgba(190,61,42,0)}}
+
+  .hub{position:absolute;left:72%;top:50%;transform:translateY(-50%);z-index:2;width:216px;background:var(--ink);color:#F3EDE0;padding:18px 18px 15px;border-radius:4px;box-shadow:9px 9px 0 rgba(24,39,32,.2)}
+  .hub-live{display:flex;align-items:center;gap:7px;font:500 8.5px/1 var(--mono);letter-spacing:.22em;color:rgba(243,237,224,.65);margin-bottom:10px}
+  .hub-live i{width:7px;height:7px;border-radius:50%;background:#7FC89B;animation:blip 1.6s ease-in-out infinite}
+  @keyframes blip{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+  .hub-mark{font:400 22px/1.1 var(--serif)}
+  .hub-sub{font:500 8px/1.4 var(--mono);letter-spacing:.24em;color:rgba(243,237,224,.6);margin-top:4px}
+  .hub-div{height:1px;background:rgba(243,237,224,.22);margin:12px 0 10px}
+  .hub-lbl{font:500 8px/1 var(--mono);letter-spacing:.2em;color:rgba(243,237,224,.55)}
+  .hub-count{font:600 21px/1.2 var(--mono);color:var(--brass-lt);margin-top:5px;font-variant-numeric:tabular-nums}
+  .hub-foot{font:500 8px/1.5 var(--mono);letter-spacing:.16em;color:rgba(243,237,224,.5);margin-top:10px}
+  .stamp{position:absolute;top:-17px;right:-16px;transform:rotate(9deg);border:2px solid var(--red);color:var(--red);font:700 9px/1 var(--mono);letter-spacing:.16em;padding:5px 8px;border-radius:3px;background:var(--paper);mix-blend-mode:multiply;transition:transform .3s ease}
+  .hub:hover .stamp{transform:rotate(4deg) scale(1.06)}
+  .map-foot{display:flex;justify-content:space-between;padding:11px 18px;border-top:1px solid var(--line);font:500 9.5px/1 var(--mono);letter-spacing:.14em;color:var(--soft)}
+
+  /* ---------- detail panel ---------- */
+  .panel{position:sticky;top:24px;border:1px solid var(--ink);background:var(--paper2);box-shadow:9px 9px 0 rgba(24,39,32,.08);padding:26px 26px 22px}
+  .panel-inner.swap{animation:swapIn .35s ease}
+  @keyframes swapIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .panel-head{display:flex;justify-content:space-between;align-items:center}
+  .tag{font:600 9.5px/1 var(--mono);letter-spacing:.2em;color:var(--red);border:1px solid var(--red);padding:5px 9px;border-radius:2px}
+  .mono-code{font:500 10px/1 var(--mono);letter-spacing:.14em;color:var(--soft)}
+  .panel-name{font:400 31px/1.1 var(--serif);margin:.45em 0 .3em}
+  .panel-tag{margin:0 0 16px;font-size:14px;line-height:1.55;color:var(--ink2)}
+  .flow h4{margin:16px 0 8px;font:600 9px/1 var(--mono);letter-spacing:.24em;color:var(--soft)}
+  .flow ul{list-style:none;margin:0;padding:0}
+  .flow li{position:relative;padding-left:18px;font-size:13.5px;line-height:1.5;margin:5px 0}
+  .flow li::before{content:"›";position:absolute;left:2px;top:0;color:var(--red);font:700 13px/1.45 var(--mono)}
+  .panel-rule{border-top:1px dotted rgba(24,39,32,.35);display:flex;justify-content:space-between;gap:14px;padding:12px 0;margin-top:16px;font-size:12.5px}
+  .panel-rule span{font:500 9.5px/1.8 var(--mono);letter-spacing:.16em;color:var(--soft)}
+  .panel-rule b{font-weight:600;text-align:right}
+  .pair-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0 14px;border-bottom:1px dotted rgba(24,39,32,.35)}
+  .pair-row > span{font:500 9.5px/1.6 var(--mono);letter-spacing:.16em;color:var(--soft)}
+  .pair-btn{font:600 10.5px/1 var(--mono);letter-spacing:.08em;border:1px solid rgba(24,39,32,.4);background:transparent;border-radius:2px;padding:6px 9px;cursor:pointer;transition:all .15s}
+  .pair-btn:hover{border-color:var(--brass);color:var(--brass);transform:translateY(-1px)}
+
+  .btn{display:inline-block;font:600 11.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:15px 22px;border:1.5px solid var(--ink);border-radius:2px;background:transparent;color:var(--ink);cursor:pointer;box-shadow:4px 4px 0 rgba(24,39,32,.85);transition:transform .15s ease,box-shadow .15s ease,background .15s}
+  .btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(24,39,32,.85)}
+  .btn:active{transform:translate(0,0);box-shadow:2px 2px 0 rgba(24,39,32,.85)}
+  .btn:disabled{opacity:.6;cursor:wait;transform:none;box-shadow:4px 4px 0 rgba(24,39,32,.5)}
+  .btn-primary{background:var(--ink);color:var(--paper2)}
+  .btn-block{display:block;width:100%;margin-top:18px;text-align:center}
+
+  .log{margin-top:16px;background:var(--ink);color:#CFE0D2;border-radius:4px;padding:12px 14px;font:11.5px/1.65 var(--mono)}
+  .log-title{font-size:8.5px;letter-spacing:.26em;color:rgba(207,224,210,.55);margin-bottom:7px}
+  .log-body{max-height:132px;overflow-y:auto;scrollbar-width:thin}
+  .log-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .log-line .lt{color:var(--brass-lt);margin-right:8px}
+  .log-line.dim{color:rgba(207,224,210,.55);font-style:italic}
+  .log-line.ok{color:#7FC89B;font-weight:600}
+
+  /* ---------- outcomes ---------- */
+  .outcomes{margin-top:110px}
+  .sec-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:12px}
+  .sec-head h2{margin:0;font:400 36px/1.1 var(--serif)}
+  .sec-head .fig{font:600 10px/1 var(--mono);letter-spacing:.2em;color:var(--soft)}
+  .out-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:48px;align-items:start;margin-top:34px}
+  .out-row{display:grid;grid-template-columns:60px 1fr 110px;gap:20px;padding:24px 10px;border-top:1px solid var(--line);align-items:start;transition:background .2s}
+  .out-row:last-child{border-bottom:1px solid var(--line)}
+  .out-row:hover{background:rgba(166,114,42,.06)}
+  .out-row .idx{font:italic 400 24px/1 var(--serif);color:var(--soft);transition:color .2s}
+  .out-row:hover .idx{color:var(--red)}
+  .out-row h3{margin:0 0 7px;font:400 21px/1.2 var(--serif)}
+  .out-row p{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink2);max-width:52ch}
+  .out-tag{font:600 8.5px/1 var(--mono);letter-spacing:.2em;color:var(--brass);border:1px solid rgba(166,114,42,.5);padding:5px 7px;justify-self:end;border-radius:2px;white-space:nowrap}
+
+  .statboard{background:var(--ink);color:#F3EDE0;padding:30px 30px 24px;border-radius:4px;box-shadow:9px 9px 0 rgba(24,39,32,.2);position:sticky;top:24px}
+  .statboard h3{margin:0;font:600 10px/1 var(--mono);letter-spacing:.26em;color:rgba(243,237,224,.6)}
+  .stat{padding:20px 0 18px;border-top:1px dashed rgba(243,237,224,.22);margin-top:16px}
+  .stat:first-of-type{margin-top:20px}
+  .stat .num{font:600 44px/1 var(--mono);color:var(--brass-lt);font-variant-numeric:tabular-nums}
+  .stat .num small{font-size:18px;color:rgba(243,237,224,.7);margin-left:4px}
+  .stat .lbl{font-size:13px;color:rgba(243,237,224,.85);margin-top:7px}
+  .bar{height:3px;background:rgba(243,237,224,.18);margin-top:12px;border-radius:2px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--brass-lt);transition:width 1.3s cubic-bezier(.2,.7,.2,1) var(--d,0s)}
+  .statboard.grow .bar i{width:var(--w)}
+  .stat-note{margin:18px 0 0;font:italic 12px/1.5 var(--serif);color:rgba(243,237,224,.55)}
+
+  /* ---------- ecosystem marquee ---------- */
+  .eco{margin-top:104px}
+  .marq{overflow:hidden;border-block:1px solid var(--ink);background:var(--paper2)}
+  .marq-track{display:flex;width:max-content;animation:marq 34s linear infinite}
+  .marq:hover .marq-track{animation-play-state:paused}
+  @keyframes marq{to{transform:translateX(-50%)}}
+  .tile{flex:none;display:flex;align-items:center;gap:11px;padding:18px 28px;border-right:1px solid var(--line);font:600 11.5px/1 var(--mono);letter-spacing:.16em}
+  .tile .tcat{color:var(--soft);font-weight:500}
+  .tile .tdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tile.method{color:var(--ink2)}
+  .tile.method .tdot{background:transparent !important;border:1.5px dashed var(--soft);height:8px}
+  .tile.you{color:var(--brass)}
+  .eco-note{margin-top:14px;font:500 10px/1.6 var(--mono);letter-spacing:.14em;color:var(--soft);text-align:center}
+
+  /* ---------- CTA band ---------- */
+  .cta{margin-top:96px;background:var(--ink);color:#F3EDE0;padding:58px 62px 54px;border-radius:4px;box-shadow:10px 10px 0 rgba(24,39,32,.2);position:relative;overflow:hidden}
+  .cta::after{content:"SEC.04";position:absolute;right:-14px;bottom:-42px;font:400 170px/1 var(--serif);color:rgba(243,237,224,.05);pointer-events:none}
+  .cta-grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:60px;align-items:center;position:relative;z-index:1}
+  .cta h2{margin:0;font:400 42px/1.12 var(--serif)}
+  .cta h2 em{font-style:italic;color:var(--brass-lt)}
+  .cta p{margin:18px 0 28px;font-size:14.5px;line-height:1.65;color:rgba(243,237,224,.8);max-width:46ch}
+  .cta-actions{display:flex;gap:18px;flex-wrap:wrap}
+  .btn-onDark{border-color:#F3EDE0;color:#F3EDE0;box-shadow:4px 4px 0 rgba(231,199,123,.4)}
+  .btn-onDark:hover{box-shadow:6px 6px 0 rgba(231,199,123,.4)}
+  .btn-solid{background:#F3EDE0;color:var(--ink);box-shadow:4px 4px 0 var(--brass)}
+  .btn-solid:hover{box-shadow:6px 6px 0 var(--brass)}
+  .dir-lbl{font:600 9px/1 var(--mono);letter-spacing:.26em;color:rgba(243,237,224,.55);margin-bottom:16px}
+  .dir-grid{display:flex;flex-wrap:wrap;gap:10px}
+  .mono-tile{width:56px;height:56px;border:1px solid rgba(243,237,224,.32);border-radius:3px;display:grid;place-items:center;font:600 15px/1 var(--serif);color:var(--brass-lt);background:rgba(243,237,224,.04);cursor:pointer;transition:all .18s ease}
+  .mono-tile:hover{border-color:var(--brass-lt);transform:translateY(-3px);box-shadow:0 6px 0 rgba(0,0,0,.25)}
+  .mono-tile.plus{color:rgba(243,237,224,.55);font-family:var(--mono);border-style:dashed}
+  .cta-meta{margin:20px 0 0;font:500 9.5px/1.7 var(--mono);letter-spacing:.16em;color:rgba(243,237,224,.5)}
+
+  .legal{margin-top:40px;border-top:3px double rgba(24,39,32,.6);padding-top:14px;display:flex;justify-content:space-between;gap:20px;font:500 9.5px/1.6 var(--mono);letter-spacing:.1em;color:var(--soft)}
+
+  @media (max-width:1100px){
+    .hero,.mapgrid,.out-grid,.cta-grid{grid-template-columns:1fr}
+    .panel,.statboard{position:static}
+    .hero-title{font-size:46px}
+    .cta{padding:44px 34px}
+  }
+  @media (max-width:880px){
+    .wrap{padding:0 26px}
+    .map{height:640px}
+    .hub{left:52%}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
+    .marq-track{animation:none;flex-wrap:wrap;width:auto}
+    html.js .mask > span,html.js [data-reveal]{transform:none;opacity:1}
+  }
+</style>
+</head>
+<body>
+
+<section class="section" id="integrations" aria-labelledby="int-title">
+  <div class="margin-rule" aria-hidden="true"></div>
+  <div class="noise" aria-hidden="true"></div>
+
+  <div class="wrap">
+
+    <!-- ============ header strip ============ -->
+    <header>
+      <div class="top-strip" data-reveal>
+        <span class="eyebrow" data-scramble>APPENDIX 04 · THE INTEGRATION ECOSYSTEM</span>
+        <span class="strip-right">LEDGERNORTH · FY2025 · P. 14</span>
+      </div>
+
+      <div class="hero">
+        <div data-reveal style="--d:.08s">
+          <h1 class="hero-title" id="int-title">
+            <span class="mask"><span style="--d:.1s">Every system you already run on,</span></span>
+            <span class="mask"><span style="--d:.22s"><em>reconciled</em> into one ledger.</span></span>
+          </h1>
+          <p class="lede">LedgerNorth plugs into the accounting, banking, payments, expense, and workforce tools your finance team trusts today. Transactions, balances, and documents sync in near real time — so month-end close is measured in days, not weeks.</p>
+        </div>
+
+        <div class="spec" data-reveal style="--d:.2s" aria-label="Ecosystem specification">
+          <h2>ECOSYSTEM SPEC</h2>
+          <dl style="margin:0">
+            <div class="spec-row"><dt>NATIVE CONNECTORS</dt><dd>8 flagship systems</dd></div>
+            <div class="spec-row"><dt>SYNC CADENCE</dt><dd>15 min · event-driven</dd></div>
+            <div class="spec-row"><dt>DIRECTION</dt><dd>Two-way</dd></div>
+            <div class="spec-row"><dt>SETUP</dt><dd>Guided · same-day</dd></div>
+            <div class="spec-row"><dt>COVERAGE</dt><dd>Accounting · Banking · Payments · Spend · Workforce</dd></div>
+          </dl>
+          <p class="spec-note">— plus an open exchange for everything else.</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ connector map + detail panel ============ -->
+    <div class="mapgrid">
+      <figure class="map-panel" data-reveal style="--d:.1s;margin:0">
+        <div class="map-head"><span><b>FIG. A</b> — CONNECTION MAP</span><span>CLICK A CONNECTOR TO INSPECT</span></div>
+        <div class="map" id="map">
+          <svg class="map-lines" id="lines" aria-hidden="true"></svg>
+
+          <span class="cluster" style="left:1.5%;top:2.5%">ACCOUNTING</span>
+          <button class="node" data-key="netsuite" style="left:1.5%;top:9%"><span class="dot" style="background:#A6722A"></span>Oracle NetSuite<span class="code">ACC·01</span></button>
+          <button class="node" data-key="quickbooks" style="left:22%;top:19%"><span class="dot" style="background:#A6722A"></span>QuickBooks<span class="code">ACC·02</span></button>
+          <button class="node" data-key="xero" style="left:3.5%;top:31%"><span class="dot" style="background:#A6722A"></span>Xero<span class="code">ACC·03</span></button>
+          <button class="node" data-key="sageintacct" style="left:24%;top:41%"><span class="dot" style="background:#A6722A"></span>Sage Intacct<span class="code">ACC·04</span></button>
+
+          <span class="cluster" style="left:1.5%;top:55%">BANKING &amp; PAYMENTS</span>
+          <button class="node" data-key="plaid" style="left:4%;top:62%"><span class="dot" style="background:#2F5D8A"></span>Plaid<span class="code">BNK·01</span></button>
+          <button class="node" data-key="stripe" style="left:25%;top:72%"><span class="dot" style="background:#2F5D8A"></span>Stripe<span class="code">PAY·01</span></button>
+
+          <span class="cluster" style="left:7%;top:84.5%">SPEND</span>
+          <button class="node" data-key="ramp" style="left:9%;top:90%"><span class="dot" style="background:#2F6B4F"></span>Ramp<span class="code">SPD·01</span></button>
+
+          <span class="cluster" style="left:46%;top:2.5%">WORKFORCE</span>
+          <button class="node" data-key="workday" style="left:47%;top:9%"><span class="dot" style="background:#8A4A2F"></span>Workday<span class="code">WRK·01</span></button>
+
+          <div class="hub" id="hub">
+            <span class="stamp" aria-hidden="true">AUTO-RECONCILED</span>
+            <div class="hub-live"><i></i>LIVE · 8 OF 8 CONNECTORS UP</div>
+            <div class="hub-mark">LedgerNorth</div>
+            <div class="hub-sub">CORE LEDGER · SINGLE SOURCE OF TRUTH</div>
+            <div class="hub-div"></div>
+            <div class="hub-lbl">RECORDS RECONCILED TODAY</div>
+            <div class="hub-count" id="hubCount">1,284,902</div>
+            <div class="hub-foot">TWO-WAY SYNC · ZERO-DRIFT GUARANTEE</div>
+          </div>
+        </div>
+        <div class="map-foot"><span>● ACTIVE SYNC &nbsp;&nbsp; ◌ IDLE</span><span>MAP REF. LN-04 / A</span></div>
+      </figure>
+
+      <aside class="panel" data-reveal style="--d:.18s" aria-label="Integration detail">
+        <div class="panel-inner" id="panelInner">
+          <div class="panel-head">
+            <span class="tag" id="dCat">ACCOUNTING</span>
+            <span class="mono-code" id="dCode">ACC·01</span>
+          </div>
+          <h2 class="panel-name" id="dName">Oracle NetSuite</h2>
+          <p class="panel-tag" id="dTag">Two-way ERP sync for journals, AR/AP, and period close.</p>
+
+          <div class="flow"><h4>FLOWS INTO LEDGERNORTH</h4><ul id="dIn">
+            <li>Journal entries &amp; GL postings</li><li>Chart of accounts mapping</li><li>AR / AP aging and status</li>
+          </ul></div>
+          <div class="flow"><h4>SENDS BACK</h4><ul id="dOut">
+            <li>Consolidated ledger balances</li><li>Close checklist &amp; exceptions</li>
+          </ul></div>
+
+          <div class="panel-rule"><span>SYNC CADENCE</span><b id="dCad">Every 15 minutes</b></div>
+          <div class="pair-row"><span>PAIRS WELL WITH</span><span id="dPairs"></span></div>
+
+          <button class="btn btn-primary btn-block" id="runBtn">Run a live reconciliation</button>
+
+          <div class="log">
+            <div class="log-title">SYNC LOG</div>
+            <div class="log-body" id="logBody" aria-live="polite"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ============ outcomes ============ -->
+    <div class="outcomes">
+      <div class="sec-head" data-reveal>
+        <h2>What connected makes possible</h2>
+        <span class="fig">FIG. B — OUTCOMES, POST-CONNECTION</span>
+      </div>
+
+      <div class="out-grid">
+        <div>
+          <div class="out-row" data-reveal>
+            <span class="idx">01</span>
+            <div><h3>One source of truth</h3><p>Balances from NetSuite, Xero, and every bank feed reconcile against each other automatically. Discrepancies surface the moment they appear — not after close.</p></div>
+            <span class="out-tag">RECONCILIATION</span>
+          </div>
+          <div class="out-row" data-reveal style="--d:.06s">
+            <span class="idx">02</span>
+            <div><h3>Close in days, not weeks</h3><p>With Ramp receipts, Stripe revenue, and Workday payroll already posted and matched, your team reviews exceptions instead of chasing exports.</p></div>
+            <span class="out-tag">MONTH-END</span>
+          </div>
+          <div class="out-row" data-reveal style="--d:.12s">
+            <span class="idx">03</span>
+            <div><h3>Cash you can trust</h3><p>Plaid balances and Stripe payouts roll into a live cash position, reconciled against the general ledger — visible to the whole finance team, same day.</p></div>
+            <span class="out-tag">TREASURY</span>
+          </div>
+          <div class="out-row" data-reveal style="--d:.18s">
+            <span class="idx">04</span>
+            <div><h3>An audit trail that keeps itself</h3><p>Every entry retains a live link back to its source system, document, and approval. Auditors see provenance, not shoeboxes.</p></div>
+            <span class="out-tag">CONTROLS</span>
+          </div>
+        </div>
+
+        <div class="statboard" id="statboard" data-reveal style="--d:.15s">
+          <h3>PILOT-COHORT BENCHMARKS</h3>
+          <div class="stat">
+            <div class="num"><span data-count="97.4" data-dec="1">0.0</span><small>%</small></div>
+            <div class="lbl">of imported transactions auto-matched with no human touch</div>
+            <div class="bar"><i style="--w:97%"></i></div>
+          </div>
+          <div class="stat">
+            <div class="num"><span data-count="5.2" data-dec="1">0.0</span><small>days</small></div>
+            <div class="lbl">median month-end close, down from 9+ on spreadsheets</div>
+            <div class="bar"><i style="--w:62%;--d:.15s"></i></div>
+          </div>
+          <div class="stat">
+            <div class="num"><span data-count="31" data-dec="0">0</span><small>hrs / mo</small></div>
+            <div class="lbl">of manual export-and-paste work returned to the team</div>
+            <div class="bar"><i style="--w:78%;--d:.3s"></i></div>
+          </div>
+          <p class="stat-note">Illustrative figures from LedgerNorth pilot cohorts.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ecosystem marquee ============ -->
+    <div class="eco" data-reveal>
+      <div class="sec-head" style="margin-bottom:22px">
+        <h2 style="font-size:28px">…and room for the rest of your stack</h2>
+        <span class="fig">FIG. C — THE EXCHANGE</span>
+      </div>
+      <div class="marq" aria-label="Integration ecosystem ticker">
+        <div class="marq-track">
+          <div class="marq-half">
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>ORACLE NETSUITE <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>QUICKBOOKS <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>XERO <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>SAGE INTACCT <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#2F5D8A"></span>PLAID <span class="tcat">· BANKING</span></span>
+            <span class="tile"><span class="tdot" style="background:#2F5D8A"></span>STRIPE <span class="tcat">· PAYMENTS</span></span>
+            <span class="tile"><span class="tdot" style="background:#2F6B4F"></span>RAMP <span class="tcat">· SPEND</span></span>
+            <span class="tile"><span class="tdot" style="background:#8A4A2F"></span>WORKDAY <span class="tcat">· WORKFORCE</span></span>
+            <span class="tile method"><span class="tdot"></span>OPEN API</span>
+            <span class="tile method"><span class="tdot"></span>WEBHOOKS</span>
+            <span class="tile method"><span class="tdot"></span>CSV &amp; SPREADSHEET IMPORT</span>
+            <span class="tile you">→ YOUR SYSTEM HERE</span>
+          </div>
+          <div class="marq-half" aria-hidden="true">
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>ORACLE NETSUITE <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>QUICKBOOKS <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>XERO <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#A6722A"></span>SAGE INTACCT <span class="tcat">· ACCOUNTING</span></span>
+            <span class="tile"><span class="tdot" style="background:#2F5D8A"></span>PLAID <span class="tcat">· BANKING</span></span>
+            <span class="tile"><span class="tdot" style="background:#2F5D8A"></span>STRIPE <span class="tcat">· PAYMENTS</span></span>
+            <span class="tile"><span class="tdot" style="background:#2F6B4F"></span>RAMP <span class="tcat">· SPEND</span></span>
+            <span class="tile"><span class="tdot" style="background:#8A4A2F"></span>WORKDAY <span class="tcat">· WORKFORCE</span></span>
+            <span class="tile method"><span class="tdot"></span>OPEN API</span>
+            <span class="tile method"><span class="tdot"></span>WEBHOOKS</span>
+            <span class="tile method"><span class="tdot"></span>CSV &amp; SPREADSHEET IMPORT</span>
+            <span class="tile you">→ YOUR SYSTEM HERE</span>
+          </div>
+        </div>
+      </div>
+      <p class="eco-note">EIGHT FLAGSHIP CONNECTORS SHIP TODAY · THE EXCHANGE ACCEPTS ANYTHING WITH AN API — OR A SPREADSHEET.</p>
+    </div>
+
+    <!-- ============ CTA band ============ -->
+    <div class="cta" data-reveal>
+      <div class="cta-grid">
+        <div>
+          <h2>Explore the complete <em>ecosystem</em>.</h2>
+          <p>Browse every connector, see exactly which fields sync in each direction, and map LedgerNorth onto your stack before you ever sign in.</p>
+          <div class="cta-actions">
+            <button class="btn btn-solid" type="button">Browse the directory ↗</button>
+            <button class="btn btn-onDark" type="button">Request an integration</button>
+          </div>
+        </div>
+        <div>
+          <div class="dir-lbl">IN THE DIRECTORY TODAY — CLICK TO INSPECT ON THE MAP</div>
+          <div class="dir-grid" id="dirGrid">
+            <button class="mono-tile" data-key="netsuite" title="Oracle NetSuite" aria-label="Inspect Oracle NetSuite on the map">NS</button>
+            <button class="mono-tile" data-key="quickbooks" title="QuickBooks" aria-label="Inspect QuickBooks on the map">QB</button>
+            <button class="mono-tile" data-key="xero" title="Xero" aria-label="Inspect Xero on the map">X</button>
+            <button class="mono-tile" data-key="sageintacct" title="Sage Intacct" aria-label="Inspect Sage Intacct on the map">SI</button>
+            <button class="mono-tile" data-key="plaid" title="Plaid" aria-label="Inspect Plaid on the map">PL</button>
+            <button class="mono-tile" data-key="stripe" title="Stripe" aria-label="Inspect Stripe on the map">ST</button>
+            <button class="mono-tile" data-key="ramp" title="Ramp" aria-label="Inspect Ramp on the map">RA</button>
+            <button class="mono-tile" data-key="workday" title="Workday" aria-label="Inspect Workday on the map">WD</button>
+            <span class="mono-tile plus" aria-hidden="true">+</span>
+          </div>
+          <p class="cta-meta">8 NATIVE CONNECTORS · OPEN API · WEBHOOKS · CSV IMPORT<br>SETUP IS GUIDED — MOST TEAMS GO LIVE THE SAME DAY.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="legal">
+      <span>LEDGERNORTH © FY2025 — SEC. 04 / INTEGRATIONS</span>
+      <span>LEDGERNORTH IS A FICTIONAL PRODUCT. ALL THIRD-PARTY NAMES &amp; TRADEMARKS BELONG TO THEIR RESPECTIVE OWNERS AND ARE REFERENCED FOR ILLUSTRATION ONLY.</span>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  document.documentElement.classList.add('js');
+  var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var NS = 'http://www.w3.org/2000/svg';
+
+  /* ---------- data ---------- */
+  var DATA = {
+    netsuite:{name:'Oracle NetSuite',cat:'ACCOUNTING',code:'ACC·01',tag:'Two-way ERP sync for journals, AR/AP, and period close.',
+      inflow:['Journal entries & GL postings','Chart of accounts mapping','AR / AP aging and status'],
+      out:['Consolidated ledger balances','Close checklist & exceptions'],cadence:'Every 15 minutes',pairs:['plaid','stripe','workday']},
+    quickbooks:{name:'QuickBooks',cat:'ACCOUNTING',code:'ACC·02',tag:'Pull transactions, reconciliation state, and reports from QuickBooks Online.',
+      inflow:['Bank & card transactions','Reconciliation status','Invoices and payments'],
+      out:['Adjusting journal entries','Month-end reporting pack'],cadence:'Every 15 minutes',pairs:['ramp','stripe','plaid']},
+    xero:{name:'Xero',cat:'ACCOUNTING',code:'ACC·03',tag:'Keep every Xero organisation in lockstep with the core ledger.',
+      inflow:['Manual & spend journals','Contacts and tracking categories','Bank reconciliation detail'],
+      out:['Consolidated balances','Audit-ready schedules'],cadence:'Every 15 minutes',pairs:['plaid','stripe','ramp']},
+    sageintacct:{name:'Sage Intacct',cat:'ACCOUNTING',code:'ACC·04',tag:'Dimensions-first sync built for multi-entity finance teams.',
+      inflow:['GL detail by dimension','AP / AR batches','Consolidation schedules'],
+      out:['Cross-entity reconciliations','Continuous close status'],cadence:'Every 15 minutes',pairs:['workday','ramp','stripe']},
+    stripe:{name:'Stripe',cat:'PAYMENTS',code:'PAY·01',tag:'Payouts, fees, refunds, and disputes — posted and matched automatically.',
+      inflow:['Payouts & gross volume','Processing fees and refunds','Dispute / chargeback events'],
+      out:['Matched revenue journals','Daily cash snapshot'],cadence:'Event-driven · near real time',pairs:['netsuite','quickbooks','plaid']},
+    plaid:{name:'Plaid',cat:'BANKING',code:'BNK·01',tag:'Live balances and transaction feeds from every bank account you connect.',
+      inflow:['Account balances','Cleared & pending transactions','Account metadata'],
+      out:['Reconciled bank ledger','Cash-position signals'],cadence:'Every 15 minutes',pairs:['netsuite','stripe','xero']},
+    ramp:{name:'Ramp',cat:'SPEND',code:'SPD·01',tag:'Card spend, receipts, and approvals arrive pre-coded by your policies.',
+      inflow:['Card transactions','Receipts & memo lines','Approval metadata'],
+      out:['Coded expense journals','Policy-flagged exceptions'],cadence:'Every 15 minutes',pairs:['quickbooks','netsuite','xero']},
+    workday:{name:'Workday',cat:'WORKFORCE',code:'WRK·01',tag:'Payroll journals and headcount cost land by cost center, period by period.',
+      inflow:['Payroll register & journals','Headcount by cost center','Benefits & deductions detail'],
+      out:['Departmental spend vs. plan','People-cost forecasts'],cadence:'Per pay period + on demand',pairs:['netsuite','sageintacct']}
+  };
+
+  var LOG = {
+    netsuite:['GL journal #<ID> posted — $<AMT>','AR aging synced · <N> open invoices','AP schedule matched · <N> bills','Period status: OPEN → CLOSE-READY'],
+    quickbooks:['Transactions pulled · <N> new','Bank feed matched · <N> of <N> lines','Invoice INV-<ID> settled — $<AMT>','Reconciliation state: CURRENT'],
+    xero:['Manual journals synced · <N> entries','Contact ledger updated · <N> accounts','Payment received — $<AMT>','Bank reconciliation: COMPLETE'],
+    sageintacct:['AP batch #<ID> posted — $<AMT>','Dimensions mapped · <N> cost centers','GL roll-up refreshed','Trial balance exported → LedgerNorth'],
+    stripe:['Payout po_<ID> landed — $<AMT>','Fees auto-split · <N> lines','Refund re_<ID> matched to invoice','Dispute window checked · clear'],
+    plaid:['<N> bank accounts refreshed','Balances verified · variance $0.00','<N> cleared transactions imported','Cash position recalculated'],
+    ramp:['<N> card charges pre-coded','Receipts attached · <N> of <N> OK','Policy exceptions: <N> → review queue','Spend journal posted — $<AMT>'],
+    workday:['Payroll register imported — $<AMT>','<N> cost centers updated','Benefits split posted · <N> lines','Headcount vs. plan: refreshed']
+  };
+
+  /* ---------- helpers ---------- */
+  function amt(){ return (Math.random()*92000+1400).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function idn(){ return String(1000+Math.floor(Math.random()*9000)); }
+  function nn(){ return String(3+Math.floor(Math.random()*42)); }
+  function tok(s){ return s.replace(/<AMT>/g,amt()).replace(/<ID>/g,idn()).replace(/<N>/g,nn()); }
+  function stamp(){ return new Date().toTimeString().slice(0,8); }
+  function debounce(fn,ms){ var t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
+
+  /* ---------- refs ---------- */
+  var mapEl=document.getElementById('map'), svg=document.getElementById('lines'), hub=document.getElementById('hub');
+  var chips=Array.prototype.slice.call(document.querySelectorAll('.node'));
+  var dCat=document.getElementById('dCat'), dCode=document.getElementById('dCode'), dName=document.getElementById('dName'),
+      dTag=document.getElementById('dTag'), dIn=document.getElementById('dIn'), dOut=document.getElementById('dOut'),
+      dCad=document.getElementById('dCad'), dPairs=document.getElementById('dPairs'),
+      runBtn=document.getElementById('runBtn'), logBody=document.getElementById('logBody'),
+      panelInner=document.getElementById('panelInner'), hubCount=document.getElementById('hubCount');
+
+  var paths={}, current='netsuite', running=false, hubTotal=1284902;
+
+  /* ---------- connector geometry ---------- */
+  function buildPaths(){
+    if(!mapEl||!svg) return;
+    var mr=mapEl.getBoundingClientRect();
+    svg.setAttribute('width',mr.width); svg.setAttribute('height',mr.height);
+    svg.setAttribute('viewBox','0 0 '+mr.width+' '+mr.height);
+    svg.innerHTML=''; paths={};
+    var hr=hub.getBoundingClientRect();
+    var hx=hr.left-mr.left, hy=hr.top-mr.top+hr.height/2;
+    chips.forEach(function(chip){
+      var r=chip.getBoundingClientRect();
+      var x1=r.left-mr.left+r.width, y1=r.top-mr.top+r.height/2;
+      var dx=Math.max(46,(hx-x1)*0.5);
+      var d='M '+x1+' '+y1+' C '+(x1+dx)+' '+y1+', '+(hx-dx)+' '+hy+', '+hx+' '+hy;
+      var p=document.createElementNS(NS,'path');
+      p.setAttribute('d',d); p.setAttribute('class','line'+(chip.dataset.key===current?' active':''));
+      svg.appendChild(p); paths[chip.dataset.key]=p;
+    });
+  }
+
+  /* ---------- panel ---------- */
+  function renderPanel(key){
+    var d=DATA[key]; if(!d) return;
+    dCat.textContent=d.cat; dCode.textContent=d.code; dName.textContent=d.name; dTag.textContent=d.tag;
+    dIn.innerHTML=d.inflow.map(function(x){return '<li>'+x+'</li>';}).join('');
+    dOut.innerHTML=d.out.map(function(x){return '<li>'+x+'</li>';}).join('');
+    dCad.textContent=d.cadence;
+    dPairs.innerHTML='';
+    d.pairs.forEach(function(pk){
+      var b=document.createElement('button');
+      b.className='pair-btn'; b.type='button'; b.textContent=DATA[pk].name;
+      b.addEventListener('click',function(){ select(pk); });
+      dPairs.appendChild(b);
+    });
+    panelInner.classList.remove('swap'); void panelInner.offsetWidth;
+    if(!RM) panelInner.classList.add('swap');
+  }
+
+  function addLine(text,cls){
+    var div=document.createElement('div');
+    div.className='log-line'+(cls?' '+cls:'');
+    div.innerHTML='<span class="lt">'+stamp()+'</span>'+text;
+    logBody.appendChild(div);
+    while(logBody.children.length>30) logBody.removeChild(logBody.firstChild);
+    logBody.scrollTop=logBody.scrollHeight;
+  }
+
+  function select(key,opts){
+    opts=opts||{};
+    current=key;
+    chips.forEach(function(c){
+      var on=c.dataset.key===key;
+      c.classList.toggle('active',on);
+      c.setAttribute('aria-pressed',on?'true':'false');
+    });
+    Object.keys(paths).forEach(function(k){ paths[k].classList.toggle('active',k===key); });
+    renderPanel(key);
+    if(opts.seed!==false){
+      logBody.innerHTML='';
+      addLine('connected · schema mapped · last sync '+(2+Math.floor(Math.random()*9))+' min ago','dim');
+    }
+  }
+
+  /* ---------- dots along paths ---------- */
+  function animateDot(path,o){
+    if(RM||!path) return;
+    o=o||{};
+    var dot=document.createElementNS(NS,'circle');
+    dot.setAttribute('r','3.4'); dot.setAttribute('fill',o.color||'#BE3D2A');
+    svg.appendChild(dot);
+    var L=path.getTotalLength(), t0=performance.now()+(o.delay||0), dur=o.dur||1400;
+    function step(t){
+      var k=(t-t0)/dur;
+      if(k<0){ requestAnimationFrame(step); return; }
+      k=Math.min(1,k);
+      var e=k*k*(3-2*k), pt=path.getPointAtLength(e*L);
+      dot.setAttribute('cx',pt.x); dot.setAttribute('cy',pt.y);
+      dot.setAttribute('opacity', k>0.85 ? String((1-k)/0.15) : '1');
+      if(k<1){ requestAnimationFrame(step); } else if(dot.parentNode){ dot.parentNode.removeChild(dot); }
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ---------- run reconciliation ---------- */
+  function bump(n){ hubTotal+=n; hubCount.textContent=hubTotal.toLocaleString('en-US'); }
+
+  function run(){
+    if(running) return;
+    running=true; runBtn.disabled=true; runBtn.textContent='Reconciling…';
+    var p=paths[current];
+    animateDot(p,{dur:1100}); animateDot(p,{dur:1100,delay:230,color:'#A6722A'}); animateDot(p,{dur:1100,delay:460,color:'#2F6B4F'});
+    var lines=(LOG[current]||[]).slice(), i=0;
+    var startDelay=RM?0:620;
+    setTimeout(function step(){
+      if(i<lines.length){
+        addLine(tok(lines[i])); bump(17+Math.floor(Math.random()*40)); i++;
+        setTimeout(step,RM?40:330);
+      }else{
+        addLine('✓ RECONCILED — 0 DISCREPANCIES','ok');
+        runBtn.disabled=false; runBtn.textContent='Run again'; running=false;
+      }
+    }, startDelay);
+  }
+
+  /* ---------- events ---------- */
+  chips.forEach(function(c){
+    c.addEventListener('click',function(){ select(c.dataset.key); });
+    c.addEventListener('mouseenter',function(){ var p=paths[c.dataset.key]; if(p&&c.dataset.key!==current) p.classList.add('hover'); });
+    c.addEventListener('mouseleave',function(){ var p=paths[c.dataset.key]; if(p) p.classList.remove('hover'); });
+  });
+  if(runBtn) runBtn.addEventListener('click',run);
+
+  Array.prototype.forEach.call(document.querySelectorAll('.mono-tile[data-key]'),function(t){
+    t.addEventListener('click',function(){
+      var key=t.dataset.key;
+      document.getElementById('map').scrollIntoView({behavior:RM?'auto':'smooth',block:'center'});
+      select(key);
+      var node=document.querySelector('.node[data-key="'+key+'"]');
+      if(node&&!RM){ node.classList.remove('flash'); void node.offsetWidth; node.classList.add('flash'); setTimeout(function(){node.classList.remove('flash');},2000); }
+    });
+  });
+
+  /* ---------- ambient traffic ---------- */
+  function ambient(){
+    if(!RM && !document.hidden){
+      var keys=Object.keys(paths);
+      if(keys.length){ var k=keys[Math.floor(Math.random()*keys.length)]; animateDot(paths[k],{dur:1700,color:'rgba(166,114,42,.85)'}); }
+    }
+    setTimeout(ambient,2600+Math.random()*1900);
+  }
+
+  /* ---------- hub ticker ---------- */
+  setInterval(function(){ if(!document.hidden) bump(2+Math.floor(Math.random()*7)); },900);
+
+  /* ---------- scramble ---------- */
+  var glyphs='§#%&$0123456789ABCDEF·';
+  function scramble(el){
+    var text=el.dataset.text||el.textContent; el.dataset.text=text;
+    if(RM){ el.textContent=text; return; }
+    var i=0,len=text.length;
+    var iv=setInterval(function(){
+      i+=Math.max(1,Math.round(len/16));
+      var out='';
+      for(var j=0;j<len;j++){ out+= j<i ? text[j] : (text[j]===' '?' ':glyphs[Math.floor(Math.random()*glyphs.length)]); }
+      el.textContent=out;
+      if(i>=len){ clearInterval(iv); el.textContent=text; }
+    },34);
+  }
+
+  /* ---------- counters ---------- */
+  function runCounters(scope){
+    Array.prototype.forEach.call(scope.querySelectorAll('[data-count]'),function(el){
+      if(el.dataset.done) return; el.dataset.done='1';
+      var target=parseFloat(el.dataset.count), dec=parseInt(el.dataset.dec||'0',10);
+      if(RM){ el.textContent=target.toFixed(dec); return; }
+      var t0=performance.now(), dur=1500;
+      function step(t){
+        var k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+        el.textContent=(target*e).toFixed(dec);
+        if(k<1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  /* ---------- reveal observer ---------- */
+  var revealEls=document.querySelectorAll('[data-reveal]');
+  if('IntersectionObserver' in window && !RM){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(!e.isIntersecting) return;
+        e.target.classList.add('in');
+        Array.prototype.forEach.call(e.target.querySelectorAll('[data-scramble]'),scramble);
+        if(e.target.querySelectorAll('[data-count]').length) runCounters(e.target);
+        if(e.target.classList.contains('statboard')) e.target.classList.add('grow');
+        io.unobserve(e.target);
+      });
+    },{threshold:.18});
+    revealEls.forEach(function(el){ io.observe(el); });
+  }else{
+    revealEls.forEach(function(el){ el.classList.add('in'); });
+    document.querySelectorAll('[data-scramble]').forEach(function(el){ el.textContent=el.dataset.text||el.textContent; });
+    runCounters(document);
+    var sb=document.getElementById('statboard'); if(sb) sb.classList.add('grow');
+  }
+
+  /* ---------- init ---------- */
+  select('netsuite',{seed:false});
+  addLine('connected · schema mapped · last sync 4 min ago','dim');
+  buildPaths();
+  setTimeout(buildPaths,120);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(buildPaths);
+  window.addEventListener('resize',debounce(buildPaths,160));
+  setTimeout(ambient,1800);
+})();
+</script>
+</body>
+</html>

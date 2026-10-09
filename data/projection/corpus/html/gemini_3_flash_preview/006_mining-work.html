@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TerraSync | Mine Operations Scheduler</title>
+    <style>
+        :root {
+            --color-bg-base: #0f1115;
+            --color-bg-surface: #1a1d23;
+            --color-bg-elevated: #242831;
+            --color-border-subtle: #2d333d;
+            --color-border-muted: #3f4756;
+            --color-text-primary: #e1e4e8;
+            --color-text-secondary: #9aa5b1;
+            --color-text-muted: #626d7d;
+            --color-accent: #ffb400;
+            --color-accent-hover: #ffc433;
+            --color-danger: #ff4d4d;
+            --color-warning: #ff8c00;
+            --color-success: #28a745;
+            --color-info: #007bff;
+            
+            --font-size-xs: 0.7rem;
+            --font-size-sm: 0.8125rem;
+            --font-size-md: 0.9375rem;
+            --font-size-lg: 1.1rem;
+            --font-size-xl: 1.5rem;
+
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2.5rem;
+
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --radius-lg: 8px;
+
+            --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.5);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.6);
+
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--color-bg-base);
+            color: var(--color-text-primary);
+            font-family: var(--font-main);
+            font-size: var(--font-size-md);
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        /* Layout Structure */
+        .app-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            grid-template-rows: 64px 1fr;
+            height: 100vh;
+            max-width: 1280px;
+            margin: 0 auto;
+            border-left: 1px solid var(--color-border-subtle);
+            border-right: 1px solid var(--color-border-subtle);
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background-color: var(--color-bg-surface);
+            border-bottom: 1px solid var(--color-border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--spacing-lg);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 700;
+            font-size: var(--font-size-lg);
+            color: var(--color-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .exit-button {
+            background: transparent;
+            border: 1px solid var(--color-border-muted);
+            color: var(--color-text-secondary);
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all 0.2s;
+        }
+
+        .exit-button:hover {
+            background-color: var(--color-bg-elevated);
+            color: var(--color-text-primary);
+        }
+
+        .sidebar {
+            grid-column: 1;
+            background-color: var(--color-bg-surface);
+            border-right: 1px solid var(--color-border-subtle);
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .main-content {
+            grid-column: 2;
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        /* Components */
+        .section-title {
+            font-size: var(--font-size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-muted);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card {
+            background-color: var(--color-bg-elevated);
+            border: 1px solid var(--color-border-subtle);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-sm);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-value {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--color-accent);
+            font-family: var(--font-mono);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+        }
+
+        /* Collision List */
+        .collision-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .collision-item {
+            padding: var(--spacing-sm);
+            background-color: rgba(255, 77, 77, 0.05);
+            border-left: 3px solid var(--color-danger);
+            font-size: var(--font-size-sm);
+        }
+
+        .collision-meta {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-muted);
+            margin-top: var(--spacing-xs);
+        }
+
+        /* Small Lists */
+        .dense-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .dense-list-item {
+            font-size: var(--font-size-sm);
+            display: flex;
+            justify-content: space-between;
+            padding: var(--spacing-xs) 0;
+            border-bottom: 1px solid var(--color-border-subtle);
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-warning { background-color: var(--color-warning); color: #000; }
+        .badge-success { background-color: var(--color-success); color: #fff; }
+        .badge-info { background-color: var(--color-info); color: #fff; }
+
+        /* Main Table Registry */
+        .registry-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            min-height: 0;
+        }
+
+        .registry-table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--color-border-subtle);
+            border-radius: var(--radius-md);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+            text-align: left;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: var(--color-bg-elevated);
+            z-index: 10;
+        }
+
+        th {
+            padding: var(--spacing-md);
+            border-bottom: 2px solid var(--color-border-subtle);
+            color: var(--color-text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: var(--font-size-xs);
+        }
+
+        td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--color-border-subtle);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background-color: var(--color-bg-elevated);
+        }
+
+        .id-cell { font-family: var(--font-mono); color: var(--color-text-secondary); }
+        .priority-high { color: var(--color-danger); font-weight: bold; }
+
+        /* Controls / Pagination */
+        .registry-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+        }
+
+        .pagination {
+            display: flex;
+            gap: var(--spacing-xs);
+            align-items: center;
+        }
+
+        .pager-btn {
+            background: var(--color-bg-elevated);
+            border: 1px solid var(--color-border-muted);
+            color: var(--color-text-primary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+        }
+
+        .pager-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .pager-btn.active {
+            background: var(--color-accent);
+            color: var(--color-bg-base);
+            border-color: var(--color-accent);
+        }
+
+        select, input {
+            background: var(--color-bg-elevated);
+            border: 1px solid var(--color-border-muted);
+            color: var(--color-text-primary);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+        }
+
+        .collision-tag {
+            background-color: rgba(255, 77, 77, 0.2);
+            color: var(--color-danger);
+            padding: 2px 4px;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--color-border-muted); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header class="header" role="banner">
+            <div class="brand">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-top: -2px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                TerraSync Operations
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
+                <div style="text-align: right">
+                    <div style="font-size: var(--font-size-xs); color: var(--color-text-muted);">Current Asset</div>
+                    <div style="font-size: var(--font-size-sm); font-weight: 600;">Kambalda South - Sector 4</div>
+                </div>
+                <button class="exit-button">Back to Fleet</button>
+            </div>
+        </header>
+
+        <aside class="sidebar" role="complementary">
+            <section aria-labelledby="status-title">
+                <h2 id="status-title" class="section-title">Shift Performance</h2>
+                <div class="stats-grid">
+                    <div class="card stat-item">
+                        <span class="stat-label">Active Collisions</span>
+                        <span class="stat-value" style="color: var(--color-danger);">04</span>
+                    </div>
+                    <div class="card stat-item">
+                        <span class="stat-label">Fleet Utilization</span>
+                        <span class="stat-value">91%</span>
+                    </div>
+                    <div class="card stat-item">
+                        <span class="stat-label">Throughput (t/h)</span>
+                        <span class="stat-value">1,420</span>
+                    </div>
+                    <div class="card stat-item">
+                        <span class="stat-label">Safety Score</span>
+                        <span class="stat-value" style="color: var(--color-success);">9.8</span>
+                    </div>
+                </div>
+            </section>
+
+            <section aria-labelledby="collisions-title">
+                <h2 id="collisions-title" class="section-title">Critical Overlaps <span class="badge badge-warning">High Risk</span></h2>
+                <div class="collision-list">
+                    <div class="card collision-item" role="alert">
+                        <strong>Excavation E-12 vs Haul Path A</strong>
+                        <div class="collision-meta">T-Minus 14:00 • 3 Vehicles Affected</div>
+                    </div>
+                    <div class="card collision-item" role="alert">
+                        <strong>Blasting Zone B-42 Proximity</strong>
+                        <div class="collision-meta">T-Minus 45:00 • Drill Rig LD-04</div>
+                    </div>
+                </div>
+            </section>
+
+            <section aria-labelledby="equipment-title">
+                <h2 id="equipment-title" class="section-title">Available Heavy Assets</h2>
+                <div class="card">
+                    <ul class="dense-list">
+                        <li class="dense-list-item">
+                            <span>CAT 797F (TR-092)</span>
+                            <span class="badge badge-success">Idle</span>
+                        </li>
+                        <li class="dense-list-item">
+                            <span>Komatsu PC8000</span>
+                            <span class="badge badge-info">Moving</span>
+                        </li>
+                        <li class="dense-list-item">
+                            <span>Sandvik DR410i</span>
+                            <span class="badge badge-warning">Maint</span>
+                        </li>
+                        <li class="dense-list-item">
+                            <span>Hitachi EX5600</span>
+                            <span class="badge badge-success">Idle</span>
+                        </li>
+                        <li class="dense-list-item">
+                            <span>P&H 4100XPC</span>
+                            <span class="badge badge-info">Active</span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section aria-labelledby="personnel-title">
+                <h2 id="personnel-title" class="section-title">Field Supervisors</h2>
+                <div class="card">
+                    <ul class="dense-list">
+                        <li class="dense-list-item"><span>M. Henderson</span> <span style="color: var(--color-text-muted)">Sector Alpha</span></li>
+                        <li class="dense-list-item"><span>J. Wu</span> <span style="color: var(--color-text-muted)">Blasting</span></li>
+                        <li class="dense-list-item"><span>S. Rodriguez</span> <span style="color: var(--color-text-muted)">Haulage</span></li>
+                    </ul>
+                </div>
+            </section>
+        </aside>
+
+        <main class="main-content" role="main">
+            <section class="registry-container" aria-labelledby="registry-title">
+                <div class="registry-controls">
+                    <h2 id="registry-title" style="font-size: var(--font-size-lg); font-weight: 600;">Work Order Registry</h2>
+                    <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+                        <label for="page-size" style="font-size: var(--font-size-xs); color: var(--color-text-muted);">Rows:</label>
+                        <select id="page-size" onchange="updatePageSize()">
+                            <option value="15">15</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                        </select>
+                        <input type="text" placeholder="Search work orders..." aria-label="Search">
+                    </div>
+                </div>
+
+                <div class="registry-table-wrapper">
+                    <table role="table">
+                        <thead>
+                            <tr role="row">
+                                <th role="columnheader">ID</th>
+                                <th role="columnheader">Priority</th>
+                                <th role="columnheader">Activity Description</th>
+                                <th role="columnheader">Location</th>
+                                <th role="columnheader">Resource</th>
+                                <th role="columnheader">Start Time</th>
+                                <th role="columnheader">End Time</th>
+                                <th role="columnheader">Collision</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registry-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="registry-controls" style="border-top: 1px solid var(--color-border-subtle); padding-top: var(--spacing-md);">
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);" id="page-info">
+                        Showing 1 to 25 of 142 entries
+                    </div>
+                    <nav class="pagination" role="navigation" aria-label="Work order pagination">
+                        <button class="pager-btn" aria-label="Previous page" onclick="changePage(-1)" id="prev-btn">&lt;</button>
+                        <button class="pager-btn active">1</button>
+                        <button class="pager-btn">2</button>
+                        <button class="pager-btn">3</button>
+                        <span style="color: var(--color-text-muted);">...</span>
+                        <button class="pager-btn">6</button>
+                        <button class="pager-btn" aria-label="Next page" onclick="changePage(1)" id="next-btn">&gt;</button>
+                    </nav>
+                </div>
+            </section>
+
+            <section style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                <div class="card" style="border-top: 4px solid var(--color-info);">
+                    <h3 class="section-title">Resource Utilization Preview</h3>
+                    <div style="height: 100px; display: flex; align-items: flex-end; gap: 4px; padding-top: 10px;">
+                        <!-- Mock bar chart -->
+                        <div style="flex: 1; background: var(--color-border-muted); height: 40%;"></div>
+                        <div style="flex: 1; background: var(--color-border-muted); height: 60%;"></div>
+                        <div style="flex: 1; background: var(--color-accent); height: 85%;"></div>
+                        <div style="flex: 1; background: var(--color-accent); height: 90%;"></div>
+                        <div style="flex: 1; background: var(--color-border-muted); height: 50%;"></div>
+                        <div style="flex: 1; background: var(--color-border-muted); height: 30%;"></div>
+                        <div style="flex: 1; background: var(--color-border-muted); height: 45%;"></div>
+                        <div style="flex: 1; background: var(--color-accent); height: 75%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: 8px;">
+                        <span>06:00</span><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span>
+                    </div>
+                </div>
+
+                <div class="card" style="border-top: 4px solid var(--color-warning);">
+                    <h3 class="section-title">Environmental Constraints</h3>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                        <div style="display: flex; justify-content: space-between; font-size: var(--font-size-sm);">
+                            <span>Dust Levels (PM10)</span>
+                            <span style="color: var(--color-success);">Optimal - 14µg/m³</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: var(--font-size-sm);">
+                            <span>Wind Speed</span>
+                            <span style="color: var(--color-warning);">Caution - 22kt NW</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: var(--font-size-sm);">
+                            <span>Ground Stability</span>
+                            <span style="color: var(--color-success);">Nominal</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const activities = [
+            "Primary Crushing Intake", "Ore Haulage Run", "Bench 420-A Drilling", "Tailing Dam Inspection",
+            "Emergency Pump Service", "Blasting Preparation", "Shaft 2 Ventilation Check", "Conveyor Belt Alignment",
+            "Heavy Asset Refuelling", "Slurry Pipeline Flush", "Substation Maintenance", "Explosives Transport",
+            "Dewatering System Monitor", "Rock Bolt Installation", "Seismic Sensor Calibration", "Lube Bay Service"
+        ];
+
+        const locations = [
+            "Level -420m", "North Pit Wall", "Stockpile C", "Processing Plant B", "Portal 4 Exit", 
+            "Main Decline", "Access Road 14", "West Tailings", "Primary Crusher", "Explosives Magazine"
+        ];
+
+        const assets = [
+            "TR-092 (Haul)", "SH-012 (Shovel)", "DR-004 (Drill)", "GR-021 (Grader)", "LV-003 (Support)",
+            "CR-001 (Crusher)", "EX-560 (Excavator)", "WT-011 (Water)"
+        ];
+
+        let currentPage = 1;
+        let pageSize = 25;
+        const totalItems = 142;
+
+        function generateData() {
+            const tbody = document.getElementById('registry-body');
+            tbody.innerHTML = '';
+
+            const start = (currentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, totalItems);
+
+            for (let i = start; i < end; i++) {
+                const tr = document.createElement('tr');
+                tr.setAttribute('role', 'row');
+                
+                const hasCollision = Math.random() > 0.85;
+                const priority = (i % 7 === 0) ? "CRITICAL" : (i % 3 === 0 ? "HIGH" : "NORMAL");
+                const pClass = priority === "CRITICAL" ? "priority-high" : "";
+
+                tr.innerHTML = `
+                    <td class="id-cell">WO-${10000 + i}</td>
+                    <td class="${pClass}">${priority}</td>
+                    <td>${activities[i % activities.length]}</td>
+                    <td>${locations[i % locations.length]}</td>
+                    <td>${assets[i % assets.length]}</td>
+                    <td style="font-family: var(--font-mono)">14:00</td>
+                    <td style="font-family: var(--font-mono)">16:30</td>
+                    <td>${hasCollision ? '<span class="collision-tag">OVERLAP</span>' : '<span style="color: var(--color-text-muted)">-</span>'}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById('page-info').innerText = `Showing ${start + 1} to ${end} of ${totalItems} entries`;
+            document.getElementById('prev-btn').disabled = currentPage === 1;
+            document.getElementById('next-btn').disabled = end >= totalItems;
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            generateData();
+        }
+
+        function updatePageSize() {
+            pageSize = parseInt(document.getElementById('page-size').value);
+            currentPage = 1;
+            generateData();
+        }
+
+        // Initialize
+        generateData();
+    </script>
+</body>
+</html>
+

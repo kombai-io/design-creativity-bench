@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MorrowSpec — Build and test before the backend is ready</title>
+<meta name="description" content="MorrowSpec creates realistic, shareable mock APIs from your OpenAPI specification so frontend, backend, QA, and product can build and test before backend services are ready. Join the private beta waitlist.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060B18;
+  --bg2:#0A1228;
+  --card:#0D1730;
+  --card2:#111D3A;
+  --border:rgba(148,163,184,.16);
+  --border-strong:rgba(148,163,184,.28);
+  --text:#EAF0FB;
+  --muted:#9AA8C3;
+  --muted2:#6B7A99;
+  --lime:#D4FF3F;
+  --lime-hover:#E4FF70;
+  --lime-ink:#101A02;
+  --teal:#2DD4BF;
+  --teal-dim:rgba(45,212,191,.12);
+  --violet:#A78BFA;
+  --violet-dim:rgba(167,139,250,.12);
+  --amber:#FBBF24;
+  --red:#FB7185;
+  --green:#34D399;
+  --radius:16px;
+  --radius-sm:10px;
+  --max:1140px;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji";
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  --shadow:0 20px 60px rgba(0,0,0,.5);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--lime);color:#0A0F00}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+img,svg{display:block;max-width:100%}
+.skip{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.skip:focus{left:12px;top:12px;width:auto;height:auto;background:var(--lime);color:#000;padding:10px 16px;border-radius:8px;z-index:200;font-weight:700}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+:focus-visible{outline:2px solid var(--lime);outline-offset:3px;border-radius:6px}
+/* BACKGROUND DECOR */
+.bg-decor{position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(700px 420px at 15% -2%, rgba(45,212,191,.14), transparent 60%),
+  radial-gradient(800px 500px at 85% 0%, rgba(139,92,246,.18), transparent 60%),
+  radial-gradient(600px 500px at 50% 35%, rgba(212,255,63,.05), transparent 60%),
+  linear-gradient(var(--bg), var(--bg));
+}
+.bg-grid{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;background-image:linear-gradient(rgba(148,163,184,.07) 1px, transparent 1px),linear-gradient(90deg, rgba(148,163,184,.07) 1px, transparent 1px);background-size:44px 44px;mask-image:radial-gradient(900px 520px at 50% 0%, black 30%, transparent 75%)}
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(6,11,24,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:68px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:18px}
+.brand-mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--lime) 0%,var(--teal) 100%);display:grid;place-items:center;color:#06120F;font-weight:900;font-size:18px;flex-shrink:0}
+.brand small{font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--border);padding:3px 8px;border-radius:999px;margin-left:2px}
+.nav-links{display:flex;align-items:center;gap:28px;font-size:14.5px;color:var(--muted)}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{display:flex;align-items:center;gap:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:15px;border-radius:999px;padding:12px 22px;border:1px solid transparent;cursor:pointer;transition:transform .15s ease, background .15s ease, border-color .15s ease;line-height:1;white-space:nowrap}
+.btn-lime{background:var(--lime);color:var(--lime-ink)}
+.btn-lime:hover{background:var(--lime-hover);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border-strong)}
+.btn-ghost:hover{border-color:var(--text);background:rgba(255,255,255,.06)}
+.btn-sm{padding:10px 18px;font-size:14px}
+.hamburger{display:none;background:transparent;border:1px solid var(--border-strong);border-radius:10px;color:var(--text);padding:9px 11px;cursor:pointer}
+/* HERO */
+.hero{padding:64px 0 28px;position:relative}
+.hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:48px;align-items:start}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--lime);background:rgba(212,255,63,.09);border:1px solid rgba(212,255,63,.22);padding:8px 14px;border-radius:999px}
+.eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 4px rgba(212,255,63,.18);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(212,255,63,.18)}50%{box-shadow:0 0 0 7px rgba(212,255,63,.08)}}
+h1{font-size:clamp(38px,5.2vw,62px);line-height:.98;letter-spacing:-.04em;margin:22px 0 18px;font-weight:800}
+h1 .grad{background:linear-gradient(92deg,var(--lime) 10%,var(--teal) 45%,var(--violet) 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:18px;color:var(--muted);max-width:540px;line-height:1.6}
+.lead strong{color:var(--text);font-weight:700}
+.hero-checks{display:flex;flex-wrap:wrap;gap:10px 18px;margin:20px 0 26px;font-size:14.5px;color:#CBD5E8}
+.hero-checks span{display:inline-flex;align-items:center;gap:8px}
+.tick{width:20px;height:20px;border-radius:50%;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.35);display:inline-grid;place-items:center;color:var(--green);font-size:12px;font-weight:900;flex-shrink:0}
+.hero-form{display:flex;gap:10px;max-width:520px;background:rgba(255,255,255,.04);border:1px solid var(--border-strong);padding:6px;border-radius:999px}
+.hero-form input{flex:1;background:transparent;border:0;color:var(--text);padding:12px 16px;font-size:15px;outline:none;min-width:0}
+.hero-form input::placeholder{color:var(--muted2)}
+.form-note{font-size:13px;color:var(--muted2);margin-top:12px}
+.form-note a{color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.hero-meta{display:flex;gap:22px;margin-top:22px;flex-wrap:wrap}
+.hero-meta div strong{display:block;font-size:20px;letter-spacing:-.02em}
+.hero-meta div span{font-size:13px;color:var(--muted2)}
+.inline-error{font-size:13.5px;color:var(--red);margin-top:10px;display:none}
+.inline-success{font-size:14px;color:var(--lime);margin-top:10px;display:none;background:rgba(212,255,63,.08);border:1px solid rgba(212,255,63,.25);padding:10px 14px;border-radius:10px}
+/* MOCK WINDOW */
+.mock-shell{background:linear-gradient(180deg,#0F1A33,#0A132A);border:1px solid var(--border-strong);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.mock-top{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+.dots{display:flex;gap:7px}
+.dots i{width:11px;height:11px;border-radius:50%;display:block}
+.dots i:nth-child(1){background:#FB7185}.dots i:nth-child(2){background:#FBBF24}.dots i:nth-child(3){background:#34D399}
+.urlbar{flex:1;display:flex;align-items:center;gap:8px;background:#060D1F;border:1px solid var(--border);border-radius:999px;padding:7px 12px;font-family:var(--font-mono);font-size:12.5px;color:#9EEAD9;overflow:hidden;white-space:nowrap}
+.urlbar .lock{color:var(--green);flex-shrink:0}
+.urlbar code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer;flex-shrink:0}
+.copy-btn:hover{background:rgba(255,255,255,.12)}
+.mock-body{display:grid;grid-template-columns:1fr 1fr;min-height:360px}
+.mock-left{padding:18px;border-right:1px solid var(--border);background:rgba(0,0,0,.18)}
+.mock-right{padding:18px;background:rgba(45,212,191,.03)}
+.pane-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);font-weight:800;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.live{display:inline-flex;align-items:center;gap:6px;color:var(--green);background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);padding:3px 8px;border-radius:999px;font-size:11px;letter-spacing:.06em}
+.live i{width:7px;height:7px;background:var(--green);border-radius:50%;display:block;animation:pulse 1.8s infinite}
+.code{font-family:var(--font-mono);font-size:12.8px;line-height:1.7;color:#CBD5E8;background:#060D1F;border:1px solid var(--border);border-radius:12px;padding:14px;overflow:auto}
+.code .k{color:var(--violet)}.code .s{color:var(--lime)}.code .c{color:#5B6B8C;font-style:italic}.code .n{color:var(--teal)}.code .p{color:#8EA0C2}
+.sync-banner{display:flex;align-items:center;gap:10px;margin-top:12px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.25);border-radius:12px;padding:10px 12px;font-size:13px}
+.sync-banner .ico{width:28px;height:28px;border-radius:8px;background:var(--teal);color:#04211D;display:grid;place-items:center;font-weight:900;flex-shrink:0}
+.sync-banner strong{color:var(--text)} .sync-banner span{color:var(--muted)}
+.scenarios{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px}
+.sc-btn{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:7px 11px;border-radius:999px;border:1px solid var(--border-strong);background:transparent;color:var(--muted);cursor:pointer}
+.sc-btn[aria-pressed="true"]{background:var(--lime);color:#0A0F00;border-color:var(--lime)}
+.resp-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.status{font-family:var(--font-mono);font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px}
+.st-200{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.35)}
+.st-404,.st-429,.st-500{background:rgba(251,113,133,.12);color:var(--red);border:1px solid rgba(251,113,133,.35)}
+.latency{font-family:var(--font-mono);font-size:12px;color:var(--muted2)}
+.send-row{display:flex;gap:8px;margin-top:12px}
+.send-btn{flex:1;background:var(--text);color:#060B18;border:0;border-radius:10px;padding:10px;font-weight:800;font-size:13.5px;cursor:pointer}
+.send-btn:hover{background:#fff}
+.send-btn:disabled{opacity:.6;cursor:wait}
+/* STRIP */
+.strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(255,255,255,.015);margin-top:36px}
+.strip-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 24px;flex-wrap:wrap}
+.strip p{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);font-weight:800}
+.teams-mini{display:flex;gap:10px;flex-wrap:wrap}
+.teams-mini span{font-size:13.5px;font-weight:700;color:#CBD5E8;border:1px solid var(--border);background:rgba(255,255,255,.03);padding:8px 14px;border-radius:999px;display:inline-flex;gap:8px;align-items:center}
+/* SECTIONS */
+section.block{padding:72px 0}
+.kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--teal);margin-bottom:12px}
+h2{font-size:clamp(28px,3.6vw,42px);letter-spacing:-.03em;line-height:1.05;margin-bottom:14px}
+.sub{color:var(--muted);font-size:17px;max-width:680px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));border:1px solid var(--border);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden}
+.card:hover{border-color:var(--border-strong)}
+.card .icon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:19px;margin-bottom:14px;border:1px solid var(--border)}
+.card h3{font-size:17px;margin-bottom:8px;letter-spacing:-.01em}
+.card p{font-size:14.5px;color:var(--muted);line-height:1.6}
+.card .tag{position:absolute;top:16px;right:16px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--lime);background:rgba(212,255,63,.1);border:1px solid rgba(212,255,63,.25);padding:4px 9px;border-radius:999px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px;counter-reset:step}
+.step{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;position:relative}
+.step-num{font-family:var(--font-mono);font-size:12px;font-weight:800;color:var(--lime-ink);background:var(--lime);display:inline-block;padding:5px 11px;border-radius:999px;margin-bottom:14px}
+.step h3{font-size:18px;margin-bottom:8px}
+.step p{font-size:14.5px;color:var(--muted)}
+.step code{font-family:var(--font-mono);font-size:12.5px;background:#060D1F;border:1px solid var(--border);padding:2px 7px;border-radius:6px;color:var(--teal)}
+.step .mini{margin-top:14px;background:#060D1F;border:1px solid var(--border);border-radius:10px;padding:12px;font-family:var(--font-mono);font-size:12.5px;color:#AEC0DD;line-height:1.6}
+/* DEMO */
+.demo-wrap{display:grid;grid-template-columns:360px 1fr;gap:16px;margin-top:32px}
+.demo-controls{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.demo-controls h3{font-size:16px;margin-bottom:6px}
+.demo-controls p{font-size:14px;color:var(--muted);margin-bottom:16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px}
+.select,.endpoint-pick{width:100%;background:#060D1F;border:1px solid var(--border-strong);color:var(--text);border-radius:10px;padding:11px 12px;font-family:var(--font-mono);font-size:13px}
+.sc-list{display:grid;gap:8px}
+.sc-item{display:flex;align-items:center;gap:10px;text-align:left;background:#060D1F;border:1px solid var(--border);border-radius:12px;padding:11px 12px;cursor:pointer;color:var(--text);width:100%}
+.sc-item:hover{border-color:var(--border-strong)}
+.sc-item[aria-pressed="true"]{border-color:var(--lime);background:rgba(212,255,63,.07)}
+.sc-item .code-chip{font-family:var(--font-mono);font-size:12px;font-weight:800;padding:4px 8px;border-radius:7px;flex-shrink:0}
+.c200{background:rgba(52,211,153,.15);color:var(--green)} .c404,.c500,.c429{background:rgba(251,113,133,.15);color:var(--red)}
+.sc-item b{font-size:14px;display:block} .sc-item small{font-size:12.5px;color:var(--muted);display:block}
+.demo-output{background:#050A18;border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.out-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
+.out-body{padding:18px;display:grid;gap:14px}
+.req{font-family:var(--font-mono);font-size:13px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.2);border-radius:10px;padding:12px 14px;color:#9EEAD9;overflow:auto;white-space:nowrap}
+.resp{font-family:var(--font-mono);font-size:13px;line-height:1.7;background:#02060F;border:1px solid var(--border);border-radius:12px;padding:16px;min-height:240px;overflow:auto;white-space:pre}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--lime);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* PERSONAS */
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:32px}
+.persona{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.persona h3{font-size:16px;margin:12px 0 8px}
+.persona ul{list-style:none;display:grid;gap:8px;margin-top:12px}
+.persona li{font-size:13.5px;color:var(--muted);display:flex;gap:8px;line-height:1.5}
+.persona li::before{content:"✓";color:var(--lime);font-weight:900;flex-shrink:0}
+.avatar{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:900;font-size:16px}
+/* COMPARE */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px}
+.cmp{border-radius:var(--radius);padding:26px;border:1px solid var(--border)}
+.cmp.bad{background:rgba(251,113,133,.04);border-color:rgba(251,113,133,.2)}
+.cmp.good{background:rgba(212,255,63,.05);border-color:rgba(212,255,63,.25);position:relative;overflow:hidden}
+.cmp h3{font-size:16px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.cmp ul{list-style:none;display:grid;gap:12px}
+.cmp li{font-size:14.5px;display:flex;gap:10px;line-height:1.5}
+.cmp.bad li{color:var(--muted)} .cmp.good li{color:#DDE6F5}
+.x{color:var(--red);font-weight:900} .y{color:var(--lime);font-weight:900}
+/* BETA */
+.beta-box{display:grid;grid-template-columns:1.1fr .9fr;gap:0;margin-top:32px;border:1px solid var(--border-strong);border-radius:20px;overflow:hidden;background:var(--card)}
+.beta-left{padding:32px}
+.beta-right{padding:32px;background:#060D1F;border-left:1px solid var(--border)}
+.check-list{list-style:none;display:grid;gap:12px;margin-top:18px}
+.check-list li{display:flex;gap:10px;font-size:14.5px;color:#D3DCEF}
+.check-list li span.ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;flex-shrink:0;margin-top:1px}
+.ok{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.no{background:rgba(148,163,184,.1);color:var(--muted2);border:1px solid var(--border)}
+.beta-badge{display:inline-flex;align-items:center;gap:8px;background:var(--lime);color:var(--lime-ink);font-weight:800;font-size:13px;padding:7px 13px;border-radius:999px}
+/* WAITLIST */
+.wait-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:32px;align-items:start}
+.wait-steps{display:grid;gap:14px;margin-top:20px}
+.wstep{display:flex;gap:14px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:16px}
+.wstep b{display:flex;width:30px;height:30px;border-radius:50%;background:rgba(212,255,63,.12);border:1px solid rgba(212,255,63,.3);color:var(--lime);align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.wstep p{font-size:14px;color:var(--muted)} .wstep strong{color:var(--text)}
+.form-card{background:linear-gradient(180deg,#101B38,#0A132A);border:1px solid var(--border-strong);border-radius:20px;padding:28px;box-shadow:var(--shadow)}
+.form-card h3{font-size:20px;letter-spacing:-.02em} .form-card>p{font-size:14px;color:var(--muted);margin:6px 0 18px}
+.form-card label{display:block;font-size:13px;font-weight:700;margin:14px 0 7px}
+.form-card input,.form-card select{width:100%;background:#060D1F;border:1px solid var(--border-strong);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:inherit}
+.form-card input:focus,.form-card select:focus{border-color:var(--lime);outline:none}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full-btn{width:100%;margin-top:18px;padding:15px;font-size:16px}
+.micro{font-size:12.5px;color:var(--muted2);text-align:center;margin-top:12px}
+.success-panel{display:none;text-align:center;padding:12px 0}
+.success-panel .big{width:64px;height:64px;border-radius:50%;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.35);display:grid;place-items:center;font-size:28px;margin:0 auto 14px;color:var(--green)}
+.success-panel h4{font-size:19px;margin-bottom:8px}
+.success-panel p{font-size:14.5px;color:var(--muted)}
+.queue-num{display:inline-block;font-family:var(--font-mono);background:rgba(212,255,63,.1);border:1px solid rgba(212,255,63,.3);color:var(--lime);padding:6px 14px;border-radius:999px;font-weight:800;margin-top:12px}
+/* FAQ */
+.faq{margin-top:28px;display:grid;gap:10px;max-width:800px}
+details{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:0;overflow:hidden}
+details[open]{border-color:var(--border-strong)}
+summary{list-style:none;cursor:pointer;padding:18px 20px;font-weight:700;font-size:15.5px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary .plus{width:28px;height:28px;border-radius:50%;border:1px solid var(--border-strong);display:grid;place-items:center;flex-shrink:0;font-size:18px;color:var(--lime);line-height:1}
+details[open] .plus{transform:rotate(45deg);background:var(--lime);color:#000;border-color:var(--lime)}
+details .ans{padding:0 20px 20px;color:var(--muted);font-size:14.5px;line-height:1.65}
+details .ans code{font-family:var(--font-mono);font-size:13px;color:var(--teal);background:#060D1F;padding:2px 6px;border-radius:6px;border:1px solid var(--border)}
+/* CTA BAND */
+.band{margin:20px 0 0;background:linear-gradient(135deg,#D4FF3F 0%,#8FF5C6 50%,#5EEAD4 100%);border-radius:22px;padding:44px;color:#07120E;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.band h2{color:#07120E;margin-bottom:8px}
+.band p{color:rgba(7,18,14,.72);font-size:16px;max-width:520px;font-weight:500}
+.band .btn{background:#07120E;color:#E9FF6A}
+.band .btn:hover{background:#0E241B;transform:translateY(-1px)}
+/* FOOTER */
+footer{border-top:1px solid var(--border);margin-top:64px;background:#04081４;background:#040814}
+.foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:24px;padding:44px 0 28px}
+.foot-grid p{font-size:14px;color:var(--muted2);margin-top:12px;max-width:300px}
+.foot-grid h4{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:14px}
+.foot-grid ul{list-style:none;display:grid;gap:10px;font-size:14px;color:var(--muted)}
+.foot-grid ul a:hover{color:var(--text)}
+.foot-bottom{border-top:1px solid var(--border);padding:18px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted2)}
+.status-dot{display:inline-flex;align-items:center;gap:8px}
+.status-dot i{width:8px;height:8px;background:var(--green);border-radius:50%;display:block;box-shadow:0 0 0 4px rgba(52,211,153,.15)}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease, transform .6s ease}
+.reveal.visible{opacity:1;transform:none}
+/* RESPONSIVE */
+@media(max-width:980px){
+  .hero-grid{grid-template-columns:1fr}
+  .grid3{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr}
+  .demo-wrap{grid-template-columns:1fr}
+  .grid4{grid-template-columns:1fr 1fr}
+  .compare{grid-template-columns:1fr}
+  .beta-box{grid-template-columns:1fr} .beta-right{border-left:0;border-top:1px solid var(--border)}
+  .wait-grid{grid-template-columns:1fr}
+  .nav-links{display:none}
+  .hamburger{display:block}
+  .mobile-menu{display:none;border-top:1px solid var(--border);padding:12px 24px 18px;background:rgba(6,11,24,.98)}
+  .mobile-menu.open{display:grid;gap:4px}
+  .mobile-menu a{padding:12px 4px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:600}
+  .mock-body{grid-template-columns:1fr} .mock-left{border-right:0;border-bottom:1px solid var(--border)}
+  .foot-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .grid3,.grid4{grid-template-columns:1fr}
+  .hero{padding-top:36px}
+  .hero-form{flex-direction:column;border-radius:16px} .hero-form .btn{width:100%}
+  .form-row{grid-template-columns:1fr}
+  .foot-grid{grid-template-columns:1fr}
+  section.block{padding:52px 0}
+  .band{padding:30px 24px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important} html{scroll-behavior:auto} .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="bg-decor" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="MorrowSpec home">
+      <span class="brand-mark" aria-hidden="true">◈</span>
+      MorrowSpec <small>Beta</small>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#how">How it works</a>
+      <a href="#demo">Live demo</a>
+      <a href="#features">Features</a>
+      <a href="#teams">For teams</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="#waitlist" class="btn btn-ghost btn-sm" style="display:inline-flex">Sign in</a>
+      <a href="#waitlist" class="btn btn-lime btn-sm">Join waitlist →</a>
+      <button class="hamburger" id="hamburger" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">☰</button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#how">How it works</a>
+    <a href="#demo">Live demo</a>
+    <a href="#features">Features</a>
+    <a href="#teams">For teams</a>
+    <a href="#faq">FAQ</a>
+    <a href="#waitlist"><strong>Join waitlist →</strong></a>
+  </div>
+</header>
+
+<main id="main">
+<!-- HERO -->
+<div class="wrap hero" id="top">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow"><span class="dot"></span> Private beta · OpenAPI REST</span>
+      <h1>Build against your API <span class="grad">before it exists.</span></h1>
+      <p class="lead"><strong>MorrowSpec</strong> turns your OpenAPI specification into a realistic, hosted mock API — with real data, errors, and test scenarios — so your team can build and test while the backend is still being written.</p>
+      <div class="hero-checks">
+        <span><span class="tick">✓</span> No backend required</span>
+        <span><span class="tick">✓</span> Always in sync with your spec</span>
+        <span><span class="tick">✓</span> Shareable environments</span>
+      </div>
+      <form class="hero-form" id="heroForm" novalidate>
+        <label for="heroEmail" class="skip">Work email</label>
+        <input id="heroEmail" name="email" type="email" placeholder="you@company.com" autocomplete="email" required>
+        <button class="btn btn-lime" type="submit">Get beta access</button>
+      </form>
+      <div class="inline-error" id="heroError" role="alert">Please enter a valid work email to join the waitlist.</div>
+      <div class="inline-success" id="heroSuccess" role="status">✓ You're on the list! Check your inbox to confirm your spot.</div>
+      <p class="form-note">Free during private beta · No credit card · <a href="#faq">How is this different from static mocks?</a></p>
+      <div class="hero-meta" aria-label="Product highlights">
+        <div><strong>~30 sec</strong><span>from spec to live endpoint</span></div>
+        <div><strong>100%</strong><span>routes + schemas covered</span></div>
+        <div><strong>4 teams</strong><span>one shared environment</span></div>
+      </div>
+    </div>
+
+    <div class="mock-shell" role="img" aria-label="Example of MorrowSpec turning an OpenAPI spec into a live mock endpoint">
+      <div class="mock-top">
+        <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="urlbar"><span class="lock">🔒</span><code id="urlText">https://api.morrowspec.dev/e/acme-checkout/v2</code></div>
+        <button class="copy-btn" id="copyBtn" type="button">⧉ Copy</button>
+      </div>
+      <div class="mock-body">
+        <div class="mock-left">
+          <div class="pane-label"><span>◧ openapi.yaml → synced</span></div>
+          <div class="code" aria-hidden="true"><span class="c"># synced from GitHub · main · 2m ago</span><br><span class="k">paths:</span><br>&nbsp;&nbsp;<span class="s">/orders/{id}:</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">get:</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="p">responses:</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="n">'200':</span> Order<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="n">'404':</span> NotFound<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="n">'429':</span> RateLimited<br><span class="k">components:</span><br>&nbsp;&nbsp;<span class="p">schemas:</span> <span class="s">Order, Payment…</span></div>
+          <div class="sync-banner"><span class="ico">⇄</span><div><strong>Spec updated → mock redeployed</strong><br><span>v42 · automatic · no manual edits</span></div></div>
+        </div>
+        <div class="mock-right">
+          <div class="pane-label"><span>Live response</span><span class="live"><i></i> LIVE</span></div>
+          <div class="scenarios" role="group" aria-label="Preview scenarios">
+            <button class="sc-btn" type="button" data-sc="200" aria-pressed="true">200 OK</button>
+            <button class="sc-btn" type="button" data-sc="404" aria-pressed="false">404</button>
+            <button class="sc-btn" type="button" data-sc="429" aria-pressed="false">429</button>
+          </div>
+          <div class="code" id="heroCode" aria-live="polite"><span class="c">// GET /v1/orders/ord_8H2kQ</span><br>{<br>&nbsp;&nbsp;<span class="s">"id"</span>: <span class="s">"ord_8H2kQ"</span>,<br>&nbsp;&nbsp;<span class="s">"status"</span>: <span class="s">"paid"</span>,<br>&nbsp;&nbsp;<span class="s">"total"</span>: <span class="n">184.20</span>,<br>&nbsp;&nbsp;<span class="s">"items"</span>: <span class="n">3</span><br>}</div>
+          <div class="send-row"><button class="send-btn" type="button" id="heroSend">▶ Run request · 84ms</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="strip">
+  <div class="wrap strip-inner">
+    <p>One mock environment for the whole team</p>
+    <div class="teams-mini"><span>◐ Frontend</span><span>⬣ Backend</span><span>✓ QA &amp; Testing</span><span>◎ Product &amp; Design</span></div>
+  </div>
+</div>
+
+<!-- HOW -->
+<section class="block" id="how">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">How it works</div>
+    <h2>From spec to shareable API<br>in three steps.</h2>
+    <p class="sub">Stop hand-writing stubs or waiting on staging. Import what you already have — your spec — and MorrowSpec does the rest.</p></div>
+    <div class="steps">
+      <div class="step reveal"><span class="step-num">01</span><h3>Import or sync your spec</h3><p>Drop in an <code>openapi.yaml</code> or connect a repo. MorrowSpec validates, versions, and watches for changes.</p><div class="mini">$ npx morrowspec sync ./openapi.yaml<br><span style="color:#34D399">✓ Validated 48 paths · 132 schemas</span><br><span style="color:#5B6B8C">→ Watching main for changes…</span></div></div>
+      <div class="step reveal"><span class="step-num">02</span><h3>Get a hosted endpoint</h3><p>Instantly get a stable URL with realistic responses, errors, and test scenarios — no code to deploy.</p><div class="mini"><span style="color:#2DD4BF">GET</span> /v1/orders/ord_8H2kQ → <span style="color:#34D399">200</span><br><span style="color:#2DD4BF">GET</span> /v1/orders/missing → <span style="color:#FB7185">404</span><br><span style="color:#5B6B8C">?scenario=checkout-fails → 402</span></div></div>
+      <div class="step reveal"><span class="step-num">03</span><h3>Stay in sync automatically</h3><p>When the spec changes, your mock updates. Everyone — frontend, QA, product — tests against the latest contract.</p><div class="mini">main updated: <span style="color:#D4FF3F">+ POST /refunds</span><br><span style="color:#34D399">✓ Mock redeployed v43 · 0 breaking diffs</span><br><span style="color:#5B6B8C">Notified #checkout-frontend, QA env</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="block" id="demo" style="padding-top:0">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">Interactive preview</div>
+    <h2>Feel what a MorrowSpec mock is like.</h2>
+    <p class="sub">This is a simulated preview. Pick an endpoint and a scenario — just like your team would when testing happy paths and edge cases.</p></div>
+    <div class="demo-wrap reveal">
+      <div class="demo-controls">
+        <h3>Try a request</h3>
+        <p>No signup needed. This runs against a demo mock environment.</p>
+        <div class="field"><label for="endpointPick">Endpoint</label>
+          <select class="endpoint-pick" id="endpointPick">
+            <option value="GET /v1/orders/ord_8H2kQ">GET&nbsp;&nbsp;/v1/orders/{id}</option>
+            <option value="GET /v1/orders?limit=3">GET&nbsp;&nbsp;/v1/orders?limit=3</option>
+            <option value="POST /v1/orders">POST&nbsp;/v1/orders</option>
+          </select>
+        </div>
+        <div class="field"><label>Scenario</label>
+          <div class="sc-list" role="group" aria-label="Choose scenario">
+            <button class="sc-item" data-demo="success" aria-pressed="true"><span class="code-chip c200">200</span><span><b>Happy path — realistic data</b><small>Schema-valid order with items &amp; totals</small></span></button>
+            <button class="sc-item" data-demo="notfound" aria-pressed="false"><span class="code-chip c404">404</span><span><b>Not found</b><small>Typed error your UI must handle</small></span></button>
+            <button class="sc-item" data-demo="ratelimit" aria-pressed="false"><span class="code-chip c429">429</span><span><b>Rate limited</b><small>Test retries + backoff headers</small></span></button>
+            <button class="sc-item" data-demo="server" aria-pressed="false"><span class="code-chip c500">500</span><span><b>Checkout fails</b><small>Chaos scenario for resilience</small></span></button>
+          </div>
+        </div>
+        <button class="btn btn-lime full-btn" id="demoSend" type="button">Send request →</button>
+        <p class="micro">Latency simulated · Responses generated from OpenAPI schemas</p>
+      </div>
+      <div class="demo-output" aria-live="polite">
+        <div class="out-bar"><span id="outMethod">GET https://api.morrowspec.dev/e/demo/v2/v1/orders/ord_8H2kQ</span><span id="outStatus"><span class="status st-200">200 OK</span> <span class="latency">· 84ms</span></span></div>
+        <div class="out-body">
+          <div class="req" id="outReq">curl -H "x-morrow-scenario: happy-path" https://api.morrowspec.dev/e/demo/v2/v1/orders/ord_8H2kQ</div>
+          <div class="resp" id="outResp"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="block" id="features" style="padding-top:0">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">Why teams switch</div>
+    <h2>Realistic enough to build on.<br>Stable enough to test against.</h2>
+    <p class="sub">Not lorem ipsum. Not hardcoded JSON files. MorrowSpec generates contract-accurate traffic from your spec.</p></div>
+    <div class="grid3">
+      <div class="card reveal"><span class="tag">Core</span><div class="icon" style="background:rgba(45,212,191,.12);border-color:rgba(45,212,191,.25)">◍</div><h3>Realistic responses</h3><p>Schema-aware data — IDs, enums, dates, nested objects — that validates against your OpenAPI document. Pagination and auth included.</p></div>
+      <div class="card reveal"><div class="icon" style="background:rgba(251,113,133,.1);border-color:rgba(251,113,133,.25)">⚠</div><h3>Errors on demand</h3><p>Trigger 400s, 404s, 429s, and 500s per route with correct error shapes. Test empty states, retries, and failure UX before prod.</p></div>
+      <div class="card reveal"><div class="icon" style="background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.25)">▣</div><h3>Test scenarios</h3><p>Save named scenarios like <em>new-user</em>, <em>refund-fails</em>, or <em>slow-network</em>. Switch with a header, query param, or one click.</p></div>
+      <div class="card reveal"><div class="icon" style="background:rgba(212,255,63,.1);border-color:rgba(212,255,63,.25)">⇄</div><h3>Auto-updates on spec change</h3><p>Sync from file upload, URL, or GitHub. Diffs redeploy your mock automatically with version history and breaking-change alerts.</p></div>
+      <div class="card reveal"><div class="icon" style="background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.25)">◐</div><h3>Shareable environments</h3><p>One link for frontend, backend, QA, and product. Fork environments per branch, PR, or sprint without stepping on each other.</p></div>
+      <div class="card reveal"><div class="icon" style="background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.25)">◈</div><h3>Built for OpenAPI REST</h3><p>First-class support for OpenAPI 3.x REST — path params, query filters, request bodies, webhooks docs. Private by default.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAMS -->
+<section class="block" id="teams" style="padding-top:0">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">For the whole team</div><h2>Stop waiting. Start shipping in parallel.</h2><p class="sub">MorrowSpec gives every discipline a stable contract to work against — even when the real service doesn’t exist yet.</p></div>
+    <div class="grid4">
+      <div class="persona reveal"><div class="avatar" style="background:rgba(45,212,191,.14);color:#2DD4BF">◑</div><h3>Frontend</h3><p style="font-size:13.5px;color:var(--muted)">Build UI against the real contract, not guesses.</p><ul><li>Code against final routes today</li><li>Test loading, empty &amp; error states</li><li>No more blocked sprints</li></ul></div>
+      <div class="persona reveal"><div class="avatar" style="background:rgba(167,139,250,.14);color:#A78BFA">⬣</div><h3>Backend</h3><p style="font-size:13.5px;color:var(--muted)">Design the contract first, implement freely.</p><ul><li>Validate spec design early</li><li>Break consumers safely with diffs</li><li>Contract-test on every PR</li></ul></div>
+      <div class="persona reveal"><div class="avatar" style="background:rgba(52,211,153,.14);color:#34D399">✓</div><h3>QA &amp; Testing</h3><p style="font-size:13.5px;color:var(--muted)">Deterministic edge cases, on demand.</p><ul><li>Automate against stable seeds</li><li>Reproduce 429s &amp; 500s reliably</li><li>Share bug-ready environments</li></ul></div>
+      <div class="persona reveal"><div class="avatar" style="background:rgba(251,191,36,.14);color:#FBBF24">◎</div><h3>Product &amp; Design</h3><p style="font-size:13.5px;color:var(--muted)">Click through the real flow, early.</p><ul><li>Demo with live data, not slides</li><li>Review API behavior pre-build</li><li>Align on errors &amp; edge cases</li></ul></div>
+    </div>
+    <div class="compare reveal">
+      <div class="cmp bad"><h3><span class="x">✕</span> Without MorrowSpec</h3><ul><li><span class="x">✕</span> Frontend blocked waiting for staging</li><li><span class="x">✕</span> Stale Postman mocks that drift from code</li><li><span class="x">✕</span> “Works on my machine” bugs found in prod</li><li><span class="x">✕</span> QA can’t test errors until it’s too late</li></ul></div>
+      <div class="cmp good"><h3><span class="y">✓</span> With MorrowSpec</h3><ul><li><span class="y">✓</span> Everyone builds in parallel from day one</li><li><span class="y">✓</span> Mock always matches the synced spec</li><li><span class="y">✓</span> Shareable link per branch, PR, or sprint</li><li><span class="y">✓</span> Errors &amp; scenarios testable from the start</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- BETA SCOPE -->
+<section class="block" id="beta" style="padding-top:0">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">Private beta scope</div><h2>Focused today. Transparent about tomorrow.</h2><p class="sub">We’re starting where the pain is sharpest — OpenAPI REST — and expanding with beta feedback.</p></div>
+    <div class="beta-box reveal">
+      <div class="beta-left">
+        <span class="beta-badge">● Now onboarding — Private beta</span>
+        <h3 style="font-size:22px;margin:14px 0 8px;letter-spacing:-.02em">Built for OpenAPI-based REST APIs</h3>
+        <p style="color:var(--muted);font-size:15px">If your team designs with OpenAPI 3.x, you can get value on day one. Invite-only, free during beta, with direct access to the founding team.</p>
+        <ul class="check-list">
+          <li><span class="ic ok">✓</span> Import OpenAPI 3.x via file, URL, or GitHub sync</li>
+          <li><span class="ic ok">✓</span> Hosted endpoints with realistic data + errors + scenarios</li>
+          <li><span class="ic ok">✓</span> Auto-redeploy when the spec changes, with version history</li>
+          <li><span class="ic ok">✓</span> Shareable team environments &amp; private-by-default projects</li>
+        </ul>
+      </div>
+      <div class="beta-right">
+        <h4 style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:14px">Not yet — on the roadmap</h4>
+        <ul class="check-list">
+          <li><span class="ic no">–</span> GraphQL, gRPC &amp; AsyncAPI / WebSockets</li>
+          <li><span class="ic no">–</span> Stateful write-through &amp; custom logic hooks</li>
+          <li><span class="ic no">–</span> Enterprise SSO, audit logs &amp; on-prem runners</li>
+        </ul>
+        <div style="margin-top:20px;background:rgba(212,255,63,.07);border:1px solid rgba(212,255,63,.22);border-radius:12px;padding:14px;font-size:13.5px;color:#DDE6B0"><strong style="color:var(--lime)">Tell us what you need.</strong> Beta members shape the roadmap. The waitlist form takes 20 seconds.</div>
+        <a href="#waitlist" class="btn btn-lime full-btn" style="margin-top:14px">Join the waitlist →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAITLIST -->
+<section class="block" id="waitlist" style="padding-top:0">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">Join the waitlist</div><h2>Get early access for your team.</h2><p class="sub">We’re onboarding teams in small cohorts every week. Tell us where to reach you — we’ll reply with your invite and a starter template.</p></div>
+    <div class="wait-grid">
+      <div class="reveal">
+        <div class="wait-steps">
+          <div class="wstep"><b>1</b><p><strong>Request access.</strong> Drop your work email and role. Takes 20 seconds — no credit card, no sales call.</p></div>
+          <div class="wstep"><b>2</b><p><strong>Get your invite.</strong> We onboard weekly. Most teams get in within 1–2 weeks with a sample spec to explore.</p></div>
+          <div class="wstep"><b>3</b><p><strong>Ship unblocked.</strong> Sync your OpenAPI file, share your first environment link, and build before backend is ready.</p></div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--muted)"><span class="tick">✓</span> Your spec stays private. SOC 2 practices from day one. Delete anytime.</div>
+      </div>
+      <div class="form-card reveal">
+        <div id="formWrap">
+          <h3>Request private-beta access</h3>
+          <p>Free during beta · For teams building OpenAPI REST APIs</p>
+          <form id="waitForm" novalidate>
+            <label for="wName">Full name</label>
+            <input id="wName" name="name" type="text" placeholder="Ada Lovelace" autocomplete="name">
+            <label for="wEmail">Work email *</label>
+            <input id="wEmail" name="email" type="email" placeholder="ada@company.com" autocomplete="email" required>
+            <div class="form-row">
+              <div><label for="wRole">Role</label><select id="wRole" name="role"><option>Frontend engineer</option><option>Backend engineer</option><option>Full-stack engineer</option><option>QA / SDET</option><option>Engineering manager</option><option>Product / Design</option><option>Other</option></select></div>
+              <div><label for="wSize">Team size</label><select id="wSize" name="size"><option>1–5</option><option>6–20</option><option>21–100</option><option>100+</option></select></div>
+            </div>
+            <label for="wUse">What would you mock first? <span style="color:var(--muted2);font-weight:400">(optional)</span></label>
+            <input id="wUse" name="usecase" type="text" placeholder="e.g. checkout API, 48 routes, OpenAPI 3.1">
+            <div class="inline-error" id="wError" role="alert">Please enter a valid email address.</div>
+            <button class="btn btn-lime full-btn" type="submit">Join waitlist →</button>
+            <p class="micro">By joining you agree to receive beta emails. Unsubscribe anytime.</p>
+          </form>
+        </div>
+        <div class="success-panel" id="wSuccess" role="status">
+          <div class="big">✓</div>
+          <h4>You’re on the waitlist!</h4>
+          <p id="wSuccessText">We’ll email your invite soon. In the meantime, grab a teammate — shared environments work best together.</p>
+          <div class="queue-num" id="queueNum">#042 in queue</div>
+          <p class="micro" style="margin-top:14px"><a href="#demo" style="color:var(--lime);font-weight:700">← Try the interactive demo</a></p>
+        </div>
+      </div>
+    </div>
+    <div class="band reveal">
+      <div><h2>Your backend isn’t ready. Your roadmap shouldn’t wait.</h2><p>Import your OpenAPI spec. Share a live mock with your team before standup tomorrow.</p></div>
+      <a href="#waitlist" class="btn">Get beta access →</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="block" id="faq" style="padding-top:8px">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">FAQ</div><h2>Questions teams ask us.</h2></div>
+    <div class="faq reveal">
+      <details open><summary>How is MorrowSpec different from static mocks or Postman examples? <span class="plus">+</span></summary><div class="ans">Static mocks are hand-written and rot. MorrowSpec <em>generates</em> responses from your OpenAPI schemas — with realistic data, correct error shapes, pagination, and scenarios — and <em>re-deploys automatically</em> when the spec changes. One hosted URL stays correct for everyone.</div></details>
+      <details><summary>What do I need to get started? <span class="plus">+</span></summary><div class="ans">Just an OpenAPI 3.x file (<code>openapi.yaml/json</code>), a URL, or a GitHub repo connection. We validate it, create a hosted endpoint like <code>api.morrowspec.dev/e/your-env/v2</code>, and you can start fetching in about 30 seconds.</div></details>
+      <details><summary>How does syncing with my code repository work? <span class="plus">+</span></summary><div class="ans">Connect GitHub and point MorrowSpec at the spec path on a branch. On every push we diff the spec, version the mock (v41, v42…), redeploy, and flag breaking changes to subscribed channels. You can also pin an environment to a PR or tag.</div></details>
+      <details><summary>Which APIs are supported in the private beta? <span class="plus">+</span></summary><div class="ans">The private beta <strong>initially supports OpenAPI-based REST APIs (3.x)</strong>. GraphQL, gRPC, and event-driven protocols (AsyncAPI/WebSockets) are on the roadmap and prioritized by waitlist demand — tell us what you need in the form.</div></details>
+      <details><summary>Is my specification and data private? <span class="plus">+</span></summary><div class="ans">Yes. Projects are private by default, endpoints use unguessable URLs with optional tokens, and generated data is synthetic — never your production data. You can delete environments and specs at any time.</div></details>
+      <details><summary>When will I get access, and how much will it cost? <span class="plus">+</span></summary><div class="ans">We onboard new cohorts weekly and prioritize teams with an OpenAPI spec ready to sync. The private beta is <strong>free</strong>. We’ll share pricing before any paid plans launch — beta members lock in early-team benefits.</div></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div><a class="brand" href="#top"><span class="brand-mark">◈</span> MorrowSpec</a><p>Realistic, shareable mock APIs from your OpenAPI spec. Build and test before backend is ready.</p></div>
+      <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#demo">Live demo</a></li><li><a href="#features">Features</a></li><li><a href="#beta">Private beta</a></li></ul></div>
+      <div><h4>Teams</h4><ul><li><a href="#teams">Frontend</a></li><li><a href="#teams">Backend</a></li><li><a href="#teams">QA &amp; Testing</a></li><li><a href="#teams">Product</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="#waitlist">Join waitlist</a></li><li><a href="#faq">FAQ</a></li><li><a href="#top">Security</a></li><li><a href="#top">Contact</a></li></ul></div>
+    </div>
+    <div class="foot-bottom"><span>© <span id="year">2026</span> MorrowSpec, Inc. · Pre-launch — private beta</span><span class="status-dot"><i></i> All mock regions operational</span></div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var year=document.getElementById('year'); if(year) year.textContent=new Date().getFullYear();
+  // Mobile menu
+  var burger=document.getElementById('hamburger'), menu=document.getElementById('mobileMenu');
+  if(burger&&menu){ burger.addEventListener('click',function(){ var open=menu.classList.toggle('open'); burger.setAttribute('aria-expanded',open?'true':'false'); burger.textContent=open?'✕':'☰'; }); menu.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){menu.classList.remove('open');burger.setAttribute('aria-expanded','false');burger.textContent='☰';});});}
+  // Header shadow
+  var header=document.querySelector('header');
+  function onScroll(){ if(window.scrollY>8){header.style.boxShadow='0 8px 30px rgba(0,0,0,.35)';}else{header.style.boxShadow='none';} }
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  // Reveal
+  var io=new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting){e.target.classList.add('visible'); io.unobserve(e.target);} }); },{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+  // Email validate
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v).trim()); }
+  // Copy
+  var copyBtn=document.getElementById('copyBtn'), urlText=document.getElementById('urlText');
+  if(copyBtn){ copyBtn.addEventListener('click',function(){ var t=urlText.textContent.trim(); function done(){ copyBtn.textContent='✓ Copied'; setTimeout(function(){copyBtn.textContent='⧉ Copy';},1600);} if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(done);} else { var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); done(); } });}
+  // Hero scenarios
+  var heroCode=document.getElementById('heroCode');
+  var heroSnippets={
+    '200':'<span class="c">// GET /v1/orders/ord_8H2kQ → 200</span><br>{<br>&nbsp;&nbsp;<span class="s">"id"</span>: <span class="s">"ord_8H2kQ"</span>,<br>&nbsp;&nbsp;<span class="s">"status"</span>: <span class="s">"paid"</span>,<br>&nbsp;&nbsp;<span class="s">"total"</span>: <span class="n">184.20</span>,<br>&nbsp;&nbsp;<span class="s">"items"</span>: <span class="n">3</span><br>}',
+    '404':'<span class="c">// GET /v1/orders/missing → 404</span><br>{<br>&nbsp;&nbsp;<span class="s">"error"</span>: <span class="s">"order_not_found"</span>,<br>&nbsp;&nbsp;<span class="s">"message"</span>: <span class="s">"No order with id \'missing\'."</span>,<br>&nbsp;&nbsp;<span class="s">"requestId"</span>: <span class="s">"req_9f31"</span><br>}',
+    '429':'<span class="c">// GET /v1/orders → 429 · retry-after: 2s</span><br>{<br>&nbsp;&nbsp;<span class="s">"error"</span>: <span class="s">"rate_limited"</span>,<br>&nbsp;&nbsp;<span class="s">"retryAfterMs"</span>: <span class="n">2000</span>,<br>&nbsp;&nbsp;<span class="s">"limit"</span>: <span class="s">"100/min"</span><br>}'
+  };
+  document.querySelectorAll('.sc-btn').forEach(function(b){ b.addEventListener('click',function(){ document.querySelectorAll('.sc-btn').forEach(function(x){x.setAttribute('aria-pressed','false');}); b.setAttribute('aria-pressed','true'); heroCode.innerHTML=heroSnippets[b.getAttribute('data-sc')]||heroSnippets['200']; });});
+  var heroSend=document.getElementById('heroSend');
+  if(heroSend){ heroSend.addEventListener('click',function(){ var orig=heroSend.textContent; heroSend.disabled=true; heroSend.innerHTML='<span class="spinner"></span> Sending…'; setTimeout(function(){ heroSend.disabled=false; heroSend.textContent=orig; heroCode.style.borderColor='rgba(212,255,63,.5)'; setTimeout(function(){heroCode.style.borderColor='';},600); },700); });}
+  // Demo logic
+  var demoData={
+    success:{status:'<span class="status st-200">200 OK</span> <span class="latency">· 84ms</span>', header:'x-morrow-scenario: happy-path', body:'{\n  "id": "ord_8H2kQ",\n  "status": "paid",\n  "currency": "USD",\n  "total": 184.20,\n  "customer": {\n    "id": "cus_42M1",\n    "email": "maya@acme.co",\n    "name": "Maya Chen"\n  },\n  "items": [\n    { "sku": "KB-002", "qty": 1, "price": 129.00 },\n    { "sku": "CC-014", "qty": 2, "price": 27.60 }\n  ]\n}'},
+    notfound:{status:'<span class="status st-404">404 Not Found</span> <span class="latency">· 41ms</span>', header:'x-morrow-scenario: not-found', body:'{\n  "error": "order_not_found",\n  "message": "No order exists with id \'ord_missing\'.",\n  "docs": "https://api.morrowspec.dev/docs/errors#order_not_found",\n  "requestId": "req_9f31a2"\n}'},
+    ratelimit:{status:'<span class="status st-429">429 Too Many Requests</span> <span class="latency">· 18ms</span>', header:'x-morrow-scenario: rate-limited', body:'{\n  "error": "rate_limited",\n  "message": "Exceeded 100 req/min for /v1/orders.",\n  "retryAfterMs": 2000,\n  "headers": {\n    "Retry-After": "2",\n    "X-RateLimit-Remaining": "0"\n  }\n}'},
+    server:{status:'<span class="status st-500">500 Internal Error</span> <span class="latency">· 312ms</span>', header:'x-morrow-scenario: checkout-fails', body:'{\n  "error": "payment_provider_timeout",\n  "message": "Simulated chaos: provider timed out after 3000ms.",\n  "transient": true,\n  "requestId": "req_chaos_77"\n}'}
+  };
+  var listBodies={
+    'GET /v1/orders?limit=3':{success:'{\n  "data": [\n    { "id": "ord_8H2kQ", "status": "paid", "total": 184.20 },\n    { "id": "ord_8H2kR", "status": "shipped", "total": 59.99 },\n    { "id": "ord_8H2kS", "status": "pending", "total": 212.50 }\n  ],\n  "pagination": { "limit": 3, "nextCursor": "cur_9Z2" }\n}'},
+    'POST /v1/orders':{success:'{\n  "id": "ord_9P1mA",\n  "status": "created",\n  "total": 49.00,\n  "location": "/v1/orders/ord_9P1mA"\n}'}
+  };
+  var currentDemo='success';
+  var outResp=document.getElementById('outResp'), outStatus=document.getElementById('outStatus'), outReq=document.getElementById('outReq'), outMethod=document.getElementById('outMethod'), endpointPick=document.getElementById('endpointPick'), demoSend=document.getElementById('demoSend');
+  function colorize(json){ return json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"([^"]+)":/g,'<span style="color:#D4FF3F">"$1"</span>:').replace(/: "([^"]*)"/g,': <span style="color:#5EEAD4">"$1"</span>').replace(/: (\d[\d.]*)/g,': <span style="color:#A78BFA">$1</span>').replace(/\b(true|false|null)\b/g,'<span style="color:#FBBF24">$1</span>'); }
+  function renderDemo(loading){
+    var ep=endpointPick.value;
+    var d=demoData[currentDemo];
+    var body=d.body;
+    if(listBodies[ep] && listBodies[ep][currentDemo==='success'? 'success':null]){ body=listBodies[ep].success; }
+    else if(ep!=='GET /v1/orders/ord_8H2kQ' && currentDemo==='success' && listBodies[ep]){ body=listBodies[ep].success; }
+    outMethod.textContent=(ep.indexOf('POST')===0?'POST ':'GET ')+'https://api.morrowspec.dev/e/demo/v2'+ep.split(' ').slice(1).join(' ');
+    var method=ep.indexOf('POST')===0?'POST':'GET';
+    var path=ep.split(' ').slice(1).join(' ');
+    outReq.textContent=(method==='POST'?'curl -X POST -H "Content-Type: application/json" -d \'{"items":[{"sku":"KB-002"}]}\' ':'curl -H "'+d.header+'" ')+'https://api.morrowspec.dev/e/demo/v2'+path;
+    if(loading){ outResp.innerHTML='<span style="color:#9AA8C3"><span class="spinner"></span>Sending request to MorrowSpec mock…</span>'; outStatus.innerHTML='<span class="latency">… pending</span>'; }
+    else { outResp.innerHTML=colorize(body); outStatus.innerHTML=d.status; }
+  }
+  document.querySelectorAll('.sc-item').forEach(function(b){ b.addEventListener('click',function(){ document.querySelectorAll('.sc-item').forEach(function(x){x.setAttribute('aria-pressed','false');}); b.setAttribute('aria-pressed','true'); currentDemo=b.getAttribute('data-demo'); renderDemo(false); });});
+  if(endpointPick){ endpointPick.addEventListener('change',function(){ renderDemo(false); });}
+  if(demoSend){ demoSend.addEventListener('click',function(){ demoSend.disabled=true; var orig=demoSend.textContent; demoSend.innerHTML='<span class="spinner"></span> Sending…'; renderDemo(true); setTimeout(function(){ renderDemo(false); demoSend.disabled=false; demoSend.textContent=orig; },750); });}
+  renderDemo(false);
+  // Hero form
+  var heroForm=document.getElementById('heroForm'), heroEmail=document.getElementById('heroEmail'), heroError=document.getElementById('heroError'), heroSuccess=document.getElementById('heroSuccess');
+  if(heroForm){ heroForm.addEventListener('submit',function(e){ e.preventDefault(); heroError.style.display='none'; heroSuccess.style.display='none'; if(!validEmail(heroEmail.value)){ heroError.style.display='block'; heroEmail.focus(); return; } heroSuccess.style.display='block'; heroForm.reset(); try{localStorage.setItem('morrowspec_waitlist', JSON.stringify({email:heroEmail.value, at:new Date().toISOString()}));}catch(err){} setTimeout(function(){ document.getElementById('waitlist').scrollIntoView({behavior:'smooth'}); },900); });}
+  // Waitlist form
+  var waitForm=document.getElementById('waitForm'), wError=document.getElementById('wError'), wSuccess=document.getElementById('wSuccess'), formWrap=document.getElementById('formWrap'), queueNum=document.getElementById('queueNum'), wEmail=document.getElementById('wEmail');
+  if(waitForm){ waitForm.addEventListener('submit',function(e){ e.preventDefault(); wError.style.display='none'; if(!validEmail(wEmail.value)){ wError.style.display='block'; wEmail.focus(); return; } var n=Math.floor(120+Math.random()*380); queueNum.textContent='#'+String(n).padStart(3,'0')+' in queue'; var name=document.getElementById('wName').value.trim(); var txt=document.getElementById('wSuccessText'); if(name){ txt.textContent='Thanks '+name.split(' ')[0]+' — we’ll email '+wEmail.value.trim()+' with your invite soon. Shared environments work best with teammates.'; } formWrap.style.display='none'; wSuccess.style.display='block'; try{localStorage.setItem('morrowspec_waitlist_full', JSON.stringify({email:wEmail.value, at:new Date().toISOString()}));}catch(err){} });}
+})();
+</script>
+</body>
+</html>

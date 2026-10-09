@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conduit Lake — Integrations</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:#070B15}
+::selection{background:rgba(95,232,212,.28)}
+
+.integrations{
+  --ink:#EAF0FB;--muted:#97A4C0;--faint:#5F6D8E;
+  --line:rgba(146,168,214,.14);--acc:#5FE8D4;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  position:relative;overflow:hidden;color:var(--ink);font-family:var(--sans);
+  background:radial-gradient(1100px 640px at 50% -200px,#0D1730 0%,#070B15 62%);
+  padding:112px 24px 122px;
+}
+
+/* ---------- backdrop ---------- */
+.bg{position:absolute;inset:0;pointer-events:none}
+.bg-grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(140,165,215,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(140,165,215,.05) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(ellipse 75% 62% at 50% 34%,#000 25%,transparent 78%);
+  mask-image:radial-gradient(ellipse 75% 62% at 50% 34%,#000 25%,transparent 78%);
+}
+.glow{position:absolute}
+.glow-a{width:700px;height:480px;left:-160px;top:-160px;background:radial-gradient(closest-side,rgba(56,178,205,.14),transparent)}
+.glow-b{width:640px;height:520px;right:-180px;top:16%;background:radial-gradient(closest-side,rgba(74,116,240,.12),transparent)}
+.glow-c{width:620px;height:420px;left:30%;bottom:-220px;background:radial-gradient(closest-side,rgba(94,224,214,.07),transparent)}
+.noise{position:absolute;inset:0;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E")}
+
+.wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto}
+
+/* ---------- header ---------- */
+.head{max-width:800px;margin:0 auto;text-align:center}
+.eyebrow{display:inline-flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--acc)}
+.eyebrow::before,.eyebrow::after{content:"";width:30px;height:1px}
+.eyebrow::before{background:linear-gradient(90deg,transparent,var(--acc))}
+.eyebrow::after{background:linear-gradient(90deg,var(--acc),transparent)}
+.head h2{margin-top:22px;font-size:clamp(32px,3.3vw,46px);line-height:1.08;letter-spacing:-.028em;font-weight:700}
+.grad{background:linear-gradient(100deg,#7CF0E0 5%,#5B9DFF 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.lede{margin:20px auto 0;max-width:648px;font-size:17px;line-height:1.65;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:30px;list-style:none}
+.chips li{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 13px;background:rgba(255,255,255,.02)}
+.chips li.more{color:var(--acc);border-color:rgba(95,232,212,.32);background:rgba(95,232,212,.06)}
+
+/* ---------- pipeline ---------- */
+.pipeline{position:relative;margin-top:66px;display:grid;grid-template-columns:1fr 1.14fr 1fr 1fr;gap:58px}
+.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible}
+.stage{position:relative;z-index:1;display:flex;flex-direction:column;min-width:0}
+
+.stage-head{display:flex;align-items:center;gap:11px;min-height:42px}
+.stage-num{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--acc);border:1px solid rgba(95,232,212,.25);border-radius:7px;padding:4px 6px;background:rgba(95,232,212,.05)}
+.stage-head h3{font-size:12.5px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:#DCE6F8}
+.stage-head p{font-size:12px;color:var(--faint);margin-top:2px}
+
+.stack{margin-top:18px;display:flex;flex-direction:column;gap:12px;flex:1;justify-content:center}
+
+/* cards */
+.card{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:13px;cursor:default;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.034),rgba(255,255,255,.012));
+  transition:transform .25s ease,border-color .25s,box-shadow .25s,opacity .25s,background .25s}
+.card:hover{transform:translateY(-2px);border-color:rgba(176,198,240,.38);box-shadow:0 14px 34px -16px var(--c)}
+.card.rel{border-color:rgba(110,235,215,.42);background:rgba(95,232,212,.05)}
+.card.idle{opacity:.4}
+.card:focus-visible,.hub:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+.tile{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--ct);color:var(--c)}
+.tile svg{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.card-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.card-name{font-size:14px;font-weight:600;letter-spacing:-.005em;white-space:nowrap}
+.card-meta{font-size:12px;color:var(--faint);white-space:nowrap}
+
+/* hub */
+.hub-wrap{flex:1;display:flex;align-items:center;margin-top:18px}
+.hub{position:relative;width:100%;border-radius:20px;padding:26px 20px 20px;text-align:center;cursor:default;
+  border:1px solid transparent;
+  background:linear-gradient(180deg,rgba(17,26,48,.92),rgba(10,16,32,.94)) padding-box,
+             linear-gradient(160deg,rgba(124,240,224,.55),rgba(91,157,255,.22) 48%,rgba(146,168,214,.14)) border-box;
+  box-shadow:0 30px 70px -40px rgba(70,150,220,.35);
+  transition:opacity .25s,box-shadow .3s}
+.hub::before{content:"";position:absolute;inset:0;border-radius:19px;pointer-events:none;
+  background:radial-gradient(70% 45% at 50% 0%,rgba(124,240,224,.10),transparent 70%)}
+.hub:hover{box-shadow:0 34px 80px -36px rgba(94,224,214,.45)}
+.hub.idle{opacity:.45}
+.hub.rel{box-shadow:0 34px 80px -36px rgba(94,224,214,.45)}
+.hub-mark{position:relative;width:116px;height:116px;margin:2px auto 16px;display:grid;place-items:center}
+.hub-mark i{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(124,240,224,.30);animation:ring 3.6s cubic-bezier(.2,.6,.3,1) infinite}
+.hub-mark i:nth-child(2){animation-delay:1.8s}
+@keyframes ring{0%{transform:scale(.58);opacity:.9}70%{opacity:.25}100%{transform:scale(1.06);opacity:0}}
+.mark-tile{position:relative;z-index:1;width:68px;height:68px;border-radius:18px;display:grid;place-items:center;
+  background:linear-gradient(150deg,rgba(124,240,224,.16),rgba(91,157,255,.12));
+  border:1px solid rgba(124,240,224,.28)}
+.mark-svg{width:36px;height:36px;display:block}
+.hub-name{font-size:17px;font-weight:650;letter-spacing:-.01em}
+.hub-sub{margin-top:3px;font-size:12px;color:var(--muted)}
+.hub-live{margin-top:16px;padding-top:14px;border-top:1px solid rgba(146,168,214,.12);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted)}
+.pulse{position:relative;width:7px;height:7px;border-radius:50%;background:#57E6C9}
+.pulse::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(87,230,201,.7);animation:pulse 2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.6);opacity:0}}
+
+/* wires */
+.wire-path{fill:none;stroke:rgba(150,172,220,.17);stroke-width:1.5;transition:stroke .3s ease}
+.wire .end{fill:rgba(150,172,220,.38);transition:fill .3s}
+.wire .pkt{fill:#7DEEDC;opacity:.34;transition:opacity .3s}
+.wire.lit .wire-path{stroke:#5FE8D4;stroke-width:1.8;filter:drop-shadow(0 0 6px rgba(95,232,212,.55))}
+.wire.lit .end{fill:#5FE8D4}
+.wire.lit .pkt{opacity:1}
+.wire.dim .wire-path{stroke:rgba(150,172,220,.06)}
+.wire.dim .end{fill:rgba(150,172,220,.12)}
+.wire.dim .pkt{opacity:.06}
+
+/* readout */
+.readout{margin-top:30px;display:flex;justify-content:center;align-items:center;gap:11px;
+  font-family:var(--mono);font-size:12px;color:var(--faint)}
+.ro-label{font-size:10px;letter-spacing:.18em;border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--faint)}
+.readout.active{color:#B9C7E4}
+.readout .hl{color:var(--acc)}
+
+/* ---------- outcomes ---------- */
+.outcomes{margin-top:88px}
+.out-label{display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+.out-label i{flex:1;height:1px;background:var(--line)}
+.out-grid{margin-top:38px;display:grid;grid-template-columns:repeat(3,1fr);gap:36px}
+.o-tile{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:var(--acc);
+  background:rgba(95,232,212,.07);border:1px solid rgba(95,232,212,.16)}
+.o-tile svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.outcome h3{margin:16px 0 9px;font-size:16.5px;font-weight:650;letter-spacing:-.01em}
+.outcome p{font-size:14px;line-height:1.68;color:var(--muted)}
+
+/* ---------- cta ---------- */
+.cta{margin-top:92px;text-align:center;border:1px solid var(--line);border-radius:26px;padding:58px 32px 50px;
+  background:radial-gradient(560px 240px at 50% -60px,rgba(95,232,212,.10),transparent 70%),
+             linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,0))}
+.cta-kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc)}
+.cta h3{margin-top:14px;font-size:29px;letter-spacing:-.02em;font-weight:700}
+.cta-sub{margin:14px auto 0;max-width:580px;font-size:15px;line-height:1.65;color:var(--muted)}
+.cta-actions{margin-top:30px;display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:9px;font-size:14.5px;font-weight:600;letter-spacing:.005em;text-decoration:none;
+  border-radius:12px;padding:14px 24px;transition:transform .22s,box-shadow .25s,background .25s,border-color .25s}
+.btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn-primary{color:#05202A;background:linear-gradient(135deg,#6FF0DC,#53A9F5);box-shadow:0 12px 30px -12px rgba(94,224,214,.5)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 40px -14px rgba(94,224,214,.65)}
+.btn-ghost{color:var(--ink);border:1px solid rgba(146,168,214,.3)}
+.btn-ghost:hover{transform:translateY(-2px);border-color:rgba(190,208,240,.55);background:rgba(255,255,255,.03)}
+.cta-note{margin-top:18px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--faint)}
+
+/* ---------- entrance ---------- */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.head>*{animation:rise .7s cubic-bezier(.22,.7,.3,1) both}
+.head>*:nth-child(2){animation-delay:.08s}
+.head>*:nth-child(3){animation-delay:.16s}
+.head>*:nth-child(4){animation-delay:.24s}
+.pipeline{animation:rise .8s .3s cubic-bezier(.22,.7,.3,1) both}
+.readout{animation:rise .8s .45s both}
+.outcomes{animation:rise .8s .2s both}
+.cta{animation:rise .8s .25s both}
+
+.rm .hub-mark i,.rm .pulse::after{animation:none;display:none}
+.rm .head>*,.rm .pipeline,.rm .readout,.rm .outcomes,.rm .cta{animation:none}
+.rm .pkt{display:none}
+
+/* ---------- responsive ---------- */
+@media(max-width:1120px){.pipeline{gap:38px}}
+@media(max-width:980px){
+  .integrations{padding:88px 20px 96px}
+  .pipeline{grid-template-columns:1fr;max-width:440px;margin:56px auto 0;gap:48px}
+  .hub{max-width:330px;margin:0 auto}
+  .hub-wrap{width:100%}
+  .stack{justify-content:flex-start}
+  .out-grid{grid-template-columns:1fr;gap:30px;max-width:540px;margin-left:auto;margin-right:auto}
+  .readout{flex-wrap:wrap;text-align:center;padding:0 12px}
+}
+</style>
+</head>
+<body>
+
+<section class="integrations" id="integrations" aria-labelledby="integrations-title">
+  <div class="bg" aria-hidden="true">
+    <div class="bg-grid"></div>
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+    <div class="glow glow-c"></div>
+    <div class="noise"></div>
+  </div>
+
+  <div class="wrap">
+
+    <header class="head">
+      <p class="eyebrow">Integrations</p>
+      <h2 id="integrations-title">Your stack, <span class="grad">already connected.</span></h2>
+      <p class="lede">Conduit Lake is the movement layer between the systems that produce your data and the tools that put it to work. Connect what you already run — no rip-and-replace, no pipelines to babysit.</p>
+      <ul class="chips" aria-label="Connector categories">
+        <li>Databases</li>
+        <li>Object storage</li>
+        <li>Event streams</li>
+        <li>Data warehouses</li>
+        <li>Lakehouses</li>
+        <li>Transformation</li>
+        <li>BI &amp; analytics</li>
+        <li class="more">+ 200 more in the catalog</li>
+      </ul>
+    </header>
+
+    <div class="pipeline" id="pipeline">
+      <svg class="wires" id="wires" aria-hidden="true"></svg>
+
+      <!-- 01 SOURCES -->
+      <div class="stage">
+        <div class="stage-head">
+          <span class="stage-num">01</span>
+          <div><h3>Sources</h3><p>Where data is born</p></div>
+        </div>
+        <div class="stack">
+
+          <div class="card" data-id="pg" tabindex="0" style="--c:#6EA8FF;--ct:rgba(110,168,255,.13)" data-trace="[[PostgreSQL]] → Conduit Lake → Warehouse → dbt → Looker">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><ellipse cx="10" cy="5.4" rx="5.8" ry="2.5"/><path d="M4.2 5.4v8.9c0 1.4 2.6 2.5 5.8 2.5s5.8-1.1 5.8-2.5V5.4"/><path d="M4.2 9.9c0 1.4 2.6 2.5 5.8 2.5s5.8-1.1 5.8-2.5"/></svg></span>
+            <span class="card-text"><span class="card-name">PostgreSQL</span><span class="card-meta">CDC &amp; batch syncs</span></span>
+          </div>
+
+          <div class="card" data-id="s3" tabindex="0" style="--c:#FF9E57;--ct:rgba(255,158,87,.12)" data-trace="[[Amazon S3]] → Conduit Lake → Warehouse → dbt → Looker">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.6 16.3 6.2v7.3L10 17.1 3.7 13.5V6.2Z"/><path d="M3.7 6.2 10 9.8l6.3-3.6"/><path d="M10 9.8v7.3"/></svg></span>
+            <span class="card-text"><span class="card-name">Amazon S3</span><span class="card-meta">Files &amp; object storage</span></span>
+          </div>
+
+          <div class="card" data-id="kafka" tabindex="0" style="--c:#B9C6E2;--ct:rgba(185,198,226,.11)" data-trace="[[Apache Kafka]] → Conduit Lake → Warehouse → dbt → Looker">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.8 6.8h10.2"/><path d="M13 4.3l2.5 2.5L13 9.3"/><path d="M17.2 13.2H7"/><path d="M7 10.7 4.5 13.2 7 15.7"/></svg></span>
+            <span class="card-text"><span class="card-name">Apache Kafka</span><span class="card-meta">Event streams &amp; topics</span></span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 02 CONDUIT LAKE -->
+      <div class="stage">
+        <div class="stage-head">
+          <span class="stage-num">02</span>
+          <div><h3>Conduit Lake</h3><p>The movement layer</p></div>
+        </div>
+        <div class="hub-wrap">
+          <div class="hub" data-id="hub" tabindex="0" data-trace="Sources → [[Conduit Lake]] → Destinations → Transform &amp; BI">
+            <div class="hub-mark" aria-hidden="true">
+              <i></i><i></i>
+              <span class="mark-tile">
+                <svg class="mark-svg" viewBox="0 0 48 48">
+                  <defs>
+                    <linearGradient id="clg" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                      <stop offset="0" stop-color="#7CF0E0"/><stop offset="1" stop-color="#5B9DFF"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="24" cy="24" r="13.5" fill="none" stroke="url(#clg)" stroke-width="2.2"/>
+                  <path d="M14.5 24c3-5 6-5 9 0s6 5 9 0" fill="none" stroke="url(#clg)" stroke-width="2.2" stroke-linecap="round"/>
+                  <path d="M10.5 24H5.5" fill="none" stroke="url(#clg)" stroke-width="2.2" stroke-linecap="round"/>
+                  <path d="M8 21.2 4.8 24 8 26.8" fill="none" stroke="url(#clg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M37.5 24h5" fill="none" stroke="url(#clg)" stroke-width="2.2" stroke-linecap="round"/>
+                  <path d="M40 21.2 43.2 24 40 26.8" fill="none" stroke="url(#clg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </div>
+            <p class="hub-name">Conduit Lake</p>
+            <p class="hub-sub">The movement layer</p>
+            <div class="hub-live"><span class="pulse" aria-hidden="true"></span>Live · 8 connections healthy</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 03 DESTINATIONS -->
+      <div class="stage">
+        <div class="stage-head">
+          <span class="stage-num">03</span>
+          <div><h3>Destinations</h3><p>Where data lands</p></div>
+        </div>
+        <div class="stack">
+
+          <div class="card" data-id="snowflake" tabindex="0" style="--c:#6FD9F7;--ct:rgba(111,217,247,.12)" data-trace="Sources → Conduit Lake → [[Snowflake]] → dbt → Looker">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.6v14.8"/><path d="M3.6 6.3l12.8 7.4"/><path d="M16.4 6.3 3.6 13.7"/></svg></span>
+            <span class="card-text"><span class="card-name">Snowflake</span><span class="card-meta">Cloud warehouse</span></span>
+          </div>
+
+          <div class="card" data-id="bigquery" tabindex="0" style="--c:#5B93F7;--ct:rgba(91,147,247,.13)" data-trace="Sources → Conduit Lake → [[Google BigQuery]] → dbt → Looker">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.8" y="2.8" width="10.4" height="10.4" rx="2.2"/><path d="M8 2.8v10.4"/><path d="M2.8 8h10.4"/><circle cx="14.4" cy="14.4" r="3"/><path d="M16.6 16.6l2 2"/></svg></span>
+            <span class="card-text"><span class="card-name">Google BigQuery</span><span class="card-meta">Serverless warehouse</span></span>
+          </div>
+
+          <div class="card" data-id="databricks" tabindex="0" style="--c:#FF6E61;--ct:rgba(255,110,97,.12)" data-trace="Sources → Conduit Lake → [[Databricks]] → dbt → Looker">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3 16.8 6.9 10 10.8 3.2 6.9Z"/><path d="M4.4 10.3 10 13.4l5.6-3.1"/><path d="M4.4 13.8 10 16.9l5.6-3.1"/></svg></span>
+            <span class="card-text"><span class="card-name">Databricks</span><span class="card-meta">Lakehouse</span></span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 04 DOWNSTREAM -->
+      <div class="stage">
+        <div class="stage-head">
+          <span class="stage-num">04</span>
+          <div><h3>Downstream</h3><p>Where data works</p></div>
+        </div>
+        <div class="stack">
+
+          <div class="card" data-id="dbt" tabindex="0" style="--c:#FF7A4D;--ct:rgba(255,122,77,.12)" data-trace="Sources → Conduit Lake → Warehouse → [[dbt]] → Looker">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="4.6" cy="10" r="2.1"/><circle cx="15.4" cy="5.4" r="2.1"/><circle cx="15.4" cy="14.6" r="2.1"/><path d="M6.6 9.3l6.9-3.1"/><path d="M6.6 10.7l6.9 3.1"/></svg></span>
+            <span class="card-text"><span class="card-name">dbt</span><span class="card-meta">Models &amp; tests</span></span>
+          </div>
+
+          <div class="card" data-id="looker" tabindex="0" style="--c:#8B7CF6;--ct:rgba(139,124,246,.13)" data-trace="Sources → Conduit Lake → Warehouse → dbt → [[Looker]]">
+            <span class="tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.4 10S5.6 5.2 10 5.2 17.6 10 17.6 10 14.4 14.8 10 14.8 2.4 10 2.4 10Z"/><circle cx="10" cy="10" r="2.5"/></svg></span>
+            <span class="card-text"><span class="card-name">Looker</span><span class="card-meta">BI &amp; metrics</span></span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <p class="readout" id="readout"><span class="ro-label">Trace</span><span id="ro-text" aria-live="polite">Hover any system to trace its path through the stack</span></p>
+
+    <!-- outcomes -->
+    <div class="outcomes">
+      <p class="out-label"><i></i>What connection unlocks<i></i></p>
+      <div class="out-grid">
+
+        <article class="outcome">
+          <span class="o-tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8.2 11.8a3.4 3.4 0 0 0 4.8 0l2.2-2.2a3.4 3.4 0 0 0-4.8-4.8L9.2 6"/><path d="M11.8 8.2a3.4 3.4 0 0 0-4.8 0L4.8 10.4a3.4 3.4 0 0 0 4.8 4.8l1.2-1.2"/></svg></span>
+          <h3>Connect, don&rsquo;t build</h3>
+          <p>Every connector is prebuilt and fully managed — authentication, schema mapping, retries, and backfills included. A pipeline that used to take a sprint now takes a sign-in.</p>
+        </article>
+
+        <article class="outcome">
+          <span class="o-tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8s5.4 5.7 5.4 9.4a5.4 5.4 0 0 1-10.8 0C4.6 8.5 10 2.8 10 2.8Z"/><path d="M7.2 12.7c.9-1.2 1.9-1.2 2.8 0s1.9 1.2 2.8 0"/></svg></span>
+          <h3>Fresh at every step</h3>
+          <p>Each source syncs on the cadence it demands — change data capture from PostgreSQL, continuous Kafka topics, scheduled S3 drops — and lands in your warehouse within the minute.</p>
+        </article>
+
+        <article class="outcome">
+          <span class="o-tile"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 16.6h13.2"/><path d="M4.6 13.2l3.8-4 2.9 2.7 4.4-5.4"/><path d="M13.2 6.3h2.5v2.5"/></svg></span>
+          <h3>Ready for the last mile</h3>
+          <p>Data arrives typed, deduplicated, and modeled to your conventions — so dbt builds stay green and every Looker dashboard tells today&rsquo;s story, not yesterday&rsquo;s.</p>
+        </article>
+
+      </div>
+    </div>
+
+    <!-- cta -->
+    <div class="cta">
+      <p class="cta-kicker">08 shown — 200+ in the catalog</p>
+      <h3>You&rsquo;ve met eight. The catalog runs 200+ deep.</h3>
+      <p class="cta-sub">Every connector on this page — and hundreds more across the modern data stack — is ready to switch on today. Browse the full library, or bring us the system we&rsquo;re missing.</p>
+      <div class="cta-actions">
+        <a href="#" class="btn btn-primary">Explore all integrations <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13"/><path d="M12.5 6l4 4-4 4"/></svg></a>
+        <a href="#" class="btn btn-ghost">Request a connector</a>
+      </div>
+      <p class="cta-note">The full catalog is public — no signup required.</p>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var section=document.getElementById('integrations');
+  var pipeline=document.getElementById('pipeline');
+  var svg=document.getElementById('wires');
+  var NS='http://www.w3.org/2000/svg';
+  var EDGES=[['pg','hub'],['s3','hub'],['kafka','hub'],
+             ['hub','snowflake'],['hub','bigquery'],['hub','databricks'],
+             ['snowflake','dbt'],['bigquery','dbt'],['databricks','dbt'],
+             ['dbt','looker']];
+
+  var nodes={};
+  Array.prototype.forEach.call(document.querySelectorAll('[data-id]'),function(n){nodes[n.getAttribute('data-id')]=n;});
+
+  var adj={};
+  EDGES.forEach(function(e){
+    (adj[e[0]]=adj[e[0]]||[]).push(e[1]);
+    (adj[e[1]]=adj[e[1]]||[]).push(e[0]);
+  });
+
+  var reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){section.classList.add('rm');}
+
+  function mk(name,attrs){var n=document.createElementNS(NS,name);for(var k in attrs){n.setAttribute(k,attrs[k]);}return n;}
+
+  var wires=EDGES.map(function(e,i){
+    var g=mk('g',{'class':'wire'});
+    var p=mk('path',{'class':'wire-path'});
+    var s=mk('circle',{'class':'end',r:2.6});
+    var t=mk('circle',{'class':'end',r:2.6});
+    g.appendChild(p);g.appendChild(s);g.appendChild(t);
+    var ams=[];
+    if(!reduced){
+      for(var k=0;k<2;k++){
+        var c=mk('circle',{'class':'pkt',r:2.3});
+        var am=mk('animateMotion',{dur:(2.6+((i+k*3)%5)*0.65)+'s',repeatCount:'indefinite',begin:(-(k*2.1+i*0.55))+'s'});
+        c.appendChild(am);g.appendChild(c);ams.push(am);
+      }
+    }
+    svg.appendChild(g);
+    return {g:g,path:p,s:s,t:t,ams:ams,from:e[0],to:e[1]};
+  });
+
+  function r(n){return Math.round(n*10)/10;}
+
+  function layout(){
+    var box=pipeline.getBoundingClientRect();
+    if(!box.width){return;}
+    svg.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
+    wires.forEach(function(w){
+      var a=nodes[w.from].getBoundingClientRect();
+      var b=nodes[w.to].getBoundingClientRect();
+      var acx=a.left+a.width/2-box.left, acy=a.top+a.height/2-box.top;
+      var bcx=b.left+b.width/2-box.left, bcy=b.top+b.height/2-box.top;
+      var dx=bcx-acx, dy=bcy-acy, p1, p2, d, dir, c;
+      if(Math.abs(dx)>=Math.abs(dy)){
+        dir=dx>=0?1:-1;
+        p1={x:acx+dir*a.width/2,y:acy};
+        p2={x:bcx-dir*b.width/2,y:bcy};
+        c=Math.max(26,Math.abs(p2.x-p1.x)*0.45);
+        d='M'+r(p1.x)+' '+r(p1.y)+' C'+r(p1.x+dir*c)+' '+r(p1.y)+' '+r(p2.x-dir*c)+' '+r(p2.y)+' '+r(p2.x)+' '+r(p2.y);
+      }else{
+        dir=dy>=0?1:-1;
+        p1={x:acx,y:acy+dir*a.height/2};
+        p2={x:bcx,y:bcy-dir*b.height/2};
+        c=Math.max(18,Math.abs(p2.y-p1.y)*0.5);
+        d='M'+r(p1.x)+' '+r(p1.y)+' C'+r(p1.x)+' '+r(p1.y+dir*c)+' '+r(p2.x)+' '+r(p2.y-dir*c)+' '+r(p2.x)+' '+r(p2.y);
+      }
+      w.path.setAttribute('d',d);
+      w.s.setAttribute('cx',r(p1.x));w.s.setAttribute('cy',r(p1.y));
+      w.t.setAttribute('cx',r(p2.x));w.t.setAttribute('cy',r(p2.y));
+      w.ams.forEach(function(am){am.setAttribute('path',d);});
+    });
+  }
+
+  var ro=document.getElementById('ro-text');
+  var roWrap=document.getElementById('readout');
+  var RO_DEFAULT=ro.textContent;
+
+  function activate(id){
+    wires.forEach(function(w){
+      var hit=(w.from===id||w.to===id);
+      w.g.classList.toggle('lit',hit);
+      w.g.classList.toggle('dim',!hit);
+    });
+    Object.keys(nodes).forEach(function(nid){
+      if(nid===id){return;}
+      var near=adj[id]&&adj[id].indexOf(nid)>-1;
+      nodes[nid].classList.toggle('rel',near);
+      nodes[nid].classList.toggle('idle',!near);
+    });
+    var tr=nodes[id].getAttribute('data-trace');
+    if(tr){
+      ro.innerHTML=tr.replace(/\[\[(.+?)\]\]/g,'<span class="hl">$1</span>');
+      roWrap.classList.add('active');
+    }
+  }
+  function deactivate(){
+    wires.forEach(function(w){w.g.classList.remove('lit');w.g.classList.remove('dim');});
+    Object.keys(nodes).forEach(function(nid){nodes[nid].classList.remove('rel');nodes[nid].classList.remove('idle');});
+    ro.textContent=RO_DEFAULT;
+    roWrap.classList.remove('active');
+  }
+  Object.keys(nodes).forEach(function(id){
+    var n=nodes[id];
+    n.addEventListener('mouseenter',function(){activate(id);});
+    n.addEventListener('mouseleave',deactivate);
+    n.addEventListener('focus',function(){activate(id);});
+    n.addEventListener('blur',deactivate);
+  });
+
+  layout();
+  window.addEventListener('resize',layout);
+  window.addEventListener('load',layout);
+  if('ResizeObserver' in window){new ResizeObserver(layout).observe(pipeline);}
+  setTimeout(layout,400);
+  setTimeout(layout,1200);
+})();
+</script>
+
+</body>
+</html>

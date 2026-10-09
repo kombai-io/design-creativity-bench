@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity & Wayfinding Planner | Apex Plaza Redevelopment</title>
+    <style>
+        :root {
+            /* Colors - Inspired by 'bisque' and 'gleaming' hints */
+            --color-bg: #f8f9fa;
+            --color-surface: #ffffff;
+            --color-rail: #1a1c1e;
+            --color-rail-active: #2d2f31;
+            --color-primary: #d4a373; /* A warm, earthy bisque-adjacent gold */
+            --color-primary-dark: #bc8a5f;
+            --color-text: #1a1c1e;
+            --color-text-muted: #606467;
+            --color-border: #e0e2e4;
+            --color-success-bg: #e6f4ea;
+            --color-success-text: #137333;
+            --color-success-icon: #1e8e3e;
+            --color-overlay: rgba(0, 0, 0, 0.4);
+            
+            /* Spacing - Rule-governed system */
+            --space-none: 0;
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-xxl: 48px;
+            --space-nav-width: 72px;
+            --space-top-height: 64px;
+
+            /* Typography */
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --size-xs: 11px;
+            --size-sm: 13px;
+            --size-base: 15px;
+            --size-md: 18px;
+            --size-lg: 24px;
+            --size-xl: 32px;
+            --weight-reg: 400;
+            --weight-med: 500;
+            --weight-bold: 600;
+
+            /* Shadows & Effects */
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --transition: 0.2s ease-in-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: var(--space-none);
+            padding: var(--space-none);
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-size: var(--size-base);
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Layout Shell */
+        .nav-rail {
+            width: var(--space-nav-width);
+            background-color: var(--color-rail);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: var(--space-md);
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            width: 48px;
+            height: 48px;
+            margin-bottom: var(--space-md);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: background-color var(--transition);
+        }
+
+        .nav-item:hover {
+            background-color: var(--color-rail-active);
+        }
+
+        .nav-item.active {
+            background-color: var(--color-primary);
+        }
+
+        .main-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .top-bar {
+            height: var(--space-top-height);
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-lg);
+            flex-shrink: 0;
+        }
+
+        .breadcrumb {
+            display: flex;
+            gap: var(--space-sm);
+            color: var(--color-text-muted);
+            font-size: var(--size-sm);
+        }
+
+        .breadcrumb span:last-child {
+            color: var(--color-text);
+            font-weight: var(--weight-med);
+        }
+
+        .content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: var(--space-xl);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xxl);
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: calc(var(--space-top-height) + var(--space-lg));
+            right: var(--space-lg);
+            z-index: 1000;
+            animation: slideIn 0.4s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(120%); }
+            to { transform: translateX(0); }
+        }
+
+        .toast {
+            background-color: var(--color-surface);
+            border-left: 4px solid var(--color-success-icon);
+            box-shadow: var(--shadow-lg);
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            min-width: 320px;
+        }
+
+        .toast-icon {
+            color: var(--color-success-icon);
+            width: 24px;
+            height: 24px;
+        }
+
+        .toast-content h4 {
+            font-size: var(--size-sm);
+            font-weight: var(--weight-bold);
+            margin-bottom: 2px;
+        }
+
+        .toast-content p {
+            font-size: var(--size-xs);
+            color: var(--color-text-muted);
+        }
+
+        /* Sections and Content */
+        .section-header {
+            margin-bottom: var(--space-lg);
+        }
+
+        .section-title {
+            font-size: var(--size-lg);
+            font-weight: var(--weight-bold);
+            color: var(--color-text);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--space-lg);
+        }
+
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            transition: transform var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .media-placeholder {
+            aspect-ratio: 16/9;
+            background-color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .media-placeholder.map-view {
+            aspect-ratio: 21/9;
+            background-image: repeating-linear-gradient(45deg, #f0f0f0 0, #f0f0f0 10px, #f5f5f5 10px, #f5f5f5 20px);
+        }
+
+        .card-caption {
+            padding: var(--space-md);
+        }
+
+        .card-caption h5 {
+            font-size: var(--size-base);
+            font-weight: var(--weight-med);
+            margin-bottom: var(--space-xs);
+        }
+
+        .card-caption p {
+            font-size: var(--size-sm);
+            color: var(--color-text-muted);
+        }
+
+        /* Specialized Components */
+        .identity-banner {
+            background-color: var(--color-primary);
+            color: white;
+            padding: var(--space-xl);
+            border-radius: var(--radius-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: var(--space-xxl);
+        }
+
+        .stat-item .label {
+            display: block;
+            font-size: var(--size-xs);
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .stat-item .value {
+            font-size: var(--size-lg);
+            font-weight: var(--weight-bold);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-surface);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--color-border);
+        }
+
+        th {
+            text-align: left;
+            background: var(--color-bg);
+            padding: var(--space-md);
+            font-size: var(--size-xs);
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        td {
+            padding: var(--space-md);
+            border-bottom: 1px solid var(--color-border);
+            font-size: var(--size-sm);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: var(--size-xs);
+            font-weight: var(--weight-med);
+            background: var(--color-bg);
+        }
+
+        .badge-active { background: #e3f2fd; color: #1976d2; }
+        .badge-pending { background: #fff3e0; color: #f57c00; }
+
+        .svg-icon {
+            fill: currentColor;
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: var(--space-sm) var(--space-lg);
+            border-radius: var(--radius-sm);
+            font-weight: var(--weight-med);
+            cursor: pointer;
+            border: none;
+            font-size: var(--size-sm);
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--color-primary-dark);
+        }
+
+    </style>
+</head>
+<body>
+
+    <nav class="nav-rail" role="navigation" aria-label="Main Navigation">
+        <div class="nav-item">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </div>
+        <div class="nav-item active">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2c-4.41 0-8 3.59-8 8 0 5.25 8 13 8 13s8-7.75 8-13c0-4.41-3.59-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>
+        </div>
+        <div class="nav-item">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
+        </div>
+        <div class="nav-item">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </div>
+        <div style="flex-grow: 1;"></div>
+        <div class="nav-item">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+    </nav>
+
+    <div class="main-wrapper">
+        <header class="top-bar">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <span>Projects</span>
+                <span>/</span>
+                <span>London District</span>
+                <span>/</span>
+                <span>Apex Plaza Redevelopment</span>
+            </nav>
+            <div style="display: flex; gap: var(--space-md); align-items: center;">
+                <span style="font-size: var(--size-xs); color: var(--color-text-muted);">Last saved: 2 minutes ago</span>
+                <button class="btn btn-primary">Publish Blueprint</button>
+            </div>
+        </header>
+
+        <main class="content-area" role="main">
+            
+            <!-- Section 1: Hero Identity -->
+            <section class="identity-banner">
+                <div>
+                    <h1 style="font-size: var(--size-xl); margin-bottom: var(--space-xs);">Apex Plaza Redevelopment</h1>
+                    <p style="opacity: 0.9;">Site Identity & Wayfinding Masterplan v4.2</p>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span class="label">Total Signs</span>
+                        <span class="value">142</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Compliance</span>
+                        <span class="value">98%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Zone Count</span>
+                        <span class="value">12</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Spatial Arrangement Tool -->
+            <section id="spatial-layout">
+                <div class="section-header">
+                    <h2 class="section-title">Site Arrangement & Route Flow</h2>
+                </div>
+                <div class="card">
+                    <div class="media-placeholder map-view" aria-label="Interactive Map of Apex Plaza">
+                        <svg width="100%" height="100%" viewBox="0 0 800 300">
+                            <rect x="50" y="50" width="700" height="200" fill="none" stroke="#ccc" stroke-width="2" stroke-dasharray="5,5" />
+                            <circle cx="200" cy="150" r="10" fill="var(--color-primary)" />
+                            <circle cx="400" cy="120" r="10" fill="var(--color-primary)" />
+                            <circle cx="600" cy="180" r="10" fill="var(--color-primary)" />
+                            <path d="M200 150 L400 120 L600 180" fill="none" stroke="var(--color-primary)" stroke-width="2" />
+                            <text x="215" y="155" font-size="12" fill="#666">Entrance A</text>
+                            <text x="415" y="125" font-size="12" fill="#666">Main Lobby Hub</text>
+                            <text x="615" y="185" font-size="12" fill="#666">Exit North</text>
+                        </svg>
+                    </div>
+                    <div class="card-caption">
+                        <h5>Primary Pedestrian Flow</h5>
+                        <p>Optimized route for site visitors and contractors based on Phase 2 heavy machinery displacement.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Identity Elements -->
+            <section id="identity-assets">
+                <div class="section-header">
+                    <h2 class="section-title">Project Identity Assets</h2>
+                </div>
+                <div class="grid-container">
+                    <article class="card">
+                        <div class="media-placeholder">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="var(--color-primary)"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        </div>
+                        <div class="card-caption">
+                            <h5>Primary Wordmark</h5>
+                            <p>For use on hoarding and site entrance totems. High visibility finish.</p>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="media-placeholder">
+                            <rect width="80" height="80" fill="#333" />
+                            <text x="10" y="45" fill="white" font-weight="bold">APEX</text>
+                        </div>
+                        <div class="card-caption">
+                            <h5>Night-time Luminescence</h5>
+                            <p>Mockup of backlit branding for safe night passage and brand reinforcement.</p>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="media-placeholder">
+                            <svg width="100" height="40" viewBox="0 0 100 40">
+                                <rect width="100" height="40" fill="#f0f0f0" />
+                                <rect x="5" y="5" width="20" height="30" fill="var(--color-primary)" />
+                                <rect x="30" y="10" width="60" height="5" fill="#ccc" />
+                                <rect x="30" y="20" width="40" height="5" fill="#ccc" />
+                            </svg>
+                        </div>
+                        <div class="card-caption">
+                            <h5>Temporary Barrier Wraps</h5>
+                            <p>Repeated pattern for perimeter security fencing (Standard 2m height).</p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- Section 4: Signage Catalog -->
+            <section id="signage-catalog">
+                <div class="section-header">
+                    <h2 class="section-title">Standardized Signage Types</h2>
+                </div>
+                <div class="grid-container">
+                    <article class="card">
+                        <div class="media-placeholder">
+                            <rect x="30" y="10" width="40" height="80" fill="var(--color-text)" rx="2" />
+                        </div>
+                        <div class="card-caption">
+                            <h5>Type A1: Totem</h5>
+                            <p>Wayfinding monolith for public-facing site boundaries.</p>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="media-placeholder">
+                            <rect x="20" y="30" width="60" height="30" fill="#cc0000" />
+                            <circle cx="50" cy="45" r="10" fill="white" />
+                        </div>
+                        <div class="card-caption">
+                            <h5>Type S2: Mandatory</h5>
+                            <p>Health and Safety instruction panels for PPE requirements.</p>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="media-placeholder">
+                            <rect x="20" y="20" width="60" height="40" fill="#eee" stroke="#999" />
+                            <path d="M30 40 L70 40" stroke="#333" stroke-width="4" marker-end="url(#arrow)" />
+                        </div>
+                        <div class="card-caption">
+                            <h5>Type D4: Directional</h5>
+                            <p>Internal site corridor directional wall-mounted panels.</p>
+                        </div>
+                    </article>
+                    <article class="card">
+                        <div class="media-placeholder">
+                            <rect x="40" y="10" width="20" height="80" fill="#555" />
+                            <rect x="10" y="10" width="80" height="20" fill="var(--color-primary)" />
+                        </div>
+                        <div class="card-caption">
+                            <h5>Type L1: Landmark</h5>
+                            <p>Elevated project identification for crane visibility.</p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <!-- Section 5: Materials -->
+            <section id="materials">
+                <div class="section-header">
+                    <h2 class="section-title">Physical Specifications</h2>
+                </div>
+                <div class="grid-container">
+                    <div class="card">
+                        <div class="media-placeholder">
+                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #ddd 25%, #bbb 100%);"></div>
+                        </div>
+                        <div class="card-caption">
+                            <h5>Brushed Aluminum</h5>
+                            <p>Used for permanent structural wayfinding in main lobby.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="media-placeholder">
+                            <div style="width: 100%; height: 100%; background: radial-gradient(circle, #555 0%, #111 100%);"></div>
+                        </div>
+                        <div class="card-caption">
+                            <h5>Recycled High-Density Polyethylene</h5>
+                            <p>Sustainable substrate for external temporary hoarding.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Installation Schedule -->
+            <section id="installation">
+                <div class="section-header">
+                    <h2 class="section-title">Installation Schedule</h2>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table role="table">
+                        <thead role="rowgroup">
+                            <tr role="row">
+                                <th role="columnheader">Sign ID</th>
+                                <th role="columnheader">Location Zone</th>
+                                <th role="columnheader">Type</th>
+                                <th role="columnheader">Status</th>
+                                <th role="columnheader">Delivery Date</th>
+                            </tr>
+                        </thead>
+                        <tbody role="rowgroup">
+                            <tr role="row">
+                                <td role="cell">AP-W-001</td>
+                                <td role="cell">South Perimeter Gate</td>
+                                <td role="cell">A1 Totem</td>
+                                <td role="cell"><span class="badge badge-active">Installed</span></td>
+                                <td role="cell">Oct 12, 2023</td>
+                            </tr>
+                            <tr role="row">
+                                <td role="cell">AP-W-004</td>
+                                <td role="cell">Main Hoisting Area</td>
+                                <td role="cell">S2 Mandatory</td>
+                                <td role="cell"><span class="badge badge-active">Installed</span></td>
+                                <td role="cell">Oct 14, 2023</td>
+                            </tr>
+                            <tr role="row">
+                                <td role="cell">AP-W-012</td>
+                                <td role="cell">Visitor Hub Entrance</td>
+                                <td role="cell">D4 Directional</td>
+                                <td role="cell"><span class="badge badge-pending">Pending</span></td>
+                                <td role="cell">Nov 02, 2023</td>
+                            </tr>
+                            <tr role="row">
+                                <td role="cell">AP-W-015</td>
+                                <td role="cell">Staff Welfare Suite</td>
+                                <td role="cell">D4 Directional</td>
+                                <td role="cell"><span class="badge badge-pending">Pending</span></td>
+                                <td role="cell">Nov 05, 2023</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 7: Regulatory Compliance -->
+            <section id="compliance">
+                <div class="section-header">
+                    <h2 class="section-title">Compliance Documentation</h2>
+                </div>
+                <div class="grid-container">
+                    <div class="card">
+                        <div class="media-placeholder">
+                            <svg width="40" height="50" viewBox="0 0 40 50"><path d="M5 0h20l10 10v40H5z" fill="#eee" stroke="#ccc"/><path d="M25 0v10h10" fill="none" stroke="#ccc"/></svg>
+                        </div>
+                        <div class="card-caption">
+                            <h5>BS 5499-10 Safety Standards</h5>
+                            <p>Certificate of conformity for project identity signage.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="media-placeholder">
+                            <svg width="40" height="50" viewBox="0 0 40 50"><path d="M5 0h20l10 10v40H5z" fill="#eee" stroke="#ccc"/><path d="M25 0v10h10" fill="none" stroke="#ccc"/></svg>
+                        </div>
+                        <div class="card-caption">
+                            <h5>Visual Impact Assessment</h5>
+                            <p>Local council approval for illuminated totem installation.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Notification / Toast -->
+        <div id="success-notification" class="toast-container" role="status" aria-live="polite">
+            <div class="toast">
+                <div class="toast-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="toast-content">
+                    <h4>Layout Sync Successful</h4>
+                    <p>All wayfinding nodes have been updated and synchronized with the central site blueprint.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Simple interactive behavior to hide toast after some time or on click
+        const toast = document.getElementById('success-notification');
+        setTimeout(() => {
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => toast.remove(), 500);
+            }
+        }, 6000);
+
+        toast.addEventListener('click', () => {
+            toast.remove();
+        });
+    </script>
+</body>
+</html>

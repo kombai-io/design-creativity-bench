@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deephaven Trust Registry — Vessel Certification</title>
+<style>
+:root {
+  --clr-bg-deep: #0d1a2a;
+  --clr-bg-surface: #122236;
+  --clr-bg-elevated: #192f48;
+  --clr-bg-input: #0f1d2e;
+  --clr-border-subtle: #1e3a57;
+  --clr-border-medium: #2a5078;
+  --clr-border-active: #4a8fd4;
+  --clr-primary: #3b8dd4;
+  --clr-primary-hover: #5ba8ed;
+  --clr-primary-dim: #2a6da5;
+  --clr-success: #34c78a;
+  --clr-success-bg: rgba(52, 199, 138, 0.1);
+  --clr-warning: #e8a838;
+  --clr-warning-bg: rgba(232, 168, 56, 0.1);
+  --clr-danger: #e05555;
+  --clr-danger-bg: rgba(224, 85, 85, 0.1);
+  --clr-text-heading: #e8eff5;
+  --clr-text-body: #a0bcd4;
+  --clr-text-muted: #5e7d96;
+  --clr-text-inverse: #0d1a2a;
+  --clr-overlay: rgba(5, 10, 18, 0.75);
+  --clr-toast-bg: #1c3d5e;
+  --clr-toast-border: #3b8dd4;
+  --clr-badge-green-bg: #1e5a3a;
+  --clr-badge-yellow-bg: #5a441e;
+  --clr-badge-gray-bg: #2a3544;
+
+  --fs-xs: 0.7rem;
+  --fs-sm: 0.8rem;
+  --fs-base: 0.9rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.15rem;
+  --fs-xl: 1.4rem;
+  --fs-2xl: 1.75rem;
+
+  --sp-xxs: 0.15rem;
+  --sp-xs: 0.3rem;
+  --sp-sm: 0.5rem;
+  --sp-md: 0.75rem;
+  --sp-lg: 1rem;
+  --sp-xl: 1.5rem;
+  --sp-2xl: 2rem;
+  --sp-3xl: 3rem;
+
+  --radius-sm: 0.2rem;
+  --radius-md: 0.35rem;
+  --radius-lg: 0.5rem;
+
+  --shadow-sm: 0 0.05rem 0.3rem rgba(0,0,0,0.3);
+  --shadow-md: 0 0.15rem 0.6rem rgba(0,0,0,0.4);
+  --shadow-lg: 0 0.3rem 1.2rem rgba(0,0,0,0.5);
+
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --transition-fast: 150ms ease;
+  --transition-med: 250ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: var(--fs-base); }
+
+body {
+  font-family: var(--font-sans);
+  color: var(--clr-text-body);
+  background: var(--clr-bg-deep);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Toast ─────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  top: var(--sp-lg);
+  right: var(--sp-lg);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.toast {
+  background: var(--clr-toast-bg);
+  border: 0.08rem solid var(--clr-toast-border);
+  border-left: 0.25rem solid var(--clr-primary);
+  border-radius: var(--radius-md);
+  padding: var(--sp-md) var(--sp-lg);
+  min-width: 22rem;
+  max-width: 34rem;
+  box-shadow: var(--shadow-lg);
+  transform: translateX(calc(100% + var(--sp-xl)));
+  transition: transform var(--transition-med);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-md);
+}
+
+.toast.show { transform: translateX(0); }
+.toast.success { border-left-color: var(--clr-success); }
+.toast.warning { border-left-color: var(--clr-warning); }
+.toast.error { border-left-color: var(--clr-danger); }
+
+.toast-icon { flex-shrink: 0; margin-top: 0.1rem; }
+.toast-msg { font-size: var(--fs-sm); line-height: 1.5; color: var(--clr-text-heading); }
+.toast-close {
+  cursor: pointer;
+  color: var(--clr-text-muted);
+  background: none;
+  border: none;
+  font-size: var(--fs-lg);
+  margin-left: auto;
+  padding: 0 var(--sp-xs);
+  line-height: 1;
+}
+.toast-close:hover { color: var(--clr-text-body); }
+
+/* ── Dialog Overlay ────────────────────────────── */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--clr-overlay);
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-med);
+}
+.dialog-overlay.open { opacity: 1; pointer-events: auto; }
+
+.dialog {
+  background: var(--clr-bg-surface);
+  border: 0.08rem solid var(--clr-border-medium);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 38rem;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: translateY(var(--sp-lg));
+  transition: transform var(--transition-med);
+}
+.dialog-overlay.open .dialog { transform: translateY(0); }
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-lg) var(--sp-xl);
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+}
+.dialog-header h2 { font-size: var(--fs-xl); color: var(--clr-text-heading); }
+.dialog-body { padding: var(--sp-xl); }
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-md);
+  padding: var(--sp-lg) var(--sp-xl);
+  border-top: 0.08rem solid var(--clr-border-subtle);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-lg);
+  border: 0.08rem solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.btn-primary {
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+  border-color: var(--clr-primary);
+}
+.btn-primary:hover { background: var(--clr-primary-hover); border-color: var(--clr-primary-hover); }
+.btn-secondary {
+  background: transparent;
+  color: var(--clr-text-body);
+  border-color: var(--clr-border-medium);
+}
+.btn-secondary:hover { border-color: var(--clr-text-body); color: var(--clr-text-heading); }
+.btn-danger {
+  background: var(--clr-danger);
+  color: white;
+  border-color: var(--clr-danger);
+}
+.btn-danger:hover { opacity: 0.85; }
+
+/* ── Layout Shell ──────────────────────────────── */
+.app-layout {
+  display: grid;
+  grid-template-columns: var(--nav-width);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "header" "main";
+  height: 100vh;
+}
+
+@media (min-width: 1000px) {
+  .app-layout {
+    grid-template-columns: var(--nav-width) var(--list-width) 1fr;
+    grid-template-areas: "header header header" "main main main";
+  }
+}
+
+/* ── Header / Nav ──────────────────────────────── */
+.site-header {
+  grid-area: header;
+  background: var(--clr-bg-surface);
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-sm) var(--sp-lg);
+  z-index: 100;
+}
+
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+}
+
+.logo-icon {
+  width: 2rem;
+  height: 2rem;
+  fill: var(--clr-primary);
+}
+
+.logo-text {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--clr-text-heading);
+  letter-spacing: 0.03em;
+}
+.logo-text span { color: var(--clr-primary); }
+
+.header-actions { display: flex; align-items: center; gap: var(--sp-md); }
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-xs) var(--sp-sm);
+  background: var(--clr-bg-elevated);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  color: var(--clr-text-body);
+}
+.user-avatar {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--clr-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--clr-text-inverse);
+}
+
+/* ── Navigation Pane ───────────────────────────── */
+.nav-pane {
+  grid-area: nav;
+  background: var(--clr-bg-surface);
+  border-right: 0.08rem solid var(--clr-border-subtle);
+  overflow-y: auto;
+  display: none;
+}
+
+@media (min-width: 1000px) { .nav-pane { display: block; } }
+
+.nav-section { padding: var(--sp-lg) var(--sp-md); }
+.nav-section-title {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--clr-text-muted);
+  margin-bottom: var(--sp-sm);
+  padding: 0 var(--sp-sm);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  color: var(--clr-text-body);
+  transition: all var(--transition-fast);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.nav-item:hover { background: var(--clr-bg-elevated); color: var(--clr-text-heading); }
+.nav-item.active {
+  background: var(--clr-primary-dim);
+  color: var(--clr-text-heading);
+}
+.nav-item svg { flex-shrink: 0; width: 1.1rem; height: 1.1rem; fill: currentColor; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 0.05rem var(--sp-xs);
+  border-radius: var(--radius-sm);
+  min-width: 1.4rem;
+  text-align: center;
+}
+
+/* ── List Pane ─────────────────────────────────── */
+.list-pane {
+  grid-area: list;
+  border-right: 0.08rem solid var(--clr-border-subtle);
+  background: var(--clr-bg-deep);
+  overflow-y: auto;
+  display: none;
+}
+
+@media (min-width: 1000px) { .list-pane { display: block; } }
+
+.list-toolbar {
+  padding: var(--sp-md) var(--sp-md);
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 10rem;
+  background: var(--clr-bg-input);
+  border: 0.08rem solid var(--clr-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-xs) var(--sp-sm);
+  color: var(--clr-text-heading);
+  font-size: var(--fs-sm);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.search-input:focus { border-color: var(--clr-border-active); }
+.search-input::placeholder { color: var(--clr-text-muted); }
+
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xs) var(--sp-sm);
+  background: var(--clr-bg-elevated);
+  border: 0.08rem solid var(--clr-border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--clr-text-muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all var(--transition-fast);
+}
+.filter-btn:hover { color: var(--clr-text-body); border-color: var(--clr-border-medium); }
+.filter-btn.active { color: var(--clr-primary); border-color: var(--clr-primary); }
+
+.tablist {
+  display: flex;
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+}
+
+.tab {
+  flex: 1;
+  padding: var(--sp-sm) var(--sp-md);
+  background: none;
+  border: none;
+  border-bottom: 0.15rem solid transparent;
+  color: var(--clr-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+.tab:hover { color: var(--clr-text-body); }
+.tab.active { color: var(--clr-primary); border-bottom-color: var(--clr-primary); }
+
+.list-container { overflow-y: auto; flex: 1; }
+
+.entry-card {
+  padding: var(--sp-md);
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.entry-card:hover { background: var(--clr-bg-elevated); }
+.entry-card.selected { background: var(--clr-bg-elevated); border-left: 0.2rem solid var(--clr-primary); }
+
+.entry-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-text-heading);
+  margin-bottom: var(--sp-xxs);
+}
+
+.entry-meta {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  margin-right: var(--sp-xxs);
+}
+.status-dot.green { background: var(--clr-success); }
+.status-dot.yellow { background: var(--clr-warning); }
+.status-dot.gray { background: var(--clr-text-muted); }
+.status-dot.red { background: var(--clr-danger); }
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem var(--sp-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.status-tag.pending { background: var(--clr-badge-yellow-bg); color: var(--clr-warning); }
+.status-tag.review { background: var(--clr-badge-green-bg); color: var(--clr-success); }
+.status-tag.approved { background: var(--clr-badge-gray-bg); color: var(--clr-text-muted); }
+.status-tag.rejected { background: var(--clr-badge-red-bg, var(--clr-danger-bg)); color: var(--clr-danger); }
+
+/* ── Detail Pane ───────────────────────────────── */
+.detail-pane {
+  grid-area: detail;
+  overflow-y: auto;
+  background: var(--clr-bg-deep);
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-header {
+  padding: var(--sp-lg) var(--sp-2xl);
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+  background: var(--clr-bg-surface);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.detail-header h1 {
+  font-size: var(--fs-xl);
+  color: var(--clr-text-heading);
+  font-weight: 700;
+}
+
+.detail-header p {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+  margin-top: var(--sp-xxs);
+}
+
+.step-indicators {
+  display: flex;
+  gap: var(--sp-xs);
+  margin-top: var(--sp-md);
+}
+
+.step-dot {
+  width: 1.6rem;
+  height: 0.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--clr-border-subtle);
+  transition: background var(--transition-fast);
+}
+.step-dot.done { background: var(--clr-success); }
+.step-dot.current { background: var(--clr-primary); }
+
+.detail-body {
+  flex: 1;
+  padding: var(--sp-xl) var(--sp-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2xl);
+}
+
+.section-card {
+  background: var(--clr-bg-surface);
+  border: 0.08rem solid var(--clr-border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-md) var(--sp-lg);
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+  background: var(--clr-bg-elevated);
+}
+
+.section-card-header h2 {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--clr-text-heading);
+}
+
+.section-card-header .step-num {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.section-card-body { padding: var(--sp-lg) var(--sp-lg); }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-lg);
+}
+.form-grid .full-span { grid-column: 1 / -1; }
+
+.field-group label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-text-muted);
+  margin-bottom: var(--sp-xs);
+}
+
+.field-group input,
+.field-group select,
+.field-group textarea {
+  width: 100%;
+  background: var(--clr-bg-input);
+  border: 0.08rem solid var(--clr-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  color: var(--clr-text-heading);
+  font-size: var(--fs-sm);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
+  border-color: var(--clr-border-active);
+}
+
+.field-group input::placeholder,
+.field-group textarea::placeholder { color: var(--clr-text-muted); }
+
+.field-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%235e7d96' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: var(--sp-xl);
+}
+
+.field-group textarea { resize: vertical; min-height: 5rem; }
+
+.field-hint {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+  margin-top: var(--sp-xxs);
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.15rem;
+  accent-color: var(--clr-primary);
+  flex-shrink: 0;
+}
+
+.checkbox-group label {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-body);
+  text-transform: none;
+  letter-spacing: normal;
+  margin-bottom: 0;
+  font-weight: 400;
+}
+
+.table-wrapper { overflow-x: auto; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.data-table th {
+  text-align: left;
+  padding: var(--sp-sm) var(--sp-md);
+  background: var(--clr-bg-elevated);
+  color: var(--clr-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+}
+
+.data-table td {
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 0.08rem solid var(--clr-border-subtle);
+  color: var(--clr-text-body);
+}
+
+.data-table tbody tr:hover { background: var(--clr-bg-elevated); }
+
+.declaration-box {
+  background: var(--clr-bg-input);
+  border: 0.08rem solid var(--clr-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--sp-lg);
+  margin-top: var(--sp-sm);
+}
+
+.declaration-box p {
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--clr-text-body);
+}
+
+.detail-footer {
+  padding: var(--sp-lg) var(--sp-2xl);
+  border-top: 0.08rem solid var(--clr-border-subtle);
+  background: var(--clr-bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+}
+
+.footer-info {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+}
+
+/* ── Empty State ───────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-3xl);
+  text-align: center;
+}
+.empty-state svg { width: 4rem; height: 4rem; fill: var(--clr-border-subtle); margin-bottom: var(--sp-lg); }
+.empty-state h3 { font-size: var(--fs-md); color: var(--clr-text-muted); margin-bottom: var(--sp-sm); }
+.empty-state p { font-size: var(--fs-sm); color: var(--clr-text-muted); max-width: 20rem; }
+
+/* ── Responsive fallback ───────────────────────── */
+@media (max-width: 999px) {
+  .detail-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-3xl);
+    text-align: center;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 0.5rem; }
+::-webkit-scrollbar-track { background: var(--clr-bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--clr-border-subtle); border-radius: var(--radius-sm); }
+::-webkit-scrollbar-thumb:hover { background: var(--clr-border-medium); }
+</style>
+</head>
+<body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Confirm Dialog -->
+<div class="dialog-overlay" id="confirmDialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+  <div class="dialog">
+    <div class="dialog-header">
+      <h2 id="dialogTitle">Submit Application?</h2>
+      <button class="toast-close" onclick="closeDialog()" aria-label="Close">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <p style="color: var(--clr-text-body); font-size: var(--fs-sm); line-height: 1.7;">
+        You are about to submit the vessel certification application for <strong style="color: var(--clr-text-heading);" id="dialogAppName">MV Seabreeze</strong>. This action cannot be undone — the application will be forwarded to the Deephaven Classification Board for review. Please ensure all declared information is accurate and complete.
+      </p>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" onclick="closeDialog()">Go Back</button>
+      <button class="btn btn-primary" onclick="submitApplication()">Confirm Submission</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div class="app-layout">
+
+  <!-- ── Header ──────────────────────────────── -->
+  <header class="site-header">
+    <div class="logo-group">
+      <svg class="logo-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 2 L6 14 v12 l14 12 l14 -12 v-12 Z M20 8 l8 7 v8 l-8 7 l-8 -7 v-8 Z"/>
+        <text x="20" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#0d1a2a" font-family="sans-serif">D</text>
+      </svg>
+      <div class="logo-text"><span>Deephaven</span> Trust Registry</div>
+    </div>
+    <div class="header-actions">
+      <button class="filter-btn" onclick="showToast('Notifications checked — no new alerts', 'success')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      </button>
+      <div class="user-chip">
+        <div class="user-avatar">RL</div>
+        R. Lindström
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Navigation Pane ─────────────────────── -->
+  <nav class="nav-pane" aria-label="Main navigation">
+    <div class="nav-section">
+      <div class="nav-section-title">Overview</div>
+      <button class="nav-item" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item active" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+        Certifications
+        <span class="nav-badge">7</span>
+      </button>
+      <button class="nav-item" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        Applicants
+      </button>
+      <button class="nav-item" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        Audit Logs
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Workflow</div>
+      <button class="nav-item" onclick="openNewAppDialog()">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        New Application
+      </button>
+      <button class="nav-item" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+        Document Archive
+      </button>
+      <button class="nav-item" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        Verification Queue
+        <span class="nav-badge" style="background: var(--clr-warning); color: var(--clr-text-inverse);">3</span>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Administration</div>
+      <button class="nav-item" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        Settings
+      </button>
+      <button class="nav-item" onclick="setActiveNav(this)">
+        <svg viewBox="0 0 24 24"><path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z"/></svg>
+        Help Centre
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── List Pane ───────────────────────────── -->
+  <aside class="list-pane" aria-label="Certification list">
+    <div class="list-toolbar">
+      <input type="search" class="search-input" placeholder="Search applications…" aria-label="Search applications" oninput="filterEntries(this.value)">
+      <button class="filter-btn active" onclick="setFilter(this,'all')">All</button>
+      <button class="filter-btn" onclick="setFilter(this,'pending')">Pending</button>
+      <button class="filter-btn" onclick="setFilter(this,'review')">In Review</button>
+      <button class="filter-btn" onclick="setFilter(this,'approved')">Approved</button>
+    </div>
+
+    <div class="tablist" role="tablist" aria-label="Application status tabs">
+      <button class="tab active" role="tab" aria-selected="true" aria-controls="tabPanelPending" onclick="switchTab(this,'pending')">Pending<span style="opacity:.5;margin-left:3px;">5</span></button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelReview" onclick="switchTab(this,'review')">In Review<span style="opacity:.5;margin-left:3px;">2</span></button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelApproved" onclick="switchTab(this,'approved')">Finalised<span style="opacity:.5;margin-left:3px;">0</span></button>
+    </div>
+
+    <div class="list-container" id="listContainer">
+      <!-- Populated by JS -->
+    </div>
+  </aside>
+
+  <!-- ── Detail Pane ─────────────────────────── -->
+  <main class="detail-pane" id="detailPane">
+    <div class="detail-placeholder" id="emptyDetail">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h3 style="color: var(--clr-text-heading); font-size: var(--fs-md); margin-bottom: var(--sp-sm);">No Application Selected</h3>
+      <p style="color: var(--clr-text-muted); font-size: var(--fs-sm); max-width: 22rem;">Select a certification application from the list to view its details and manage the review process.</p>
+    </div>
+    <div id="filledDetail" style="display:none; flex-direction:column;">
+      <div class="detail-header">
+        <div>
+          <h1 id="detailTitle">—</h1>
+          <p id="detailSub">—</p>
+          <div class="step-indicators">
+            <div class="step-dot done"></div>
+            <div class="step-dot current"></div>
+            <div class="step-dot"></div>
+            <div class="step-dot"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--sp-sm);align-items:center;">
+          <span class="status-tag pending" id="detailStatus">Pending</span>
+        </div>
+      </div>
+      <div class="detail-body" id="detailBody">
+        <!-- Sections injected by JS -->
+      </div>
+      <div class="detail-footer">
+        <div class="footer-info" id="footerInfo">Last updated: —</div>
+        <div style="display:flex;gap:var(--sp-sm);">
+          <button class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
+          <button class="btn btn-primary" onclick="openConfirmDialog()">Submit for Review</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────
+const applications = [
+  {
+    id: "VCR-2024-0047",
+    title: "MV Northern Aurora",
+    owner: "Borealis Shipping Ltd.",
+    IMO: "IMO 9876543",
+    flag: "Bahamas",
+    grossTonnage: "4,820 GT",
+    built: "2019",
+    hullType: "Double-hulled bulk carrier",
+    status: "pending",
+    dateCreated: "14 Jan 2025",
+    lastModified: "16 Jan 2025 · 09:32 UTC",
+    applicantName: "Captain Henrik Sørensen",
+    applicantEmail: "hsorensen@borealis-marine.com",
+    applicantPhone: "+1 242-555-0198",
+    portOfRegistry: "Nassau",
+    classificationClass: "DNV GL · 1A1 Bulk Carrier · E0",
+    mscCode: "MSC/Circ.1114 Rev.2",
+    hazmatDeclaration: true,
+    inspections: [
+      { date: "03 Dec 2024", type: "Pre-purchase hull survey", inspector: "J. Whitfield, DNVGL", result: "Passed — Minor rectifications noted on starboard pump room grating." },
+      { date: "18 Nov 2024", type: "Annual safety equipment check", inspector: "R. Al-Mansoori, Bureau Veritas", result: "Passed — All lifeboats serviced within tolerance." },
+      { date: "05 Oct 2024", type: "Environmental compliance audit", inspector: "Internal QA Team", result: "Compliant — Ballast water treatment unit operating within spec." }
+    ],
+    attachments: ["HullCertificate_Borealis_Aurora.pdf", "ClassSurveyReport_2024Q3.pdf", "BallastWaterLog_Nov2024.xlsx"],
+    notes: "Vessel previously operated under Panamanian registry. Flag change completed October 2024. Owner requests expedited processing due to charter commitment off Muroran, Japan effective February."
+  },
+  {
+    id: "VCR-2024-0051",
+    title: "SS Coral Resilience",
+    owner: "Tidal Guard Maritime Inc.",
+    IMO: "IMO 9712088",
+    flag: "Marshall Islands",
+    grossTonnage: "12,340 GT",
+    built: "2016",
+    hullType: "Multi-purpose cargo vessel",
+    status: "pending",
+    dateCreated: "17 Jan 2025",
+    lastModified: "18 Jan 2025 · 14:05 UTC",
+    applicantName: "First Officer Clara M. Reyes",
+    applicantEmail: "creyes@tidalguard.io",
+    applicantPhone: "+63 917-555-0421",
+    portOfRegistry: "Majuro",
+    classificationClass: "Lloyd's Register · 100A1 MCP · EcoShip",
+    mscCode: "MSC.1/Circ.1631",
+    hazmatDeclaration: false,
+    inspections: [
+      { date: "22 Jan 2025", type: "Dry-docking inspection (scheduled)", inspector: "T. Nakamura, LR Surveyor", result: "Awaiting completion — scheduled dry dock opening 30 Jan." },
+      { date: "10 Dec 2024", type: "Cargo gear load test", inspector: "Offshore Marine Services", result: "Passed — All four hatch covers within rated capacity." }
+    ],
+    attachments: ["LRSurvey_Coral_Res2025.pdf", "DryDockPlan_Jan2025.pdf"],
+    notes: "Owner intends to retrofit SCR emissions system pre-certification. Requesting conditional approval with 6-month remediation window on NOx emission readings currently at 4.9 g/kWh (limit 4.4)."
+  },
+  {
+    id: "VCR-2025-0003",
+    title: "MT Arctic Pioneer",
+    owner: "KaraSea Energy Transport AS",
+    IMO: "IMO 9943201",
+    flag: "Norway",
+    grossTonnage: "28,900 GT",
+    built: "2022",
+    hullType: "Ice-class tankerman",
+    status: "pending",
+    dateCreated: "20 Jan 2025",
+    lastModified: "20 Jan 2025 · 17:44 UTC",
+    applicantName: "Brigadier Admiral Lars Eriksen (Ret.)",
+    applicantEmail: "leriksen@karasea.no",
+    applicantPhone: "+47 908-555-0034",
+    portOfRegistry: "Bergen",
+    classificationClass: "Norwegian Maritime Authority · 1A1 Oil Tanker · Ice Class IA",
+    mscCode: "IMO MODU Code 2009 (as amended)",
+    hazmatDeclaration: true,
+    inspections: [
+      { date: "15 Jan 2025", type: "Initial sea trial & stability assessment", inspector: "DNV Oslo Office", result: "Passed — Stable meets intact and damage stability criteria per Solas Chapter II-1." },
+      { date: "28 Dec 2024", type: "Crane system certification", inspector: "Liebherr Marine Service", result: "Pass — Load testing completed at 125% rated capacity." }
+    ],
+    attachments: ["DNV_SeaTrial_Pioneer_2025.pdf", "IceClassCertificate_KaraSea.pdf", "StabilityBook_FinalEdition_v3.docx"],
+    notes: "Newbuild vessel being placed into service on Barents Sea supply runs. Requires both flag-state and trust-registry dual certification. Previous owner: Stavanger Drydock AB."
+  },
+  {
+    id: "VCR-2025-0005",
+    title: "RV Southern Tracer",
+    owner: "Oceanus Research Consortium",
+    IMO: "IMO 9855670",
+    flag: "United Kingdom",
+    grossTonnage: "5,610 GT",
+    built: "2020",
+    hullType: "Research / survey vessel",
+    status: "pending",
+    dateCreated: "22 Jan 2025",
+    lastModified: "23 Jan 2025 · 08:19 UTC",
+    applicantName: "Dr Priya Nair, Oceanographic Lead",
+    applicantEmail: "pnair@oceanusrc.uk",
+    applicantPhone: "+44 20-7946-0981",
+    portOfRegistry: "Southampton",
+    classificationClass: "UK Maritime & Coastguard Agency · A3 Research Vessel · Dynamic Positioning DP-2",
+    mscCode: "Resolution MEPC.330(76) — Biofouling Management",
+    hazmatDeclaration: false,
+    inspections: [
+      { date: "12 Jan 2025", type: "DP system performance verification", inspector: "Kongsberg Maritime", result: "Passed — Position holding accuracy ±0.5 m verified in 6-knot cross-current." },
+      { date: "08 Jan 2025", type: "Laboratory fit-out safety inspection", inspector: "MCA Port State Control", result: "Compliant — Chemical storage locked and ventilated per COSHH regs." }
+    ],
+    attachments: ["MCA_DP2_Certificate_SouthernTracer.pdf", "LabSafety_InspectionJan2025.pdf", "BiofoulingLogbook_Q1.xlsx"],
+    notes: "Vessel operates under joint UK-Norway research charter. Applying for extended coverage to include Antarctic Treaty Area waters. Environmental impact statement attached separately via secure dropbox."
+  },
+  {
+    id: "VCR-2025-0007",
+    title: "FV Blue Fin Maru",
+    owner: "Seijima Fishing Group KK",
+    IMO: "IMO 9720345",
+    flag: "Japan",
+    grossTonnage: "892 GT",
+    built: "2014",
+    hullType: "Purse seine freezer trawler",
+    status: "pending",
+    dateCreated: "24 Jan 2025",
+    lastModified: "25 Jan 2025 · 06:50 UTC",
+    applicantName: "Director Takeshi Yamamoto",
+    applicantEmail: "t.yamamoto@seijima-fg.jp",
+    applicantPhone: "+81 952-555-0067",
+    portOf Registry: "Shimonoseki",
+    classificationClass: "Nippon Kaiji Kyokai (ClassNK) · ʃ6E · Fish Factory Ship",
+    mscCode: "MLC 2006 — Seafarers' Employment Agreement",
+    hazmatDeclaration: false,
+    inspections: [
+      { date: "20 Jan 2025", type: "Cold store temperature calibration", inspector: "ClassNK Kobe Branch", result: "Passed — Holds 1 through 4 within -30 °C ± 2 °C specification." },
+      { date: "14 Jan 2025", type: "Crew accommodation welfare check", inspector: "JFTU Rep. Kenichi Tsuboi", result: "Minor deficiencies found in galley ventilation fan #2 — replacement order placed." }
+    ],
+    attachments: ["ClassNK_BlueFin_Maru_2025.pdf", "MLC_CrewList_Jan2025.pdf"],
+    notes: "Small fleet operator seeking first-time entry into Deephaven trust pool. Applicant has limited familiarity with digital submission platform — consider offering phone-guided walkthrough option."
+  },
+  {
+    id: "VCR-2024-0038",
+    title: "CS Deep Harvest",
+    owner: "Atlantis Mining & Exploration Pty.",
+    IMO: "IMO 9601290",
+    flag: "Australia",
+    grossTonnage: "35,200 GT",
+    built: "2011",
+    hullType: "Mineral carrier with crane installation",
+    status: "review",
+    dateCreated: "05 Dec 2024",
+    lastModified: "19 Jan 2025 · 11:22 UTC",
+    applicantName: "Chief Engineer Marcus Webb",
+    applicantEmail: "mwebb@atlantis-mining.au",
+    applicantPhone: "+61 8-9456-7710",
+    portOfRegistry: "Perth",
+    classificationClass: "Australian Maritime Safety Authority · A3 Mineral Carrier · Heavy Lift Equipment HLE-3",
+    mscCode: "IMSBC Code 2023 Edition",
+    hazmatDeclaration: true,
+    inspections: [
+      { date: "10 Dec 2024", type: "Heavy-lift crane overhaul inspection", inspector: "ThyssenKrupp Marine Systems", result: "Conditionally Passed — Winch brake lining wear at 78% of limit; replacement required by 28 Feb." },
+      { date: "15 Nov 2024", type: "Tailings discharge system evaluation", inspector: "Environment Australia Marine Division", result: "Approved — Plume modelling confirms dispersion below EPA threshold." }
+    ],
+    attachments: ["AMSA_DesignApproval_DeepHarvest.pdf", "CraneOverhaulReport_Dec2024.pdf", "PlumeModel_PortPhillipBay.pdf"],
+    notes: "Application currently under Deephaven technical review panel. Pending clarification on tailings containment protocol amendment filed 14 Jan. Panel expects response by 01 Feb."
+  },
+  {
+    id: "VCR-2024-0042",
+    title: "PS Queen Margrethe II",
+    owner: "Danish Royal Yacht Administration",
+    IMO: "IMO 9554103",
+    flag: "Denmark",
+    grossTonnage: "2,180 GT",
+    built: "2008 (refurbished 2023)",
+    hullType: "Official state yacht / patrol auxiliary",
+    status: "review",
+    dateCreated: "18 Dec 2024",
+    lastModified: "17 Jan 2025 · 16:08 UTC",
+    applicantName: "Commodore Anders Jørgensen",
+    applicantEmail: "ajoergensen@kongehuset.dk",
+    applicantPhone: "+45 33-112-0047",
+    portOfRegistry: "Copenhagen",
+    classificationClass: "Det Danske Søfarersted · A2 Auxiliary Vessel · VIP Accommodation Cat. 1",
+    mscCode: "Solas Reg. II-2/13 — Special Requirements for Passenger Spaces",
+    hazmatDeclaration: false,
+    inspections: [
+      { date: "02 Jan 2025", type: "Post-refurbishment comprehensive survey", inspector: "DDS Chief Surveyor P. Hansen", result: "Passed — Full interior re-fit meets luxury passenger standards. Fire dampers tested and commissioned." },
+      { date: "20 Dec 2024", type: "Communications array upgrade verification", inspector: "Thales Naval Denmark", result: "Passed — Inmarsat FleetBroadband 500 operational. NAVTEX receiver updated." }
+    ],
+    attachments: ["DDS_RefurbCert_QueenMargretheII.pdf", "FireSystems_Test_Report_2025.pdf", "CommArrayUpgrade_Log.pdf"],
+    notes: "Royal yacht underwent 14-month refit at Odense Steel Shipyard. Application submitted on behalf of King Frederik X's administration. Expedited handling requested but remains subject to standard security clearance timeline."
+  }
+];
+
+let currentAppId = null;
+
+// ── Render list ───────────────────────────────────
+function renderList(filter) {
+  const container = document.getElementById('listContainer');
+  let filtered = filter && filter !== 'all' ? applications.filter(a => a.status === filter) : [...applications];
+  
+  // Sort: pending first, then review, then approved
+  const order = { pending: 0, review: 1, approved: 2 };
+  filtered.sort((a, b) => order[a.status] - order[b.status]);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg><h3>No matching applications</h3><p>Try adjusting your filter or search query.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(app => `
+    <div class="entry-card ${currentAppId === app.id ? 'selected' : ''}" 
+         onclick="selectApplication('${app.id}')" 
+         data-status="${app.status}"
+         data-id="${app.id}">
+      <div class="entry-title">${app.title}</div>
+      <div class="entry-meta">
+        <span><span class="status-dot ${app.status === 'pending' ? 'yellow' : app.status === 'review' ? 'green' : app.status === 'approved' ? 'gray' : 'red'}"></span>${app.status.charAt(0).toUpperCase() + app.status.slice(1)}</span>
+        <span>${app.id}</span>
+        <span>${app.dateCreated}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterEntries(query) {
+  query = query.toLowerCase();
+  document.querySelectorAll('.entry-card').forEach(card => {
+    const text = card.textContent.toLowerCase();
+    card.style.display = text.includes(query) ? '' : 'none';
+  });
+}
+
+function setFilter(btn, filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList(filter);
+}
+
+function switchTab(tab, status) {
+  document.querySelectorAll('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+  tab.classList.add('active');
+  tab.setAttribute('aria-selected','true');
+  
+  // Show corresponding tab panel area
+  renderList(status);
+  
+  // Update tab panels (conceptual)
+  document.querySelectorAll('[role="tabpanel"]').forEach(p => p.hidden = true);
+  const panel = document.getElementById('tabPanel' + status.charAt(0).toUpperCase() + status.slice(1));
+  if (panel) panel.hidden = false;
+}
+
+// ── Select application & show detail ──────────────
+function selectApplication(id) {
+  currentAppId = id;
+  const app = applications.find(a => a.id === id);
+  if (!app) return;
+
+  renderList(getCurrentFilter());
+
+  document.getElementById('emptyDetail').style.display = 'none';
+  const filled = document.getElementById('filledDetail');
+  filled.style.display = 'flex';
+
+  document.getElementById('detailTitle').textContent = app.title;
+  document.getElementById('detailSub').textContent = `${app.owner} · ${app.id}`;
+  
+  const statusEl = document.getElementById('detailStatus');
+  statusEl.textContent = app.status.charAt(0).toUpperCase() + app.status.slice(1);
+  statusEl.className = 'status-tag ' + app.status;
+
+  document.getElementById('footerInfo').textContent = `Last updated: ${app.lastModified} · Record created ${app.dateCreated}`;
+
+  // Build step indicators based on status
+  const dots = document.querySelectorAll('.step-dot');
+  const stepsDone = app.status === 'pending' ? 0 : app.status === 'review' ? 1 : 2;
+  dots.forEach((d, i) => {
+    d.className = 'step-dot';
+    if (i < stepsDone) d.classList.add('done');
+    else if (i === stepsDone) d.classList.add('current');
+  });
+
+  // Build detail sections
+  const body = document.getElementById('detailBody');
+  body.innerHTML = `
+    <!-- Section 1: Vessel Information -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="step-num">1</span>
+        <h2>Vessel Identification &amp; Registration</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="vesselName">Vessel Name</label>
+            <input type="text" id="vesselName" value="${app.title}" />
+          </div>
+          <div class="field-group">
+            <label for="imoNumber">IMO Number</label>
+            <input type="text" id="imoNumber" value="${app.IMO}" />
+          </div>
+          <div class="field-group">
+            <label for="owner">Registered Owner</label>
+            <input type="text" id="owner" value="${app.owner}" />
+          </div>
+          <div class="field-group">
+            <label for="flagState">Flag State</label>
+            <select id="flagState">
+              <option ${app.flag === 'Bahamas' ? 'selected' : ''}>Bahamas</option>
+              <option ${app.flag === 'Marshall Islands' ? 'selected' : ''}>Marshall Islands</option>
+              <option ${app.flag === 'Norway' ? 'selected' : ''}>Norway</option>
+              <option ${app.flag === 'United Kingdom' ? 'selected' : ''}>United Kingdom</option>
+              <option ${app.flag === 'Japan' ? 'selected' : ''}>Japan</option>
+              <option ${app.flag === 'Australia' ? 'selected' : ''}>Australia</option>
+              <option ${app.flag === 'Denmark' ? 'selected' : ''}>Denmark</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="portReg">Port of Registry</label>
+            <input type="text" id="portReg" value="${app.portOfRegistry}" />
+          </div>
+          <div class="field-group">
+            <label for="yearBuilt">Year Built</label>
+            <input type="text" id="yearBuilt" value="${app.built}" />
+          </div>
+          <div class="field-group">
+            <label for="grossTonnage">Gross Tonnage</label>
+            <input type="text" id="grossTonnage" value="${app.grossTonnage}" />
+          </div>
+          <div class="field-group">
+            <label for="hullDesc">Hull Type Description</label>
+            <input type="text" id="hullDesc" value="${app.hullType}" />
+          </div>
+          <div class="field-group full-span">
+            <label for="classNotation">Classification Society &amp; Notation</label>
+            <input type="text" id="classNotation" value="${app.classificationClass}" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Applicant Information -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="step-num">2</span>
+        <h2>Applicant &amp; Contact Details</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="appName">Full Name</label>
+            <input type="text" id="appName" value="${app.applicantName}" />
+          </div>
+          <div class="field-group">
+            <label for="appRole">Position / Title</label>
+            <input type="text" id="appRole" value="${app.applicantName.split(', ').pop() || app.applicantName}" />
+          </div>
+          <div class="field-group">
+            <label for="appEmail">Work Email</label>
+            <input type="email" id="appEmail" value="${app.applicantEmail}" />
+          </div>
+          <div class="field-group">
+            <label for="appPhone">Direct Phone</label>
+            <input type="tel" id="appPhone" value="${app.applicantPhone}" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Compliance & Inspections -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="step-num">3</span>
+        <h2>Inspection History &amp; Compliance Records</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Inspection Type</th>
+                <th>Inspector</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${app.inspections.map(ins => `
+                <tr>
+                  <td>${ins.date}</td>
+                  <td>${ins.type}</td>
+                  <td>${ins.inspector}</td>
+                  <td>${ins.result}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="form-grid" style="margin-top: var(--sp-lg);">
+          <div class="field-group">
+            <label for="mscRef">Relevant MSC Circular Reference</label>
+            <input type="text" id="mscRef" value="${app.mscCode}" />
+          </div>
+          <div class="field-group">
+            <label for="hazmatCheck">Hazmat Carriage Declaration</label>
+            <div class="checkbox-group" style="margin-top: var(--sp-xs);">
+              <input type="checkbox" id="hazmatCheck" ${app.hazmatDeclaration ? 'checked' : ''} />
+              <label for="hazmatCheck">This vessel carries, or may carry, hazardous materials as defined under IMDG Code Amendment 41-22. I confirm awareness of all applicable segregation and stowage requirements.</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Attachments & Notes -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="step-num">4</span>
+        <h2>Supporting Documents &amp; Additional Notes</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-group full-span">
+          <label>Attached Documents (${app.attachments.length})</label>
+          <ul style="list-style: none; padding: var(--sp-sm) 0;">
+            ${app.attachments.map(f => `
+              <li style="padding: var(--sp-xxs) 0; font-size: var(--fs-sm); color: var(--clr-primary); display: flex; align-items: center; gap: var(--sp-sm);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+                ${f}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+        <div class="field-group full-span" style="margin-top: var(--sp-md);">
+          <label for="notesArea">Additional Context Notes</label>
+          <textarea id="notesArea" rows="4">${app.notes}</textarea>
+          <div class="field-hint">Free-text field for any contextual details that may assist the review board. Include charter particulars, previous registry history, or known constraints.</div>
+        </div>
+
+        <div class="declaration-box">
+          <p>I hereby declare, under penalty of revocation of certification and applicable maritime law, that the information provided in this application is true, complete, and accurate to the best of my knowledge. I understand that material misrepresentation may result in denial of certification and referral to the relevant flag-state authority.</p>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="finalDecl" />
+          <label for="finalDecl">I certify that all declarations above are made in good faith and that supporting documentation has been reviewed for accuracy.</label>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getCurrentFilter() {
+  const activeFilter = document.querySelector('.filter-btn.active');
+  return activeFilter ? activeFilter.textContent.trim().toLowerCase() : 'all';
+}
+
+// ── Nav ───────────────────────────────────────────
+function setActiveNav(btn) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Toast ─────────────────────────────────────────
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  const icons = {
+    success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="#34c78a"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+    warning: '<svg width="18" height="18" viewBox="0 0 24 24" fill="#e8a838"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>',
+    error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="#e05555"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>',
+    info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="#3b8dd4"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'
+  };
+
+  toast.innerHTML = `
+    <div class="toast-icon">${icons[type] || icons.info}</div>
+    <span class="toast-msg">${message}</span>
+    <button class="toast-close" onclick="this.parentElement.classList.remove('show'); setTimeout(()=>this.parentElement.remove(), 250);" aria-label="Dismiss notification">&times;</button>
+  `;
+
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 5000);
+}
+
+// ── Dialog ────────────────────────────────────────
+function openConfirmDialog() {
+  const app = applications.find(a => a.id === currentAppId);
+  if (!app) return;
+  document.getElementById('dialogAppName').textContent = app.title;
+  document.getElementById('confirmDialog').classList.add('open');
+}
+
+function closeDialog() {
+  document.getElementById('confirmDialog').classList.remove('open');
+}
+
+function submitApplication() {
+  closeDialog();
+  const app = applications.find(a => a.id === currentAppId);
+  if (app) {
+    app.status = 'review';
+    app.lastModified = new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC';
+    renderList('review');
+    selectApplication(currentAppId);
+  }
+  showToast(`Application ${app.id} submitted successfully. Expected review turnaround: 10 business days.`, 'success');
+}
+
+function saveDraft() {
+  showToast('Draft saved locally. Changes will persist until you submit.', 'info');
+}
+
+function openNewAppDialog() {
+  showToast('New application wizard — redirecting to intake form. (Demo: select an existing record.)', 'warning');
+}
+
+// ── Init ──────────────────────────────────────────
+renderList();
+</script>
+</body>
+</html>

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Patchbay Cloud is a developer platform for testing and debugging webhook integrations before they reach production. Join the private-beta waitlist.">
+  <title>Patchbay Cloud — Test webhooks before they reach production</title>
+  <style>
+    :root {
+      --bg: #080b10;
+      --bg-elev: #10151d;
+      --bg-card: #141b25;
+      --bg-inset: #0c1118;
+      --line: #243044;
+      --line-strong: #33445c;
+      --text: #eef2f7;
+      --muted: #9aa8bb;
+      --faint: #6d7c91;
+      --accent: #ff6a3d;
+      --accent-hover: #ff825c;
+      --accent-dim: rgba(255, 106, 61, 0.14);
+      --signal: #3ee0a2;
+      --signal-dim: rgba(62, 224, 162, 0.12);
+      --ice: #8ec0ff;
+      --ice-dim: rgba(142, 192, 255, 0.12);
+      --warn: #f5c542;
+      --radius: 14px;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea { font-family: inherit; }
+
+    .skip {
+      position: absolute;
+      left: -999px;
+      top: 8px;
+      background: var(--accent);
+      color: #140800;
+      padding: 8px 12px;
+      z-index: 100;
+    }
+    .skip:focus { left: 8px; }
+
+    .page-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(900px 500px at 80% -10%, rgba(255, 106, 61, 0.12), transparent 55%),
+        radial-gradient(700px 420px at 0% 10%, rgba(142, 192, 255, 0.08), transparent 50%),
+        linear-gradient(180deg, #0b1018 0%, #080b10 40%, #080b10 100%);
+    }
+    .page-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at 50% 0%, #000 20%, transparent 75%);
+      opacity: 0.5;
+    }
+
+    .wrap {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+      background: rgba(8, 11, 16, 0.72);
+      border-bottom: 1px solid rgba(36, 48, 68, 0.8);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+      gap: 20px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-size: 1.02rem;
+    }
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      flex: none;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 11px 18px;
+      font-weight: 650;
+      font-size: 0.92rem;
+      transition: 0.18s ease;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #1a0903;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 8px 24px rgba(255, 106, 61, 0.28);
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line-strong);
+    }
+    .btn-ghost:hover { border-color: #4d6484; background: rgba(255,255,255,0.03); }
+    .btn:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--ice);
+      outline-offset: 3px;
+    }
+
+    .hero {
+      padding: 72px 0 40px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--signal);
+      background: var(--signal-dim);
+      border: 1px solid rgba(62, 224, 162, 0.28);
+      padding: 6px 10px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--signal);
+      box-shadow: 0 0 10px var(--signal);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    h1 {
+      font-size: clamp(2.2rem, 4.4vw, 3.5rem);
+      line-height: 1.08;
+      letter-spacing: -0.045em;
+      font-weight: 750;
+      margin-bottom: 18px;
+    }
+    .lede {
+      font-size: 1.12rem;
+      color: var(--muted);
+      max-width: 540px;
+      margin-bottom: 28px;
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 22px;
+      color: var(--faint);
+      font-size: 0.86rem;
+    }
+    .meta-row span { display: inline-flex; align-items: center; gap: 8px; }
+    .meta-row svg { opacity: 0.8; }
+
+    .panel {
+      background: linear-gradient(180deg, #18202c, #121821);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #151c27;
+    }
+    .panel-title {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .pills { display: flex; gap: 6px; }
+    .pill {
+      width: 9px; height: 9px; border-radius: 50%;
+    }
+    .pill.r { background: #ff6b6b; }
+    .pill.y { background: #f5c542; }
+    .pill.g { background: #3ee0a2; }
+
+    .endpoint-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+    .method {
+      background: var(--ice-dim);
+      color: var(--ice);
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    .url { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .live {
+      margin-left: auto;
+      color: var(--signal);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 0 8px;
+    }
+    .tab {
+      background: none;
+      border: 0;
+      color: var(--faint);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    .payload {
+      padding: 14px 16px 18px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      min-height: 248px;
+      color: #c9d6e6;
+    }
+    .k { color: #8ec0ff; }
+    .s { color: #3ee0a2; }
+    .n { color: #f5c542; }
+    .c { color: #6d7c91; }
+    .hidden { display: none; }
+
+    .event-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      border-top: 1px solid var(--line);
+    }
+    .event {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      gap: 10px;
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .event:hover, .event.active { background: rgba(255,255,255,0.03); color: var(--text); }
+    .status-ok { color: var(--signal); font-family: var(--mono); }
+    .status-fail { color: var(--accent); font-family: var(--mono); }
+
+    section { padding: 84px 0; position: relative; z-index: 1; }
+    .section-kicker {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    h2 {
+      font-size: clamp(1.7rem, 3vw, 2.35rem);
+      letter-spacing: -0.035em;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+    .section-lead {
+      color: var(--muted);
+      max-width: 640px;
+      font-size: 1.05rem;
+      margin-bottom: 36px;
+    }
+
+    .problem {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+    .card h3 { font-size: 1.05rem; margin: 10px 0 8px; letter-spacing: -0.02em; }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+    .num {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--faint);
+    }
+    .bad { border-color: rgba(255, 106, 61, 0.25); }
+    .good { border-color: rgba(62, 224, 162, 0.25); }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .feature {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px;
+      min-height: 210px;
+    }
+    .icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: var(--accent-dim);
+      margin-bottom: 14px;
+      color: var(--accent);
+    }
+    .feature:nth-child(2) .icon-box { background: var(--ice-dim); color: var(--ice); }
+    .feature:nth-child(3) .icon-box { background: var(--signal-dim); color: var(--signal); }
+    .feature:nth-child(4) .icon-box { background: rgba(245, 197, 66, 0.12); color: var(--warn); }
+    .feature h3 { margin-bottom: 8px; font-size: 1.12rem; letter-spacing: -0.02em; }
+    .feature p { color: var(--muted); }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      counter-reset: step;
+    }
+    .step {
+      background: var(--bg-elev);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px 18px;
+      position: relative;
+    }
+    .step::before {
+      counter-increment: step;
+      content: "0" counter(step);
+      font-family: var(--mono);
+      color: var(--accent);
+      font-size: 0.78rem;
+      display: block;
+      margin-bottom: 12px;
+    }
+    .step h3 { font-size: 1rem; margin-bottom: 8px; }
+    .step p { color: var(--muted); font-size: 0.92rem; }
+
+    .audience {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .chip {
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      background: var(--bg-inset);
+    }
+    .code-card {
+      background: #0d131c;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .code-card pre {
+      padding: 18px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      color: #c9d6e6;
+    }
+
+    .beta {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .waitlist {
+      background: linear-gradient(180deg, #182230, #121924);
+      border: 1px solid var(--line-strong);
+      border-radius: 18px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+    }
+    .waitlist h3 { font-size: 1.25rem; margin-bottom: 6px; }
+    .waitlist > p { color: var(--muted); margin-bottom: 18px; font-size: 0.95rem; }
+    form { display: grid; gap: 12px; }
+    label { font-size: 0.82rem; color: var(--muted); }
+    input, select {
+      width: 100%;
+      margin-top: 6px;
+      background: var(--bg-inset);
+      border: 1px solid var(--line-strong);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 12px 12px;
+      font-size: 0.95rem;
+    }
+    input::placeholder { color: #5e6d82; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-note { font-size: 0.78rem; color: var(--faint); }
+    .success {
+      display: none;
+      background: var(--signal-dim);
+      border: 1px solid rgba(62, 224, 162, 0.3);
+      color: var(--signal);
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+    }
+    .success.show { display: block; }
+    .error {
+      display: none;
+      color: #ff8d72;
+      font-size: 0.82rem;
+    }
+    .error.show { display: block; }
+    .checks { display: grid; gap: 14px; margin-top: 8px; }
+    .check {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      color: var(--muted);
+    }
+    .check strong { color: var(--text); display: block; font-weight: 650; }
+
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 28px 0 40px;
+      position: relative;
+      z-index: 1;
+      color: var(--faint);
+      font-size: 0.85rem;
+    }
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .foot a:hover { color: var(--text); }
+
+    @media (max-width: 920px) {
+      .hero, .audience, .beta, .problem, .features, .steps {
+        grid-template-columns: 1fr;
+      }
+      .nav-links { display: none; }
+      .hero { padding-top: 40px; }
+      section { padding: 64px 0; }
+    }
+    @media (max-width: 560px) {
+      .wrap { width: min(1120px, calc(100% - 28px)); }
+      .form-row { grid-template-columns: 1fr; }
+      h1 { font-size: 2rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .dot { animation: none; }
+      .btn { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+  <a class="skip" href="#main">Skip to content</a>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="#top" aria-label="Patchbay Cloud home">
+        <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect x="1.5" y="1.5" width="29" height="29" rx="8" stroke="#ff6a3d" stroke-width="1.5"/>
+          <circle cx="10" cy="12" r="2.2" fill="#3ee0a2"/>
+          <circle cx="22" cy="12" r="2.2" fill="#8ec0ff"/>
+          <circle cx="10" cy="21" r="2.2" fill="#8ec0ff"/>
+          <circle cx="22" cy="21" r="2.2" fill="#ff6a3d"/>
+          <path d="M12.2 12.4 C16 9.5 16 14.5 19.8 12.2" stroke="#eef2f7" stroke-width="1.4" fill="none"/>
+          <path d="M12.2 20.6 C16 23.6 16 18.4 19.8 20.8" stroke="#eef2f7" stroke-width="1.4" fill="none"/>
+        </svg>
+        Patchbay Cloud
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#product">Product</a>
+        <a href="#how">How it works</a>
+        <a href="#beta">Private beta</a>
+      </nav>
+      <a class="btn btn-primary" href="#waitlist">Join waitlist</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap hero" id="top">
+      <div>
+        <div class="kicker"><span class="dot" aria-hidden="true"></span> Private beta now forming</div>
+        <h1>Test webhooks in a sandbox, not in production.</h1>
+        <p class="lede">Patchbay Cloud gives software teams temporary endpoints to capture, inspect, replay, and share webhook events—so integrations are proven before they ever touch live systems.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#waitlist">Request beta access</a>
+          <a class="btn btn-ghost" href="#how">See the workflow</a>
+        </div>
+        <div class="meta-row">
+          <span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M7 2v10" stroke="#6d7c91" stroke-width="1.4"/></svg>
+            Disposable HTTPS endpoints
+          </span>
+          <span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="#6d7c91" stroke-width="1.4"/></svg>
+            Shared debugging sessions
+          </span>
+          <span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 10l4-6 4 6" stroke="#6d7c91" stroke-width="1.4"/></svg>
+            HTTP + common signing
+          </span>
+        </div>
+      </div>
+
+      <aside class="panel" aria-label="Product preview">
+        <div class="panel-bar">
+          <div class="pills" aria-hidden="true"><span class="pill r"></span><span class="pill y"></span><span class="pill g"></span></div>
+          <div class="panel-title">inspector · session pb_7f3a</div>
+        </div>
+        <div class="endpoint-row">
+          <span class="method">POST</span>
+          <span class="url">https://in.patchbay.dev/e/pb_7f3a</span>
+          <span class="live">LIVE</span>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" type="button" role="tab" aria-selected="true" data-tab="body">Body</button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-tab="headers">Headers</button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-tab="sig">Signature</button>
+        </div>
+        <div class="payload" id="pane-body">
+          <div><span class="c">// captured 12:04:18.441 · 214ms</span></div>
+          <div>{</div>
+          <div>&nbsp;&nbsp;<span class="k">"id"</span>: <span class="s">"evt_91c2"</span>,</div>
+          <div>&nbsp;&nbsp;<span class="k">"type"</span>: <span class="s">"invoice.paid"</span>,</div>
+          <div>&nbsp;&nbsp;<span class="k">"created"</span>: <span class="n">1716408258</span>,</div>
+          <div>&nbsp;&nbsp;<span class="k">"data"</span>: {</div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"amount"</span>: <span class="n">4900</span>,</div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"currency"</span>: <span class="s">"usd"</span></div>
+          <div>&nbsp;&nbsp;}</div>
+          <div>}</div>
+        </div>
+        <div class="payload hidden" id="pane-headers">
+          <div><span class="k">content-type</span>: application/json</div>
+          <div><span class="k">user-agent</span>: Stripe/1.0</div>
+          <div><span class="k">x-request-id</span>: req_8e21aa</div>
+          <div><span class="k">stripe-signature</span>: t=1716408258,v1=8f3c…</div>
+          <div><span class="c">// 6 headers · 412 bytes</span></div>
+        </div>
+        <div class="payload hidden" id="pane-sig">
+          <div><span class="c">// HMAC-SHA256 · matched</span></div>
+          <div><span class="k">scheme</span>: <span class="s">"t,v1"</span></div>
+          <div><span class="k">timestamp</span>: <span class="n">1716408258</span></div>
+          <div><span class="k">computed</span>: <span class="s">"8f3c9a…"</span></div>
+          <div><span class="k">status</span>: <span class="s">"valid"</span></div>
+        </div>
+        <div class="event-list" aria-label="Recent events">
+          <div class="event active"><span class="status-ok">200</span><span>invoice.paid</span><span>12:04:18</span></div>
+          <div class="event"><span class="status-fail">401</span><span>invoice.paid · bad sig</span><span>12:03:51</span></div>
+          <div class="event"><span class="status-ok">200</span><span>customer.updated</span><span>12:01:02</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <section>
+      <div class="wrap">
+        <p class="section-kicker">The gap</p>
+        <h2>Webhook debugging is still tribal knowledge.</h2>
+        <p class="section-lead">Events fire once, payloads live in screenshots, and failure paths get tested against real customers. Patchbay is the shared workspace for webhook truth.</p>
+        <div class="problem">
+          <article class="card bad">
+            <div class="num">WITHOUT PATCHBAY</div>
+            <h3>Guess, ping vendors, ship anyway</h3>
+            <p>Someone tunnels a laptop, pastes a payload into Slack, and asks the provider to resend. Timeouts, retries, and signature mismatches are discovered in production logs.</p>
+          </article>
+          <article class="card good">
+            <div class="num">WITH PATCHBAY</div>
+            <h3>Capture once, rehearse everything</h3>
+            <p>A durable session records every request. Engineering replays and mutates events. Support inspects the same history. Handlers are generated from real payloads, not docs.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="product">
+      <div class="wrap">
+        <p class="section-kicker">Product</p>
+        <h2>Built for the full integration loop.</h2>
+        <p class="section-lead">From first handshake to failure drills, Patchbay Cloud keeps webhook work inspectable, repeatable, and shareable across the team.</p>
+        <div class="features">
+          <article class="feature">
+            <div class="icon-box" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M10 4v12" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.4"/></svg>
+            </div>
+            <h3>Temporary endpoints</h3>
+            <p>Spin up unique HTTPS URLs that receive webhook events instantly. Inspect headers, body, timing, and signatures as they arrive—without opening production ports.</p>
+          </article>
+          <article class="feature">
+            <div class="icon-box" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 101.2-3.6" stroke="currentColor" stroke-width="1.6"/><path d="M4 4v4h4" stroke="currentColor" stroke-width="1.6"/></svg>
+            </div>
+            <h3>Replay, mutate, break</h3>
+            <p>Resend captured events as-is or edit the payload first. Rehearse timeouts, 4xx/5xx responses, and malformed signatures without waiting on a vendor or a customer.</p>
+          </article>
+          <article class="feature">
+            <div class="icon-box" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="8" r="2.4" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="8" r="2.4" stroke="currentColor" stroke-width="1.5"/><path d="M4 15c.6-2 2-3 3.2-3h1.6c1.2 0 2.6 1 3.2 3M12 15c.3-1 1-2 2-2h.6c1 0 2 .8 2.4 2" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <h3>Shared event history</h3>
+            <p>Invite engineering and support into the same session. Pin failures, annotate payloads, and hand off a live history instead of a screenshot thread.</p>
+          </article>
+          <article class="feature">
+            <div class="icon-box" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 4h8v12H6z" stroke="currentColor" stroke-width="1.5"/><path d="M8 8h4M8 11h3" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <h3>Code from captured events</h3>
+            <p>Generate starter snippets that verify signatures and handle the payload you actually received—ready to drop into the languages your team already ships.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <p class="section-kicker">Workflow</p>
+        <h2>Four steps from empty port to proven handler.</h2>
+        <p class="section-lead">Patchbay stays out of production traffic. It is the rehearsal space you use before you wire a provider to live systems.</p>
+        <div class="steps">
+          <article class="step">
+            <h3>Create an endpoint</h3>
+            <p>Mint a temporary URL and point any HTTP webhook provider at it. Common HMAC signing methods are ready on day one of beta.</p>
+          </article>
+          <article class="step">
+            <h3>Capture the event</h3>
+            <p>Every request is recorded: method, headers, body, timing, and signature check. Nothing disappears after the first delivery.</p>
+          </article>
+          <article class="step">
+            <h3>Replay and fail safely</h3>
+            <p>Mutate payloads, force error paths, and confirm retries. Share the session so support sees the same evidence engineering does.</p>
+          </article>
+          <article class="step">
+            <h3>Generate and graduate</h3>
+            <p>Export handler snippets from the captured event, then connect production only after the integration behaves as designed.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap audience">
+        <div>
+          <p class="section-kicker">Who it’s for</p>
+          <h2>Software teams who ship integrations, not just features.</h2>
+          <p class="section-lead">If webhooks cross engineering, support, and partner success, you need a single inspectable record—not a private tunnel on someone’s laptop.</p>
+          <div class="chip-list">
+            <span class="chip">Platform engineering</span>
+            <span class="chip">Integration specialists</span>
+            <span class="chip">Developer experience</span>
+            <span class="chip">Support / CS technical</span>
+            <span class="chip">Payments &amp; billing</span>
+            <span class="chip">Partner APIs</span>
+          </div>
+        </div>
+        <div class="code-card" aria-label="Generated snippet preview">
+          <div class="panel-bar">
+            <div class="panel-title">generated · node · from evt_91c2</div>
+          </div>
+          <pre><code><span class="c">// Signature check generated from session pb_7f3a</span>
+<span class="k">export function</span> <span class="s">verify</span>(header, raw, secret) {
+  <span class="k">const</span> { t, v1 } = <span class="s">parse</span>(header);
+  <span class="k">const</span> mac = hmac(secret, `${t}.${raw}`);
+  <span class="k">if</span> (!timingSafeEqual(mac, v1)) <span class="k">throw</span> Error(<span class="s">'bad sig'</span>);
+  <span class="k">return</span> JSON.parse(raw);
+}</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="beta">
+      <div class="wrap beta">
+        <div>
+          <p class="section-kicker">Private beta</p>
+          <h2>Limited seats for teams who live in webhook traffic.</h2>
+          <p class="section-lead">The first release is focused: HTTP-based webhooks and the signing methods you already implement. No production gateway. No surprise surface area.</p>
+          <div class="checks">
+            <div class="check">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="#3ee0a2" stroke-width="1.5"/><path d="M7 11.2l2.3 2.3L15 8.5" stroke="#3ee0a2" stroke-width="1.6"/></svg>
+              <div><strong>HTTP webhooks</strong> Capture standard POST/PUT deliveries over HTTPS, including JSON and form-encoded bodies.</div>
+            </div>
+            <div class="check">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="#3ee0a2" stroke-width="1.5"/><path d="M7 11.2l2.3 2.3L15 8.5" stroke="#3ee0a2" stroke-width="1.6"/></svg>
+              <div><strong>Common signing</strong> Validate HMAC schemes used by major providers so authenticity checks match production.</div>
+            </div>
+            <div class="check">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="#3ee0a2" stroke-width="1.5"/><path d="M7 11.2l2.3 2.3L15 8.5" stroke="#3ee0a2" stroke-width="1.6"/></svg>
+              <div><strong>Team sessions</strong> Share histories with engineering and support. We’ll email when your workspace is ready.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="waitlist" id="waitlist">
+          <h3>Join the waitlist</h3>
+          <p>Tell us how your team handles webhooks today. We’ll invite teams in waves as capacity opens.</p>
+          <form id="waitlist-form" novalidate>
+            <div>
+              <label for="email">Work email</label>
+              <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@company.com">
+            </div>
+            <div class="form-row">
+              <div>
+                <label for="company">Company</label>
+                <input id="company" name="company" type="text" autocomplete="organization" placeholder="Acme">
+              </div>
+              <div>
+                <label for="role">Role</label>
+                <select id="role" name="role">
+                  <option value="engineering">Engineering</option>
+                  <option value="platform">Platform / DX</option>
+                  <option value="support">Support</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label for="use">What do you want to test first?</label>
+              <select id="use" name="use">
+                <option value="payments">Payments / billing webhooks</option>
+                <option value="saas">SaaS product events</option>
+                <option value="ci">CI / source control hooks</option>
+                <option value="custom">Custom HTTP providers</option>
+              </select>
+            </div>
+            <p class="error" id="form-error" role="alert">Enter a valid work email so we can reach you.</p>
+            <button class="btn btn-primary" type="submit">Request private-beta access</button>
+            <p class="form-note">No production traffic. We’ll only use this to schedule your invite.</p>
+          </form>
+          <div class="success" id="form-success" role="status">You’re on the list. We’ll email when a Patchbay Cloud workspace is available for your team.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div>© 2026 Patchbay Cloud. Pre-production webhook testing for software teams.</div>
+      <div>
+        <a href="#product">Product</a>
+        &nbsp;·&nbsp;
+        <a href="#beta">Private beta</a>
+        &nbsp;·&nbsp;
+        <a href="#waitlist">Waitlist</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var tabs = document.querySelectorAll(".tab");
+      var panes = {
+        body: document.getElementById("pane-body"),
+        headers: document.getElementById("pane-headers"),
+        sig: document.getElementById("pane-sig")
+      };
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          tabs.forEach(function (t) {
+            t.classList.remove("active");
+            t.setAttribute("aria-selected", "false");
+          });
+          tab.classList.add("active");
+          tab.setAttribute("aria-selected", "true");
+          var key = tab.getAttribute("data-tab");
+          Object.keys(panes).forEach(function (k) {
+            panes[k].classList.toggle("hidden", k !== key);
+          });
+        });
+      });
+
+      var form = document.getElementById("waitlist-form");
+      var error = document.getElementById("form-error");
+      var success = document.getElementById("form-success");
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var email = document.getElementById("email").value.trim();
+        var valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        error.classList.toggle("show", !valid);
+        if (!valid) {
+          document.getElementById("email").focus();
+          return;
+        }
+        form.style.display = "none";
+        success.classList.add("show");
+      });
+    })();
+  </script>
+</body>
+</html>

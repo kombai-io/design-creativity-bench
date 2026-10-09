@@ -1,0 +1,525 @@
+# Variant `case56__ds+ia_L2` of the Ridgewell staff-access screen
+
+Reproduce the reference HTML document at the end of this file with the changes below applied, and
+with nothing else changed. Every change is specified; there is nothing here for you to choose.
+Apply the change sets in the order given.
+
+Return one complete standalone HTML document.
+
+## What must not change
+
+- **The reusable components are untouched.** The role button, the permission row and the
+  member card each keep the internal layout the reference gives them: the same fields in the same
+  order and the same arrangement. Each shows exactly what it shows now and hides exactly what it
+  hides now. The same controls do the same things in the same way - the role buttons select, the
+  permission rows are read-only, the reassign `<select>` moves a person on `change` with no
+  confirmation step. Nothing moves onto a different surface: what is inline stays inline, and no
+  drawer, modal or popover appears.
+- **The content is identical.** The same people, employee ids, emails, roles, locations,
+  sign-in dates, permission labels, headings and body copy, word for word. No records added or
+  removed, no new copy invented. This is the same screen redesigned, not a new screen.
+- **The build is identical.** One standalone HTML document loading the same Tailwind browser CDN
+  script the reference loads, with the same `<style>` block approach and the same inline
+  `<script>`. Do not switch to a stylesheet, a build step or a framework - a change of technique
+  would register as a design difference in its own right.
+- **The `data-kid` and `data-name` attributes stay on the elements that carry them**, and any
+  element you add carries neither. Where an element moves, its attributes move with it.
+- **Everything keeps working.** Selecting a role re-renders the detail, the counts stay correct,
+  and reassignment still moves a person between roles. Desktop width, about 1280px.
+
+
+## The changes (4 change sets)
+
+This variant moves the visual language and information architecture. Apply every set below, in order.
+
+### DS-1 - Re-skin: cool slate neutrals, amber accent
+
+The screen is built on a green-tinted neutral family with a lime accent. Replace both, keeping
+every colour's lightness so the contrast relationships survive.
+
+1. **Neutrals to cool slate.** Replace every colour in the neutral table below with its
+   replacement, everywhere it occurs: in Tailwind arbitrary values (`bg-[...]`, `text-[...]`,
+   `border-[...]`, `divide-[...]`, `ring-[...]`, `focus:border-[...]`), in the `<style>` block,
+   and inside the template strings in `<script>`.
+2. **Accent to amber.** Replace every colour in the accent table below the same way.
+3. **Shadow tints follow the neutrals.** `rgba(32,57,48,0.025)` becomes `rgba(32,36,48,0.025)`
+   and `rgba(28,44,42,0.03)` becomes `rgba(28,32,44,0.03)`.
+
+The fourteen per-person avatar tints are the only colours that stay as they are - they identify
+people, not the product. Leave every one of these exactly as found:
+`#e2eef0` `#41656a` `#e8e9f2` `#5b5d78` `#e5ebda` `#597143` `#f0e7db` `#7c6042` `#dce8bf` `#36524a` `#e9e3f0` `#69577b` `#f0e8dd` `#7c5e3d`
+
+**Neutral table** (61 colours):
+
+| from | to |
+| --- | --- |
+| `#173d39` | `#202634` |
+| `#183b38` | `#212632` |
+| `#1c2c2a` | `#202228` |
+| `#233c37` | `#292d36` |
+| `#30423e` | `#35373e` |
+| `#30443f` | `#35383f` |
+| `#344944` | `#393c44` |
+| `#354944` | `#3a3d44` |
+| `#354d47` | `#3b3f47` |
+| `#3a504a` | `#40434a` |
+| `#477066` | `#515766` |
+| `#4d7167` | `#565b68` |
+| `#4f645b` | `#54575f` |
+| `#547068` | `#5b5f69` |
+| `#65736b` | `#686b70` |
+| `#66756d` | `#6a6c71` |
+| `#67756f` | `#6b6d72` |
+| `#68766f` | `#6b6e73` |
+| `#68776f` | `#6c6e73` |
+| `#6f7c74` | `#727479` |
+| `#6f7d76` | `#73757a` |
+| `#70877a` | `#767981` |
+| `#718079` | `#75777c` |
+| `#73817a` | `#76797e` |
+| `#73877c` | `#787b82` |
+| `#74827b` | `#787a7e` |
+| `#7c8a82` | `#808286` |
+| `#7e8b84` | `#818388` |
+| `#809a74` | `#7e8390` |
+| `#839089` | `#86888d` |
+| `#83918a` | `#86898d` |
+| `#85918b` | `#888a8e` |
+| `#89958e` | `#8c8e92` |
+| `#89958f` | `#8c8e92` |
+| `#8b9890` | `#8e9095` |
+| `#8c9891` | `#8f9195` |
+| `#909b95` | `#939498` |
+| `#92a09a` | `#96989c` |
+| `#99a39d` | `#9b9da1` |
+| `#9aa39d` | `#9c9ea1` |
+| `#9aa49e` | `#9c9ea2` |
+| `#a6b0aa` | `#a9aaae` |
+| `#bdc9bf` | `#c0c2c6` |
+| `#cfd9d0` | `#d2d3d6` |
+| `#d3ddd4` | `#d6d7da` |
+| `#d6ded6` | `#d8d9dc` |
+| `#d7dfd7` | `#d9dadd` |
+| `#d7e0d7` | `#d9dbde` |
+| `#d9e0d9` | `#dbdcde` |
+| `#dce2dc` | `#dedee0` |
+| `#e0e6df` | `#e1e2e4` |
+| `#e0e7df` | `#e1e2e5` |
+| `#e2e7e1` | `#e2e3e5` |
+| `#e4ece6` | `#e6e7ea` |
+| `#e5eee8` | `#e7e9ec` |
+| `#e8ede7` | `#e9e9ec` |
+| `#f0f4ed` | `#eff0f2` |
+| `#f3f5f0` | `#f1f2f4` |
+| `#f4f7f3` | `#f4f5f6` |
+| `#fbfcf8` | `#f9fafb` |
+| `#fbfcf9` | `#fafafb` |
+
+**Accent table** (9 colours):
+
+| from | to |
+| --- | --- |
+| `#5b762a` | `#7c5024` |
+| `#647631` | `#7b542c` |
+| `#6c7d38` | `#825a33` |
+| `#b4ce4e` | `#d88e44` |
+| `#bfd75d` | `#e09a54` |
+| `#d7e86c` | `#f1aa63` |
+| `#dfe9bd` | `#ecd3ba` |
+| `#e3efb2` | `#f4d0ad` |
+| `#eaf0d8` | `#f2e4d6` |
+
+### IA-1 - Reorder the regions
+
+Nothing is added, removed or restyled. Three things sit somewhere else.
+
+1. **The two columns swap.** `grid-cols-[302px_minmax(0,1fr)]` becomes
+   `grid-cols-[minmax(0,1fr)_302px]`, and the role detail `<section>` is moved before the role
+   catalog `<section>` in the DOM, so the detail is on the left and the catalog on the right.
+2. **The two detail panels swap.** `grid-cols-[1.12fr_.88fr]` becomes `grid-cols-[.88fr_1.12fr]`,
+   and the members panel is moved before the permissions panel in the DOM.
+3. **Reassignment moves into the members panel.** The whole reassign block - label, control and
+   instruction text - leaves the detail header and sits directly beneath the members panel header,
+   full width of that panel, with its label and instruction left-aligned rather than right. The
+   detail header keeps the badge, role name and summary, which now sit alone.
+
+### DS-2 - Geometry and type: square corners, serif type, flat surfaces
+
+1. **Corners.** Replace `rounded-[17px]`, `rounded-[12px]` and `rounded-[11px]` with
+   `rounded-[3px]` wherever each appears, including inside the `<script>` templates. The two
+   pill-shaped text chips - the selected-role badge in the detail header, and the location chip
+   in the member card - change from `rounded-full` to `rounded-[2px]`. `rounded-full` stays on
+   the three genuinely circular tokens: the brand logo initial, the user and member initials
+   badges, the sidebar active-indicator dot and the clinic status dot, and the 18px permission
+   tick. In the `<style>` block, the scrollbar thumb's `border-radius: 999px` becomes `2px`.
+2. **Type.** In the `<style>` block, `.rw-font` changes its family to
+   `"Iowan Old Style", Georgia, "Times New Roman", serif`. Every negative letter-spacing utility
+   - all of `tracking-[-0.08em]`, `tracking-[-0.045em]`, `tracking-[-0.055em]`,
+   `tracking-[-0.02em]`, `tracking-[-0.01em]` - is deleted, leaving default tracking; the
+   positive uppercase tracking utilities (`tracking-[0.17em]` and the rest) stay. `font-black`
+   becomes `font-bold`.
+3. **Elevation.** Delete both shadow utilities entirely: `shadow-[0_2px_7px_rgba(...)]` on the
+   two `<section>` wrappers and `shadow-[0_1px_2px_rgba(...)]` on the clinic switcher button. In
+   their place, those three elements change `border` to `border-2`.
+
+### IA-2 - Regroup: permissions by area, members by location, title into the header
+
+1. **Permissions gain a grouping level.** The flat list of twelve becomes four labelled groups,
+   in this order, each with a subhead in the same style as the panel title and a `n/m` count on
+   the right of the subhead:
+   - **Patients** - view patient demographics, view clinical notes, edit clinical notes, export
+     patient list
+   - **Scheduling** - view calendar, book appointments, cancel appointments
+   - **Billing** - view invoices, post payments, issue refunds
+   - **Administration** - manage staff access, edit clinic settings
+
+   Rows keep their order within a group and keep their appearance.
+2. **Members gain a grouping level.** The member list is grouped by location under two subheads,
+   `Lakeside` then `Central`, each with its own count. Dr. Elena Voss, whose location reads
+   `Lakeside - Central`, appears under both.
+3. **The page title folds into the header bar.** The page title area is removed as a region. Its
+   three pieces move into the header bar, replacing the `Staff access` breadcrumb title: the
+   `Staff / access` label on the first line, the `Roles & access` headline on the second, and
+   `Assign one global role to each person.` on the third. The header bar grows to fit them and the
+   roles-and-details grid moves up to where the title area was.
+
+## Reference design
+
+```html
+<!DOCTYPE html><html><head><meta charset='utf-8'><script src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'></script><style> *,*::before,*::after{box-sizing:border-box;} body{margin:0;padding:0;}</style></head><body><style>
+    .rw-font { font-family: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif; }
+  .rw-scroll::-webkit-scrollbar { width: 6px; }
+  .rw-scroll::-webkit-scrollbar-track { background: transparent; }
+  .rw-scroll::-webkit-scrollbar-thumb { background: #bdc9bf; border-radius: 999px; }
+  .rw-role-item[aria-pressed="true"] .rw-role-arrow { opacity: 1; transform: translateX(0); }
+  .rw-role-item[aria-pressed="false"] .rw-role-arrow { opacity: .42; transform: translateX(-2px); }
+  .rw-select { background-image: none; }
+</style>
+<div class="rw-font min-h-screen overflow-x-clip bg-[#f3f5f0] text-[#1c2c2a] antialiased" data-kid="1" data-name="page layout container">
+    <div class="flex min-h-screen" data-kid="1-1" data-name="main content structure">
+        <aside class="flex w-[220px] shrink-0 flex-col border-r border-[#d9e0d9] bg-[#fbfcf8] px-5 py-5" data-kid="1-1-1" data-name="sidebar navigation area">
+            <div class="flex items-center gap-3 px-1" data-kid="1-1-1-1" data-name="branding container">
+                <span class="grid h-9 w-9 place-items-center rounded-[11px] bg-[#173d39] text-[17px] font-black tracking-[-0.08em] text-[#d7e86c]" data-kid="1-1-1-1-1" data-name="brand logo initial">
+                    R
+                </span>
+                <div class="leading-none" data-kid="1-1-1-1-2" data-name="brand name group">
+                    <div class="text-[15px] font-bold tracking-[-0.045em] text-[#183b38]" data-kid="1-1-1-1-2-1" data-name="brand name text">
+                        Ridgewell
+                    </div>
+                    <div class="mt-1 text-[8px] font-bold uppercase tracking-[0.21em] text-[#8b9890]" data-kid="1-1-1-1-2-2" data-name="brand subtitle text">
+                        Clinics
+                    </div>
+                </div>
+            </div>
+            <div class="mt-[61px] px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#65736b]" data-kid="1-1-1-2" data-name="sidebar section title">
+                Workspace
+            </div>
+            <nav aria-label="Primary" class="mt-3 space-y-1" data-kid="1-1-1-3" data-name="primary navigation menu">
+                <a class="flex h-10 items-center gap-3 rounded-[11px] px-3 text-[13px] font-medium text-[#67756f]" data-kid="1-1-1-3-1" data-name="schedule menu item" href="#">
+                    <svg aria-hidden="true" class="h-[17px] w-[17px] text-[#92a09a]" data-kid="1-1-1-3-1-1" data-name="calendar icon" fill="none" stroke="currentColor" stroke-width="1.7" viewbox="0 0 24 24">
+                        <rect height="15" rx="2" width="16" x="4" y="5">
+                        </rect>
+                        <path d="M8 3v4M16 3v4M4 10h16">
+                        </path>
+                    </svg>
+                    <span data-kid="1-1-1-3-1-2" data-name="schedule text">
+                        Schedule
+                    </span>
+                </a>
+                <a class="flex h-10 items-center gap-3 rounded-[11px] px-3 text-[13px] font-medium text-[#67756f]" data-kid="1-1-1-3-2" data-name="patients menu item" href="#">
+                    <svg aria-hidden="true" class="h-[17px] w-[17px] text-[#92a09a]" data-kid="1-1-1-3-2-1" data-name="patients icon" fill="none" stroke="currentColor" stroke-width="1.7" viewbox="0 0 24 24">
+                        <circle cx="9" cy="8" r="3">
+                        </circle>
+                        <path d="M3.8 19c.8-3 2.5-4.5 5.2-4.5s4.4 1.5 5.2 4.5M16 11a2.7 2.7 0 1 0 0-5.4M15.4 14.8c2.6.1 4.2 1.5 4.8 4.2">
+                        </path>
+                    </svg>
+                    <span data-kid="1-1-1-3-2-2" data-name="patients text">
+                        Patients
+                    </span>
+                </a>
+                <a class="flex h-10 items-center gap-3 rounded-[11px] px-3 text-[13px] font-medium text-[#67756f]" data-kid="1-1-1-3-3" data-name="billing menu item" href="#">
+                    <svg aria-hidden="true" class="h-[17px] w-[17px] text-[#92a09a]" data-kid="1-1-1-3-3-1" data-name="billing icon" fill="none" stroke="currentColor" stroke-width="1.7" viewbox="0 0 24 24">
+                        <rect height="12" rx="2" width="17" x="3.5" y="6">
+                        </rect>
+                        <path d="M3.5 10h17M8 14h2">
+                        </path>
+                    </svg>
+                    <span data-kid="1-1-1-3-3-2" data-name="billing text">
+                        Billing
+                    </span>
+                </a>
+                <a aria-current="page" class="flex h-10 items-center justify-between rounded-[11px] bg-[#e4ece6] px-3 text-[13px] font-bold text-[#173d39]" data-kid="1-1-1-3-4" data-name="staff menu item" href="#">
+                    <span class="flex items-center gap-3" data-kid="1-1-1-3-4-1" data-name="staff menu link container">
+                        <svg aria-hidden="true" class="h-[17px] w-[17px] text-[#477066]" data-kid="1-1-1-3-4-1-1" data-name="user staff icon" fill="none" stroke="currentColor" stroke-width="1.7" viewbox="0 0 24 24">
+                            <circle cx="12" cy="8" r="3">
+                            </circle>
+                            <path d="M5.5 20c.9-3.8 3.1-5.7 6.5-5.7s5.6 1.9 6.5 5.7">
+                            </path>
+                        </svg>
+                        <span data-kid="1-1-1-3-4-1-2" data-name="staff text">
+                            Staff
+                        </span>
+                    </span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-[#bfd75d]" data-kid="1-1-1-3-4-2" data-name="active indicator dot">
+                    </span>
+                </a>
+            </nav>
+        </aside>
+        <div class="min-w-0 flex-1" data-kid="1-1-2" data-name="main content area">
+            <header class="flex h-[70px] items-center justify-between border-b border-[#dce2dc] bg-[#fbfcf8] px-8" data-kid="1-1-2-1" data-name="page header bar">
+                <div class="text-[13px] font-semibold text-[#547068]" data-kid="1-1-2-1-1" data-name="breadcrumb title">
+                    Staff access
+                </div>
+                <div class="flex items-center gap-5" data-kid="1-1-2-1-2" data-name="user profile and switcher area">
+                    <button aria-label="Clinic switcher" class="flex h-10 items-center gap-2 rounded-[12px] border border-[#d6ded6] bg-white px-3.5 text-[12px] font-semibold text-[#354d47] shadow-[0_1px_2px_rgba(28,44,42,0.03)]" data-kid="1-1-2-1-2-1" data-name="clinic switcher button" type="button">
+                        <span class="h-2 w-2 rounded-full bg-[#b4ce4e]" data-kid="1-1-2-1-2-1-1" data-name="clinic status indicator dot">
+                        </span>
+                        <span data-kid="1-1-2-1-2-1-2" data-name="current clinic name">
+                            Lakeside
+                        </span>
+                        <span class="text-[#a6b0aa]" data-kid="1-1-2-1-2-1-3" data-name="separator slash">
+                            /
+                        </span>
+                        <span class="text-[#6f7d76]" data-kid="1-1-2-1-2-1-4" data-name="secondary clinic name">
+                            Central
+                        </span>
+                        <svg aria-hidden="true" class="ml-1 h-3.5 w-3.5 text-[#83918a]" data-kid="1-1-2-1-2-1-5" data-name="dropdown arrow icon" fill="none" viewbox="0 0 20 20">
+                            <path d="m5.5 7.5 4.5 4.5 4.5-4.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                            </path>
+                        </svg>
+                    </button>
+                    <div class="h-8 w-px bg-[#e2e7e1]" data-kid="1-1-2-1-2-2" data-name="divider">
+                    </div>
+                    <div class="flex items-center gap-2.5" data-kid="1-1-2-1-2-3" data-name="user profile container">
+                        <span class="grid h-9 w-9 place-items-center rounded-full bg-[#dce8bf] text-[11px] font-bold text-[#36524a]" data-kid="1-1-2-1-2-3-1" data-name="user initials badge">
+                            AC
+                        </span>
+                        <span class="text-[13px] font-semibold text-[#30423e]" data-kid="1-1-2-1-2-3-2" data-name="user full name">
+                            Amira Cole
+                        </span>
+                    </div>
+                </div>
+            </header>
+            <main class="px-8 py-7" data-kid="1-1-2-2" data-name="page main content container">
+                <div class="mb-5 flex items-end justify-between" data-kid="1-1-2-2-1" data-name="page title area">
+                    <div data-kid="1-1-2-2-1-1" data-name="title breadcrumb group">
+                        <div class="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#89958e]" data-kid="1-1-2-2-1-1-1" data-name="page breadcrumb label">
+                            Staff / access
+                        </div>
+                        <h1 class="text-[30px] font-semibold leading-none tracking-[-0.055em] text-[#183b38]" data-kid="1-1-2-2-1-1-2" data-name="page headline text">
+                            Roles & access
+                        </h1>
+                        <p class="mt-2.5 text-[13px] text-[#718079]" data-kid="1-1-2-2-1-1-3" data-name="page description">
+                            Assign one global role to each person.
+                        </p>
+                    </div>
+                    <div class="mb-1 h-1.5" data-kid="1-1-2-2-1-2" data-name="spacer">
+                    </div>
+                </div>
+                <div class="grid min-h-[526px] grid-cols-[302px_minmax(0,1fr)] gap-5" data-kid="1-1-2-2-2" data-name="roles and details grid">
+                    <section aria-labelledby="role-catalog-title" class="flex min-h-[526px] flex-col rounded-[17px] border border-[#d7dfd7] bg-white p-4 shadow-[0_2px_7px_rgba(32,57,48,0.025)]" data-kid="1-1-2-2-2-1" data-name="role catalog section">
+                        <div class="flex items-end justify-between border-b border-[#e8ede7] px-2 pb-3" data-kid="1-1-2-2-2-1-1" data-name="catalog header area">
+                            <div data-kid="1-1-2-2-2-1-1-1" data-name="catalog title group">
+                                <h2 class="text-[15px] font-bold tracking-[-0.02em] text-[#233c37]" data-kid="1-1-2-2-2-1-1-1-1" data-name="catalog title" id="role-catalog-title">
+                                    Role catalog
+                                </h2>
+                                <p class="mt-1 text-[11px] text-[#68766f]" data-kid="1-1-2-2-2-1-1-1-2" data-name="catalog subtitle">
+                                    Select a role to view access
+                                </p>
+                            </div>
+                            <span class="text-[11px] font-medium text-[#6f7c74]" data-kid="1-1-2-2-2-1-1-2" data-name="role count text">
+                                5 roles
+                            </span>
+                        </div>
+                        <div aria-label="Roles" class="rw-scroll mt-2 flex-1 space-y-1" data-dynamic="true" data-kid="1-1-2-2-2-1-2" data-name="roles list container" data-reason="list items rendered and re-rendered by script on interaction" id="roleCatalog">
+                        </div>
+                        <div class="mt-3 border-t border-[#e8ede7] px-2 pt-3 text-[11px] leading-5 text-[#89958f]" data-kid="1-1-2-2-2-1-3" data-name="catalog footer text">
+                            A person has one role across Ridgewell Clinics.
+                        </div>
+                    </section>
+                    <section aria-labelledby="detailRole" class="min-w-0 overflow-hidden rounded-[17px] border border-[#d3ddd4] bg-[#fbfcf9] shadow-[0_2px_7px_rgba(32,57,48,0.025)]" data-dynamic="true" data-kid="1-1-2-2-2-2" data-name="role detail section" data-reason="content updated by script based on selection" id="roleDetail">
+                        <div class="flex items-start justify-between border-b border-[#e0e7df] px-7 py-5" data-kid="1-1-2-2-2-2-1" data-name="detail header area">
+                            <div data-kid="1-1-2-2-2-2-1-1" data-name="role metadata group">
+                                <div class="mb-2 inline-flex items-center rounded-full bg-[#eaf0d8] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#647631]" data-kid="1-1-2-2-2-2-1-1-1" data-name="selected role badge">
+                                    Selected role
+                                </div>
+                                <h2 class="text-[24px] font-semibold leading-none tracking-[-0.045em] text-[#183b38]" data-dynamic="true" data-kid="1-1-2-2-2-2-1-1-2" data-name="role detail name" data-reason="text replaced by script on role change" id="detailRole">
+                                    Front desk
+                                </h2>
+                                <p class="mt-2 text-[12px] text-[#7e8b84]" data-dynamic="true" data-kid="1-1-2-2-2-2-1-1-3" data-name="role detail summary" data-reason="text replaced by script on role change" id="detailSummary">
+                                    2 people · global role
+                                </p>
+                            </div>
+                            <div class="w-[238px]" data-kid="1-1-2-2-2-2-1-2" data-name="reassign person area">
+                                <label class="mb-2 block text-right text-[9px] font-bold uppercase tracking-[0.18em] text-[#85918b]" data-kid="1-1-2-2-2-2-1-2-1" data-name="reassign label" for="reassignPerson">
+                                    Reassign a person
+                                </label>
+                                <div class="relative" data-kid="1-1-2-2-2-2-1-2-2" data-name="reassign dropdown container">
+                                    <select class="rw-select h-10 w-full appearance-none rounded-[11px] border border-[#cfd9d0] bg-white px-3.5 pr-9 text-[12px] font-semibold text-[#3a504a] outline-hidden focus:border-[#809a74] focus:ring-2 focus:ring-[#dfe9bd]" data-dynamic="true" data-kid="1-1-2-2-2-2-1-2-2-1" data-name="reassign dropdown" data-reason="options list dynamically populated by script" id="reassignPerson">
+                                        <option data-kid="1-1-2-2-2-2-1-2-2-1-1" value="">
+                                            Select a person…
+                                        </option>
+                                    </select>
+                                    <svg aria-hidden="true" class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#839089]" data-kid="1-1-2-2-2-2-1-2-2-2" data-name="dropdown arrow icon" fill="none" viewbox="0 0 20 20">
+                                        <path d="m5.5 7.5 4.5 4.5 4.5-4.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <p class="mt-1.5 text-right text-[10px] text-[#99a39d]" data-kid="1-1-2-2-2-2-1-2-3" data-name="reassign instruction text">
+                                    Their role changes immediately.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="grid min-h-[420px] grid-cols-[1.12fr_.88fr] divide-x divide-[#e0e7df]" data-kid="1-1-2-2-2-2-2" data-name="detail grid area">
+                            <div class="min-w-0 px-7 py-5" data-kid="1-1-2-2-2-2-2-1" data-name="permissions list panel">
+                                <div class="mb-3 flex items-center justify-between" data-kid="1-1-2-2-2-2-2-1-1" data-name="permissions header area">
+                                    <h3 class="text-[11px] font-bold uppercase tracking-[0.17em] text-[#74827b]" data-kid="1-1-2-2-2-2-2-1-1-1" data-name="permissions title">
+                                        Permissions
+                                    </h3>
+                                    <span class="rounded-full bg-[#eaf0d8] px-2 py-1 text-[10px] font-semibold text-[#6c7d38]" data-dynamic="true" data-kid="1-1-2-2-2-2-2-1-1-2" data-name="permission count label" data-reason="text replaced by script on role change" id="permissionCount">
+                                        4 granted
+                                    </span>
+                                </div>
+                                <div class="overflow-hidden rounded-[12px] border border-[#e0e6df] bg-white" data-dynamic="true" data-kid="1-1-2-2-2-2-2-1-2" data-name="permissions list container" data-reason="content rendered by script on role change" id="permissionList">
+                                </div>
+                                <p class="mt-3 text-[10px] text-[#8c9891]" data-kid="1-1-2-2-2-2-2-1-3" data-name="permissions footer text">
+                                    Permissions are fixed by role.
+                                </p>
+                            </div>
+                            <div class="min-w-0 px-7 py-5" data-kid="1-1-2-2-2-2-2-2" data-name="members list panel">
+                                <div class="mb-3 flex items-center justify-between" data-kid="1-1-2-2-2-2-2-2-1" data-name="members header area">
+                                    <h3 class="text-[11px] font-bold uppercase tracking-[0.17em] text-[#74827b]" data-kid="1-1-2-2-2-2-2-2-1-1" data-name="members title">
+                                        People in this role
+                                    </h3>
+                                    <span class="text-[10px] font-medium text-[#9aa39d]" data-dynamic="true" data-kid="1-1-2-2-2-2-2-2-1-2" data-name="member count label" data-reason="text replaced by script on role change" id="memberCount">
+                                        2 people
+                                    </span>
+                                </div>
+                                <div class="rw-scroll max-h-[402px] space-y-2 overflow-y-auto pr-1" data-dynamic="true" data-kid="1-1-2-2-2-2-2-2-2" data-name="members list container" data-reason="content rendered by script on role change" id="memberList">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+<script>
+    const rwPermissions = [
+    { id: "demographics", label: "view patient demographics" },
+    { id: "clinical-view", label: "view clinical notes" },
+    { id: "clinical-edit", label: "edit clinical notes" },
+    { id: "export", label: "export patient list" },
+    { id: "calendar", label: "view calendar" },
+    { id: "book", label: "book appointments" },
+    { id: "cancel", label: "cancel appointments" },
+    { id: "invoices", label: "view invoices" },
+    { id: "payments", label: "post payments" },
+    { id: "refunds", label: "issue refunds" },
+    { id: "manage-access", label: "manage staff access" },
+    { id: "settings", label: "edit clinic settings" }
+  ];
+
+  const rwRoles = {
+    "Front desk": ["demographics", "calendar", "book", "cancel"],
+    "Nurse": ["demographics", "clinical-view", "clinical-edit", "calendar", "book"],
+    "Physician": ["demographics", "clinical-view", "clinical-edit", "calendar", "book", "cancel"],
+    "Billing": ["demographics", "calendar", "invoices", "payments", "refunds"],
+    "Clinic admin": ["demographics", "export", "calendar", "book", "cancel", "invoices", "manage-access", "settings"]
+  };
+
+  const rwStaff = [
+    { id: "EMP-1041", name: "Priya Shah", email: "priya.shah@ridgewell.example", role: "Front desk", location: "Lakeside", signIn: "last sign-in 24 Aug 2026", initials: "PS", tone: "bg-[#e2eef0] text-[#41656a]" },
+    { id: "EMP-1108", name: "Marcus Bell", email: "marcus.bell@ridgewell.example", role: "Nurse", location: "Lakeside", signIn: "last sign-in 23 Aug 2026", initials: "MB", tone: "bg-[#e8e9f2] text-[#5b5d78]" },
+    { id: "EMP-0902", name: "Dr. Elena Voss", email: "elena.voss@ridgewell.example", role: "Physician", location: "Lakeside · Central", signIn: "last sign-in 24 Aug 2026", initials: "EV", tone: "bg-[#e5ebda] text-[#597143]" },
+    { id: "EMP-1214", name: "Jonah Reeve", email: "jonah.reeve@ridgewell.example", role: "Billing", location: "Central", signIn: "last sign-in 19 Aug 2026", initials: "JR", tone: "bg-[#f0e7db] text-[#7c6042]" },
+    { id: "EMP-0801", name: "Amira Cole", email: "amira.cole@ridgewell.example", role: "Clinic admin", location: "Central", signIn: "last sign-in 24 Aug 2026", initials: "AC", tone: "bg-[#dce8bf] text-[#36524a]" },
+    { id: "EMP-1188", name: "Luis Ortega", email: "luis.ortega@ridgewell.example", role: "Nurse", location: "Central", signIn: "last sign-in 22 Aug 2026", initials: "LO", tone: "bg-[#e9e3f0] text-[#69577b]" },
+    { id: "EMP-1303", name: "Hannah Cho", email: "hannah.cho@ridgewell.example", role: "Front desk", location: "Lakeside", signIn: "invite sent 2 Mar 2026, never signed in", initials: "HC", tone: "bg-[#f0e8dd] text-[#7c5e3d]" }
+  ];
+
+  const rwCatalog = document.getElementById("roleCatalog");
+  const rwDetailRole = document.getElementById("detailRole");
+  const rwDetailSummary = document.getElementById("detailSummary");
+  const rwPermissionCount = document.getElementById("permissionCount");
+  const rwPermissionList = document.getElementById("permissionList");
+  const rwMemberCount = document.getElementById("memberCount");
+  const rwMemberList = document.getElementById("memberList");
+  const rwReassign = document.getElementById("reassignPerson");
+  let rwSelectedRole = "Front desk";
+
+  function rwCountLabel(count) {
+    return count === 1 ? "1 person" : count + " people";
+  }
+
+  function rwRoleCount(role) {
+    return rwStaff.filter(person => person.role === role).length;
+  }
+
+  function rwRenderCatalog() {
+    rwCatalog.innerHTML = Object.keys(rwRoles).map(role => {
+      const count = rwRoleCount(role);
+      const selected = role === rwSelectedRole;
+      return `<button type="button" data-role="${role}" aria-pressed="${selected}" class="rw-role-item group flex min-h-[70px] w-full items-center justify-between rounded-[12px] px-3 ${selected ? "bg-[#e5eee8]" : "bg-transparent hover:bg-[#f4f7f3]"}">
+        <span class="text-left"><span class="block text-[13px] font-bold tracking-[-0.01em] ${selected ? "text-[#173d39]" : "text-[#354944]"}">${role}</span><span class="mt-1 block text-[11px] ${selected ? "text-[#70877a]" : "text-[#909b95]"}">${rwCountLabel(count)}</span></span>
+        <span class="flex items-center gap-3"><span class="text-[11px] font-semibold ${selected ? "text-[#73877c]" : "text-[#9aa49e]"}">${count}</span><svg class="rw-role-arrow h-4 w-4 text-[#4d7167]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h12M11 5.5 15.5 10 11 14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </button>`;
+    }).join("");
+    rwCatalog.querySelectorAll("[data-role]").forEach(button => {
+      button.addEventListener("click", () => {
+        rwSelectedRole = button.dataset.role;
+        rwRenderCatalog();
+        rwRenderDetail();
+      });
+    });
+  }
+
+  function rwRenderDetail() {
+    const granted = rwRoles[rwSelectedRole];
+    const members = rwStaff.filter(person => person.role === rwSelectedRole);
+    rwDetailRole.textContent = rwSelectedRole;
+    rwDetailSummary.textContent = `${rwCountLabel(members.length)} · global role`;
+    rwPermissionCount.textContent = `${granted.length} granted`;
+    rwMemberCount.textContent = rwCountLabel(members.length);
+
+    rwPermissionList.innerHTML = rwPermissions.map((permission, index) => {
+      const isGranted = granted.includes(permission.id);
+      return `<div class="flex min-h-[31px] items-center justify-between gap-4 border-b border-[#e8ede7] px-3.5 py-1.5 last:border-b-0 ${isGranted ? "text-[#344944]" : "text-[#66756d]"}">
+        <span class="text-[12px] leading-4 ${isGranted ? "font-medium" : "font-normal"}">${permission.label}</span>
+        ${isGranted ? `<span class="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-[#e3efb2] text-[#5b762a]"><svg class="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : `<span class="shrink-0 text-[12px] font-medium text-[#7c8a82]">—</span>`}
+      </div>`;
+    }).join("");
+
+    if (members.length === 0) {
+      rwMemberList.innerHTML = `<div class="rounded-[12px] border border-dashed border-[#d7e0d7] px-4 py-5 text-[12px] text-[#8c9891]">No people in this role.</div>`;
+    } else {
+      rwMemberList.innerHTML = members.map(person => `<div class="rounded-[12px] border border-[#e0e7df] bg-white px-3.5 py-3">
+        <div class="flex items-start gap-3">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[10px] font-bold ${person.tone}">${person.initials}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline justify-between gap-3"><span class="truncate text-[12px] font-bold text-[#30443f]">${person.name}</span><span class="shrink-0 text-[10px] font-medium text-[#839089]">${person.id}</span></div>
+            <div class="mt-1 truncate text-[10px] text-[#73817a]">${person.email}</div>
+            <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-[#68776f]"><span class="rounded-full bg-[#f0f4ed] px-2 py-0.5 font-medium text-[#4f645b]">${person.location}</span><span>${person.signIn}</span></div>
+          </div>
+        </div>
+      </div>`).join("");
+    }
+
+    rwReassign.innerHTML = `<option value="">Select a person…</option>` + rwStaff.filter(person => person.role !== rwSelectedRole).map(person => `<option value="${person.id}">${person.name} · ${person.role}</option>`).join("");
+  }
+
+  rwReassign.addEventListener("change", () => {
+    const person = rwStaff.find(item => item.id === rwReassign.value);
+    if (!person) return;
+    person.role = rwSelectedRole;
+    rwReassign.value = "";
+    rwRenderCatalog();
+    rwRenderDetail();
+  });
+
+  rwRenderCatalog();
+  rwRenderDetail();
+</script>
+</body></html>
+```

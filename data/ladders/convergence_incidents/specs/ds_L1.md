@@ -1,0 +1,878 @@
+# Variant `ember__ds_L1` of the ember incident-triage workspace, converging toward the atlas reference
+
+Reproduce the reference HTML document at the end of this file with the changes below applied,
+and with nothing else changed. Every change is specified; there is nothing here for you to
+choose. Apply the change sets in the order given.
+
+Return one complete standalone HTML document.
+
+## What must not change
+
+- **The three reusable components stay ember's own.** Do not change the structure, markup, or styling of the incident row (the dense grid table row), the severity/status badge (the bordered rectangle), or the activity entry (the timestamp-first grid row). Keep their current layout, sizing and separators exactly as they are.
+- **Information architecture stays ember's own.** Keep the top horizontal tab bar (no sidebar). Keep the incident queue full width, with the detail panel appearing full width below it (stacked, not side-by-side) when an incident is selected. Keep the Description / Activity tab control in the detail panel exactly as it is.
+- **Every change must be visible when the page loads.** This page is judged from a
+  screenshot of its resting state, so a difference that appears only after a click, a hover, or a
+  tab switch is not a change at all. The reference's Description/Activity tab control (if this
+  variant still has one) defaults to showing "Description" on load - that default-visible state is
+  what gets judged, whatever else changes.
+- **The content is identical.** The same eleven incidents, the same IDs, titles, severities,
+  statuses, teams, assignees, ages, descriptions, properties, linked resources and activity-log
+  entries, word for word. No incidents added or removed, no copy invented. This is the same page
+  restyled and restructured, not a new page.
+- **The build is identical.** One standalone HTML document with no external files - the reference
+  loads none, and neither may you. Plain CSS in a `<style>` tag and plain JavaScript in a
+  `<script>` tag. All existing behaviour (search, filters, row selection, tab switching, posting a
+  comment) keeps working after your changes. Desktop width, about 1280px.
+
+
+## The changes (1 change set)
+
+This variant moves the visual language toward the atlas reference. Apply every set below, in order.
+
+### DS-1 - Recolour and retype the page chrome to atlas's palette and font
+
+The page currently runs on these custom properties, declared once in `:root`:
+`--paper:#faf4e8; --surface:#f2ead7; --surface-2:#e8dcc1; --ink:#241d15; --ink-soft:#5b4c39;
+--line:#2b2318; --line-soft:#c3b393; --accent:#b0512a; --accent-tint:#f0d9c8; --maroon:#6b1420;
+--maroon-tint:#f0d8d6; --ochre:#8f6a10; --ochre-tint:#f3e6bf; --forest:#2b5a37;
+--forest-tint:#dce9d9;` plus `--serif` and `--mono` font stacks.
+
+Replace the VALUES only - keep every property NAME exactly as it is, so every existing
+reference to `var(--paper)` etc. still resolves, just to a new colour:
+
+- `--paper` -> `#eef1f7` (page background)
+- `--surface` -> `#ffffff` (raised panel background)
+- `--surface-2` -> `#f5f7fb` (sunken/alternate surface)
+- `--ink` -> `#1b2437` (primary text)
+- `--ink-soft` -> `#3d4a63` (secondary text)
+- `--line` -> `#6b7a94` (was a hairline colour; keep it defined, DS-2 stops using it for
+  separators)
+- `--line-soft` -> `#8b97ad`
+- `--accent` -> `#4f46e5` (primary interactive colour, was rust, now indigo)
+- `--accent-tint` -> `#eef1fe`
+- `--maroon` -> `#b42318` (critical ink) ; `--maroon-tint` -> `#fde8e8` (critical fill)
+- `--ochre` -> `#a4610a` (high ink) ; `--ochre-tint` -> `#fdf0d5` (high fill)
+- `--forest` -> `#4a5a73` (low ink, now a neutral slate rather than green) ; `--forest-tint`
+  -> `#e3e8f0` (low fill)
+
+Font: change `--serif` and every element that sets `font-family:var(--serif)` to this single
+sans-serif stack instead: `"Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,
+sans-serif`. Change every element that sets `font-family:var(--mono)` (timestamps, IDs, the
+search input) to that SAME sans-serif stack - the page now uses one type family everywhere, no
+separate monospace. Headings become medium-to-bold weight (600-650) with slightly tight
+letter-spacing (-0.01em to -0.02em) instead of the current wide letter-spacing.
+
+## Reference design (this is `ember` - transcribe the changes above onto this document)
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Triage — Helpdesk Ops Console</title>
+<style>
+  :root{
+    --paper:#faf4e8;
+    --surface:#f2ead7;
+    --surface-2:#e8dcc1;
+    --ink:#241d15;
+    --ink-soft:#5b4c39;
+    --line:#2b2318;
+    --line-soft:#c3b393;
+    --accent:#b0512a;
+    --accent-tint:#f0d9c8;
+    --maroon:#6b1420;
+    --maroon-tint:#f0d8d6;
+    --ochre:#8f6a10;
+    --ochre-tint:#f3e6bf;
+    --forest:#2b5a37;
+    --forest-tint:#dce9d9;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono","Courier New",monospace;
+  }
+  *{box-sizing:border-box;border-radius:0 !important;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-size:14px;
+    line-height:1.3;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select{font:inherit;color:inherit;}
+  a{color:var(--accent);}
+
+  /* ---------- global nav tab bar ---------- */
+  .navbar{
+    display:flex;
+    align-items:stretch;
+    width:100%;
+    background:var(--surface-2);
+    border-bottom:2px solid var(--line);
+  }
+  .navbar .brand{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 14px;
+    border-right:2px solid var(--line);
+    font-family:var(--serif);
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .brand .mark{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0;
+    background:var(--accent);
+    color:#fdf6ea;
+    padding:2px 5px;
+    border:1.5px solid var(--line);
+  }
+  .navtabs{display:flex;align-items:stretch;}
+  .navtab{
+    appearance:none;
+    background:transparent;
+    border:0;
+    border-right:2px solid var(--line);
+    padding:8px 20px;
+    font-family:var(--serif);
+    font-size:13.5px;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+    margin-bottom:-2px;
+  }
+  .navtab:hover{background:var(--surface);color:var(--ink);}
+  .navtab[aria-selected="true"]{
+    background:var(--paper);
+    color:var(--accent);
+    font-weight:700;
+    border-bottom:3px solid var(--accent);
+  }
+  .nav-right{
+    margin-left:auto;
+    display:flex;align-items:center;gap:14px;
+    padding:0 12px;
+    border-left:2px solid var(--line);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.04em;
+    color:var(--ink-soft);
+  }
+  .nav-right b{color:var(--maroon);}
+
+  /* ---------- toolbar ---------- */
+  .toolbar{
+    display:flex;align-items:center;gap:12px;
+    width:100%;
+    padding:8px 12px;
+    background:var(--surface);
+    border-bottom:2px solid var(--line);
+  }
+  .toolbar h1{
+    margin:0;
+    font-family:var(--serif);
+    font-size:19px;
+    letter-spacing:.09em;
+    font-weight:700;
+  }
+  .toolbar .sub{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:.03em;
+    border-left:2px solid var(--line-soft);
+    padding-left:10px;
+  }
+  .tools{margin-left:auto;display:flex;align-items:center;gap:8px;}
+  .field{display:flex;align-items:center;border:2px solid var(--line);background:var(--paper);}
+  .field label{
+    font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+    padding:0 6px;color:var(--ink-soft);border-right:1.5px solid var(--line-soft);
+    align-self:stretch;display:flex;align-items:center;background:var(--surface-2);
+  }
+  .field input,.field select{
+    border:0;background:transparent;padding:4px 6px;
+    font-family:var(--mono);font-size:12px;outline:none;
+  }
+  .field input{width:230px;}
+  .field:focus-within{outline:2px solid var(--accent);outline-offset:0;}
+  .btn{
+    border:2px solid var(--line);
+    background:var(--surface-2);
+    padding:4px 12px;
+    font-family:var(--serif);
+    font-size:12.5px;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .btn:hover{background:var(--surface);}
+  .btn-primary{background:var(--accent);color:#fdf6ea;border-color:var(--line);font-weight:700;}
+  .btn-primary:hover{background:#98431f;}
+
+  /* ---------- queue (full width list) ---------- */
+  .queue{width:100%;border-bottom:2px solid var(--line);}
+  .queue-head,.incident-row{
+    display:grid;
+    grid-template-columns:96px minmax(0,1fr) 96px 122px 168px 160px 92px 26px;
+    align-items:center;
+    gap:10px;
+    padding:0 12px;
+    width:100%;
+  }
+  .queue-head{
+    background:var(--surface-2);
+    border-bottom:2px solid var(--line);
+    height:24px;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .queue-head .num{text-align:right;}
+
+  /* --- COMPONENT: incident row --- */
+  .incident-row{
+    height:32px;
+    background:var(--paper);
+    border-bottom:1.5px solid var(--line-soft);
+    border-left:4px solid transparent;
+    cursor:pointer;
+    font-size:13px;
+    text-align:left;
+    font-family:var(--serif);
+    color:var(--ink);
+    width:100%;
+  }
+  .incident-row:nth-child(even){background:#f6efe1;}
+  .incident-row:hover{background:var(--accent-tint);}
+  .incident-row.is-selected{
+    background:var(--accent-tint);
+    border-left:4px solid var(--accent);
+    border-bottom:1.5px solid var(--line);
+  }
+  .incident-row .r-id{font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;color:var(--ink-soft);}
+  .incident-row.is-selected .r-id{color:var(--accent);font-weight:700;}
+  .incident-row .r-title{
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    font-size:13.5px;letter-spacing:.01em;
+  }
+  .incident-row.is-selected .r-title{font-weight:700;}
+  .incident-row .r-team,.incident-row .r-assignee{
+    font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  }
+  .incident-row .r-age{font-family:var(--mono);font-size:11.5px;text-align:right;}
+  .incident-row .r-caret{font-family:var(--mono);font-size:11px;color:var(--accent);text-align:center;}
+  .empty{
+    padding:14px 12px;font-family:var(--mono);font-size:12px;color:var(--ink-soft);background:var(--paper);
+  }
+
+  /* --- COMPONENT: severity / status badge --- */
+  .badge{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:9.5px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    padding:1px 6px;
+    border:1.5px solid currentColor;
+    line-height:1.35;
+    white-space:nowrap;
+    font-weight:700;
+  }
+  .badge--critical{color:var(--maroon);background:var(--maroon-tint);}
+  .badge--high{color:var(--ochre);background:var(--ochre-tint);}
+  .badge--low{color:var(--forest);background:var(--forest-tint);}
+  .badge--open{color:var(--maroon);background:transparent;}
+  .badge--investigating{color:var(--accent);background:transparent;}
+  .badge--resolved{color:var(--forest);background:transparent;}
+  .badge--lg{font-size:11px;padding:2px 8px;letter-spacing:.1em;}
+
+  /* ---------- detail panel (full width, below the list) ---------- */
+  .detail{
+    width:100%;
+    border-top:2px solid var(--line);
+    background:var(--surface);
+  }
+  .detail-strip{
+    display:flex;align-items:center;gap:10px;
+    padding:4px 12px;
+    background:var(--line);
+    color:var(--surface);
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .detail-inner{border:2px solid var(--line);border-top:0;background:var(--paper);}
+
+  /* header block */
+  .d-header{
+    display:flex;align-items:flex-start;gap:14px;
+    padding:10px 12px;
+    border-bottom:2px solid var(--line);
+    background:var(--surface);
+  }
+  .d-head-main{min-width:0;}
+  .d-idline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .d-id{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.04em;}
+  .d-title{
+    margin:4px 0 0;
+    font-family:var(--serif);
+    font-size:20px;
+    letter-spacing:.05em;
+    font-weight:700;
+    line-height:1.2;
+  }
+  .d-assignee{
+    margin-left:auto;
+    display:flex;align-items:center;gap:8px;
+    border:2px solid var(--line);
+    background:var(--paper);
+    padding:5px 9px;
+    white-space:nowrap;
+  }
+  .d-assignee .k{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-soft);}
+  .d-assignee .v{font-family:var(--mono);font-size:12px;font-weight:700;}
+  .d-actions{display:flex;gap:6px;}
+
+  /* detail tabs */
+  .dtabs{display:flex;background:var(--surface-2);border-bottom:2px solid var(--line);}
+  .dtab{
+    appearance:none;background:transparent;border:0;border-right:2px solid var(--line);
+    padding:6px 20px;cursor:pointer;
+    font-family:var(--serif);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+  }
+  .dtab:hover{background:var(--surface);color:var(--ink);}
+  .dtab[aria-selected="true"]{background:var(--paper);color:var(--accent);font-weight:700;border-bottom:2px solid var(--paper);margin-bottom:-2px;}
+  .dpane{padding:0;}
+  .dpane[hidden]{display:none;}
+
+  /* description block */
+  .d-desc{
+    padding:10px 12px;
+    border-bottom:2px solid var(--line);
+    width:100%;
+  }
+  .block-label{
+    font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:5px;
+  }
+  .d-desc p{margin:0 0 7px;line-height:1.35;font-size:14px;max-width:none;}
+  .d-desc p:last-child{margin-bottom:0;}
+  .d-desc code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);border:1.5px solid var(--line-soft);padding:0 4px;}
+  .links{display:flex;flex-wrap:wrap;gap:0;border:1.5px solid var(--line);margin-top:8px;}
+  .links a{
+    font-family:var(--mono);font-size:11.5px;padding:4px 9px;text-decoration:none;
+    border-right:1.5px solid var(--line);color:var(--accent);background:var(--surface);
+  }
+  .links a:last-child{border-right:0;}
+  .links a:hover{background:var(--accent-tint);text-decoration:underline;}
+
+  /* properties strip */
+  .props{
+    display:flex;align-items:center;flex-wrap:wrap;
+    padding:0;background:var(--surface);
+    border-bottom:2px solid var(--line);
+  }
+  .prop{
+    display:flex;align-items:baseline;gap:6px;
+    padding:6px 12px;
+    border-right:1.5px solid var(--line-soft);
+  }
+  .prop .k{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-soft);}
+  .prop .v{font-family:var(--mono);font-size:12px;font-weight:700;}
+
+  /* activity feed */
+  .feed{padding:8px 12px 10px;}
+  /* --- COMPONENT: activity entry --- */
+  .activity-entry{
+    display:grid;
+    grid-template-columns:150px 20px minmax(0,1fr);
+    gap:10px;
+    align-items:baseline;
+    padding:6px 0;
+    border-bottom:1.5px solid var(--line-soft);
+  }
+  .activity-entry:last-child{border-bottom:0;}
+  .activity-entry .ts{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.02em;white-space:nowrap;}
+  .activity-entry .dot{
+    font-family:var(--mono);font-size:11px;color:var(--accent);text-align:center;font-weight:700;
+  }
+  .activity-entry .body{font-size:13.5px;line-height:1.3;}
+  .activity-entry .actor{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink);}
+  .activity-entry .action{color:var(--ink-soft);}
+  .activity-entry .note{display:block;margin-top:2px;font-size:13.5px;color:var(--ink);}
+  .feed-foot{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 12px;border-top:2px solid var(--line);background:var(--surface);
+  }
+  .feed-foot input{
+    flex:1;border:2px solid var(--line);background:var(--paper);padding:5px 8px;
+    font-family:var(--mono);font-size:12px;outline:none;
+  }
+  .feed-foot input:focus{outline:2px solid var(--accent);}
+  footer.page-foot{
+    padding:6px 12px;border-top:2px solid var(--line);background:var(--surface-2);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;color:var(--ink-soft);
+    display:flex;gap:16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ GLOBAL NAV TAB BAR ============ -->
+<nav class="navbar" role="tablist" aria-label="Global navigation">
+  <div class="brand"><span class="mark">OPS</span> Helpdesk Console</div>
+  <div class="navtabs">
+    <button class="navtab" role="tab" aria-selected="true" id="nav-queue">Queue</button>
+    <button class="navtab" role="tab" aria-selected="false" id="nav-mine">My incidents</button>
+    <button class="navtab" role="tab" aria-selected="false" id="nav-reports">Reports</button>
+    <button class="navtab" role="tab" aria-selected="false" id="nav-settings">Settings</button>
+  </div>
+  <div class="nav-right">
+    <span>SHIFT 14:00–22:00 UTC</span>
+    <span>ON-CALL <b>D. REYES</b></span>
+    <span id="clock">17:42:05 UTC</span>
+  </div>
+</nav>
+
+<!-- ============ TOOLBAR ROW ============ -->
+<div class="toolbar">
+  <h1>Incident Triage</h1>
+  <span class="sub" id="queue-summary">10 OPEN · 3 CRITICAL · 3 HIGH · 4 LOW</span>
+  <div class="tools">
+    <div class="field">
+      <label for="q">Search</label>
+      <input id="q" type="search" placeholder="id, title, assignee, team…" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="f-sev">Severity</label>
+      <select id="f-sev">
+        <option value="all">all</option>
+        <option value="critical">critical</option>
+        <option value="high">high</option>
+        <option value="low">low</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-stat">Status</label>
+      <select id="f-stat">
+        <option value="all">all</option>
+        <option value="open">open</option>
+        <option value="investigating">investigating</option>
+        <option value="resolved">resolved</option>
+      </select>
+    </div>
+    <button class="btn" id="btn-reset">Reset</button>
+    <button class="btn btn-primary" id="btn-new">New incident</button>
+  </div>
+</div>
+
+<!-- ============ FULL-WIDTH INCIDENT QUEUE LIST ============ -->
+<section class="queue" aria-label="Open incident queue">
+  <div class="queue-head">
+    <span>ID</span>
+    <span>Incident</span>
+    <span>Severity</span>
+    <span>Status</span>
+    <span>Reporting team</span>
+    <span>Assignee</span>
+    <span class="num">Age</span>
+    <span></span>
+  </div>
+  <div id="rows"></div>
+</section>
+
+<!-- ============ FULL-WIDTH DETAIL PANEL (BELOW THE LIST) ============ -->
+<section class="detail" id="detail" aria-label="Incident detail">
+  <div class="detail-strip"><span>Incident detail</span><span id="strip-id">INC-4821</span><span>— expanded below queue</span></div>
+  <div class="detail-inner">
+
+    <!-- header block -->
+    <div class="d-header">
+      <div class="d-head-main">
+        <div class="d-idline">
+          <span class="d-id" id="d-id">INC-4821</span>
+          <span id="d-sev" class="badge badge--lg badge--critical">critical</span>
+          <span id="d-stat" class="badge badge--lg badge--investigating">investigating</span>
+          <span class="badge badge--lg badge--open" id="d-age" style="color:var(--ink-soft);">opened 42m ago</span>
+        </div>
+        <h2 class="d-title" id="d-title">Checkout API returning 500s</h2>
+      </div>
+      <div class="d-assignee">
+        <span class="k">Assignee</span>
+        <span class="v" id="d-assignee">D. Reyes</span>
+      </div>
+      <div class="d-actions">
+        <button class="btn">Assign to me</button>
+        <button class="btn btn-primary">Resolve</button>
+      </div>
+    </div>
+
+    <!-- description / activity tabs -->
+    <div class="dtabs" role="tablist" aria-label="Incident detail sections">
+      <button class="dtab" role="tab" id="tab-desc" aria-selected="true" aria-controls="pane-desc">Description</button>
+      <button class="dtab" role="tab" id="tab-act" aria-selected="false" aria-controls="pane-act">Activity</button>
+    </div>
+
+    <div class="dpane" id="pane-desc" role="tabpanel" aria-labelledby="tab-desc">
+      <!-- description block, full width -->
+      <div class="d-desc">
+        <div class="block-label">Description</div>
+        <div id="d-desc-body"></div>
+        <div class="links" id="d-links"></div>
+      </div>
+      <!-- properties strip -->
+      <div class="props" id="d-props"></div>
+    </div>
+
+    <div class="dpane" id="pane-act" role="tabpanel" aria-labelledby="tab-act" hidden>
+      <div class="feed" id="d-feed"></div>
+      <div class="feed-foot">
+        <input id="comment" type="text" placeholder="Add an update to the timeline…" autocomplete="off">
+        <button class="btn btn-primary" id="btn-comment">Post</button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer class="page-foot">
+  <span>QUEUE REFRESH 30s</span>
+  <span>NODE ops-console-02</span>
+  <span>BUILD 2024.06.14-r3</span>
+  <span id="foot-sel">SELECTED INC-4821</span>
+</footer>
+
+<script>
+const INCIDENTS = [
+  {
+    id:"INC-4821", title:"Checkout API returning 500s", sev:"critical", status:"investigating",
+    team:"Payments Platform", reporter:"M. Okafor", assignee:"D. Reyes", age:"42m",
+    opened:"2024-06-14 17:00 UTC", priority:"P1",
+    desc:[
+      "Roughly 18% of <code>POST /v2/checkout/confirm</code> calls have returned HTTP 500 since 16:58 UTC. Errors trace to a connection pool exhaustion on <code>pay-db-primary</code> after the 16:52 deploy of payments-svc <code>v3.11.4</code>.",
+      "Customer impact: failed card confirmations on web and iOS. Retries succeed intermittently, so the storefront shows a generic 'try again' message rather than a hard outage. Revenue impact estimated at £3.1k/hour.",
+      "Mitigation in flight: pool size raised from 40 to 90 on two replicas while a rollback candidate is prepared. Do not re-enable the async settlement worker until the pool metric holds under 60% for 15 minutes."
+    ],
+    links:[["runbook","RUNBOOK: payments-db-pool"],["dash","GRAFANA: checkout latency"],["pr","PR #2214 rollback candidate"],["ticket","JIRA PAY-8871"]],
+    log:[
+      {ts:"17:41:02 UTC", actor:"D. Reyes", action:"commented", note:"Pool utilisation down to 54% on replica b. Holding before rollback decision."},
+      {ts:"17:28:47 UTC", actor:"A. Haddad", action:"changed status", note:"open → investigating"},
+      {ts:"17:19:10 UTC", actor:"pagerduty-bot", action:"escalated", note:"No ack in 8m — paged secondary on-call (A. Haddad)."},
+      {ts:"17:11:33 UTC", actor:"D. Reyes", action:"raised severity", note:"high → critical after error rate crossed 15%."},
+      {ts:"17:04:26 UTC", actor:"M. Okafor", action:"commented", note:"Support queue seeing ~40 'payment failed' contacts in 5 minutes."},
+      {ts:"17:00:08 UTC", actor:"alertmanager", action:"opened incident", note:"5xx ratio on checkout-edge above 5% for 3 consecutive minutes."}
+    ]
+  },
+  {
+    id:"INC-4818", title:"VPN gateway intermittent auth failures", sev:"high", status:"open",
+    team:"Network Ops", reporter:"S. Whitfield", assignee:"L. Bianchi", age:"1h 15m",
+    opened:"2024-06-14 16:27 UTC", priority:"P2",
+    desc:[
+      "Remote staff report RADIUS auth failures roughly 1 in 5 attempts against <code>vpn-gw-lon-02</code>. Successful retries occur within seconds, so no full lockout has been observed.",
+      "Suspected cause is a stale secondary RADIUS endpoint left in the gateway config after last week's identity migration. Awaiting a maintenance slot to drain the gateway."
+    ],
+    links:[["runbook","RUNBOOK: vpn-gateway failover"],["dash","KIBANA: radius auth log"],["ticket","JIRA NET-2214"]],
+    log:[
+      {ts:"17:36:44 UTC", actor:"L. Bianchi", action:"commented", note:"Confirmed 22% failure rate against secondary RADIUS host only."},
+      {ts:"17:02:19 UTC", actor:"K. Osei", action:"commented", note:"Identity side shows no rejects — failures never reach the directory."},
+      {ts:"16:48:05 UTC", actor:"L. Bianchi", action:"assigned", note:"Self-assigned from Network Ops rota."},
+      {ts:"16:35:51 UTC", actor:"helpdesk-bot", action:"linked incidents", note:"Merged 6 duplicate tickets from service desk."},
+      {ts:"16:27:12 UTC", actor:"S. Whitfield", action:"opened incident", note:"Reported by 11 users across Manchester and remote EU."}
+    ]
+  },
+  {
+    id:"INC-4815", title:"Warehouse label printer offline (Bay 4)", sev:"low", status:"open",
+    team:"Fulfilment", reporter:"R. Adeyemi", assignee:"P. Nakamura", age:"3h 02m",
+    opened:"2024-06-14 14:40 UTC", priority:"P4",
+    desc:[
+      "Zebra ZT411 in Bay 4 is unreachable on <code>10.42.7.118</code>. Bay 3 printer is absorbing the load, so despatch is slowed but not blocked.",
+      "Field engineer scheduled for the 19:00 shift change to swap the print server NIC."
+    ],
+    links:[["runbook","RUNBOOK: warehouse printers"],["ticket","JIRA FUL-1180"]],
+    log:[
+      {ts:"17:12:00 UTC", actor:"P. Nakamura", action:"commented", note:"Spare NIC pulled from stores, tagged for Bay 4."},
+      {ts:"16:05:38 UTC", actor:"P. Nakamura", action:"assigned", note:"Assigned by Workplace IT dispatch."},
+      {ts:"15:20:14 UTC", actor:"R. Adeyemi", action:"commented", note:"Bay 3 handling all despatch labels; ~6 min added per pallet."},
+      {ts:"14:52:47 UTC", actor:"monitoring", action:"confirmed", note:"ICMP loss 100% for 12 minutes on printer host."},
+      {ts:"14:40:03 UTC", actor:"R. Adeyemi", action:"opened incident", note:"Printer shows no network light after power cycle."}
+    ]
+  },
+  {
+    id:"INC-4812", title:"Elevated latency on search cluster eu-west-1", sev:"high", status:"investigating",
+    team:"Search Infra", reporter:"J. Moreau", assignee:"A. Haddad", age:"4h 20m",
+    opened:"2024-06-14 13:22 UTC", priority:"P2",
+    desc:[
+      "p95 query latency on the product search cluster rose from 180ms to 940ms after a shard rebalance triggered by node <code>es-data-07</code> restarting.",
+      "Rebalance is 62% complete. Latency is expected to settle without intervention; throttle has been lowered to reduce IO contention."
+    ],
+    links:[["dash","GRAFANA: search p95"],["runbook","RUNBOOK: shard rebalance"],["ticket","JIRA SRCH-902"]],
+    log:[
+      {ts:"17:30:55 UTC", actor:"A. Haddad", action:"commented", note:"Rebalance 62% done, p95 now 610ms and falling."},
+      {ts:"16:10:22 UTC", actor:"A. Haddad", action:"changed status", note:"open → investigating"},
+      {ts:"15:04:41 UTC", actor:"J. Moreau", action:"commented", note:"Storefront search timeouts down to 0.4% after throttle change."},
+      {ts:"14:12:07 UTC", actor:"A. Haddad", action:"lowered recovery throttle", note:"20mb/s → 8mb/s per node."},
+      {ts:"13:22:19 UTC", actor:"J. Moreau", action:"opened incident", note:"Search SLO burn rate alert fired at 4x budget."}
+    ]
+  },
+  {
+    id:"INC-4809", title:"SSO session drops for Finance users", sev:"critical", status:"open",
+    team:"Identity", reporter:"H. Lindqvist", assignee:"K. Osei", age:"5h 47m",
+    opened:"2024-06-14 11:55 UTC", priority:"P1",
+    desc:[
+      "Finance users are being logged out of the ERP portal every 4–6 minutes. Token refresh returns <code>invalid_grant</code> for sessions issued by the <code>fin-prod</code> client.",
+      "Month-end close is in progress, so impact is high: journal entries are lost on session drop. Temporary workaround is the legacy direct-login URL, shared with the Finance leads."
+    ],
+    links:[["runbook","RUNBOOK: sso token refresh"],["dash","SPLUNK: invalid_grant"],["ticket","JIRA IDP-4402"],["doc","Workaround note for Finance"]],
+    log:[
+      {ts:"17:20:31 UTC", actor:"K. Osei", action:"commented", note:"Clock skew of 47s found on idp-node-3; NTP resync queued."},
+      {ts:"15:48:12 UTC", actor:"H. Lindqvist", action:"commented", note:"Finance leads using legacy login; 9 users still affected."},
+      {ts:"14:02:58 UTC", actor:"K. Osei", action:"assigned", note:"Assigned by Identity duty manager."},
+      {ts:"12:40:19 UTC", actor:"change-bot", action:"linked change", note:"CHG-1188 — idp certificate rotation, 11:30 UTC."},
+      {ts:"11:55:06 UTC", actor:"H. Lindqvist", action:"opened incident", note:"Reported by 14 users in Finance shared services."}
+    ]
+  },
+  {
+    id:"INC-4805", title:"Nightly backup job exceeded window", sev:"low", status:"resolved",
+    team:"Data Platform", reporter:"backup-scheduler", assignee:"S. Whitfield", age:"9h 10m",
+    opened:"2024-06-14 08:32 UTC", priority:"P3",
+    desc:[
+      "The nightly <code>pg_basebackup</code> for the analytics warehouse overran its 06:00 window by 2h 14m, delaying the morning ETL chain.",
+      "Root cause: an unvacuumed 400GB events table. Backup completed successfully; retention and integrity checks passed."
+    ],
+    links:[["runbook","RUNBOOK: warehouse backups"],["dash","AIRFLOW: etl_daily"],["ticket","JIRA DATA-771"]],
+    log:[
+      {ts:"12:15:47 UTC", actor:"S. Whitfield", action:"changed status", note:"investigating → resolved"},
+      {ts:"11:58:03 UTC", actor:"S. Whitfield", action:"commented", note:"Autovacuum thresholds tuned on events table; ticket raised for partitioning."},
+      {ts:"10:22:36 UTC", actor:"J. Moreau", action:"commented", note:"ETL chain caught up; no downstream dashboards stale."},
+      {ts:"09:14:50 UTC", actor:"S. Whitfield", action:"changed status", note:"open → investigating"},
+      {ts:"08:32:11 UTC", actor:"backup-scheduler", action:"opened incident", note:"Job duration 8h 14m exceeded 6h SLA."}
+    ]
+  },
+  {
+    id:"INC-4802", title:"Slack alert webhook duplicating messages", sev:"low", status:"investigating",
+    team:"Dev Tools", reporter:"D. Reyes", assignee:"J. Moreau", age:"11h 33m",
+    opened:"2024-06-14 06:09 UTC", priority:"P4",
+    desc:[
+      "Each alertmanager notification is posting three times to <code>#ops-alerts</code>. Noise is causing engineers to mute the channel, which is a real risk during major incidents.",
+      "Likely cause: two orphaned webhook receivers left behind after the alertmanager HA migration."
+    ],
+    links:[["runbook","RUNBOOK: alert routing"],["pr","PR #418 remove orphan receivers"],["ticket","JIRA DEV-3390"]],
+    log:[
+      {ts:"16:44:09 UTC", actor:"J. Moreau", action:"commented", note:"Two orphan receivers confirmed in config map; PR open."},
+      {ts:"13:31:52 UTC", actor:"J. Moreau", action:"changed status", note:"open → investigating"},
+      {ts:"10:07:24 UTC", actor:"D. Reyes", action:"commented", note:"Channel muted by 4 engineers — raising visibility."},
+      {ts:"07:45:16 UTC", actor:"J. Moreau", action:"assigned", note:"Picked up from Dev Tools backlog."},
+      {ts:"06:09:44 UTC", actor:"D. Reyes", action:"opened incident", note:"Triple posting observed on every alert since 05:50."}
+    ]
+  },
+  {
+    id:"INC-4798", title:"Payment reconciliation export missing rows", sev:"high", status:"open",
+    team:"Finance Systems", reporter:"H. Lindqvist", assignee:"D. Reyes", age:"14h 05m",
+    opened:"2024-06-14 03:37 UTC", priority:"P2",
+    desc:[
+      "The 03:00 reconciliation export delivered 1,204 fewer rows than the ledger count for 13 June. Difference traced to transactions settled between 23:58 and 00:04 that fall outside the export window boundary.",
+      "Finance cannot close 13 June until a corrected file is supplied. A manual re-run is blocked pending confirmation of the window fix."
+    ],
+    links:[["runbook","RUNBOOK: recon export"],["dash","AIRFLOW: recon_nightly"],["ticket","JIRA FIN-5521"]],
+    log:[
+      {ts:"16:02:38 UTC", actor:"D. Reyes", action:"commented", note:"Boundary is exclusive on both ends — confirmed off-by-one in window query."},
+      {ts:"11:19:05 UTC", actor:"H. Lindqvist", action:"commented", note:"13 June close on hold; auditors notified."},
+      {ts:"08:26:41 UTC", actor:"D. Reyes", action:"assigned", note:"Assigned by Finance Systems triage."},
+      {ts:"05:10:12 UTC", actor:"recon-checker", action:"confirmed", note:"Row count delta 1,204 against ledger snapshot."},
+      {ts:"03:37:29 UTC", actor:"H. Lindqvist", action:"opened incident", note:"Export checksum mismatch flagged by nightly validation."}
+    ]
+  },
+  {
+    id:"INC-4795", title:"Kafka consumer lag on orders topic", sev:"critical", status:"investigating",
+    team:"Order Services", reporter:"alertmanager", assignee:"A. Haddad", age:"18h 41m",
+    opened:"2024-06-13 23:01 UTC", priority:"P1",
+    desc:[
+      "Consumer group <code>order-fulfilment-v2</code> is lagging 412k messages on the <code>orders.events</code> topic. Downstream despatch notifications are delayed by up to 25 minutes.",
+      "Two of six consumers are stuck in a rebalance loop caused by a poll timeout that is too aggressive for the new enrichment step. Config change drafted; awaiting change approval."
+    ],
+    links:[["runbook","RUNBOOK: consumer lag"],["dash","GRAFANA: kafka lag"],["pr","PR #1902 poll timeout"],["ticket","JIRA ORD-6613"]],
+    log:[
+      {ts:"17:15:26 UTC", actor:"A. Haddad", action:"commented", note:"Lag flat at 412k — not growing, but not draining either."},
+      {ts:"14:48:03 UTC", actor:"change-bot", action:"linked change", note:"CHG-1191 awaiting CAB approval at 18:00 UTC."},
+      {ts:"09:33:47 UTC", actor:"L. Bianchi", action:"commented", note:"Ruled out broker disk saturation; all brokers under 55%."},
+      {ts:"02:12:55 UTC", actor:"A. Haddad", action:"changed status", note:"open → investigating"},
+      {ts:"23:01:18 UTC", actor:"alertmanager", action:"opened incident", note:"Consumer lag above 100k for 10 minutes."}
+    ]
+  },
+  {
+    id:"INC-4790", title:"Meeting room display firmware stuck", sev:"low", status:"resolved",
+    team:"Workplace IT", reporter:"R. Adeyemi", assignee:"T. Novak", age:"1d 04h",
+    opened:"2024-06-13 13:20 UTC", priority:"P4",
+    desc:[
+      "Display panel in Ashcroft 3 was stuck on the firmware update splash after the scheduled 12:00 rollout, leaving the room without screen share for two bookings.",
+      "Recovered by forcing a factory reset and re-enrolling the device. Rollout paused for the remaining 14 panels pending vendor confirmation."
+    ],
+    links:[["runbook","RUNBOOK: room device enrolment"],["ticket","JIRA WPL-330"]],
+    log:[
+      {ts:"16:40:22 UTC", actor:"T. Novak", action:"changed status", note:"investigating → resolved"},
+      {ts:"16:12:09 UTC", actor:"T. Novak", action:"commented", note:"Panel re-enrolled, calendar sync verified for tomorrow's bookings."},
+      {ts:"15:05:44 UTC", actor:"T. Novak", action:"commented", note:"Vendor case 88-2210 opened; rollout paused for remaining panels."},
+      {ts:"14:18:31 UTC", actor:"T. Novak", action:"changed status", note:"open → investigating"},
+      {ts:"13:20:57 UTC", actor:"R. Adeyemi", action:"opened incident", note:"Two bookings moved to Ashcroft 1 as workaround."}
+    ]
+  }
+];
+
+let selectedId = "INC-4821";
+
+const el = id => document.getElementById(id);
+const rowsEl = el("rows");
+
+function badge(kind, text){
+  return '<span class="badge badge--'+kind+'">'+text+'</span>';
+}
+
+/* ---------- COMPONENT: incident row ---------- */
+function renderRows(){
+  const q = el("q").value.trim().toLowerCase();
+  const sev = el("f-sev").value;
+  const stat = el("f-stat").value;
+  const list = INCIDENTS.filter(i=>{
+    if(sev!=="all" && i.sev!==sev) return false;
+    if(stat!=="all" && i.status!==stat) return false;
+    if(!q) return true;
+    return (i.id+" "+i.title+" "+i.assignee+" "+i.team+" "+i.reporter).toLowerCase().includes(q);
+  });
+
+  rowsEl.innerHTML = list.length ? list.map(i=>{
+    return '<div class="incident-row'+(i.id===selectedId?' is-selected':'')+'" role="button" tabindex="0" data-id="'+i.id+'">'
+      + '<span class="r-id">'+i.id+'</span>'
+      + '<span class="r-title">'+i.title+'</span>'
+      + '<span>'+badge(i.sev, i.sev)+'</span>'
+      + '<span>'+badge(i.status, i.status)+'</span>'
+      + '<span class="r-team">'+i.team+'</span>'
+      + '<span class="r-assignee">'+i.assignee+'</span>'
+      + '<span class="r-age">'+i.age+'</span>'
+      + '<span class="r-caret">'+(i.id===selectedId?'▾':'›')+'</span>'
+      + '</div>';
+  }).join("") : '<div class="empty">No incidents match the current filter.</div>';
+
+  const c = list.filter(i=>i.sev==="critical").length,
+        h = list.filter(i=>i.sev==="high").length,
+        l = list.filter(i=>i.sev==="low").length;
+  el("queue-summary").textContent = list.length+" SHOWN · "+c+" CRITICAL · "+h+" HIGH · "+l+" LOW";
+}
+
+/* ---------- COMPONENT: activity entry ---------- */
+function activityEntry(e){
+  return '<div class="activity-entry">'
+    + '<span class="ts">'+e.ts+'</span>'
+    + '<span class="dot">●</span>'
+    + '<span class="body"><span class="actor">'+e.actor+'</span> <span class="action">'+e.action+'</span>'
+    + '<span class="note">'+e.note+'</span></span>'
+    + '</div>';
+}
+
+function renderDetail(){
+  const i = INCIDENTS.find(x=>x.id===selectedId) || INCIDENTS[0];
+  el("strip-id").textContent = i.id;
+  el("d-id").textContent = i.id;
+  el("d-title").textContent = i.title;
+  el("d-assignee").textContent = i.assignee;
+  el("foot-sel").textContent = "SELECTED "+i.id;
+
+  const sevEl = el("d-sev");
+  sevEl.className = "badge badge--lg badge--"+i.sev;
+  sevEl.textContent = i.sev;
+  const statEl = el("d-stat");
+  statEl.className = "badge badge--lg badge--"+i.status;
+  statEl.textContent = i.status;
+  el("d-age").textContent = "opened "+i.age+" ago";
+
+  el("d-desc-body").innerHTML = i.desc.map(p=>'<p>'+p+'</p>').join("");
+  el("d-links").innerHTML = i.links.map(l=>'<a href="#" onclick="return false;">['+l[0]+'] '+l[1]+'</a>').join("");
+
+  el("d-props").innerHTML = [
+    ["Status", i.status],
+    ["Priority", i.priority],
+    ["Assignee", i.assignee],
+    ["Reporter", i.reporter],
+    ["Team", i.team],
+    ["Opened at", i.opened],
+    ["Age", i.age]
+  ].map(p=>'<span class="prop"><span class="k">'+p[0]+'</span><span class="v">'+p[1]+'</span></span>').join("");
+
+  el("d-feed").innerHTML = i.log.map(activityEntry).join("");
+}
+
+function select(id){
+  selectedId = id;
+  renderRows();
+  renderDetail();
+  el("detail").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+rowsEl.addEventListener("click", e=>{
+  const row = e.target.closest(".incident-row");
+  if(row) select(row.dataset.id);
+});
+rowsEl.addEventListener("keydown", e=>{
+  if(e.key==="Enter"||e.key===" "){
+    const row = e.target.closest(".incident-row");
+    if(row){ e.preventDefault(); select(row.dataset.id); }
+  }
+});
+
+el("q").addEventListener("input", renderRows);
+el("f-sev").addEventListener("change", renderRows);
+el("f-stat").addEventListener("change", renderRows);
+el("btn-reset").addEventListener("click", ()=>{
+  el("q").value=""; el("f-sev").value="all"; el("f-stat").value="all"; renderRows();
+});
+
+/* detail tabs: Description / Activity */
+function setDetailTab(which){
+  const isDesc = which==="desc";
+  el("tab-desc").setAttribute("aria-selected", isDesc);
+  el("tab-act").setAttribute("aria-selected", !isDesc);
+  el("pane-desc").hidden = !isDesc;
+  el("pane-act").hidden = isDesc;
+}
+el("tab-desc").addEventListener("click", ()=>setDetailTab("desc"));
+el("tab-act").addEventListener("click", ()=>setDetailTab("act"));
+
+/* global nav tabs */
+document.querySelectorAll(".navtab").forEach(t=>{
+  t.addEventListener("click", ()=>{
+    document.querySelectorAll(".navtab").forEach(o=>o.setAttribute("aria-selected","false"));
+    t.setAttribute("aria-selected","true");
+  });
+});
+
+/* post a comment onto the timeline */
+el("btn-comment").addEventListener("click", ()=>{
+  const v = el("comment").value.trim();
+  if(!v) return;
+  const i = INCIDENTS.find(x=>x.id===selectedId);
+  const d = new Date();
+  const p = n => String(n).padStart(2,"0");
+  i.log.unshift({ts:p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds())+" UTC", actor:"D. Reyes", action:"commented", note:v});
+  el("comment").value="";
+  renderDetail();
+});
+el("comment").addEventListener("keydown", e=>{ if(e.key==="Enter") el("btn-comment").click(); });
+
+renderRows();
+renderDetail();
+</script>
+</body>
+</html>
+
+```

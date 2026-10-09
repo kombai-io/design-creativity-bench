@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="Conduit Lake integrations: how the movement layer fits between PostgreSQL, Amazon S3, Apache Kafka, Snowflake, Google BigQuery, Databricks, dbt, and Looker.">
+<title>Integrations · Conduit Lake</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='6' fill='%2314241F'/%3E%3Cpath d='M5 15c2.4-3 4.6-3 7 0s4.6 3 7 0 4.6-3 4 0' fill='none' stroke='%238FE3D2' stroke-width='1.6'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #F3EEE6;
+    --paper-2: #FBF9F4;
+    --ink: #14241F;
+    --muted: #3E524B;
+    --teal: #0C5F54;
+    --teal-bright: #8FE3D2;
+    --copper: #C4622D;
+    --copper-ink: #8A3F14;
+    --lake: #0E1C19;
+    --line: rgba(20, 36, 31, 0.1);
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Liberation Serif", "Times New Roman", serif;
+    --sans: "Avenir Next", "Segoe UI", "Helvetica Neue", "Liberation Sans", Arial, sans-serif;
+    --mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: #E6DFD4;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--teal); }
+  a:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 3px;
+  }
+  .integrations {
+    width: 1440px;
+    margin: 0 auto;
+    background: var(--paper);
+    border-top: 3px solid var(--copper);
+    position: relative;
+  }
+  .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+  .ico { width: 26px; height: 26px; display: block; color: var(--teal); flex: none; }
+  .lake .ico { color: var(--teal-bright); }
+
+  .statusline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 9px 72px;
+    background: var(--ink);
+    color: #D5E4DE;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+  .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3DDC97;
+    box-shadow: 0 0 0 0 rgba(61, 220, 151, 0.65);
+    animation: pulse 2.2s ease-out infinite;
+    flex: none;
+  }
+  @keyframes pulse {
+    70% { box-shadow: 0 0 0 6px rgba(61, 220, 151, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(61, 220, 151, 0); }
+  }
+  .sep { opacity: 0.45; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 22px 72px 0;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-size: 15px;
+  }
+  .mark { width: 28px; height: 28px; display: block; }
+  .section-nav { display: flex; gap: 22px; }
+  .section-nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .section-nav a:hover { color: var(--ink); }
+  .quiet-link {
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid var(--copper);
+    padding-bottom: 1px;
+  }
+  .quiet-link:hover { color: var(--copper-ink); }
+
+  .kicker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .kicker i {
+    display: inline-block;
+    width: 18px;
+    height: 1px;
+    background: var(--copper);
+    flex: none;
+  }
+
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
+    gap: 40px;
+    padding: 34px 72px 0;
+    align-items: start;
+  }
+  h1 {
+    margin: 10px 0 16px;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 58px;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    max-width: 11em;
+  }
+  h1 em { font-style: italic; color: var(--teal); }
+  .deck {
+    margin: 0;
+    max-width: 640px;
+    font-size: 17.5px;
+    line-height: 1.55;
+    color: #24352F;
+  }
+  .promises {
+    list-style: none;
+    margin: 20px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+    max-width: 640px;
+  }
+  .promises li {
+    position: relative;
+    padding-left: 16px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: #24352F;
+  }
+  .promises li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: var(--teal);
+    position: absolute;
+    left: 0;
+    top: 7px;
+  }
+  .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    line-height: 1;
+  }
+  .btn-primary { background: var(--ink); color: #F4F0E8; }
+  .btn-primary:hover { background: var(--teal); }
+  .btn-primary::after, .btn-light::after { content: "\2192"; font-size: 16px; }
+  .btn-line {
+    background: transparent;
+    color: var(--ink);
+    border-color: rgba(20, 36, 31, 0.22);
+  }
+  .btn-line:hover { border-color: var(--ink); }
+  .btn-light { background: #F4F0E8; color: var(--ink); }
+  .btn-light:hover { background: #fff; }
+  .btn-ghost {
+    background: transparent;
+    color: #F4F0E8;
+    border-color: rgba(244, 240, 232, 0.28);
+  }
+  .btn-ghost:hover { border-color: #F4F0E8; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px 15px;
+  }
+  .stat-num {
+    display: block;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 34px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .stat-num.accent { color: var(--copper-ink); }
+  .stat-label { display: block; margin-top: 8px; font-size: 13px; font-weight: 650; font-weight: 600; }
+  .stat-gloss { display: block; margin-top: 4px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+
+  .module { padding: 52px 72px 0; }
+  .mod-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 28px;
+    align-items: end;
+    margin-bottom: 20px;
+  }
+  .mod-head h2, .closing h2, .subhead, .channel h3, .card h3, .preview h3 {
+    font-family: var(--serif);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+  .mod-head h2 {
+    margin: 8px 0 0;
+    font-size: 34px;
+    line-height: 1.08;
+  }
+  .lede { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--muted); }
+
+  .lake {
+    background:
+      radial-gradient(ellipse 520px 220px at 50% 40%, rgba(26, 165, 140, 0.16), transparent 70%),
+      radial-gradient(ellipse 860px 340px at 50% 46%, rgba(26, 165, 140, 0.07), transparent 72%),
+      var(--lake);
+    color: #F4F0E8;
+    border-radius: 20px;
+    padding: 20px 22px 16px;
+    box-shadow: 0 24px 50px rgba(20, 36, 31, 0.12);
+    overflow: hidden;
+  }
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal-bright);
+  }
+  .stratum {
+    display: grid;
+    grid-template-columns: 148px minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+  }
+  .stratum-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding-left: 12px;
+    border-left: 1px solid rgba(143, 227, 210, 0.35);
+  }
+  .stratum-label .idx {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--teal-bright);
+  }
+  .stratum-label strong {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+  }
+  .stratum-label em {
+    font-style: normal;
+    font-size: 12px;
+    color: #B7C4BE;
+    line-height: 1.35;
+  }
+  .cols-3, .cols-2 { display: grid; gap: 12px; }
+  .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .src {
+    background: rgba(244, 240, 232, 0.04);
+    border: 1px solid rgba(244, 240, 232, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .src:hover { border-color: rgba(143, 227, 210, 0.4); background: rgba(255, 255, 255, 0.05); }
+  .src-head { display: flex; gap: 10px; align-items: flex-start; }
+  .src-head h3 {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #F4F0E8;
+  }
+  .src-head p { margin: 2px 0 0; font-size: 12px; color: #B7C4BE; }
+  .src-fit { margin: 8px 0 0; font-size: 13px; line-height: 1.4; color: #E4EEEA; }
+  .src-meta {
+    margin: 8px 0 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--teal-bright);
+  }
+  .current {
+    display: grid;
+    grid-template-columns: 148px minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+    margin: 8px 0;
+  }
+  .current-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal-bright);
+    text-align: right;
+    line-height: 1.35;
+  }
+  .flow {
+    position: relative;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(143, 227, 210, 0.12), rgba(143, 227, 210, 0.9));
+    overflow: hidden;
+  }
+  .flow::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: -3px;
+    border-left: 6px solid #8FE3D2;
+    border-top: 3.5px solid transparent;
+    border-bottom: 3.5px solid transparent;
+  }
+  .flow::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -20%;
+    width: 18%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    animation: drift 2.8s linear infinite;
+  }
+  .flow.d2::after { animation-delay: 0.7s; animation-duration: 3.3s; }
+  .flow.d3::after { animation-delay: 0.25s; animation-duration: 2.4s; }
+  @keyframes drift {
+    from { left: -20%; }
+    to { left: 100%; }
+  }
+  .channel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.9fr) minmax(0, 1.15fr);
+    gap: 20px;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(143, 227, 210, 0.4);
+    background: rgba(143, 227, 210, 0.06);
+    box-shadow: 0 0 0 4px rgba(143, 227, 210, 0.05);
+  }
+  .cl-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 10px;
+    background: rgba(143, 227, 210, 0.12);
+    border: 1px solid rgba(143, 227, 210, 0.45);
+    color: #EFFFFA;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    font-size: 13px;
+  }
+  .channel h3 { margin: 0 0 6px; font-size: 28px; color: #F4F0E8; }
+  .channel-id p { margin: 0; font-size: 13px; line-height: 1.45; color: #C9D6D0; }
+  .channel-id .src-meta { margin-top: 10px; }
+  .verbs { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; align-content: center; }
+  .verbs strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .verbs span { display: block; font-size: 12.5px; line-height: 1.4; color: #C9D6D0; }
+  .chart-block { display: flex; flex-direction: column; justify-content: center; }
+  .chart-kicker {
+    margin: 0 0 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--teal-bright);
+  }
+  .chart-total {
+    margin: 0;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .chart-total span {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    letter-spacing: 0;
+    color: #C9D6D0;
+  }
+  .chart-block svg { width: 100%; height: 72px; display: block; margin-top: 6px; }
+  .chart-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: #B7C4BE;
+  }
+  .split { display: flex; height: 6px; border-radius: 99px; overflow: hidden; margin-top: 8px; }
+  .split span { display: block; height: 100%; }
+  .split-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 11px;
+    color: #C9D6D0;
+  }
+  .split-legend i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 4px;
+  }
+  .lake figcaption {
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #B7C4BE;
+  }
+  .footnote {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--teal);
+    border-radius: 14px;
+    padding: 16px 16px 14px;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:nth-child(2) { border-top-color: var(--copper); }
+  .card:nth-child(3) { border-top-color: var(--ink); }
+  .card-kicker {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .healthy { color: var(--teal); font-weight: 600; white-space: nowrap; }
+  .healthy::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #1F9D6A;
+    margin-right: 6px;
+  }
+  .card h3 { margin: 0 0 12px; font-size: 24px; line-height: 1.15; }
+  .hops { list-style: none; margin: 0 0 12px; padding: 0; }
+  .hops li {
+    position: relative;
+    padding: 0 0 8px 14px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: #24352F;
+  }
+  .hops li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--teal);
+  }
+  .hops li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 2.5px;
+    top: 12px;
+    bottom: 0;
+    width: 1px;
+    background: rgba(20, 36, 31, 0.16);
+  }
+  .hops b { font-weight: 600; }
+  .hops i { font-style: normal; color: var(--muted); }
+  .card-result { margin: 0 0 14px; font-size: 14px; line-height: 1.45; }
+  .metrics {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: auto 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid rgba(20, 36, 31, 0.08);
+  }
+  .metrics strong {
+    display: block;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+  .metrics span { display: block; font-size: 11px; line-height: 1.3; color: var(--muted); }
+
+  .quote {
+    margin: 26px 0 0;
+    padding: 0 0 0 20px;
+    border-left: 2px solid var(--copper);
+  }
+  .quote p {
+    margin: 0 0 8px;
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.32;
+    font-weight: 400;
+  }
+  .quote cite { font-style: normal; font-size: 13px; color: var(--muted); }
+  .subhead { margin: 28px 0 10px; font-size: 22px; }
+
+  .table-wrap {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--paper-2);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 13px 16px; }
+  thead th {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    background: #EFEAE1;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody th, tbody td { border-top: 1px solid rgba(20, 36, 31, 0.08); font-size: 14px; font-weight: 400; }
+  tbody tr:hover th, tbody tr:hover td { background: #F7F1E6; }
+  .cname { display: flex; gap: 10px; align-items: flex-start; }
+  .cname strong { display: block; font-size: 15px; }
+  .cname span, .cell-sub { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .signal { font-family: var(--mono); font-size: 12px; line-height: 1.5; color: #24352F; }
+  .compare td:last-child, .compare th:last-child {
+    background: #E7F3EF;
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .compare tr:hover td:last-child { background: #DCEEE8; }
+  .flagship tbody tr:hover th { box-shadow: inset 3px 0 0 var(--copper); }
+  .flag {
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: inset 0 -1px 0 var(--copper);
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    list-style: none;
+    margin: 4px 0 22px;
+    padding: 0;
+  }
+  .steps li {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 14px 16px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .steps .n {
+    display: block;
+    font-family: var(--serif);
+    font-size: 22px;
+    color: var(--teal);
+    margin-bottom: 6px;
+  }
+  .searchbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(20, 36, 31, 0.16);
+    background: var(--paper-2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--muted);
+  }
+  .searchbox svg { flex: none; color: var(--teal); }
+  .searchbox .ph { flex: 1; font-size: 14.5px; }
+  .count-pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--teal);
+    background: #E7F3EF;
+    padding: 3px 8px;
+    border-radius: 99px;
+  }
+  .hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 12px 0 18px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .hint {
+    border: 1px solid rgba(20, 36, 31, 0.14);
+    background: var(--paper-2);
+    border-radius: 99px;
+    padding: 4px 9px;
+    color: var(--ink);
+  }
+  .explore-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.9fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .directory {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 8px 16px 10px;
+  }
+  .directory h3 {
+    margin: 10px 0 2px;
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .dir-note { margin: 0 0 4px; font-size: 12.5px; color: var(--muted); }
+  .dir-row {
+    display: grid;
+    grid-template-columns: 168px 150px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    padding: 11px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .dir-name { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .dir-name b {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 400;
+  }
+  .bar { height: 6px; background: rgba(20, 36, 31, 0.08); border-radius: 99px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--teal); border-radius: 99px; }
+  .examples { margin: 0; color: var(--muted); line-height: 1.45; }
+  .examples .more { font-style: italic; }
+
+  .preview {
+    background: var(--lake);
+    color: #F4F0E8;
+    border-radius: 16px;
+    padding: 18px 18px 16px;
+  }
+  .preview .kicker { color: var(--teal-bright); }
+  .preview h3 { margin: 8px 0 6px; font-size: 26px; }
+  .preview .lede { color: #C9D6D0; font-size: 13.5px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+  .chip {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 99px;
+    background: rgba(143, 227, 210, 0.14);
+    color: #CFF6EE;
+    border: 1px solid rgba(143, 227, 210, 0.35);
+  }
+  .chip-opt {
+    background: transparent;
+    color: #C8B8A8;
+    border-color: rgba(244, 240, 232, 0.22);
+  }
+  .checklist { list-style: none; padding: 0; margin: 12px 0; }
+  .checklist li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-top: 1px solid rgba(244, 240, 232, 0.1);
+    font-size: 13px;
+  }
+  .ok { color: var(--teal-bright); font-weight: 600; white-space: nowrap; }
+  .opt { color: #E7A06A; font-weight: 600; white-space: nowrap; }
+  .mini {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 4px 0 12px;
+  }
+  .mini div {
+    background: rgba(244, 240, 232, 0.04);
+    border: 1px solid rgba(244, 240, 232, 0.08);
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .mini strong {
+    display: block;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 16px;
+  }
+  .mini span { display: block; font-size: 10.5px; color: #B7C4BE; line-height: 1.3; }
+  .preview-link { color: var(--teal-bright); font-size: 13px; font-weight: 600; }
+  .preview-link:hover { color: #fff; }
+  .closing a:focus-visible, .preview a:focus-visible { outline-color: #F4F0E8; }
+
+  .closing {
+    margin-top: 52px;
+    background: var(--ink);
+    color: #F4F0E8;
+    padding: 42px 72px 28px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.7fr);
+    gap: 24px;
+    align-items: center;
+  }
+  .closing .kicker { color: var(--teal-bright); }
+  .closing h2 { margin: 8px 0 10px; font-size: 36px; line-height: 1.05; }
+  .closing .lede { color: #C9D6D0; max-width: 640px; }
+  .close-stats {
+    display: flex;
+    gap: 22px;
+    list-style: none;
+    padding: 16px 0 0;
+    margin: 0;
+  }
+  .close-stats li { font-size: 12px; color: #C9D6D0; }
+  .close-stats strong {
+    display: block;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 22px;
+    color: #F4F0E8;
+  }
+  .closing-actions { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .fineprint {
+    grid-column: 1 / -1;
+    margin: 8px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(244, 240, 232, 0.12);
+    font-size: 12px;
+    color: #A8B8B2;
+    line-height: 1.5;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+<section class="integrations" id="integrations" aria-labelledby="integrations-title">
+  <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-pg" viewBox="0 0 32 32">
+      <ellipse cx="16" cy="9" rx="9" ry="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M7 9v12c0 2 4 3.5 9 3.5s9-1.5 9-3.5V9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M7 15c0 2 4 3.5 9 3.5s9-1.5 9-3.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    </symbol>
+    <symbol id="i-s3" viewBox="0 0 32 32">
+      <path d="M8 12h16v12H8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M8 12l3-4h10l3 4M8 18h16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-kafka" viewBox="0 0 32 32">
+      <circle cx="8" cy="16" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="16" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="16" cy="24" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="24" cy="16" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M10.2 15.1L13.8 9.4M10.2 16.9L13.8 22.6M18.2 9.4L21.8 14.4M18.2 22.6L21.8 17.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-sf" viewBox="0 0 32 32">
+      <path d="M16 5l8 5.5v11L16 27l-8-5.5v-11z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M16 5v22M8.4 10.8l15.2 10.4M23.6 10.8L8.4 21.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-bq" viewBox="0 0 32 32">
+      <rect x="6" y="7" width="20" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M6 13h20M6 19h20M13 13v12M20 13v12" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    </symbol>
+    <symbol id="i-dbx" viewBox="0 0 32 32">
+      <path d="M6 12l10-5 10 5-10 5zM6 17l10 5 10-5M6 22l10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-dbt" viewBox="0 0 32 32">
+      <path d="M6 8h8l4 8-4 8H6M18 16h8M22 12l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-look" viewBox="0 0 32 32">
+      <circle cx="15" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="15" cy="16" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M21 16h6M15 10V7M15 25v-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
+  <p class="statusline" role="status">
+    <span class="pulse" aria-hidden="true"></span>
+    All 12 regions operational
+    <span class="sep" aria-hidden="true">·</span>
+    Catalog v26.3
+    <span class="sep" aria-hidden="true">·</span>
+    3,840 workspaces live
+    <span class="sep" aria-hidden="true">·</span>
+    Heartbeat 18s ago
+  </p>
+
+  <header class="topbar">
+    <a class="brand" href="#integrations">
+      <svg class="mark" viewBox="0 0 28 28" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <rect width="28" height="28" rx="7" fill="#14241F"/>
+        <path d="M5 12.5c2.4-2.8 4.6-2.8 7 0s4.6 2.8 7 0 4.6-2.8 4 0" fill="none" stroke="#8FE3D2" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M6.5 17.5c2-2.2 3.8-2.2 5.8 0s3.8 2.2 5.8 0 3.8-2.2 2.4 0" fill="none" stroke="#E7A06A" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="14" cy="7.2" r="1.3" fill="#F4F0E8"/>
+      </svg>
+      <span>Conduit Lake</span>
+    </a>
+    <nav class="section-nav" aria-label="On this section">
+      <a href="#fit">Fit</a>
+      <a href="#possible">Outcomes</a>
+      <a href="#flagship">Flagship</a>
+      <a href="#catalog">Catalog</a>
+    </nav>
+    <a class="quiet-link" href="#stack-preview">Request a stack review</a>
+  </header>
+
+  <div class="intro">
+    <div class="intro-copy">
+      <p class="kicker"><i></i>02 / Integrations</p>
+      <h1 id="integrations-title">Conduit Lake fits the<br><em>stack you already run.</em></h1>
+      <p class="deck">Conduit Lake is the data-movement layer between operational sources and the warehouses, transformation tools, and analytics destinations you already trust. The integration ecosystem is the fit test: if a system is certified here, connecting it is configuration, not a new pipeline project. Eight flagship systems define the common path. The catalog holds 184.</p>
+      <ul class="promises">
+        <li>Sits in the middle. Databases, object stores, and streams stay systems of record. Warehouses stay systems of decision.</li>
+        <li>One ledger for CDC, micro-batch, and streaming, with cursor rewind when a deploy goes wrong.</li>
+        <li>PostgreSQL, Amazon S3, and Apache Kafka land in Snowflake, Google BigQuery, or Databricks. dbt and Looker follow the cursor.</li>
+      </ul>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#catalog">Explore all 184 integrations</a>
+        <a class="btn btn-line" href="#fit">See the stack cross-section</a>
+      </div>
+    </div>
+    <div class="stats" aria-label="Ecosystem snapshot">
+      <article class="stat">
+        <span class="stat-num">184</span>
+        <span class="stat-label">Certified connectors</span>
+        <span class="stat-gloss">Seven layers, from operational databases through BI. Catalog v26.3.</span>
+      </article>
+      <article class="stat">
+        <span class="stat-num">7</span>
+        <span class="stat-label">Median connectors by day 30</span>
+        <span class="stat-gloss">Across 3,840 live workspaces. Flagship plus the long tail.</span>
+      </article>
+      <article class="stat">
+        <span class="stat-num accent">14 min</span>
+        <span class="stat-label">Credential to first row</span>
+        <span class="stat-gloss">Median, new PostgreSQL CDC pipelines, trailing 90 days.</span>
+      </article>
+      <article class="stat">
+        <span class="stat-num">99.98%</span>
+        <span class="stat-label">Delivery success</span>
+        <span class="stat-gloss">Events delivered without a manual replay, trailing 90 days.</span>
+      </article>
+    </div>
+  </div>
+
+  <div class="module" id="fit">
+    <div class="mod-head">
+      <div>
+        <p class="kicker"><i></i>How it fits</p>
+        <h2>A cross-section of the stack you already run.</h2>
+      </div>
+      <p class="lede">Conduit Lake is the channel in the middle. Sources stay systems of record. Warehouses stay systems of decision. Nothing in this picture has to be replaced for the path to run.</p>
+    </div>
+
+    <figure class="lake">
+      <p class="live-badge"><span class="pulse" aria-hidden="true"></span> Live composite · March 2026</p>
+
+      <div class="stratum">
+        <div class="stratum-label">
+          <span class="idx">01</span>
+          <strong>Surface</strong>
+          <em>Where change begins</em>
+        </div>
+        <div class="stratum-body cols-3">
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-pg"/></svg>
+              <div>
+                <h3>PostgreSQL</h3>
+                <p>Operational database · Source</p>
+              </div>
+            </div>
+            <p class="src-fit">Reads the write-ahead log so inserts, updates, and deletes all land.</p>
+            <p class="src-meta">41s median lag<br>Freshest cursor 18s ago · 2,640 workspaces</p>
+          </article>
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-s3"/></svg>
+              <div>
+                <h3>Amazon S3</h3>
+                <p>Object landing zone · Source</p>
+              </div>
+            </div>
+            <p class="src-fit">Picks up partner drops and archival extracts by notification or prefix scan.</p>
+            <p class="src-meta">5 min typical cadence<br>Last object 2m ago · 2,105 workspaces</p>
+          </article>
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-kafka"/></svg>
+              <div>
+                <h3>Apache Kafka</h3>
+                <p>Event stream · Source</p>
+              </div>
+            </div>
+            <p class="src-fit">Subscribes as a consumer group. The topic stays the system of record.</p>
+            <p class="src-meta">12s median lag<br>Freshest offset 4s ago · 1,280 workspaces</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="current">
+        <span class="current-label">Change enters<br>CDC · streams · files</span>
+        <i class="flow"></i>
+      </div>
+
+      <div class="stratum">
+        <div class="stratum-label">
+          <span class="idx">02</span>
+          <strong>Channel</strong>
+          <em>The only new system</em>
+        </div>
+        <div class="channel">
+          <div class="channel-id">
+            <div class="cl-mark" aria-hidden="true">CL</div>
+            <h3>Conduit Lake</h3>
+            <p>The movement layer your other tools do not have to become. Capture, land, and observe live here.</p>
+            <p class="src-meta">22,416 pipelines in production<br>128 paths on this flagship shape</p>
+          </div>
+          <ul class="verbs">
+            <li><strong>Capture</strong><span>WAL, topics, and objects. A cursor is stored per stream, not per hopeful cron.</span></li>
+            <li><strong>Land</strong><span>Typed merge into the warehouse you already run. Partitions follow source commit time.</span></li>
+            <li><strong>Observe</strong><span>1,204 schema changes applied this week. 37 held for review before a bad merge.</span></li>
+          </ul>
+          <div class="chart-block">
+            <p class="chart-kicker">Landed, all destinations</p>
+            <p class="chart-total">1.62B <span>events · 5–18 March 2026 · peak 175M</span></p>
+            <svg viewBox="-4 -2 288 58" role="img" aria-label="Area chart of events landed per day from 5 March to 18 March 2026, in millions: 92, 98, 95, 104, 101, 88, 90, 118, 126, 122, 134, 130, 148, 175. Total 1.62 billion. Low 88 million on 10 March. Peak 175 million on 18 March.">
+              <title>Events landed, 5 to 18 March 2026</title>
+              <defs>
+                <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#8FE3D2" stop-opacity="0.55"/>
+                  <stop offset="100%" stop-color="#8FE3D2" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,42.2 L21.5,39.4 L43.1,40.8 L64.6,36.6 L86.2,38.0 L107.7,44.0 L129.2,43.1 L150.8,30.2 L172.3,26.5 L193.8,28.4 L215.4,22.9 L236.9,24.7 L258.5,16.4 L280,4 L280,52 L0,52 Z" fill="url(#areaFill)"/>
+              <path d="M0,42.2 L21.5,39.4 L43.1,40.8 L64.6,36.6 L86.2,38.0 L107.7,44.0 L129.2,43.1 L150.8,30.2 L172.3,26.5 L193.8,28.4 L215.4,22.9 L236.9,24.7 L258.5,16.4 L280,4" fill="none" stroke="#EFFFFA" stroke-width="1.6"/>
+              <circle cx="280" cy="4" r="2.4" fill="#F0A57A"/>
+            </svg>
+            <div class="chart-ends"><span>5 Mar · 92M</span><span>18 Mar · 175M</span></div>
+            <div class="split" aria-hidden="true">
+              <span style="width:54%;background:#8FE3D2"></span>
+              <span style="width:28%;background:#E7A06A"></span>
+              <span style="width:18%;background:#F4F0E8"></span>
+            </div>
+            <ul class="split-legend">
+              <li><i style="background:#8FE3D2"></i>Snowflake 875M</li>
+              <li><i style="background:#E7A06A"></i>BigQuery 454M</li>
+              <li><i style="background:#F4F0E8"></i>Databricks 292M</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="current">
+        <span class="current-label">Rows land<br>typed merge</span>
+        <i class="flow d2"></i>
+      </div>
+
+      <div class="stratum">
+        <div class="stratum-label">
+          <span class="idx">03</span>
+          <strong>Deep</strong>
+          <em>Warehouses and compute</em>
+        </div>
+        <div class="stratum-body cols-3">
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-sf"/></svg>
+              <div>
+                <h3>Snowflake</h3>
+                <p>Cloud warehouse · Destination</p>
+              </div>
+            </div>
+            <p class="src-fit">Continuous MERGE into the typed tables finance already governs.</p>
+            <p class="src-meta">58s median land<br>Loaded 22s ago · 2,210 workspaces</p>
+          </article>
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-bq"/></svg>
+              <div>
+                <h3>Google BigQuery</h3>
+                <p>Cloud warehouse · Destination</p>
+              </div>
+            </div>
+            <p class="src-fit">Storage Write API, partitioned on source commit time rather than load time.</p>
+            <p class="src-meta">86s median land<br>Loaded 41s ago · 1,164 workspaces</p>
+          </article>
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-dbx"/></svg>
+              <div>
+                <h3>Databricks</h3>
+                <p>Lakehouse · Destination</p>
+              </div>
+            </div>
+            <p class="src-fit">Delta MERGE under Unity Catalog, same source contract as the warehouse path.</p>
+            <p class="src-meta">2 min median land<br>Merged 1m ago · 742 workspaces</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="current">
+        <span class="current-label">Models follow<br>on cursor</span>
+        <i class="flow d3"></i>
+      </div>
+
+      <div class="stratum">
+        <div class="stratum-label">
+          <span class="idx">04</span>
+          <strong>Shore</strong>
+          <em>Models and decisions</em>
+        </div>
+        <div class="stratum-body cols-2">
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-dbt"/></svg>
+              <div>
+                <h3>dbt</h3>
+                <p>Transformation · follows the cursor</p>
+              </div>
+            </div>
+            <p class="src-fit">Jobs run only after new rows have landed, so a quiet hour does not build an empty model.</p>
+            <p class="src-meta">1,890 projects · last run 6m ago · 14,220 models observed</p>
+          </article>
+          <article class="src">
+            <div class="src-head">
+              <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-look"/></svg>
+              <div>
+                <h3>Looker</h3>
+                <p>Analytics · reads governed tables</p>
+              </div>
+            </div>
+            <p class="src-fit">Explores warm from warehouse tables with lineage back to the source cursor, not from a scheduled extract.</p>
+            <p class="src-meta">1,355 instances · warmed 9m ago · 6,402 explores</p>
+          </article>
+        </div>
+      </div>
+
+      <figcaption>Composite of 128 production paths with this shape, March 2026. The delivery chart is platform-wide: 1.62 billion events landed from 5 to 18 March, daily low 88 million on 10 March, peak 175 million on 18 March. Split: Snowflake 54%, Google BigQuery 28%, Databricks 18%.</figcaption>
+    </figure>
+    <p class="footnote">Source volumes on the cards are capture, not landings. Apache Kafka saw 9.6 billion events across all topics in 30 days; Conduit Lake moves subscribed topics only. Destination volumes match the chart: Snowflake 875 million, Google BigQuery 454 million, Databricks 292 million, trailing 14 days.</p>
+  </div>
+
+  <div class="module" id="possible">
+    <div class="mod-head">
+      <div>
+        <p class="kicker"><i></i>What becomes possible</p>
+        <h2>The warehouse catches the business, not yesterday’s batch.</h2>
+      </div>
+      <p class="lede">Three production paths live on Conduit Lake today. Numbers are from 3–17 March 2026, except where a card says “today.”</p>
+    </div>
+    <div class="cards">
+      <article class="card">
+        <p class="card-kicker">
+          <span>Harbor and Pine · CPG · 640 stores</span>
+          <span class="healthy">Healthy · 22s ago</span>
+        </p>
+        <h3>Same-morning revenue</h3>
+        <ol class="hops">
+          <li><b>PostgreSQL</b> public.orders <i>· WAL CDC</i></li>
+          <li><b>Apache Kafka</b> checkout.events <i>· consumer group</i></li>
+          <li><b>Conduit Lake</b> hp-orders-pulse <i>· contract v4</i></li>
+          <li><b>Snowflake</b> RAW.PUBLIC.ORDERS <i>· MERGE</i></li>
+          <li><b>dbt</b> marts.mart_revenue <i>· on cursor</i></li>
+          <li><b>Looker</b> Revenue Pulse <i>· warmed</i></li>
+        </ol>
+        <p class="card-result">The 9:15 revenue huddle opens an explore that moved 22 seconds ago, not a CSV from midnight.</p>
+        <ul class="metrics">
+          <li><strong>74s</strong><span>median lag</span></li>
+          <li><strong>2.4M</strong><span>order rows today</span></li>
+          <li><strong>11</strong><span>CSV jobs retired</span></li>
+        </ul>
+      </article>
+      <article class="card">
+        <p class="card-kicker">
+          <span>Fieldnote Mutual · Insurance · claims</span>
+          <span class="healthy">Healthy · file 3m ago</span>
+        </p>
+        <h3>Files and events, one contract</h3>
+        <ol class="hops">
+          <li><b>Amazon S3</b> sftp-drop/claims/ <i>· parquet, 5 min</i></li>
+          <li><b>Apache Kafka</b> claims.lifecycle <i>· 12s</i></li>
+          <li><b>Conduit Lake</b> fn-claims-unified <i>· shared contract</i></li>
+          <li><b>Snowflake</b> RAW.CLAIMS <i>· both doors</i></li>
+          <li><b>dbt</b> marts.claim_lifecycle <i>· one model</i></li>
+        </ol>
+        <p class="card-result">Adjusters see documents and events on one timeline. The model does not branch on which door the row used.</p>
+        <ul class="metrics">
+          <li><strong>186k</strong><span>files this week</span></li>
+          <li><strong>5 min</strong><span>file cadence</span></li>
+          <li><strong>12s</strong><span>event cadence</span></li>
+        </ul>
+      </article>
+      <article class="card">
+        <p class="card-kicker">
+          <span>Lumen Grid · Energy · platform</span>
+          <span class="healthy">Healthy · read 46s ago</span>
+        </p>
+        <h3>The warehouse stays a choice</h3>
+        <ol class="hops">
+          <li><b>PostgreSQL</b> meter_reads <i>· one source contract</i></li>
+          <li><b>Conduit Lake</b> lg-meter-dual-home <i>· destination fork only</i></li>
+          <li><b>Google BigQuery</b> FINANCE.METER_READS <i>· close</i></li>
+          <li><b>Databricks</b> feature.meter_window <i>· Unity Catalog</i></li>
+          <li><b>dbt</b> finance and feature models <i>· same cursor</i></li>
+        </ol>
+        <p class="card-result">Adding Databricks did not fork the extractor. Both homes share source commit time. Finance close never waited on the feature store.</p>
+        <ul class="metrics">
+          <li><strong>48</strong><span>feature tables</span></li>
+          <li><strong>15 min</strong><span>freshness SLA</span></li>
+          <li><strong>29 days</strong><span>SLA met in a row</span></li>
+        </ul>
+      </article>
+    </div>
+
+    <blockquote class="quote">
+      <p>“We retired six loaders in a month. Snowflake stayed. Looker stayed. The morning number finally moved with the stores.”</p>
+      <cite>Priya Raman, Head of Data Platform, Harbor and Pine · 7 systems · live since April 2025</cite>
+    </blockquote>
+
+    <h3 class="subhead">Then and now, Harbor and Pine production</h3>
+    <div class="table-wrap">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th scope="col">Measured</th>
+            <th scope="col">Before · six scripts</th>
+            <th scope="col">Now · Conduit Lake path</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Median source-to-dashboard lag</th>
+            <td>14h 20m</td>
+            <td>74s</td>
+          </tr>
+          <tr>
+            <th scope="row">Pipelines a person owns</th>
+            <td>6</td>
+            <td>1</td>
+          </tr>
+          <tr>
+            <th scope="row">Deletes reflected downstream</th>
+            <td>Partial nightly diff</td>
+            <td>Full CDC</td>
+          </tr>
+          <tr>
+            <th scope="row">Empty dbt runs that week</th>
+            <td>23</td>
+            <td>0 runs</td>
+          </tr>
+          <tr>
+            <th scope="row">Looker source</th>
+            <td>Scheduled extract</td>
+            <td>Governed Snowflake table</td>
+          </tr>
+          <tr>
+            <th scope="row">Replay after a bad deploy</th>
+            <td>Manual, 2 days</td>
+            <td>Cursor rewind, 11 min</td>
+          </tr>
+          <tr>
+            <th scope="row">Weeknight pages for a failed load</th>
+            <td>4</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <th scope="row">Systems asked to move</th>
+            <td>2 databases, during a rewrite</td>
+            <td>None. Postgres, Kafka, S3, Snowflake, dbt, Looker stayed</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="footnote">The “before” column is the six scripts Harbor and Pine retired in April 2025, remeasured against the Conduit Lake path during 3–17 March 2026. It is a then-and-now, not a simultaneous A/B.</p>
+  </div>
+
+  <div class="module" id="flagship">
+    <div class="mod-head">
+      <div>
+        <p class="kicker"><i></i>Flagship connectors</p>
+        <h2>Eight systems, shown the way data moves.</h2>
+      </div>
+      <p class="lede">Certified and generally available. Enough to judge fit. Ordered source to decision, not by logo rank. Workspace counts do not sum to 3,840 — a workspace enables several connectors.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="flagship">
+        <thead>
+          <tr>
+            <th scope="col">Connector</th>
+            <th scope="col">Where it fits</th>
+            <th scope="col">Movement</th>
+            <th scope="col">In production</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-pg"/></svg>
+                <div><strong>PostgreSQL</strong><span>Certified · GA 2019</span></div>
+              </div>
+            </th>
+            <td>App database is the system of record and deletes must land.</td>
+            <td>WAL CDC + snapshot<span class="cell-sub">Auth: database role, RDS IAM</span></td>
+            <td class="signal">41s p50 lag<br>186M rows / 30d<br>2,640 workspaces</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-s3"/></svg>
+                <div><strong>Amazon S3</strong><span>Certified · GA 2019</span></div>
+              </div>
+            </th>
+            <td>Partner drops and archival extracts need a landing zone beside the stream.</td>
+            <td>Notifications + prefix scan<span class="cell-sub">Auth: IAM role</span></td>
+            <td class="signal">5 min cadence<br>48 TB / 30d<br>2,105 workspaces</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-kafka"/></svg>
+                <div><strong>Apache Kafka</strong><span>Certified · GA 2020</span></div>
+              </div>
+            </th>
+            <td>Topics already carry the event; the warehouse should subscribe.</td>
+            <td>Consumer group + schema registry<span class="cell-sub">Auth: SASL or mTLS</span></td>
+            <td class="signal">12s p50 lag<br>9.6B events captured / 30d<br>1,280 workspaces</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-sf"/></svg>
+                <div><strong>Snowflake</strong><span>Certified · GA 2019</span></div>
+              </div>
+            </th>
+            <td>Finance already lives in Snowflake; loaders are the fragile part.</td>
+            <td>Continuous MERGE<span class="cell-sub">Auth: key pair, OAuth</span></td>
+            <td class="signal">58s median land<br>875M events / 14d<br>2,210 workspaces</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-bq"/></svg>
+                <div><strong>Google BigQuery</strong><span>Certified · GA 2020</span></div>
+              </div>
+            </th>
+            <td>BigQuery stays the system of decision; extraction should not be a side project.</td>
+            <td>Storage Write API + batch load<span class="cell-sub">Auth: workload identity</span></td>
+            <td class="signal">86s median land<br>454M events / 14d<br>1,164 workspaces</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-dbx"/></svg>
+                <div><strong>Databricks</strong><span>Certified · GA 2021</span></div>
+              </div>
+            </th>
+            <td>Feature tables and finance tables share one source contract.</td>
+            <td>Delta MERGE + Unity Catalog<span class="cell-sub">Auth: OAuth or personal access token</span></td>
+            <td class="signal">2 min median land<br>292M events / 14d<br>742 workspaces</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-dbt"/></svg>
+                <div><strong>dbt</strong><span>Certified · GA 2021</span></div>
+              </div>
+            </th>
+            <td>Models run only after the cursor moves, never on an empty hour.</td>
+            <td>On-cursor job trigger<span class="cell-sub">Auth: dbt Cloud API key</span></td>
+            <td class="signal">Runs after land<br>14,220 models observed<br>1,890 projects</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="cname">
+                <svg class="ico" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><use href="#i-look"/></svg>
+                <div><strong>Looker</strong><span>Certified · GA 2022</span></div>
+              </div>
+            </th>
+            <td>The explore leadership opens traces to a source cursor.</td>
+            <td>Explore warm + PDT dependency<span class="cell-sub">Auth: API key or OAuth</span></td>
+            <td class="signal">3 min after model<br>6,402 explores<br>1,355 instances</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="footnote">Freshness is the production median for that connector over the trailing 7 days. GA year is the first generally available release of the connector, not the source product.</p>
+  </div>
+
+  <div class="module" id="catalog">
+    <div class="mod-head">
+      <div>
+        <p class="kicker"><i></i>Explore the catalog</p>
+        <h2>Start with the eight. The other 176 are a filter away.</h2>
+      </div>
+      <p class="lede">Warehouses are a short list on purpose. The long tail is SaaS and databases — start there when the source is not already on this page. Every connector is documented the same way: direction, cursor, schema behavior, auth, and a reference path.</p>
+    </div>
+
+    <ol class="steps">
+      <li><span class="n">01</span>Name the systems you already pay for.</li>
+      <li><span class="n">02</span>Match sync mode to how that system changes.</li>
+      <li><span class="n">03</span>Keep your warehouse. Aim the path at it.</li>
+      <li><span class="n">04</span>Tie dbt and Looker to the cursor, not a clock.</li>
+      <li><span class="n">05</span>Open the catalog for the other 176.</li>
+    </ol>
+
+    <div class="searchbox" role="search" aria-label="Catalog search, showing the full browse state">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span class="ph">Search 184 connectors, sync modes, or auth</span>
+      <span class="count-pill">184</span>
+    </div>
+    <div class="hints">
+      <span>Popular searches</span>
+      <span class="hint">CDC</span>
+      <span class="hint">schema registry</span>
+      <span class="hint">Unity Catalog</span>
+      <span class="hint">IAM role</span>
+      <span class="hint">Private Link</span>
+      <span class="hint">MERGE</span>
+      <span class="hint">workload identity</span>
+      <span class="hint">PDT</span>
+    </div>
+
+    <div class="explore-grid">
+      <div class="directory">
+        <h3>By layer · 184</h3>
+        <p class="dir-note">Bars are share of the catalog. Underlined names are flagship connectors detailed above.</p>
+        <div class="dir-row">
+          <div class="dir-name"><span>Databases</span><b>42</b></div>
+          <div class="bar" role="img" aria-label="Databases, 42 of 184"><span style="width:22.8%"></span></div>
+          <p class="examples"><strong class="flag">PostgreSQL</strong>, MySQL, SQL Server, Oracle, MongoDB, DynamoDB <span class="more">+36</span></p>
+        </div>
+        <div class="dir-row">
+          <div class="dir-name"><span>Streaming</span><b>9</b></div>
+          <div class="bar" role="img" aria-label="Streaming, 9 of 184"><span style="width:4.9%"></span></div>
+          <p class="examples"><strong class="flag">Apache Kafka</strong>, Amazon Kinesis, Google Cloud Pub/Sub, Redpanda, Azure Event Hubs <span class="more">+4</span></p>
+        </div>
+        <div class="dir-row">
+          <div class="dir-name"><span>Object storage</span><b>18</b></div>
+          <div class="bar" role="img" aria-label="Object storage, 18 of 184"><span style="width:9.8%"></span></div>
+          <p class="examples"><strong class="flag">Amazon S3</strong>, Google Cloud Storage, Azure Blob Storage, SFTP, HDFS <span class="more">+13</span></p>
+        </div>
+        <div class="dir-row">
+          <div class="dir-name"><span>Warehouses</span><b>8</b></div>
+          <div class="bar" role="img" aria-label="Warehouses, 8 of 184"><span style="width:4.3%"></span></div>
+          <p class="examples"><strong class="flag">Snowflake</strong>, <strong class="flag">Google BigQuery</strong>, <strong class="flag">Databricks</strong>, Amazon Redshift, Azure Synapse, ClickHouse, Athena, Firebolt</p>
+        </div>
+        <div class="dir-row">
+          <div class="dir-name"><span>Transform</span><b>14</b></div>
+          <div class="bar" role="img" aria-label="Transform, 14 of 184"><span style="width:7.6%"></span></div>
+          <p class="examples"><strong class="flag">dbt</strong>, Airflow, Dagster, Spark, Apache Iceberg <span class="more">+9</span></p>
+        </div>
+        <div class="dir-row">
+          <div class="dir-name"><span>Analytics</span><b>23</b></div>
+          <div class="bar" role="img" aria-label="Analytics, 23 of 184"><span style="width:12.5%"></span></div>
+          <p class="examples"><strong class="flag">Looker</strong>, Tableau, Sigma, Metabase, Hex, Preset <span class="more">+17</span></p>
+        </div>
+        <div class="dir-row">
+          <div class="dir-name"><span>SaaS apps</span><b>70</b></div>
+          <div class="bar" role="img" aria-label="SaaS applications, 70 of 184"><span style="width:38%"></span></div>
+          <p class="examples">Salesforce, Stripe, NetSuite, Shopify, Zendesk, Workday, HubSpot, ServiceNow <span class="more">+62</span></p>
+        </div>
+      </div>
+
+      <aside class="preview" id="stack-preview" aria-label="Reference path detail">
+        <p class="kicker"><i></i>Reference path · 128 workspaces</p>
+        <h3>Six selected. Two on the shelf.</h3>
+        <p class="lede">Prefilled with the flagship shape used by Harbor and Pine’s cousins across the platform. Alternates stay visible so you can see what is optional.</p>
+        <div class="chips" aria-label="Selected systems">
+          <span class="chip">PostgreSQL</span>
+          <span class="chip">Amazon S3</span>
+          <span class="chip">Apache Kafka</span>
+          <span class="chip">Snowflake</span>
+          <span class="chip">dbt</span>
+          <span class="chip">Looker</span>
+          <span class="chip chip-opt">Google BigQuery · optional</span>
+          <span class="chip chip-opt">Databricks · optional</span>
+        </div>
+        <ul class="checklist">
+          <li><span>Operational database · PostgreSQL</span><span class="ok">Covered</span></li>
+          <li><span>Object storage · Amazon S3</span><span class="ok">Covered</span></li>
+          <li><span>Stream · Apache Kafka</span><span class="ok">Covered</span></li>
+          <li><span>Warehouse · Snowflake</span><span class="ok">Covered</span></li>
+          <li><span>Transform · dbt</span><span class="ok">Covered</span></li>
+          <li><span>Analytics · Looker</span><span class="ok">Covered</span></li>
+          <li><span>Alternate compute · BigQuery, Databricks</span><span class="opt">Not required</span></li>
+        </ul>
+        <div class="mini">
+          <div><strong>14 min</strong><span>first row estimate</span></div>
+          <div><strong>None</strong><span>systems to replace</span></div>
+          <div><strong>None</strong><span>custom builds</span></div>
+          <div><strong>128</strong><span>paths of this shape</span></div>
+        </div>
+        <p class="lede">Adding Google BigQuery or Databricks forks the destination, not the extractor. Lumen Grid runs both off one PostgreSQL contract.</p>
+        <p style="margin:12px 0 0"><a class="preview-link" href="#possible">See how Lumen Grid uses the alternates</a></p>
+      </aside>
+    </div>
+    <p class="footnote">Layer counts sum to 184: 42 databases, 9 streaming, 18 object storage, 8 warehouses, 14 transform, 23 analytics, 70 SaaS. Warehouses are listed in full. EU-Central has 181 of 184; three SaaS connectors remain US-only pending vendor residency review.</p>
+  </div>
+
+  <div class="closing">
+    <div>
+      <p class="kicker"><i></i>The full ecosystem</p>
+      <h2>If six of these names are already on the invoice, the path is the product.</h2>
+      <p class="lede">Filter the catalog by layer, sync mode, auth, or the vendor you already pay. Flagship systems on this page are the fastest way to see fit. The long tail is how the platform stays out of the way when a niche database or a SaaS app shows up.</p>
+      <ul class="close-stats">
+        <li><strong>184</strong> connectors</li>
+        <li><strong>7</strong> layers</li>
+        <li><strong>14 min</strong> to first row</li>
+        <li><strong>None</strong> to replace</li>
+      </ul>
+    </div>
+    <div class="closing-actions">
+      <a class="btn btn-light" href="#catalog">Browse all 184 integrations</a>
+      <a class="btn btn-ghost" href="#fit">Revisit the cross-section</a>
+    </div>
+    <p class="fineprint">Catalog v26.3 · refreshed 18 Mar 2026 · 184 connectors · 12 regions · EU-Central parity 181 of 184 · SOC 2 Type II report available under NDA · Private Link on every flagship source · row payloads are not retained beyond the delivery ledger. Conduit Lake is the movement layer. The rest of the stack stays yours.</p>
+  </div>
+</section>
+</body>
+</html>

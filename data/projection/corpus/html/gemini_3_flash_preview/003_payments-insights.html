@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gateway Insights | Field Operations</title>
+    <style>
+        :root {
+            /* Colors */
+            --color-bg: #030712;
+            --color-surface: #111827;
+            --color-surface-hover: #1f2937;
+            --color-surface-bright: #374151;
+            --color-text-primary: #f9fafb;
+            --color-text-secondary: #9ca3af;
+            --color-accent: #3b82f6;
+            --color-accent-glow: rgba(59, 130, 246, 0.5);
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-critical: #ef4444;
+            --color-toast-bg: #ffffff;
+            --color-toast-text: #030712;
+            --color-overlay: rgba(0, 0, 0, 0.85);
+            --color-border: #374151;
+
+            /* Spacing */
+            --space-none: 0px;
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 32px;
+            --space-xl: 64px;
+            --space-xxl: 128px;
+
+            /* Typography */
+            --font-size-xs: 0.875rem;
+            --font-size-sm: 1rem;
+            --font-size-base: 1.25rem;
+            --font-size-lg: 1.75rem;
+            --font-size-xl: 2.5rem;
+            --font-size-giant: 4rem;
+            --font-weight-normal: 400;
+            --font-weight-medium: 500;
+            --font-weight-bold: 700;
+            --line-height-tight: 1.2;
+            --line-height-base: 1.5;
+
+            /* Borders & Shadows */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 16px;
+            --radius-full: 9999px;
+            --border-width: 2px;
+            --shadow-subtle: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-elevated: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-glow: 0 0 30px var(--color-accent-glow);
+
+            /* Transitions */
+            --transition-fast: 0.2s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: var(--space-none);
+            padding: var(--space-none);
+        }
+
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text-primary);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-base);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Layout Container */
+        .viewport {
+            width: 100%;
+            max-width: 1280px;
+            margin: var(--space-none) auto;
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            padding: var(--space-md);
+            gap: var(--space-md);
+        }
+
+        /* Header Status Bar */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-md) var(--space-lg);
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            border: var(--border-width) solid var(--color-border);
+        }
+
+        .system-indicators {
+            display: flex;
+            gap: var(--space-lg);
+        }
+
+        .indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .dot {
+            width: var(--space-md);
+            height: var(--space-md);
+            border-radius: var(--radius-full);
+        }
+
+        .dot.active { background-color: var(--color-success); box-shadow: 0 0 var(--space-sm) var(--color-success); }
+        .dot.sync { background-color: var(--color-accent); }
+
+        .status-label {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--color-text-secondary);
+        }
+
+        /* Main Visualization Area */
+        .media-container {
+            position: relative;
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            border: var(--border-width) solid var(--color-border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .media-stage {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .visual-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 2px 2px, var(--color-border) 1px, transparent 0);
+            background-size: var(--space-xl) var(--space-xl);
+            opacity: 0.3;
+        }
+
+        /* Controls Area */
+        .media-controls {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-md);
+            padding: var(--space-lg);
+            background: rgba(0, 0, 0, 0.2);
+            border-top: var(--border-width) solid var(--color-border);
+        }
+
+        .control-btn {
+            background: var(--color-surface-bright);
+            border: var(--border-width) solid var(--color-border);
+            color: var(--color-text-primary);
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: var(--font-weight-bold);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            transition: background var(--transition-fast);
+        }
+
+        .control-btn:hover {
+            background: var(--color-surface-hover);
+        }
+
+        .control-btn.primary {
+            background: var(--color-accent);
+            border-color: var(--color-accent);
+        }
+
+        /* Announcement Toast/Modal */
+        .announcement-overlay {
+            position: fixed;
+            top: var(--space-none);
+            left: var(--space-none);
+            right: var(--space-none);
+            bottom: var(--space-none);
+            background: var(--color-overlay);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .announcement-toast {
+            background: var(--color-toast-bg);
+            color: var(--color-toast-text);
+            width: 100%;
+            max-width: 700px;
+            padding: var(--space-xl);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-elevated);
+            position: relative;
+            animation: slideUp var(--transition-fast);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(var(--space-xl)); opacity: 0; }
+            to { transform: translateY(var(--space-none)); opacity: 1; }
+        }
+
+        .announcement-header {
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .tag {
+            background: var(--color-critical);
+            color: white;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-bold);
+            text-transform: uppercase;
+        }
+
+        .announcement-title {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-bold);
+            line-height: var(--line-height-tight);
+        }
+
+        .announcement-body {
+            margin-bottom: var(--space-lg);
+            font-size: var(--font-size-base);
+        }
+
+        .ack-button {
+            width: 100%;
+            padding: var(--space-lg);
+            background: var(--color-toast-text);
+            color: var(--color-toast-bg);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-bold);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .ack-button:hover {
+            opacity: 0.9;
+        }
+
+        /* Large SVG Data Viz Styles */
+        .viz-svg {
+            width: 80%;
+            height: auto;
+            max-height: 400px;
+        }
+
+        .node { fill: var(--color-accent); }
+        .node-pulse {
+            animation: pulse 2s infinite;
+            transform-origin: center;
+        }
+
+        @keyframes pulse {
+            0% { r: 4; opacity: 1; }
+            100% { r: 20; opacity: 0; }
+        }
+
+        .connection {
+            stroke: var(--color-border);
+            stroke-width: var(--border-width);
+            stroke-dasharray: 4;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="viewport">
+        <!-- Top Status Bar -->
+        <header class="status-bar" role="banner">
+            <div class="system-indicators">
+                <div class="indicator">
+                    <span class="dot active"></span>
+                    <span class="status-label">Network: Online</span>
+                </div>
+                <div class="indicator">
+                    <span class="dot sync"></span>
+                    <span class="status-label">Liquidity Sync: 99.4%</span>
+                </div>
+            </div>
+            <div class="system-indicators">
+                <div class="indicator">
+                    <span class="status-label">Station: London_B_4</span>
+                </div>
+                <div class="indicator">
+                    <span class="status-label">14:32:05 UTC</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="media-container" role="main">
+            <section class="media-stage" aria-label="Regional Transaction Flow Map">
+                <div class="visual-grid"></div>
+                
+                <!-- Mock SVG Visualization -->
+                <svg class="viz-svg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="400" cy="200" r="10" class="node" />
+                    <circle cx="400" cy="200" r="10" class="node-pulse" fill="none" stroke="var(--color-accent)" />
+                    
+                    <!-- Peripheral Nodes -->
+                    <circle cx="200" cy="100" r="6" fill="var(--color-surface-bright)" />
+                    <circle cx="600" cy="100" r="6" fill="var(--color-surface-bright)" />
+                    <circle cx="200" cy="300" r="6" fill="var(--color-surface-bright)" />
+                    <circle cx="600" cy="300" r="6" fill="var(--color-surface-bright)" />
+
+                    <!-- Paths -->
+                    <line x1="400" y1="200" x2="200" y2="100" class="connection" />
+                    <line x1="400" y1="200" x2="600" y2="100" class="connection" />
+                    <line x1="400" y1="200" x2="200" y2="300" class="connection" />
+                    <line x1="400" y1="200" x2="600" y2="300" class="connection" />
+                    
+                    <text x="400" y="240" fill="white" text-anchor="middle" font-size="14">Core Settlement Hub</text>
+                    <text x="200" y="80" fill="var(--color-text-secondary)" text-anchor="middle" font-size="12">Node_Alpha</text>
+                    <text x="600" y="80" fill="var(--color-text-secondary)" text-anchor="middle" font-size="12">Node_Beta</text>
+                </svg>
+            </section>
+
+            <!-- Media Controls -->
+            <nav class="media-controls" role="toolbar" aria-label="Visualization Controls">
+                <button class="control-btn" type="button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12H3m18 0l-8-8m8 8l-8 8"/></svg>
+                    <span>Rotate View</span>
+                </button>
+                <button class="control-btn primary" type="button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <span>Focus Center</span>
+                </button>
+                <button class="control-btn" type="button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+                    <span>Inbound Logs</span>
+                </button>
+            </nav>
+        </main>
+
+        <!-- Footer Stats -->
+        <footer class="status-bar" role="contentinfo">
+            <div class="indicator">
+                <span class="status-label">Active Settlements:</span>
+                <span class="announcement-title" style="font-size: var(--font-size-base);">4,209</span>
+            </div>
+            <div class="indicator">
+                <span class="status-label">Gateway Load:</span>
+                <span class="announcement-title" style="font-size: var(--font-size-base); color: var(--color-success);">Low</span>
+            </div>
+            <div class="indicator">
+                <span class="status-label">Peak Velocity:</span>
+                <span class="announcement-title" style="font-size: var(--font-size-base);">12.4k txn/s</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Announcement Overlay -->
+    <div id="announcementOverlay" class="announcement-overlay" role="dialog" aria-modal="true" aria-labelledby="announcementTitle">
+        <div class="announcement-toast">
+            <header class="announcement-header">
+                <span class="tag">Urgent Update</span>
+                <h2 id="announcementTitle" class="announcement-title">New Reconciliation Protocols</h2>
+            </header>
+            <div class="announcement-body">
+                <p>Effective immediately: All field units must adopt <strong>Protocol V4.2</strong> for cross-border liquidity settlements. Failure to acknowledge this update will result in node synchronization suspension at 18:00 UTC.</p>
+                <p style="margin-top: var(--space-md); color: var(--color-text-secondary); font-size: var(--font-size-sm);">Reference: SEC-PAY-2024-089</p>
+            </div>
+            <button class="ack-button" id="ackButton" type="button">Acknowledge and Continue</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('announcementOverlay');
+            const button = document.getElementById('ackButton');
+
+            // Handle acknowledgment
+            button.addEventListener('click', () => {
+                overlay.classList.add('hidden');
+                // Potential telemetry: console.log('Announcement acknowledged by field worker.');
+            });
+
+            // Accessibility: Focus button when overlay appears
+            button.focus();
+
+            // Handle Escape key to close (if allowed, but here acknowledgement is mandatory)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !overlay.classList.contains('hidden')) {
+                    // In a real app, we might force the button click
+                    // overlay.classList.add('hidden'); 
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

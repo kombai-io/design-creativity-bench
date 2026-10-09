@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneLilt — How it works</title>
+<style>
+  :root{
+    --ink:#17161c;
+    --ink-soft:#4c4a56;
+    --paper:#faf7f2;
+    --card:#ffffff;
+    --line:#e7e1d6;
+    --accent:#ff5a2b;
+    --accent-deep:#d63f13;
+    --accent-tint:#fff1ea;
+    --violet:#5b4bd6;
+    --violet-tint:#efedfc;
+    --teal:#0e7f6f;
+    --teal-tint:#e6f4f1;
+    --gold:#b97c14;
+    --gold-tint:#fbf3e2;
+    --radius:16px;
+    --shadow:0 24px 60px -30px rgba(23,22,28,.28), 0 4px 16px -8px rgba(23,22,28,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Avenir Next","Segoe UI",Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+
+  .section{
+    padding:96px 24px 88px;
+    position:relative;
+    overflow:hidden;
+  }
+  /* faint dotted texture */
+  .section::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:radial-gradient(rgba(23,22,28,.05) 1px, transparent 1px);
+    background-size:22px 22px;
+    pointer-events:none;
+  }
+  .wrap{max-width:1140px;margin:0 auto;position:relative}
+
+  /* ---------- header ---------- */
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:10px;
+    font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--accent-deep);
+    background:var(--accent-tint);
+    border:1px solid #ffd9c9;
+    padding:8px 14px;border-radius:999px;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(255,90,43,.18)}
+  .headline{
+    margin-top:22px;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:clamp(34px,5vw,54px);
+    line-height:1.08;
+    letter-spacing:-.015em;
+    max-width:15ch;
+    font-weight:600;
+  }
+  .headline em{font-style:italic;color:var(--accent-deep)}
+  .lede{
+    margin-top:20px;
+    max-width:56ch;
+    font-size:17px;
+    color:var(--ink-soft);
+  }
+  .lede strong{color:var(--ink);font-weight:650}
+
+  /* ---------- step rail ---------- */
+  .rail{margin-top:56px}
+  .rail-top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px}
+  .rail-top p{font-size:13px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+  .steps{
+    display:flex;gap:0;
+    list-style:none;
+    margin-top:14px;
+    border-top:1px solid var(--line);
+    counter-reset:step;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .steps::-webkit-scrollbar{display:none}
+  .steps li{flex:1 1 0;min-width:128px;position:relative;counter-increment:step}
+  .steps li::before{
+    content:"";
+    position:absolute;top:-1px;left:0;right:0;height:2px;
+    background:var(--accent);
+    transform:scaleX(0);transform-origin:left;
+    transition:transform .45s cubic-bezier(.5,0,.2,1);
+  }
+  .steps li.done::before{transform:scaleX(1)}
+  .steps li.active::before{transform:scaleX(1)}
+  .steps button{
+    all:unset;cursor:pointer;
+    display:block;width:100%;
+    padding:16px 14px 18px 0;
+    font-family:inherit;
+  }
+  .steps button:focus-visible{outline:2px solid var(--violet);outline-offset:2px;border-radius:8px}
+  .step-num{
+    font-size:11px;font-weight:800;letter-spacing:.12em;
+    color:var(--ink-soft);
+    display:block;
+  }
+  .steps li.active .step-num{color:var(--accent-deep)}
+  .step-label{
+    font-size:14px;font-weight:650;line-height:1.3;
+    margin-top:6px;display:block;
+    color:var(--ink-soft);
+    transition:color .3s;
+  }
+  .steps li.active .step-label{color:var(--ink)}
+  .steps li.done .step-label{color:var(--ink)}
+
+  /* ---------- panel ---------- */
+  .panel{
+    margin-top:0;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:0 0 var(--radius) var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .stage{
+    display:grid;
+    grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+    min-height:420px;
+  }
+  .visual{
+    padding:34px;
+    border-right:1px solid var(--line);
+    background:
+      linear-gradient(180deg,#fbf9f4 0%,#f5f1e8 100%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .copy{padding:44px 42px 40px;display:flex;flex-direction:column;justify-content:center}
+
+  .kicker{
+    display:inline-flex;align-self:flex-start;
+    align-items:center;gap:8px;
+    font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    padding:6px 11px;border-radius:6px;
+  }
+  .k-1{background:var(--accent-tint);color:var(--accent-deep)}
+  .k-2{background:var(--violet-tint);color:var(--violet)}
+  .k-3{background:var(--teal-tint);color:var(--teal)}
+  .k-4{background:var(--gold-tint);color:var(--gold)}
+  .k-5{background:var(--violet-tint);color:var(--violet)}
+  .k-6{background:var(--teal-tint);color:var(--teal)}
+  .panel h3{
+    font-family:Georgia,serif;font-weight:600;
+    font-size:clamp(24px,2.6vw,31px);
+    line-height:1.15;margin:16px 0 12px;
+    letter-spacing:-.01em;
+  }
+  .panel .desc{color:var(--ink-soft);font-size:15.5px;max-width:44ch}
+  .panel .desc + .desc{margin-top:10px}
+  .points{list-style:none;margin-top:22px;display:grid;gap:10px}
+  .points li{
+    position:relative;padding-left:26px;
+    font-size:14.5px;color:var(--ink);
+    animation:rise .45s both;
+  }
+  .points li:nth-child(2){animation-delay:.06s}
+  .points li:nth-child(3){animation-delay:.12s}
+  .points li:nth-child(4){animation-delay:.18s}
+  .points li::before{
+    content:"";
+    position:absolute;left:0;top:5px;
+    width:13px;height:13px;border-radius:4px;
+    background:var(--accent-tint);
+    border:1.5px solid var(--accent);
+  }
+  .points li svg{
+    position:absolute;left:2.5px;top:7.5px;width:9px;height:9px;
+    stroke:var(--accent-deep);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  }
+
+  .panel.active{display:grid;animation:fadeUp .45s both}
+  .panel{display:none}
+
+  /* ---------- stage mini-UIs ---------- */
+  .mock{
+    width:100%;max-width:440px;
+    background:#fff;border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 18px 44px -22px rgba(23,22,28,.3);
+    overflow:hidden;
+    font-size:12px;
+  }
+  .mock-bar{
+    display:flex;align-items:center;gap:8px;
+    padding:10px 14px;
+    border-bottom:1px solid var(--line);
+    background:#fcfaf6;
+  }
+  .mock-bar .tl{display:flex;gap:6px}
+  .mock-bar .tl i{width:9px;height:9px;border-radius:50%;background:#e3ddd1}
+  .mock-bar .path{
+    margin-left:6px;font-size:11px;color:var(--ink-soft);
+    background:#f1ede4;border-radius:6px;padding:3px 9px;font-weight:600;
+  }
+  .mock-body{padding:18px}
+
+  .field{margin-bottom:14px}
+  .field .cap{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:7px}
+  .dropzone{
+    border:1.5px dashed #d8d0bf;border-radius:10px;
+    padding:20px 14px;text-align:center;background:#fbf9f4;
+  }
+  .dropzone .film{
+    width:46px;height:34px;margin:0 auto 9px;border-radius:6px;
+    background:linear-gradient(135deg,#2b2933,#454158);
+    position:relative;
+  }
+  .dropzone .film::before,.dropzone .film::after{
+    content:"";position:absolute;top:4px;bottom:4px;width:5px;
+    background:repeating-linear-gradient(#fbf9f4 0 3px,transparent 3px 6px);
+  }
+  .dropzone .film::before{left:3px}
+  .dropzone .film::after{right:3px}
+  .dropzone b{display:block;font-size:12.5px}
+  .dropzone span{font-size:11px;color:var(--ink-soft)}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{
+    border:1px solid var(--line);border-radius:999px;
+    padding:5px 11px;font-weight:650;font-size:11.5px;color:var(--ink-soft);
+    background:#fff;display:inline-flex;align-items:center;gap:6px;
+  }
+  .chip.on{border-color:var(--accent);color:var(--accent-deep);background:var(--accent-tint)}
+  .chip i{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .btn{
+    display:block;width:100%;text-align:center;
+    margin-top:16px;padding:10px;border:none;border-radius:9px;
+    background:var(--accent);color:#fff;font-family:inherit;
+    font-weight:750;font-size:12.5px;cursor:default;
+    box-shadow:0 8px 18px -8px rgba(255,90,43,.55);
+  }
+
+  .transcript{display:grid;gap:9px}
+  .tline{display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:start}
+  .tline .who{
+    font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--ink-soft);padding:3px 0;
+  }
+  .tline .txt{
+    padding:8px 11px;border-radius:9px;background:#fbf9f4;border:1px solid var(--line);
+    color:var(--ink);line-height:1.45;
+  }
+  .tline.speaking .txt{background:var(--violet-tint);border-color:#d9d4f5;color:#33297e}
+  .tline.onscreen .txt{background:var(--accent-tint);border-color:#ffd4c2;color:var(--accent-deep)}
+  .tag{
+    display:inline-block;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:2px 6px;border-radius:4px;margin-bottom:5px;
+  }
+  .tag-voice{background:#33297e;color:#fff}
+  .tag-screen{background:var(--accent);color:#fff}
+  .scanline{
+    height:3px;border-radius:99px;margin-top:16px;background:#eee8db;overflow:hidden;
+  }
+  .scanline i{display:block;height:100%;width:64%;background:linear-gradient(90deg,var(--violet),var(--accent));border-radius:99px;animation:grow 2.4s ease-in-out infinite alternate}
+
+  .dubgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .dubcol .cap{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;color:var(--ink-soft)}
+  .line-en{font-family:Georgia,serif;font-size:12px;color:var(--ink-soft);line-height:1.5}
+  .line-es{font-family:Georgia,serif;font-size:12px;color:var(--ink);line-height:1.5}
+  .wave{display:flex;align-items:center;gap:2.5px;height:34px;margin-top:8px}
+  .wave i{flex:1;background:var(--teal);border-radius:2px;opacity:.85;animation:pulse 1.4s ease-in-out infinite alternate}
+  .wave i:nth-child(odd){background:#54b3a3}
+  .overlaybox{
+    margin-top:14px;border:1px solid var(--line);border-radius:9px;overflow:hidden;
+  }
+  .overlaybox .frame{
+    padding:16px 12px;text-align:center;
+    background:linear-gradient(135deg,#2b2933,#454158);color:#fff;
+    font-family:Georgia,serif;font-size:13px;letter-spacing:.04em;
+  }
+  .overlaybox .note{
+    padding:7px 11px;font-size:10.5px;color:var(--teal);font-weight:700;background:var(--teal-tint);
+  }
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .cmp-half{padding:14px 12px}
+  .cmp-half.original{background:#f5f2ea;border-right:1px solid var(--line)}
+  .cmp-half.locale{background:var(--accent-tint)}
+  .cmp-half .cap{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+  .cmp-half .line{font-family:Georgia,serif;font-size:12px;margin-top:8px;line-height:1.5}
+  .timeline{margin-top:12px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fbf9f4}
+  .timeline .track{display:flex;height:26px}
+  .track span{flex:1;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;letter-spacing:.06em}
+  .track .t1{background:var(--violet);color:#fff}
+  .track .t2{background:#efe9d8;color:var(--gold)}
+  .track .t3{background:var(--teal);color:#fff}
+  .adjust{display:grid;gap:8px;margin-top:14px}
+  .adjust-row{display:flex;align-items:center;justify-content:space-between;background:#fbf9f4;border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:11px}
+  .adjust-row b{font-weight:700}
+  .adjust-row .val{color:var(--accent-deep);font-weight:800}
+  .mini-slider{width:70px;height:4px;border-radius:99px;background:#eee3d5;position:relative}
+  .mini-slider i{position:absolute;top:-3px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2.5px #fff}
+
+  .approvals{display:grid;gap:10px}
+  .market{
+    border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:#fff;
+  }
+  .market-head{display:flex;align-items:center;gap:8px}
+  .market-head .code{font-weight:800;font-size:11px;background:#f1ede4;border-radius:5px;padding:2px 7px}
+  .badge{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px}
+  .b-approved{background:var(--teal-tint);color:var(--teal)}
+  .b-review{background:var(--gold-tint);color:var(--gold)}
+  .b-open{background:#f0eeea;color:var(--ink-soft)}
+  .comment{
+    margin-top:9px;padding:8px 10px;border-radius:8px;background:#fbf9f4;border:1px solid var(--line);
+    font-size:11px;color:var(--ink-soft);display:grid;gap:3px;
+  }
+  .comment b{color:var(--ink);font-size:10.5px}
+  .comment .reply{
+    margin-top:7px;padding-left:10px;border-left:2px solid var(--accent);
+    font-size:10.5px;color:var(--accent-deep);font-weight:650;
+  }
+
+  .exports{display:grid;gap:10px}
+  .export{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:#fff}
+  .ratio{
+    border:2px solid var(--teal);border-radius:5px;background:var(--teal-tint);flex:none;
+  }
+  .r-16{width:40px;height:23px}
+  .r-9{width:23px;height:40px}
+  .r-1{width:30px;height:30px}
+  .export .meta b{display:block;font-size:12px}
+  .export .meta span{font-size:10.5px;color:var(--ink-soft)}
+  .export .status{margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--teal)}
+  .pubrow{
+    margin-top:14px;display:flex;align-items:center;gap:8px;background:var(--teal-tint);
+    border-radius:9px;padding:9px 12px;font-size:11px;font-weight:700;color:var(--teal);
+  }
+
+  /* ---------- workflow strip ---------- */
+  .flowstrip{
+    margin-top:64px;
+    border-top:1px solid var(--line);
+    padding-top:44px;
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:44px;
+    align-items:start;
+  }
+  .flowstrip h4{
+    font-family:Georgia,serif;font-weight:600;font-size:22px;max-width:18ch;line-height:1.25;
+  }
+  .flowstrip h4 span{color:var(--accent-deep);font-style:italic}
+  .fitlist{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  .fitlist li{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;
+    transition:transform .25s,box-shadow .25s;
+  }
+  .fitlist li:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+  .fitlist .icon{
+    width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:11px;
+  }
+  .fitlist .icon svg{width:16px;height:16px;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .fitlist b{display:block;font-size:14px;margin-bottom:5px}
+  .fitlist p{font-size:12.5px;color:var(--ink-soft);line-height:1.55}
+
+  /* ---------- CTA ---------- */
+  .cta{
+    margin-top:56px;
+    background:var(--ink);
+    border-radius:var(--radius);
+    padding:40px 44px;
+    display:flex;align-items:center;justify-content:space-between;gap:28px;flex-wrap:wrap;
+    color:#f6f2e9;position:relative;overflow:hidden;
+  }
+  .cta::after{
+    content:"";position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,90,43,.5),transparent 70%);
+  }
+  .cta h5{font-family:Georgia,serif;font-weight:600;font-size:24px;position:relative}
+  .cta p{margin-top:8px;font-size:14px;color:#c9c3b6;position:relative;max-width:44ch}
+  .cta .actions{display:flex;gap:12px;position:relative}
+  .btn-primary,.btn-ghost{
+    font-family:inherit;font-size:14px;font-weight:750;border-radius:10px;padding:12px 22px;cursor:pointer;
+    transition:transform .2s,background .2s;
+  }
+  .btn-primary{background:var(--accent);color:#fff;border:none;box-shadow:0 10px 24px -10px rgba(255,90,43,.7)}
+  .btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px)}
+  .btn-ghost{background:transparent;color:#f6f2e9;border:1px solid #4a4753}
+  .btn-ghost:hover{background:#26242e;transform:translateY(-2px)}
+
+  /* ---------- footer line ---------- */
+  .footerline{
+    margin-top:40px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    font-size:12px;color:var(--ink-soft);
+  }
+  .brandmark{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.02em;color:var(--ink)}
+  .brandmark .glyph{
+    width:22px;height:22px;border-radius:7px;flex:none;
+    background:conic-gradient(from 210deg,var(--accent),var(--violet),var(--teal),var(--accent));
+    position:relative;
+  }
+  .brandmark .glyph::after{
+    content:"";position:absolute;inset:5px;border-radius:3px;background:var(--paper);
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width:900px){
+    .stage{grid-template-columns:1fr}
+    .visual{border-right:none;border-bottom:1px solid var(--line);padding:28px}
+    .copy{padding:32px 26px}
+    .flowstrip{grid-template-columns:1fr;gap:26px}
+    .cta{padding:32px 26px}
+    .section{padding:72px 20px 64px}
+  }
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes grow{from{width:38%}to{width:82%}}
+  @keyframes pulse{from{transform:scaleY(.35)}to{transform:scaleY(1)}}
+</style>
+</head>
+<body>
+
+<section class="section" id="how-it-works" aria-labelledby="hiw-heading">
+  <div class="wrap">
+
+    <span class="eyebrow"><span class="dot"></span>How it works</span>
+    <h2 class="headline" id="hiw-heading">One master video, <em>fluent in every market.</em></h2>
+    <p class="lede">
+      SceneLilt slots into your localization workflow between final cut and publish — no spreadsheets,
+      no bouncing between translation vendors and edit suites. Here’s the path from your
+      <strong>master video</strong> to <strong>market-approved, publish-ready versions</strong>.
+    </p>
+
+    <!-- Step rail -->
+    <nav class="rail" aria-label="How SceneLilt works, step by step">
+      <div class="rail-top">
+        <p>Six steps · master → every market</p>
+        <p id="step-counter" aria-live="polite">Step 1 of 6</p>
+      </div>
+      <ul class="steps" role="tablist" id="rail">
+        <li role="presentation"><button role="tab" id="tab-1" aria-controls="panel-1" aria-selected="true"><span class="step-num">01</span><span class="step-label">Upload &amp; choose markets</span></button></li>
+        <li role="presentation"><button role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1"><span class="step-num">02</span><span class="step-label">Transcribe &amp; detect</span></button></li>
+        <li role="presentation"><button role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false" tabindex="-1"><span class="step-num">03</span><span class="step-label">Translate, dub &amp; adapt</span></button></li>
+        <li role="presentation"><button role="tab" id="tab-4" aria-controls="panel-4" aria-selected="false" tabindex="-1"><span class="step-num">04</span><span class="step-label">Refine side by side</span></button></li>
+        <li role="presentation"><button role="tab" id="tab-5" aria-controls="panel-5" aria-selected="false" tabindex="-1"><span class="step-num">05</span><span class="step-label">Comment &amp; approve</span></button></li>
+        <li role="presentation"><button role="tab" id="tab-6" aria-controls="panel-6" aria-selected="false" tabindex="-1"><span class="step-num">06</span><span class="step-label">Export &amp; publish</span></button></li>
+      </ul>
+    </nav>
+
+    <!-- Panels -->
+    <div class="panel-grid" id="panels">
+
+      <!-- 1 -->
+      <div class="panel active" id="panel-1" role="tabpanel" aria-labelledby="tab-1">
+        <div class="stage">
+          <div class="visual">
+            <div class="mock">
+              <div class="mock-bar"><div class="tl"><i></i><i></i><i></i></div><span class="path">SceneLilt · New project</span></div>
+              <div class="mock-body">
+                <div class="field">
+                  <div class="cap">Master video</div>
+                  <div class="dropzone">
+                    <div class="film"></div>
+                    <b>spring_campaign_master_v7.mp4</b>
+                    <span>00:58 · 4K · ProRes — uploaded</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="cap">Markets &amp; languages</div>
+                  <div class="chips">
+                    <span class="chip on"><i></i>Spanish (LATAM)</span>
+                    <span class="chip on"><i></i>French</span>
+                    <span class="chip on"><i></i>German</span>
+                    <span class="chip on"><i></i>Japanese</span>
+                    <span class="chip">Portuguese (BR)</span>
+                    <span class="chip">Italian</span>
+                  </div>
+                </div>
+                <button class="btn" type="button" tabindex="-1">Start localization</button>
+              </div>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="kicker k-1">Step 01 — Set up</span>
+            <h3>Drop in your master, pick your markets.</h3>
+            <p class="desc">Upload the finished master video — the one version your team has already signed off — then select the markets and languages it needs to speak.</p>
+            <ul class="points">
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>One master stays the single source of truth</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Any mix of markets, dialects, and regions</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Reference files, brand kits, and glossaries attach in the same place</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="panel" id="panel-2" role="tabpanel" aria-labelledby="tab-2">
+        <div class="stage">
+          <div class="visual">
+            <div class="mock">
+              <div class="mock-bar"><div class="tl"><i></i><i></i><i></i></div><span class="path">Analyzing master · 00:14 / 00:58</span></div>
+              <div class="mock-body">
+                <div class="transcript">
+                  <div class="tline speaking">
+                    <span class="who">00:14</span>
+                    <div class="txt"><span class="tag tag-voice">Voice</span><br>“This season, everything changes.”</div>
+                  </div>
+                  <div class="tline">
+                    <span class="who">00:19</span>
+                    <div class="txt"><span class="tag tag-voice">Voice</span><br>“Meet the new Studio Collection.”</div>
+                  </div>
+                  <div class="tline onscreen">
+                    <span class="who">00:24</span>
+                    <div class="txt"><span class="tag tag-screen">On-screen</span><br>Lower third: “Introducing Studio — from $49”</div>
+                  </div>
+                  <div class="tline">
+                    <span class="who">00:31</span>
+                    <div class="txt"><span class="tag tag-voice">Voice</span><br>“Available now, worldwide.”</div>
+                  </div>
+                </div>
+                <div class="scanline"><i></i></div>
+              </div>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="kicker k-2">Step 02 — Understand</span>
+            <h3>SceneLilt watches and listens first.</h3>
+            <p class="desc">The platform transcribes the original dialogue and identifies everything that carries meaning — both the spoken lines and the on-screen text.</p>
+            <ul class="points">
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Full transcript with speakers and timecodes</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>On-screen titles, lower thirds, and captions detected automatically</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Nothing in the frame gets missed before translation begins</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="panel" id="panel-3" role="tabpanel" aria-labelledby="tab-3">
+        <div class="stage">
+          <div class="visual">
+            <div class="mock">
+              <div class="mock-bar"><div class="tl"><i></i><i></i><i></i></div><span class="path">Generating · Spanish (LATAM)</span></div>
+              <div class="mock-body">
+                <div class="dubgrid">
+                  <div class="dubcol">
+                    <div class="cap">Original (EN)</div>
+                    <div class="line-en">“This season, everything changes.”</div>
+                    <div class="wave">
+                      <i style="height:40%"></i><i style="height:70%"></i><i style="height:55%"></i><i style="height:90%"></i><i style="height:45%"></i><i style="height:75%"></i><i style="height:60%"></i><i style="height:85%"></i><i style="height:50%"></i><i style="height:65%"></i><i style="height:40%"></i><i style="height:78%"></i>
+                    </div>
+                  </div>
+                  <div class="dubcol">
+                    <div class="cap">Dubbed (ES-419)</div>
+                    <div class="line-es">“Esta temporada, todo cambia.”</div>
+                    <div class="wave">
+                      <i style="height:55%"></i><i style="height:82%"></i><i style="height:48%"></i><i style="height:70%"></i><i style="height:92%"></i><i style="height:58%"></i><i style="height:80%"></i><i style="height:44%"></i><i style="height:68%"></i><i style="height:88%"></i><i style="height:52%"></i><i style="height:72%"></i>
+                    </div>
+                  </div>
+                </div>
+                <div class="overlaybox">
+                  <div class="frame">Presentamos Studio — desde $49</div>
+                  <div class="note">On-screen text adapted · currency &amp; length matched</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="kicker k-3">Step 03 — Localize</span>
+            <h3>Translation, dubbed audio, and adapted text — in one pass.</h3>
+            <p class="desc">SceneLilt translates the content, generates dubbed audio for the dialogue, and adapts the on-screen text so every market’s version feels native, not converted.</p>
+            <ul class="points">
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Dubbed audio generated per language, timed to picture</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>On-screen text re-set in each language and script</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Local details — currency, units, and phrasing — handled per market</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="panel" id="panel-4" role="tabpanel" aria-labelledby="tab-4">
+        <div class="stage">
+          <div class="visual">
+            <div class="mock">
+              <div class="mock-bar"><div class="tl"><i></i><i></i><i></i></div><span class="path">Refine · Compare to master</span></div>
+              <div class="mock-body">
+                <div class="compare">
+                  <div class="cmp-half original">
+                    <div class="cap">Original · EN</div>
+                    <div class="line">“This season, everything changes.”</div>
+                  </div>
+                  <div class="cmp-half locale">
+                    <div class="cap">Japanese · JA</div>
+                    <div class="line">「今シーズン、すべてが変わります。」</div>
+                  </div>
+                </div>
+                <div class="timeline">
+                  <div class="track">
+                    <span class="t1">Dialogue</span><span class="t2">Pause</span><span class="t3">Tagline</span>
+                  </div>
+                </div>
+                <div class="adjust">
+                  <div class="adjust-row"><b>Language</b><span class="val">2 lines edited</span></div>
+                  <div class="adjust-row"><b>Timing</b><span class="mini-slider"><i style="left:38%"></i></span></div>
+                  <div class="adjust-row"><b>Pronunciation</b><span class="val">“sutajio” → Studio</span></div>
+                  <div class="adjust-row"><b>Tone</b><span class="val">Warm · confident</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="kicker k-4">Step 04 — Refine</span>
+            <h3>Compare with the original. Edit anything.</h3>
+            <p class="desc">Every localized version sits next to the master, so your team can see and hear exactly what changed — and fine-tune it.</p>
+            <ul class="points">
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Side-by-side comparison against the original cut</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Direct control over language, timing, pronunciation, and tone</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Edits stay in sync — change once, every downstream version updates</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="panel" id="panel-5" role="tabpanel" aria-labelledby="tab-5">
+        <div class="stage">
+          <div class="visual">
+            <div class="mock">
+              <div class="mock-bar"><div class="tl"><i></i><i></i><i></i></div><span class="path">Review · 4 market versions</span></div>
+              <div class="mock-body">
+                <div class="approvals">
+                  <div class="market">
+                    <div class="market-head">
+                      <span class="code">FR</span><span style="font-size:11px;color:var(--ink-soft)">French</span>
+                      <span class="badge b-approved">✓ Approved</span>
+                    </div>
+                  </div>
+                  <div class="market">
+                    <div class="market-head">
+                      <span class="code">JA</span><span style="font-size:11px;color:var(--ink-soft)">Japanese</span>
+                      <span class="badge b-review">In review</span>
+                    </div>
+                    <div class="comment">
+                      <b>Yuki · Brand lead — 00:31</b>
+                      Tone feels a touch formal for the closing line. Could we warm it up?
+                      <div class="reply">↳ Revised take uploaded · tone set to “warm”</div>
+                    </div>
+                  </div>
+                  <div class="market">
+                    <div class="market-head">
+                      <span class="code">DE</span><span style="font-size:11px;color:var(--ink-soft)">German</span>
+                      <span class="badge b-open">Awaiting review</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="kicker k-5">Step 05 — Approve</span>
+            <h3>Market by market, sign-off that sticks.</h3>
+            <p class="desc">Reviewers comment on and approve each market version individually, so one market’s feedback never blocks the rest.</p>
+            <ul class="points">
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Timecoded comments pinned to exact moments</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Independent approval per market and language</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Clear status at a glance: awaiting, in review, approved</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="panel" id="panel-6" role="tabpanel" aria-labelledby="tab-6">
+        <div class="stage">
+          <div class="visual">
+            <div class="mock">
+              <div class="mock-bar"><div class="tl"><i></i><i></i><i></i></div><span class="path">Export · Spanish (LATAM)</span></div>
+              <div class="mock-body">
+                <div class="exports">
+                  <div class="export">
+                    <span class="ratio r-16"></span>
+                    <div class="meta"><b>16:9 · YouTube</b><span>MP4 · H.264 · 4K</span></div>
+                    <span class="status">Ready</span>
+                  </div>
+                  <div class="export">
+                    <span class="ratio r-9"></span>
+                    <div class="meta"><b>9:16 · Reels / Shorts</b><span>MP4 · safe-area checked</span></div>
+                    <span class="status">Ready</span>
+                  </div>
+                  <div class="export">
+                    <span class="ratio r-1"></span>
+                    <div class="meta"><b>1:1 · Feed placements</b><span>MP4 · 1080×1080</span></div>
+                    <span class="status">Rendering</span>
+                  </div>
+                </div>
+                <div class="pubrow">
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h9M8 4l4 4-4 4M13 2v12"/></svg>
+                  Approved versions export in the formats each channel requires
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="kicker k-6">Step 06 — Publish</span>
+            <h3>Exported exactly how each channel needs it.</h3>
+            <p class="desc">Once approved, market versions export in the required formats for publishing — from broadcast masters to vertical cuts for social.</p>
+            <ul class="points">
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Any aspect ratio, codec, or resolution your channels demand</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Exports are tied to approval — only signed-off versions ship</li>
+              <li><svg viewBox="0 0 12 12"><path d="M2 6.5 5 9.5 10 3"/></svg>Re-render a market in seconds when the master changes</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Workflow fit -->
+    <div class="flowstrip">
+      <h4>Where SceneLilt sits in <span>your workflow</span></h4>
+      <ul class="fitlist">
+        <li>
+          <div class="icon" style="background:var(--accent-tint)">
+            <svg viewBox="0 0 24 24" stroke="var(--accent-deep)"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z"/></svg>
+          </div>
+          <b>After final cut</b>
+          <p>Your editor hands over one signed-off master. SceneLilt takes it from there — no re-opening the edit suite.</p>
+        </li>
+        <li>
+          <div class="icon" style="background:var(--violet-tint)">
+            <svg viewBox="0 0 24 24" stroke="var(--violet)"><path d="M4 7h16M4 12h10M4 17h7"/><circle cx="19" cy="16" r="3"/><path d="M22 19l-1.8-1.8"/></svg>
+          </div>
+          <b>Instead of the spreadsheet</b>
+          <p>Transcripts, translations, feedback, and approvals live in the same place as the video — not scattered across tools.</p>
+        </li>
+        <li>
+          <div class="icon" style="background:var(--teal-tint)">
+            <svg viewBox="0 0 24 24" stroke="var(--teal)"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+          </div>
+          <b>Before publish</b>
+          <p>Approved versions come out channel-ready, so your media and social teams publish without another conversion step.</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <div>
+        <h5>See it with your own campaign.</h5>
+        <p>Book a 20-minute walkthrough — bring a master video, and we’ll run one market end to end.</p>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" type="button">Book a walkthrough</button>
+        <button class="btn-ghost" type="button">Explore the platform</button>
+      </div>
+    </div>
+
+    <div class="footerline">
+      <span class="brandmark"><span class="glyph"></span>SceneLilt</span>
+      <span>Master video in · every market out</span>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('#rail button[role="tab"]'));
+  var panels = tabs.map(function(t){ return document.getElementById(t.getAttribute('aria-controls')); });
+  var lis = Array.prototype.slice.call(document.querySelectorAll('#rail > li'));
+  var counter = document.getElementById('step-counter');
+  var current = 0;
+
+  function select(i){
+    current = i;
+    tabs.forEach(function(t, idx){
+      var active = idx === i;
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+      t.tabIndex = active ? 0 : -1;
+      if (active) { panels[idx].classList.add('active'); } else { panels[idx].classList.remove('active'); }
+    });
+    lis.forEach(function(li, idx){
+      li.classList.toggle('active', idx === i);
+      li.classList.toggle('done', idx < i);
+    });
+    counter.textContent = 'Step ' + (i + 1) + ' of 6';
+  }
+
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ select(i); });
+    t.addEventListener('keydown', function(e){
+      var next = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % tabs.length;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length;
+      if (e.key === 'Home') next = 0;
+      if (e.key === 'End') next = tabs.length - 1;
+      if (next !== null){
+        e.preventDefault();
+        select(next);
+        tabs[next].focus();
+      }
+    });
+  });
+
+  select(0);
+})();
+</script>
+
+</body>
+</html>

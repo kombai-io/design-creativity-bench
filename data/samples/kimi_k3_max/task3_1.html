@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invite to production · acme-web · CloudLayer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235B8CFF'/%3E%3Cpath d='M16 7l9 4.5L16 16 7 11.5 16 7z' fill='white'/%3E%3Cpath d='M8 16.5l8 4 8-4M8 20.5l8 4 8-4' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#090C12; --panel:#0C1018; --surface:#10151F; --surface2:#151B27; --input:#0B0F17;
+  --border:#1F2837; --border2:#2A3547; --soft:#141A26;
+  --text:#E7ECF5; --muted:#8B96AB; --faint:#5D6880;
+  --accent:#5B8CFF; --accent2:#7AA2FF; --accent-soft:rgba(91,140,255,.12); --ring:rgba(91,140,255,.28);
+  --amber:#F5B54A; --amber-soft:rgba(245,181,74,.09); --amber-border:rgba(245,181,74,.30);
+  --green:#46C08C; --red:#F06A5E; --red-soft:rgba(240,106,94,.10);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:rgba(91,140,255,.32)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#232D40;border-radius:8px;border:2px solid var(--bg)}
+::-webkit-scrollbar-track{background:transparent}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+svg{display:block}
+.glow{position:fixed;inset:0 0 auto 0;height:480px;pointer-events:none;z-index:0;
+  background:radial-gradient(720px 340px at 62% -80px,rgba(91,140,255,.10),transparent 70%),
+             radial-gradient(520px 260px at 18% -120px,rgba(245,181,74,.05),transparent 70%)}
+
+/* ---------- Sidebar ---------- */
+.sidebar{position:fixed;inset:0 auto 0 0;width:248px;background:var(--panel);border-right:1px solid #161D2B;display:flex;flex-direction:column;z-index:30}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px}
+.brand b{font-size:15px;letter-spacing:-.01em}
+.brand .tag{margin-left:auto;font-size:10.5px;color:var(--faint);border:1px solid var(--border);border-radius:999px;padding:2px 7px;font-family:var(--mono)}
+.proj{margin:2px 12px 12px;display:flex;align-items:center;gap:10px;width:calc(100% - 24px);padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);text-align:left;transition:border-color .15s,background .15s}
+.proj:hover{border-color:var(--border2);background:var(--surface2)}
+.proj .pdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(70,192,140,.15);flex:none}
+.proj .pm{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.proj .pm strong{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj .pm small{font-size:11px;color:var(--faint)}
+.proj svg{margin-left:auto;color:var(--faint)}
+.nav{padding:2px 12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--muted);font-weight:500;font-size:13.5px;position:relative;transition:background .12s,color .12s}
+.nav a svg{color:var(--faint);transition:color .12s}
+.nav a:hover{background:var(--soft);color:var(--text)}
+.nav a:hover svg{color:var(--muted)}
+.nav a.active{background:#162031;color:var(--text)}
+.nav a.active svg{color:var(--accent2)}
+.nav a.active::before{content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+.nav .sec{margin:14px 10px 6px;font-size:10.5px;letter-spacing:.12em;color:var(--faint);font-weight:600}
+.nav .cnt{margin-left:auto;font-size:11px;background:var(--soft);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:1px 7px}
+.usage{margin:12px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.usage .ut{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:8px}
+.usage .ut b{color:var(--text);font-weight:600;font-family:var(--mono);font-size:11px}
+.usage .meter{height:5px;border-radius:99px;background:#1A2231;overflow:hidden}
+.usage .meter i{display:block;height:100%;width:79%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#8FB0FF)}
+
+/* ---------- Topbar ---------- */
+.main{margin-left:248px;position:relative;z-index:1;min-width:0}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;height:60px;padding:0 28px;border-bottom:1px solid #141B29;background:rgba(9,12,18,.82);backdrop-filter:blur(10px)}
+.top-logo{display:none;align-items:center;gap:9px;font-weight:700;font-size:14.5px}
+.search{flex:1;max-width:430px;display:flex;align-items:center;gap:9px;background:var(--input);border:1px solid var(--border);border-radius:9px;padding:7px 11px;color:var(--faint);transition:border-color .15s,box-shadow .15s}
+.search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font:inherit;font-size:13px;min-width:0}
+.search input::placeholder{color:var(--faint)}
+.search kbd{font-family:var(--mono);font-size:10.5px;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;background:var(--surface)}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.env-pill{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:999px;padding:6px 12px}
+.env-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px rgba(245,181,74,.8)}
+.env-pill svg{color:var(--amber);opacity:.8}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;border:1px solid transparent;background:transparent;color:var(--muted);transition:background .12s,color .12s,border-color .12s}
+.icon-btn:hover{background:var(--soft);color:var(--text)}
+.icon-btn.bell{position:relative}
+.icon-btn.bell .nd{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,hsl(var(--h,222) 70% 55%),hsl(calc(var(--h,222) + 40) 65% 45%));display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:.02em;flex:none;border:1px solid rgba(255,255,255,.14)}
+.avatar.sm{width:30px;height:30px;font-size:10.5px}
+
+/* ---------- Content ---------- */
+.content{padding:26px 32px 90px;max-width:1180px}
+.crumbs{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--faint);flex-wrap:wrap}
+.crumbs a{color:var(--muted)}
+.crumbs a:hover{color:var(--text)}
+.crumbs .sep{color:#333E52}
+.crumbs .cenv{display:inline-flex;align-items:center;gap:6px;color:var(--amber);font-weight:600}
+.crumbs .cenv i{width:6px;height:6px;border-radius:50%;background:var(--amber)}
+.crumbs .cur{color:var(--text);font-weight:500}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:16px 0 18px}
+h1{font-size:22px;font-weight:650;letter-spacing:-.02em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.badge-prod{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-border);padding:4px 9px;border-radius:6px}
+.sub{color:var(--muted);font-size:13.5px;margin-top:6px;max-width:640px}
+.head-link{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--accent2);padding:8px 4px;border-radius:8px;white-space:nowrap}
+.head-link:hover{text-decoration:underline}
+.banner{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;border:1px solid var(--amber-border);background:var(--amber-soft);border-radius:12px;margin-bottom:22px}
+.banner svg{color:var(--amber);flex:none;margin-top:1px}
+.banner p{font-size:13px;color:#E9D9B6}
+.banner p b{color:var(--amber);font-weight:650}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 352px;gap:22px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px}
+.form-card{padding:26px 28px 22px}
+.field{margin-bottom:22px}
+label.fl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;margin-bottom:8px}
+label.fl .req{color:var(--amber)}
+.hint{font-size:12px;color:var(--faint);margin-top:7px}
+.ferr{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--red);margin-top:7px}
+
+.chips-box{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:48px;padding:7px 9px;background:var(--input);border:1px solid var(--border);border-radius:10px;cursor:text;transition:border-color .15s,box-shadow .15s}
+.chips-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.chips-box.invalid{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.chips-box input{flex:1;min-width:190px;background:transparent;border:0;outline:0;color:var(--text);font:inherit;font-size:13.5px;padding:6px 4px}
+.chips-box input::placeholder{color:var(--faint)}
+.chip{display:inline-flex;align-items:center;gap:7px;background:#1B2434;border:1px solid var(--border2);border-radius:999px;padding:3.5px 5px 3.5px 4px;font-size:12.5px;animation:pop .16s ease}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.chip .cav{width:20px;height:20px;border-radius:50%;background:hsl(var(--h) 55% 40%);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.chip .cm{color:#D5DCE9;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip .cx{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:0;background:transparent;color:var(--faint)}
+.chip .cx:hover{background:rgba(255,255,255,.08);color:var(--text)}
+
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.role-card{position:relative;display:flex;gap:10px;align-items:flex-start;padding:12px 13px;background:var(--input);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.role-card:hover{border-color:var(--border2)}
+.role-card input{position:absolute;opacity:0;pointer-events:none}
+.role-card .rdot{flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--faint);margin-top:2px;position:relative;transition:border-color .15s}
+.role-card .rdot::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent);transform:scale(0);transition:transform .15s}
+.role-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px var(--ring)}
+.role-card.selected .rdot{border-color:var(--accent)}
+.role-card.selected .rdot::after{transform:scale(1)}
+.role-card .rm strong{display:block;font-size:13px;font-weight:650}
+.role-card .rm small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.role-card .rec{position:absolute;top:10px;right:10px;font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--accent2);background:var(--accent-soft);border:1px solid rgba(91,140,255,.3);border-radius:5px;padding:2px 6px}
+
+.perms{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+.perms-head{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.perms-head svg{color:var(--accent2)}
+.perms-head b{color:var(--text);font-weight:650}
+.perms ul{list-style:none;margin-top:10px;display:flex;flex-direction:column;gap:7px}
+.perms li{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#C9D2E2}
+.perms li svg{flex:none;margin-top:2px}
+.perms li.ok svg{color:var(--green)}
+.perms li.no{color:var(--faint)}
+.perms li.no svg{color:#6E5A55}
+.admin-note{margin-top:12px;display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:#E9D9B6;background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:9px;padding:9px 12px}
+.admin-note svg{color:var(--amber);flex:none;margin-top:1px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+select.sel, .locked{width:100%;background:var(--input);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:10px 34px 10px 12px;outline:0;transition:border-color .15s,box-shadow .15s}
+select.sel{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B96AB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+select.sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.locked{display:flex;align-items:center;gap:9px;padding:10px 12px;color:var(--muted);cursor:not-allowed}
+.locked svg{color:var(--amber);flex:none}
+.locked b{color:var(--amber);font-weight:650;font-family:var(--mono);font-size:12.5px}
+.locked .lk{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--faint);border:1px solid var(--border);border-radius:5px;padding:2px 7px}
+
+.ta-wrap{position:relative}
+textarea{width:100%;background:var(--input);border:1px solid var(--border);border-radius:10px;color:var(--text);font:inherit;font-size:13.5px;padding:11px 12px;outline:0;resize:vertical;min-height:92px;transition:border-color .15s,box-shadow .15s}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+textarea::placeholder{color:var(--faint)}
+.counter{position:absolute;bottom:9px;right:11px;font-size:11px;color:var(--faint);font-family:var(--mono)}
+.counter.warn{color:var(--amber)}
+
+.form-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--border);padding-top:18px;margin-top:4px;flex-wrap:wrap}
+.foot-note{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--faint)}
+.foot-note svg{color:var(--faint);flex:none}
+.foot-actions{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:600;padding:9px 17px;border-radius:9px;border:1px solid transparent;transition:background .13s,border-color .13s,color .13s,box-shadow .13s,transform .05s}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 24px -10px rgba(91,140,255,.55)}
+.btn.primary:hover:not(:disabled){background:var(--accent2)}
+.btn.primary:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+.btn.ghost{background:transparent;border-color:var(--border2);color:var(--text)}
+.btn.ghost:hover{background:var(--soft)}
+.spinner{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Rail ---------- */
+.rail{display:flex;flex-direction:column;gap:16px}
+.rail .card{padding:17px 19px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-head h3{font-size:13px;font-weight:650;letter-spacing:.01em}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:var(--green)}
+.status .pl{width:7px;height:7px;border-radius:50%;background:var(--green);position:relative}
+.status .pl::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:1px solid var(--green);opacity:.6;animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.6);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:7.5px 0;font-size:13px;border-top:1px solid #171E2C}
+.kv:first-of-type{border-top:0}
+.kv .k{color:var(--faint);flex:none}
+.kv .v{color:var(--text);text-align:right;display:inline-flex;align-items:center;gap:6px;min-width:0}
+.kv .v.mono{font-family:var(--mono);font-size:12px}
+.kv .v a{color:var(--accent2)}
+.kv .v a:hover{text-decoration:underline}
+.kv .v svg{color:var(--faint);flex:none}
+.kv .v .mini-lock{color:var(--amber)}
+.cnt-pill{font-size:11px;font-weight:700;background:var(--accent-soft);color:var(--accent2);border:1px solid rgba(91,140,255,.3);border-radius:999px;padding:2px 8px}
+#pendingList{list-style:none}
+.invite{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid #171E2C;animation:pop .18s ease}
+.invite-meta{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.invite-meta strong{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.invite-meta small{font-size:11.5px;color:var(--faint)}
+.invite-actions{margin-left:auto;display:flex;gap:4px;flex:none}
+.icon-btn.xs{width:28px;height:28px;border-radius:8px}
+.icon-btn.danger:hover{background:var(--red-soft);color:var(--red)}
+.empty-pend{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 0 8px;color:var(--faint);font-size:12.5px;text-align:center}
+.link-desc{font-size:12.5px;color:var(--muted);margin:-4px 0 12px}
+.link-desc b{color:var(--text)}
+.link-row{display:flex;align-items:center;gap:8px;background:var(--input);border:1px solid var(--border);border-radius:9px;padding:8px 10px}
+.link-row .lnk{flex:1;font-family:var(--mono);font-size:12px;color:#C9D2E2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;font-size:11.5px;color:var(--faint)}
+.link-foot .lf-l{display:inline-flex;align-items:center;gap:6px}
+.linklike{background:none;border:0;color:var(--accent2);font-size:11.5px;font-weight:600;padding:2px 0}
+.linklike:hover{text-decoration:underline}
+
+/* ---------- Toasts ---------- */
+.toasts{position:fixed;bottom:24px;right:24px;z-index:60;display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.toast{display:flex;align-items:center;gap:11px;background:#161D2B;border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13.5px;font-weight:500;color:var(--text);box-shadow:0 18px 40px -12px rgba(0,0,0,.6);opacity:0;transform:translateY(10px) scale(.97);transition:opacity .25s,transform .25s;max-width:420px}
+.toast.show{opacity:1;transform:none}
+.toast .ticon{flex:none;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.toast.success .ticon{background:rgba(70,192,140,.15);color:var(--green)}
+.toast.info .ticon{background:var(--accent-soft);color:var(--accent2)}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+@media (max-width:1120px){
+  .layout{grid-template-columns:1fr}
+  .rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));align-items:start}
+}
+@media (max-width:920px){
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .top-logo{display:flex}
+}
+@media (max-width:640px){
+  .content{padding:20px 16px 80px}
+  .form-card{padding:20px 18px 18px}
+  .roles{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .search kbd{display:none}
+  .page-head{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="sidebar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="#5B8CFF"/>
+      <path d="M16 7l9 4.5L16 16 7 11.5 16 7z" fill="#fff"/>
+      <path d="M8 16.5l8 4 8-4M8 20.5l8 4 8-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <b>CloudLayer</b>
+    <span class="tag">v2.4</span>
+  </div>
+
+  <button class="proj" type="button" aria-label="Switch project">
+    <span class="pdot"></span>
+    <span class="pm"><strong>acme-web</strong><small>Acme Inc.</small></span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+
+  <nav class="nav" aria-label="Project">
+    <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</a>
+    <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>Deployments</a>
+    <a href="#" class="active" aria-current="page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Environments</a>
+    <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Logs</a>
+    <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>Metrics</a>
+    <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Domains</a>
+    <div class="sec">MANAGE</div>
+    <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team<span class="cnt">8</span></a>
+    <a href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+  </nav>
+
+  <div class="usage">
+    <div class="ut"><span>Bandwidth</span><b>812 GB / 1 TB</b></div>
+    <div class="meter"><i></i></div>
+  </div>
+</aside>
+
+<!-- ============ MAIN ============ -->
+<div class="main">
+  <header class="topbar">
+    <span class="top-logo">
+      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5B8CFF"/><path d="M16 7l9 4.5L16 16 7 11.5 16 7z" fill="#fff"/><path d="M8 16.5l8 4 8-4M8 20.5l8 4 8-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      CloudLayer
+    </span>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Search deployments, logs, members…" aria-label="Search">
+      <kbd>⌘K</kbd>
+    </div>
+    <div class="top-actions">
+      <span class="env-pill"><span class="dot"></span>production
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
+      <button class="icon-btn bell" type="button" aria-label="Notifications">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="nd"></span>
+      </button>
+      <span class="avatar" style="--h:222" title="Ava Kim — Workspace owner">AK</span>
+    </div>
+  </header>
+
+  <main class="content">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="#">acme-web</a><span class="sep">/</span>
+      <a href="#">Environments</a><span class="sep">/</span>
+      <span class="cenv"><i></i>production</span><span class="sep">/</span>
+      <span class="cur">Invite member</span>
+    </nav>
+
+    <div class="page-head">
+      <div>
+        <h1>Invite a developer <span class="badge-prod">PRODUCTION</span></h1>
+        <p class="sub">Grant access to the <b>production</b> environment of <b>acme-web</b>. They'll receive an email with a secure link to accept and join.</p>
+      </div>
+      <a class="head-link" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Manage existing members
+      </a>
+    </div>
+
+    <div class="banner" role="note">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p><b>You're granting access to production.</b> This environment serves live traffic. Invitees will be able to deploy code and view logs according to their role, and every action is recorded in the audit log.</p>
+    </div>
+
+    <div class="layout">
+      <!-- ======= INVITE FORM ======= -->
+      <form class="card form-card" id="inviteForm" novalidate>
+        <div class="field">
+          <label class="fl" for="emailInput">Recipient emails <span class="req" aria-hidden="true">*</span></label>
+          <div class="chips-box" id="chipsBox">
+            <input id="emailInput" type="text" placeholder="developer@acme.com" autocomplete="off" spellcheck="false" aria-describedby="emailHint emailErr">
+          </div>
+          <p class="hint" id="emailHint">Press <b>Enter</b> or <b>,</b> to add. Invite up to 10 people at once.</p>
+          <p class="ferr" id="emailErr" role="alert" hidden>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="emailErrText"></span>
+          </p>
+        </div>
+
+        <div class="field">
+          <span class="fl" id="roleLabel">Role</span>
+          <div class="roles" role="radiogroup" aria-labelledby="roleLabel">
+            <label class="role-card" data-role="viewer">
+              <input type="radio" name="role" value="viewer">
+              <span class="rdot" aria-hidden="true"></span>
+              <span class="rm"><strong>Viewer</strong><small>Read-only access to deployments and logs.</small></span>
+            </label>
+            <label class="role-card selected" data-role="developer">
+              <input type="radio" name="role" value="developer" checked>
+              <span class="rdot" aria-hidden="true"></span>
+              <span class="rm"><strong>Developer</strong><small>Deploy code, stream logs, manage config.</small></span>
+              <span class="rec">DEFAULT</span>
+            </label>
+            <label class="role-card" data-role="admin">
+              <input type="radio" name="role" value="admin">
+              <span class="rdot" aria-hidden="true"></span>
+              <span class="rm"><strong>Admin</strong><small>Full control, incl. members &amp; settings.</small></span>
+            </label>
+          </div>
+
+          <div class="perms" aria-live="polite">
+            <div class="perms-head">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>With the <b id="permRole">Developer</b> role in production, they can:</span>
+            </div>
+            <ul id="permList"></ul>
+            <div class="admin-note" id="adminNote" hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Admins can manage members and delete this environment. For most contributors, <b>Developer</b> is sufficient for production.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field grid2">
+          <div>
+            <label class="fl" for="expirySel">Invite expires</label>
+            <select class="sel" id="expirySel">
+              <option value="7" selected>After 7 days</option>
+              <option value="30">After 30 days</option>
+              <option value="90">After 90 days</option>
+              <option value="never">Never</option>
+            </select>
+          </div>
+          <div>
+            <span class="fl">Environment scope</span>
+            <div class="locked" title="Invites are always scoped to a single environment">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <b>production</b> only
+              <span class="lk">LOCKED</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="fl" for="msgInput">Message <span style="color:var(--faint);font-weight:500">(optional)</span></label>
+          <div class="ta-wrap">
+            <textarea id="msgInput" maxlength="280" placeholder="Hey! Adding you to production so you can help debug the checkout deploys…" aria-describedby="msgHint"></textarea>
+            <span class="counter" id="msgCount">0 / 280</span>
+          </div>
+          <p class="hint" id="msgHint">Shown in the invitation email.</p>
+        </div>
+
+        <div class="form-foot">
+          <p class="foot-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Invites are single-use and can be revoked anytime from Team settings.
+          </p>
+          <div class="foot-actions">
+            <button type="button" class="btn ghost" id="cancelBtn">Cancel</button>
+            <button type="submit" class="btn primary" id="sendBtn" disabled>
+              <span id="sendIcon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
+              <span id="sendLabel">Send invite</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- ======= SIDE RAIL ======= -->
+      <aside class="rail">
+        <div class="card">
+          <div class="card-head">
+            <h3>Environment</h3>
+            <span class="status"><span class="pl"></span>Healthy</span>
+          </div>
+          <div class="kv"><span class="k">Domain</span><span class="v mono"><a href="#">app.acme.com</a></span></div>
+          <div class="kv"><span class="k">Branch</span><span class="v mono">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+            main
+            <svg class="mini-lock" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span></div>
+          <div class="kv"><span class="k">Region</span><span class="v">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            us-east-1 · N. Virginia</span></div>
+          <div class="kv"><span class="k">Last deploy</span><span class="v mono">#d8f3k2 · 2h ago</span></div>
+          <div class="kv"><span class="k">Auto-deploy</span><span class="v">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            On push to main</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Pending invites</h3>
+            <span class="cnt-pill" id="pendingCount">2</span>
+          </div>
+          <ul id="pendingList"></ul>
+          <div class="empty-pend" id="pendingEmpty" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            No pending invites
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Invite link</h3></div>
+          <p class="link-desc">Anyone with this link joins production as a <b>Viewer</b>.</p>
+          <div class="link-row">
+            <span class="lnk" id="inviteLink">cloudlayer.dev/join/prd-x7Kq29</span>
+            <button class="icon-btn xs" id="copyBtn" type="button" title="Copy invite link" aria-label="Copy invite link">
+              <span id="copyIcon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+            </button>
+          </div>
+          <div class="link-foot">
+            <span class="lf-l">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Link expires in 7 days
+            </span>
+            <button class="linklike" id="regenBtn" type="button">Regenerate</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  const $  = (s, el) => (el||document).querySelector(s);
+  const $$ = (s, el) => Array.from((el||document).querySelectorAll(s));
+
+  const SVG = {
+    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    x:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    info:  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    send:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
+    copy:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+    refresh:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+    trash: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+  };
+
+  /* ---------- Toasts ---------- */
+  const toasts = $('#toasts');
+  function toast(msg, type){
+    type = type || 'success';
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.innerHTML = '<span class="ticon">' + (type === 'success' ? SVG.check : SVG.info) + '</span><span></span>';
+    el.lastElementChild.textContent = msg;
+    toasts.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 3800);
+  }
+
+  /* ---------- Helpers ---------- */
+  function hashHue(str){
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
+    return h;
+  }
+  function initials(email){
+    const name = email.split('@')[0].replace(/[^a-zA-Z]/g, ' ');
+    const parts = name.split(' ').filter(Boolean);
+    return ((parts[0] ? parts[0][0] : email[0]) + (parts[1] ? parts[1][0] : (parts[0] && parts[0][1] ? parts[0][1] : ''))).toUpperCase();
+  }
+  function isValidEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e); }
+
+  /* ---------- Email chips ---------- */
+  const chipsBox  = $('#chipsBox'),
+        emailInput= $('#emailInput'),
+        emailErr  = $('#emailErr'),
+        emailErrText = $('#emailErrText'),
+        sendBtn   = $('#sendBtn'),
+        sendLabel = $('#sendLabel'),
+        sendIcon  = $('#sendIcon');
+  const MAX = 10;
+  let emails = [];
+
+  chipsBox.addEventListener('click', () => emailInput.focus());
+
+  function setError(msg){
+    if (msg){ emailErrText.textContent = msg; emailErr.hidden = false; chipsBox.classList.add('invalid'); }
+    else { emailErr.hidden = true; chipsBox.classList.remove('invalid'); }
+  }
+  function makeChip(email){
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML =
+      '<span class="cav" style="--h:' + hashHue(email) + '">' + email[0].toUpperCase() + '</span>' +
+      '<span class="cm"></span>' +
+      '<button type="button" class="cx" aria-label="Remove ' + email + '">' + SVG.x + '</button>';
+    chip.querySelector('.cm').textContent = email;
+    chip.querySelector('.cx').addEventListener('click', () => { removeEmail(email); emailInput.focus(); });
+    return chip;
+  }
+  function renderChips(){
+    $$('.chip', chipsBox).forEach(n => n.remove());
+    emails.forEach(e => chipsBox.insertBefore(makeChip(e), emailInput));
+  }
+  function addEmail(raw){
+    const email = String(raw || '').trim().toLowerCase().replace(/,+$/, '');
+    if (!email) return true;
+    if (!isValidEmail(email)){ setError('"' + email + '" is not a valid email address.'); return false; }
+    if (emails.indexOf(email) !== -1){ setError(email + ' has already been added.'); return false; }
+    if (emails.length >= MAX){ setError('You can invite up to ' + MAX + ' people at a time.'); return false; }
+    emails.push(email);
+    setError(null);
+    renderChips();
+    updateSend();
+    return true;
+  }
+  function removeEmail(email){
+    emails = emails.filter(e => e !== email);
+    renderChips();
+    updateSend();
+  }
+  function tryAddFromInput(){
+    const raw = emailInput.value;
+    if (!raw.trim()) return true;
+    const parts = raw.split(/[,;\s]+/).filter(Boolean);
+    let ok = true;
+    parts.forEach(p => { if (!addEmail(p)) ok = false; });
+    if (ok) emailInput.value = '';
+    return ok;
+  }
+  emailInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab'){
+      if (e.key !== 'Tab' || emailInput.value.trim()) e.preventDefault();
+      tryAddFromInput();
+    } else if (e.key === 'Backspace' && !emailInput.value && emails.length){
+      removeEmail(emails[emails.length - 1]);
+    }
+  });
+  emailInput.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    text.split(/[,;\s]+/).filter(Boolean).forEach(p => addEmail(p));
+    emailInput.value = '';
+  });
+  emailInput.addEventListener('input', () => setError(null));
+  emailInput.addEventListener('blur', () => { if (emailInput.value.trim()) tryAddFromInput(); });
+
+  function updateSend(){
+    const n = emails.length;
+    if (!sendBtn.classList.contains('loading')) sendBtn.disabled = n === 0;
+    if (!sendBtn.classList.contains('loading')) sendLabel.textContent = n > 1 ? 'Send ' + n + ' invites' : 'Send invite';
+  }
+
+  /* ---------- Roles & permissions ---------- */
+  const PERMS = {
+    viewer: {
+      label: 'Viewer',
+      granted: ['View deployments and build logs', 'View environment configuration (values hidden)', 'View metrics and analytics'],
+      denied: ['Deploy or roll back releases', 'Manage environment variables', 'Manage members and settings']
+    },
+    developer: {
+      label: 'Developer',
+      granted: ['Deploy from connected branches', 'View and stream build & runtime logs', 'Manage environment variables', 'Trigger rollbacks to a previous release'],
+      denied: ['Delete or transfer the environment', 'Manage members and billing']
+    },
+    admin: {
+      label: 'Admin',
+      granted: ['Everything included in Developer', 'Manage members and their roles', 'Edit environment settings and domains', 'Delete or transfer the environment'],
+      denied: []
+    }
+  };
+  const permList = $('#permList'), permRole = $('#permRole'), adminNote = $('#adminNote');
+  function renderPerms(role){
+    const p = PERMS[role];
+    permRole.textContent = p.label;
+    permList.innerHTML = '';
+    p.granted.forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'ok';
+      li.innerHTML = SVG.check + '<span></span>';
+      li.lastElementChild.textContent = t;
+      permList.appendChild(li);
+    });
+    p.denied.forEach(t => {
+      const li = document.createElement('li');
+      li.className = 'no';
+      li.innerHTML = SVG.x + '<span></span>';
+      li.lastElementChild.textContent = t;
+      permList.appendChild(li);
+    });
+    adminNote.hidden = role !== 'admin';
+  }
+  function currentRole(){
+    const r = document.querySelector('input[name="role"]:checked');
+    return r ? r.value : 'developer';
+  }
+  function syncRoleCards(){
+    $$('.role-card').forEach(c => c.classList.toggle('selected', c.querySelector('input').checked));
+  }
+  $$('input[name="role"]').forEach(r => r.addEventListener('change', () => {
+    syncRoleCards();
+    renderPerms(r.value);
+  }));
+
+  /* ---------- Message counter ---------- */
+  const msgInput = $('#msgInput'), msgCount = $('#msgCount');
+  function updateCounter(){
+    const n = msgInput.value.length;
+    msgCount.textContent = n + ' / 280';
+    msgCount.classList.toggle('warn', n >= 250);
+  }
+  msgInput.addEventListener('input', updateCounter);
+
+  /* ---------- Pending invites ---------- */
+  const pendingList = $('#pendingList'), pendingCount = $('#pendingCount'), pendingEmpty = $('#pendingEmpty');
+  const pending = [
+    { email: 'priya@acme.dev',  role: 'Developer', meta: 'Expires in 6 days' },
+    { email: 'marco@acme.dev',  role: 'Viewer',    meta: 'Expires in 2 days' }
+  ];
+  function renderPending(){
+    pendingList.innerHTML = '';
+    pendingCount.textContent = pending.length;
+    pendingEmpty.hidden = pending.length > 0;
+    pending.forEach((p, i) => {
+      const li = document.createElement('li');
+      li.className = 'invite';
+      li.innerHTML =
+        '<span class="avatar sm" style="--h:' + hashHue(p.email) + '">' + initials(p.email) + '</span>' +
+        '<span class="invite-meta"><strong></strong><small></small></span>' +
+        '<span class="invite-actions">' +
+          '<button class="icon-btn xs" type="button" data-act="resend" title="Resend invite" aria-label="Resend invite">' + SVG.refresh + '</button>' +
+          '<button class="icon-btn xs danger" type="button" data-act="revoke" title="Revoke invite" aria-label="Revoke invite">' + SVG.trash + '</button>' +
+        '</span>';
+      li.querySelector('strong').textContent = p.email;
+      li.querySelector('small').textContent = p.role + ' · ' + p.meta;
+      li.querySelector('[data-act="resend"]').addEventListener('click', () => toast('Invitation resent to ' + p.email));
+      li.querySelector('[data-act="revoke"]').addEventListener('click', () => {
+        pending.splice(i, 1);
+        renderPending();
+        toast('Invite for ' + p.email + ' revoked', 'info');
+      });
+      pendingList.appendChild(li);
+    });
+  }
+
+  /* ---------- Submit / Cancel ---------- */
+  const form = $('#inviteForm'), expirySel = $('#expirySel');
+  function setLoading(on){
+    sendBtn.classList.toggle('loading', on);
+    sendBtn.disabled = on || emails.length === 0;
+    sendIcon.innerHTML = on ? '<span class="spinner"></span>' : SVG.send;
+    sendLabel.textContent = on ? 'Sending…' : (emails.length > 1 ? 'Send ' + emails.length + ' invites' : 'Send invite');
+  }
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    if (sendBtn.classList.contains('loading')) return;
+    const inputOk = tryAddFromInput();
+    if (!inputOk){ emailInput.focus(); return; }
+    if (!emails.length){
+      setError('Add at least one recipient email.');
+      emailInput.focus();
+      return;
+    }
+    const roleLabel = PERMS[currentRole()].label;
+    const exp = expirySel.value;
+    const meta = exp === 'never' ? 'No expiry' : 'Expires in ' + exp + ' days';
+    const count = emails.length;
+    setLoading(true);
+    setTimeout(() => {
+      emails.forEach(em => pending.unshift({ email: em, role: roleLabel, meta: meta }));
+      renderPending();
+      emails = [];
+      renderChips();
+      msgInput.value = '';
+      updateCounter();
+      setLoading(false);
+      updateSend();
+      toast(count > 1
+        ? count + ' invitations sent with ' + roleLabel + ' access to production.'
+        : 'Invitation sent with ' + roleLabel + ' access to production.');
+      emailInput.focus();
+    }, 900);
+  });
+  $('#cancelBtn').addEventListener('click', () => {
+    emails = [];
+    renderChips();
+    emailInput.value = '';
+    setError(null);
+    msgInput.value = '';
+    updateCounter();
+    document.querySelector('input[name="role"][value="developer"]').checked = true;
+    syncRoleCards();
+    renderPerms('developer');
+    expirySel.value = '7';
+    updateSend();
+    toast('Invite draft discarded', 'info');
+  });
+
+  /* ---------- Invite link ---------- */
+  const inviteLink = $('#inviteLink'), copyBtn = $('#copyBtn'), copyIcon = $('#copyIcon');
+  let copyTimer = null;
+  function copyText(t){
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t);
+    return new Promise(res => {
+      const ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch(e){}
+      ta.remove(); res();
+    });
+  }
+  copyBtn.addEventListener('click', () => {
+    copyText('https://' + inviteLink.textContent.trim()).then(() => {
+      copyIcon.innerHTML = SVG.check;
+      copyIcon.style.color = 'var(--green)';
+      copyBtn.title = 'Copied';
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => {
+        copyIcon.innerHTML = SVG.copy;
+        copyIcon.style.color = '';
+        copyBtn.title = 'Copy invite link';
+      }, 1800);
+    });
+  });
+  $('#regenBtn').addEventListener('click', () => {
+    const id = Math.random().toString(36).slice(2, 8);
+    inviteLink.textContent = 'cloudlayer.dev/join/prd-' + id;
+    toast('Invite link regenerated — previous links no longer work.', 'info');
+  });
+
+  /* ---------- Search shortcut ---------- */
+  const searchInput = $('#searchInput');
+  window.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+
+  /* ---------- Init ---------- */
+  renderPerms('developer');
+  renderPending();
+  updateCounter();
+  updateSend();
+})();
+</script>
+</body>
+</html>

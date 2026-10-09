@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LedgerNorth — Integrations</title>
+<style>
+  :root{
+    --bg:#070C16;
+    --panel:#0D1526;
+    --line:#1D2942;
+    --line-soft:#182238;
+    --text:#F1F5FB;
+    --body:#A9B6CC;
+    --muted:#7C8CA8;
+    --mint:#4EE3A5;
+    --acc:#5CE0A6;
+    --blue:#6FA8FF;
+    --cyan:#56C8DD;
+    --amber:#F2B95C;
+    --rose:#E9899B;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --serif:ui-serif,Georgia,"Times New Roman",serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  [hidden]{display:none!important}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans);
+    color:var(--text);
+    background:
+      radial-gradient(900px 480px at 18% -6%, rgba(92,224,166,.07), transparent 60%),
+      radial-gradient(1000px 560px at 86% 4%, rgba(111,168,255,.06), transparent 60%),
+      var(--bg);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:rgba(78,227,165,.28)}
+
+  .ln-integrations{position:relative;overflow:hidden}
+  .ln-integrations::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(140,160,200,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(140,160,200,.045) 1px, transparent 1px);
+    background-size:44px 44px;
+    -webkit-mask-image:radial-gradient(1000px 640px at 50% 18%, #000 30%, transparent 78%);
+    mask-image:radial-gradient(1000px 640px at 50% 18%, #000 30%, transparent 78%);
+  }
+  .wrap{position:relative;max-width:1200px;margin:0 auto;padding:88px 40px 100px}
+
+  /* ---------- Section header ---------- */
+  .sec-head{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:end;margin-bottom:34px}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:#8FA3C2;margin-bottom:18px}
+  .eyebrow svg{flex:none}
+  h2{font-size:clamp(34px,3.6vw,51px);line-height:1.06;letter-spacing:-.02em;font-weight:700;color:var(--text)}
+  .accent{
+    font-family:var(--serif);font-style:italic;font-weight:500;
+    background:linear-gradient(92deg,#5CE0A6 10%,#6FA8FF 90%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.06em;
+  }
+  .lede{font-size:16.5px;line-height:1.65;color:var(--body)}
+  .stats{display:flex;gap:36px;margin-top:28px}
+  .stat b{display:block;font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+  .stat span{display:block;font-size:12.5px;line-height:1.45;color:var(--muted);margin-top:5px;max-width:150px}
+
+  /* ---------- Category filter chips ---------- */
+  .chips-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+  .chips-label{font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-right:8px}
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;
+    border:1px solid var(--line);background:rgba(13,21,38,.72);color:#C7D3E8;
+    font-family:var(--sans);font-size:13.5px;font-weight:500;cursor:pointer;transition:border-color .2s,color .2s,background .2s,box-shadow .2s;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--c)}
+  .chip .count{font-size:11px;color:var(--muted);background:rgba(148,163,184,.1);border:1px solid var(--line);padding:1px 7px;border-radius:999px}
+  .chip:hover{border-color:#33415F;color:#fff}
+  .chip[aria-pressed="true"]{
+    border-color:var(--c);background:rgba(13,21,38,.85);color:#fff;
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent), 0 0 18px color-mix(in srgb, var(--c) 12%, transparent);
+  }
+  .chip:focus-visible,.cat-row:focus-visible,.btn-primary:focus-visible,.btn-ghost:focus-visible,.panel-link:focus-visible{outline:2px solid var(--mint);outline-offset:2px;border-radius:12px}
+
+  /* ---------- Sync map + panel grid ---------- */
+  .sync-grid{display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:20px;align-items:stretch}
+
+  .map-card{
+    position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;
+    background:linear-gradient(180deg, rgba(17,26,46,.55), rgba(10,16,30,.78));
+    padding:16px 18px 8px;
+  }
+  .map-card::before{
+    content:"";position:absolute;left:50%;top:53%;width:560px;height:560px;border-radius:50%;
+    transform:translate(-50%,-50%);pointer-events:none;
+    background:radial-gradient(circle, rgba(92,224,166,.07), rgba(111,168,255,.045) 45%, transparent 70%);
+  }
+  .map-head{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:4px 6px 10px}
+  .map-title{font-size:14px;font-weight:600;color:var(--text)}
+  .map-title small{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:3px}
+  .live-pill{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:500;letter-spacing:.04em;color:#86E7BB;border:1px solid rgba(92,224,166,.3);background:rgba(92,224,166,.07);padding:5px 12px;border-radius:999px;white-space:nowrap}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(78,227,165,.5);animation:ping 2.2s infinite}
+  @keyframes ping{70%{box-shadow:0 0 0 7px rgba(78,227,165,0)}100%{box-shadow:0 0 0 0 rgba(78,227,165,0)}}
+  svg.map{position:relative;display:block;width:100%;height:auto}
+
+  /* SVG pieces */
+  .deco path{stroke:rgba(124,140,168,.3);stroke-width:1;fill:none}
+  .wire{fill:none}
+  .wire.halo{stroke:var(--c);stroke-width:7;opacity:0;transition:opacity .35s ease}
+  .wire.main{stroke:#232E4A;stroke-width:1.5;transition:stroke .35s ease}
+  .wire.flow{stroke:var(--c);stroke-width:1.8;stroke-linecap:round;stroke-dasharray:2 11;opacity:0;transition:opacity .35s ease;animation:flow 1.6s linear infinite}
+  .wire-g{transition:opacity .35s ease}
+  .wire-g.active .wire.halo{opacity:.16}
+  .wire-g.active .wire.main{stroke:var(--c)}
+  .wire-g.active .wire.flow{opacity:.75}
+  .wire-g.hover .wire.halo{opacity:.3}
+  .wire-g.hover .wire.main{stroke:var(--c)}
+  .wire-g.hover .wire.flow{opacity:.95}
+  .wire-g.dim{opacity:.14}
+  @keyframes flow{to{stroke-dashoffset:-13}}
+  .pulse{fill:var(--c);opacity:0;transition:opacity .35s ease}
+  .wire-g.active .pulse.in, .wire-g.hover .pulse.in{opacity:.95}
+  .wire-g.active .pulse.out{opacity:.55}
+
+  .node{cursor:pointer;transition:opacity .35s ease;outline:none}
+  .node.dim{opacity:.16}
+  .n-ring{fill:#0B1322;stroke:var(--c);stroke-width:1.4;opacity:.92;transition:stroke-width .2s ease,filter .2s ease}
+  .n-mono{font-family:var(--sans);font-size:12.5px;font-weight:700;fill:var(--c);letter-spacing:.04em;text-anchor:middle}
+  .n-live{fill:#4EE3A5;stroke:#0A111F;stroke-width:2}
+  .n-label{font-family:var(--sans);font-size:13px;font-weight:500;fill:#A7B4CC;text-anchor:middle;transition:fill .2s ease}
+  .node:hover .n-label,.node:focus-visible .n-label,.node.hot .n-label{fill:#EAF1FB}
+  .node:hover .n-ring,.node:focus-visible .n-ring,.node.hot .n-ring{stroke-width:2.4;filter:drop-shadow(0 0 7px var(--c))}
+
+  .orbit{fill:none;stroke:rgba(130,150,185,.22);stroke-width:1;stroke-dasharray:2 9;transform-box:fill-box;transform-origin:center;animation:spin 90s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bezel{fill:none;stroke:rgba(92,224,166,.28);stroke-width:1.3;stroke-dasharray:1.5 6.6}
+  .core-disc{fill:url(#coreGrad);stroke:rgba(92,224,166,.35);stroke-width:1.2}
+  .core-star{fill:url(#starGrad)}
+  .core-name{font-family:var(--sans);font-size:13.5px;font-weight:700;fill:#F2F6FC;text-anchor:middle;letter-spacing:.02em}
+  .core-tag{font-family:var(--sans);font-size:8px;letter-spacing:.26em;fill:#6F809F;text-anchor:middle}
+  .ping{fill:none;stroke:#5CE0A6;stroke-width:1}
+
+  /* tooltip */
+  .tip{
+    position:absolute;z-index:6;transform:translate(-50%,-100%);pointer-events:none;text-align:center;
+    background:#101A2E;border:1px solid #26334F;border-radius:10px;padding:8px 13px;
+    box-shadow:0 8px 24px rgba(0,0,0,.45);white-space:nowrap;
+  }
+  .tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#26334F}
+  .tip strong{display:block;font-size:13px;font-weight:600;color:#EAF1FB}
+  .tip span{display:block;font-size:11.5px;color:#8FA0BC;margin-top:2px}
+
+  /* ---------- Detail panel ---------- */
+  .panel-card{
+    display:flex;flex-direction:column;border:1px solid var(--line);border-radius:20px;
+    background:linear-gradient(180deg, rgba(17,26,46,.55), rgba(10,16,30,.78));
+    padding:22px 22px 20px;min-height:0;
+  }
+  .panel{display:none}
+  .panel.show{display:flex;flex-direction:column;flex:1;animation:panelIn .32s ease}
+  @keyframes panelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--c)}
+  .kicker::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
+  .panel h3{font-size:23px;font-weight:700;letter-spacing:-.015em;line-height:1.22;color:var(--text);margin:13px 0 10px}
+  .panel p{font-size:14px;line-height:1.65;color:var(--body)}
+  .panel > p{margin-bottom:18px}
+
+  .app-rows,.cat-rows{display:flex;flex-direction:column;gap:8px}
+  .app-row{
+    display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;
+    border:1px solid var(--line-soft);background:rgba(15,23,42,.45);transition:border-color .2s,background .2s,transform .2s;
+  }
+  .app-row:hover{border-color:#2C3A5C;background:rgba(23,34,60,.55);transform:translateX(2px)}
+  .app-badge{
+    flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+    font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--c);
+    background:rgba(92,224,166,.1);background:color-mix(in srgb, var(--c) 12%, transparent);
+    border:1px solid rgba(92,224,166,.35);border:1px solid color-mix(in srgb, var(--c) 35%, transparent);
+  }
+  .app-info{min-width:0}
+  .app-info strong{display:block;font-size:13.5px;font-weight:600;color:#E8EEF8}
+  .app-info em{display:block;font-style:normal;font-size:12px;line-height:1.45;color:var(--muted);margin-top:2px}
+  .app-live{margin-left:auto;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:#7FDFB4;white-space:nowrap}
+
+  .cat-row{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px;border-radius:12px;
+    border:1px solid var(--line-soft);background:rgba(15,23,42,.45);color:inherit;font-family:var(--sans);cursor:pointer;
+    transition:border-color .2s,background .2s,transform .2s;
+  }
+  .cat-row:hover{border-color:#2C3A5C;background:rgba(23,34,60,.55);transform:translateX(2px)}
+  .cat-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 8px color-mix(in srgb, var(--c) 60%, transparent)}
+  .cat-info{min-width:0}
+  .cat-info strong{display:block;font-size:13.5px;font-weight:600;color:#E8EEF8}
+  .cat-info em{display:block;font-style:normal;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .cat-n{margin-left:auto;font-size:11px;color:var(--muted);border:1px solid var(--line);padding:1px 8px;border-radius:999px}
+
+  .panel-foot{margin-top:auto;padding-top:16px}
+  .panel-link{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;color:var(--mint);text-decoration:none}
+  .panel-link:hover{text-decoration:underline}
+  .panel-note{font-size:12px;line-height:1.55;color:var(--muted);margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+
+  /* ---------- Explore band ---------- */
+  .explore{
+    margin-top:22px;display:flex;align-items:center;flex-wrap:wrap;gap:14px 32px;
+    border:1px solid var(--line);border-radius:20px;padding:26px 30px;
+    background:linear-gradient(90deg, rgba(20,30,54,.65), rgba(12,19,35,.65));
+  }
+  .explore-copy{flex:1 1 420px}
+  .explore-copy h3{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:10px 0 8px}
+  .explore-copy p{font-size:14px;line-height:1.6;color:var(--body);max-width:560px}
+  .explore-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:12px;border:none;cursor:pointer;
+    background:linear-gradient(180deg,#57E7AB,#35CE93);color:#05261A;font-family:var(--sans);font-size:14.5px;font-weight:700;text-decoration:none;
+    box-shadow:0 6px 18px rgba(78,227,165,.18);transition:transform .2s,box-shadow .2s,filter .2s;
+  }
+  .btn-primary:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 10px 24px rgba(78,227,165,.24)}
+  .btn-ghost{
+    display:inline-flex;align-items:center;padding:12px 20px;border-radius:12px;border:1px solid #2B3959;background:rgba(15,23,42,.4);
+    color:#DCE5F3;font-family:var(--sans);font-size:14.5px;font-weight:600;text-decoration:none;transition:border-color .2s,background .2s;
+  }
+  .btn-ghost:hover{border-color:#3B4C74;background:rgba(23,34,60,.5)}
+  .explore-trust{width:100%;display:flex;flex-wrap:wrap;gap:8px 26px;font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:15px;margin-top:6px}
+  .explore-trust span{display:inline-flex;align-items:center;gap:7px}
+  .explore-trust span::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--mint);opacity:.7}
+
+  /* ---------- Responsive + motion ---------- */
+  @media (max-width:1120px){
+    .sync-grid{grid-template-columns:1fr}
+    .sec-head{grid-template-columns:1fr;gap:22px;align-items:start}
+    .stats{gap:28px}
+  }
+  @media (max-width:640px){
+    .wrap{padding:60px 20px 72px}
+    .stats{flex-wrap:wrap;gap:20px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<section class="ln-integrations" id="integrations" aria-label="LedgerNorth integrations">
+  <div class="wrap">
+
+    <!-- ============ Header ============ -->
+    <header class="sec-head">
+      <div class="head-left">
+        <span class="eyebrow">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="#4EE3A5" stroke-width="1.5"/>
+            <path d="M15.6 8.4l-2.3 5.2-5.2 2.3 2.3-5.2z" fill="#4EE3A5"/>
+          </svg>
+          Integrations
+        </span>
+        <h2>Your finance stack, finally pointing <em class="accent">true north</em>.</h2>
+      </div>
+      <div class="head-right">
+        <p class="lede">LedgerNorth plugs into the accounting, banking, payments, spend, and workforce systems you already trust — then keeps every balance, journal, and payout in continuous, two-way agreement. No rip-and-replace, no CSV archaeology at month-end.</p>
+        <div class="stats">
+          <div class="stat"><b>15 min</b><span>Worst-case sync latency on core connectors</span></div>
+          <div class="stat"><b>2-way</b><span>Every core connector syncs in both directions</span></div>
+          <div class="stat"><b>0</b><span>Manual CSV exports at month-end close</span></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ Category filter ============ -->
+    <div class="chips-row" role="group" aria-label="Filter the sync map by layer of your finance stack">
+      <span class="chips-label">Filter by layer</span>
+      <button class="chip" data-cat="all" aria-pressed="true" style="--c:#EAF1FB"><span class="dot"></span>All systems</button>
+      <button class="chip" data-cat="accounting" aria-pressed="false" style="--c:#5CE0A6"><span class="dot"></span>Accounting<span class="count">4</span></button>
+      <button class="chip" data-cat="payments" aria-pressed="false" style="--c:#6FA8FF"><span class="dot"></span>Payments<span class="count">1</span></button>
+      <button class="chip" data-cat="banking" aria-pressed="false" style="--c:#56C8DD"><span class="dot"></span>Banking<span class="count">1</span></button>
+      <button class="chip" data-cat="spend" aria-pressed="false" style="--c:#F2B95C"><span class="dot"></span>Spend<span class="count">1</span></button>
+      <button class="chip" data-cat="workforce" aria-pressed="false" style="--c:#E9899B"><span class="dot"></span>Workforce<span class="count">1</span></button>
+    </div>
+
+    <!-- ============ Sync map + detail panel ============ -->
+    <div class="sync-grid">
+
+      <!-- Sync map -->
+      <div class="map-card">
+        <div class="map-head">
+          <div class="map-title">Your stack, mapped<small>8 core connectors across 5 layers of finance ops</small></div>
+          <span class="live-pill"><span class="live-dot"></span>Live · two-way sync</span>
+        </div>
+
+        <svg class="map" viewBox="0 0 760 620" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img"
+             aria-label="Diagram of LedgerNorth at the center, connected to Oracle NetSuite, QuickBooks, Xero, Sage Intacct, Stripe, Plaid, Ramp, and Workday">
+          <defs>
+            <radialGradient id="coreGrad" cx="50%" cy="42%" r="65%">
+              <stop offset="0%" stop-color="#1B2947"/>
+              <stop offset="70%" stop-color="#0C1424"/>
+              <stop offset="100%" stop-color="#0A111F"/>
+            </radialGradient>
+            <linearGradient id="starGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#5CE0A6"/>
+              <stop offset="100%" stop-color="#6FA8FF"/>
+            </linearGradient>
+            <path id="w-netsuite"  d="M149 140 C 192 190, 248 228, 307 260"/>
+            <path id="w-quickbooks" d="M99 259 C 162 268, 226 286, 290 298"/>
+            <path id="w-xero"      d="M121 378 C 182 368, 228 352, 291 337"/>
+            <path id="w-sage"      d="M195 482 C 243 449, 276 412, 312 377"/>
+            <path id="w-plaid"     d="M608 134 C 556 186, 506 226, 452 259"/>
+            <path id="w-stripe"    d="M653 254 C 592 264, 530 282, 470 296"/>
+            <path id="w-ramp"      d="M629 383 C 570 372, 518 356, 469 340"/>
+            <path id="w-workday"   d="M536 489 C 502 452, 472 418, 442 384"/>
+          </defs>
+
+          <!-- cartographic corner ticks -->
+          <g class="deco" aria-hidden="true">
+            <path d="M26 18v16M18 26h16"/>
+            <path d="M734 18v16M726 26h16"/>
+            <path d="M26 586v16M18 594h16"/>
+            <path d="M734 586v16M726 594h16"/>
+          </g>
+
+          <!-- connection wires (under nodes) -->
+          <g class="wire-g active" data-app="netsuite" data-cat="accounting" style="--c:#5CE0A6">
+            <use href="#w-netsuite" xlink:href="#w-netsuite" class="wire halo"/>
+            <use href="#w-netsuite" xlink:href="#w-netsuite" class="wire main"/>
+            <use href="#w-netsuite" xlink:href="#w-netsuite" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-0.2s" repeatCount="indefinite"><mpath href="#w-netsuite" xlink:href="#w-netsuite"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-1s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-netsuite" xlink:href="#w-netsuite"/></animateMotion></circle>
+          </g>
+          <g class="wire-g active" data-app="quickbooks" data-cat="accounting" style="--c:#5CE0A6">
+            <use href="#w-quickbooks" xlink:href="#w-quickbooks" class="wire halo"/>
+            <use href="#w-quickbooks" xlink:href="#w-quickbooks" class="wire main"/>
+            <use href="#w-quickbooks" xlink:href="#w-quickbooks" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-0.6s" repeatCount="indefinite"><mpath href="#w-quickbooks" xlink:href="#w-quickbooks"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-1.6s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-quickbooks" xlink:href="#w-quickbooks"/></animateMotion></circle>
+          </g>
+          <g class="wire-g active" data-app="xero" data-cat="accounting" style="--c:#5CE0A6">
+            <use href="#w-xero" xlink:href="#w-xero" class="wire halo"/>
+            <use href="#w-xero" xlink:href="#w-xero" class="wire main"/>
+            <use href="#w-xero" xlink:href="#w-xero" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-1s" repeatCount="indefinite"><mpath href="#w-xero" xlink:href="#w-xero"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-2.2s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-xero" xlink:href="#w-xero"/></animateMotion></circle>
+          </g>
+          <g class="wire-g active" data-app="sage" data-cat="accounting" style="--c:#5CE0A6">
+            <use href="#w-sage" xlink:href="#w-sage" class="wire halo"/>
+            <use href="#w-sage" xlink:href="#w-sage" class="wire main"/>
+            <use href="#w-sage" xlink:href="#w-sage" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-1.4s" repeatCount="indefinite"><mpath href="#w-sage" xlink:href="#w-sage"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-2.8s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-sage" xlink:href="#w-sage"/></animateMotion></circle>
+          </g>
+          <g class="wire-g active" data-app="plaid" data-cat="banking" style="--c:#56C8DD">
+            <use href="#w-plaid" xlink:href="#w-plaid" class="wire halo"/>
+            <use href="#w-plaid" xlink:href="#w-plaid" class="wire main"/>
+            <use href="#w-plaid" xlink:href="#w-plaid" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-0.4s" repeatCount="indefinite"><mpath href="#w-plaid" xlink:href="#w-plaid"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-1.3s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-plaid" xlink:href="#w-plaid"/></animateMotion></circle>
+          </g>
+          <g class="wire-g active" data-app="stripe" data-cat="payments" style="--c:#6FA8FF">
+            <use href="#w-stripe" xlink:href="#w-stripe" class="wire halo"/>
+            <use href="#w-stripe" xlink:href="#w-stripe" class="wire main"/>
+            <use href="#w-stripe" xlink:href="#w-stripe" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-0.8s" repeatCount="indefinite"><mpath href="#w-stripe" xlink:href="#w-stripe"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-1.9s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-stripe" xlink:href="#w-stripe"/></animateMotion></circle>
+          </g>
+          <g class="wire-g active" data-app="ramp" data-cat="spend" style="--c:#F2B95C">
+            <use href="#w-ramp" xlink:href="#w-ramp" class="wire halo"/>
+            <use href="#w-ramp" xlink:href="#w-ramp" class="wire main"/>
+            <use href="#w-ramp" xlink:href="#w-ramp" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-1.2s" repeatCount="indefinite"><mpath href="#w-ramp" xlink:href="#w-ramp"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-2.5s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-ramp" xlink:href="#w-ramp"/></animateMotion></circle>
+          </g>
+          <g class="wire-g active" data-app="workday" data-cat="workforce" style="--c:#E9899B">
+            <use href="#w-workday" xlink:href="#w-workday" class="wire halo"/>
+            <use href="#w-workday" xlink:href="#w-workday" class="wire main"/>
+            <use href="#w-workday" xlink:href="#w-workday" class="wire flow"/>
+            <circle class="pulse in" r="3.2"><animateMotion dur="3.4s" begin="-1.6s" repeatCount="indefinite"><mpath href="#w-workday" xlink:href="#w-workday"/></animateMotion></circle>
+            <circle class="pulse out" r="2.2"><animateMotion dur="4.4s" begin="-3.1s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-workday" xlink:href="#w-workday"/></animateMotion></circle>
+          </g>
+
+          <!-- LedgerNorth core -->
+          <g class="core">
+            <circle class="ping" cx="380" cy="316" r="66">
+              <animate attributeName="r" values="66;124" dur="3.6s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.35;0" dur="3.6s" repeatCount="indefinite"/>
+            </circle>
+            <circle class="orbit" cx="380" cy="316" r="104"/>
+            <circle class="bezel" cx="380" cy="316" r="90"/>
+            <circle class="core-disc" cx="380" cy="316" r="66"/>
+            <path class="core-star" d="M380 284 L384.6 300 L395 306.5 L384.6 313 L380 326 L375.4 313 L365 306.5 L375.4 300 Z"/>
+            <text class="core-name" x="380" y="349">LedgerNorth</text>
+            <text class="core-tag" x="380" y="366">SYNC CORE</text>
+          </g>
+
+          <!-- integration nodes -->
+          <g class="node" data-app="netsuite" data-cat="accounting" tabindex="0" role="img" aria-label="Oracle NetSuite — accounting integration, live"
+             data-name="Oracle NetSuite" data-meta="Accounting · Two-way · GL journals · every 15 min" style="--c:#5CE0A6">
+            <circle class="n-ring" cx="120" cy="118" r="30"/>
+            <text class="n-mono" x="120" y="122.5">NS</text>
+            <circle class="n-live" cx="141" cy="97" r="3.5"/>
+            <text class="n-label" x="120" y="74">Oracle NetSuite</text>
+          </g>
+          <g class="node" data-app="quickbooks" data-cat="accounting" tabindex="0" role="img" aria-label="QuickBooks — accounting integration, live"
+             data-name="QuickBooks" data-meta="Accounting · Two-way · GL + invoicing · every 15 min" style="--c:#5CE0A6">
+            <circle class="n-ring" cx="64" cy="252" r="30"/>
+            <text class="n-mono" x="64" y="256.5">QB</text>
+            <circle class="n-live" cx="85" cy="231" r="3.5"/>
+            <text class="n-label" x="64" y="300">QuickBooks</text>
+          </g>
+          <g class="node" data-app="xero" data-cat="accounting" tabindex="0" role="img" aria-label="Xero — accounting integration, live"
+             data-name="Xero" data-meta="Accounting · Two-way · GL + bills · every 15 min" style="--c:#5CE0A6">
+            <circle class="n-ring" cx="86" cy="386" r="30"/>
+            <text class="n-mono" x="86" y="390.5">X</text>
+            <circle class="n-live" cx="107" cy="365" r="3.5"/>
+            <text class="n-label" x="86" y="434">Xero</text>
+          </g>
+          <g class="node" data-app="sage" data-cat="accounting" tabindex="0" role="img" aria-label="Sage Intacct — accounting integration, live"
+             data-name="Sage Intacct" data-meta="Accounting · Two-way · GL journals · hourly" style="--c:#5CE0A6">
+            <circle class="n-ring" cx="168" cy="506" r="30"/>
+            <text class="n-mono" x="168" y="510.5">SI</text>
+            <circle class="n-live" cx="189" cy="485" r="3.5"/>
+            <text class="n-label" x="168" y="554">Sage Intacct</text>
+          </g>
+          <g class="node" data-app="plaid" data-cat="banking" tabindex="0" role="img" aria-label="Plaid — banking integration, live"
+             data-name="Plaid" data-meta="Banking · Secure read · balances &amp; transactions · every 15 min" style="--c:#56C8DD">
+            <circle class="n-ring" cx="636" cy="112" r="30"/>
+            <text class="n-mono" x="636" y="116.5">P</text>
+            <circle class="n-live" cx="657" cy="91" r="3.5"/>
+            <text class="n-label" x="636" y="160">Plaid</text>
+          </g>
+          <g class="node" data-app="stripe" data-cat="payments" tabindex="0" role="img" aria-label="Stripe — payments integration, live"
+             data-name="Stripe" data-meta="Payments · Two-way · charges, payouts, fees · every 5 min" style="--c:#6FA8FF">
+            <circle class="n-ring" cx="688" cy="246" r="30"/>
+            <text class="n-mono" x="688" y="250.5">S</text>
+            <circle class="n-live" cx="709" cy="225" r="3.5"/>
+            <text class="n-label" x="688" y="294">Stripe</text>
+          </g>
+          <g class="node" data-app="ramp" data-cat="spend" tabindex="0" role="img" aria-label="Ramp — spend integration, live"
+             data-name="Ramp" data-meta="Spend · Two-way · transactions + receipts · every 10 min" style="--c:#F2B95C">
+            <circle class="n-ring" cx="664" cy="392" r="30"/>
+            <text class="n-mono" x="664" y="396.5">R</text>
+            <circle class="n-live" cx="685" cy="371" r="3.5"/>
+            <text class="n-label" x="664" y="440">Ramp</text>
+          </g>
+          <g class="node" data-app="workday" data-cat="workforce" tabindex="0" role="img" aria-label="Workday — workforce integration, live"
+             data-name="Workday" data-meta="Workforce · Two-way · payroll journals, HRIS · daily" style="--c:#E9899B">
+            <circle class="n-ring" cx="560" cy="516" r="30"/>
+            <text class="n-mono" x="560" y="520.5">W</text>
+            <circle class="n-live" cx="581" cy="495" r="3.5"/>
+            <text class="n-label" x="560" y="564">Workday</text>
+          </g>
+        </svg>
+
+        <div class="tip" id="tip" hidden><strong></strong><span></span></div>
+      </div>
+
+      <!-- Detail panel -->
+      <aside class="panel-card" aria-live="polite">
+
+        <!-- Overview -->
+        <div class="panel show" id="panel-all" style="--c:#4EE3A5">
+          <span class="kicker">The connected stack</span>
+          <h3>One ledger under every tool.</h3>
+          <p>LedgerNorth becomes the quiet layer beneath the systems you already run: data flows in from every tool, gets reconciled against the ledger, and flows back out as numbers everyone trusts. Choose a layer to see what changes.</p>
+          <div class="cat-rows">
+            <button class="cat-row" data-cat="accounting" style="--c:#5CE0A6">
+              <span class="cat-dot"></span>
+              <span class="cat-info"><strong>Accounting</strong><em>NetSuite · QuickBooks · Xero · Sage Intacct</em></span>
+              <span class="cat-n">4</span>
+            </button>
+            <button class="cat-row" data-cat="payments" style="--c:#6FA8FF">
+              <span class="cat-dot"></span>
+              <span class="cat-info"><strong>Payments</strong><em>Stripe</em></span>
+              <span class="cat-n">1</span>
+            </button>
+            <button class="cat-row" data-cat="banking" style="--c:#56C8DD">
+              <span class="cat-dot"></span>
+              <span class="cat-info"><strong>Banking</strong><em>Plaid</em></span>
+              <span class="cat-n">1</span>
+            </button>
+            <button class="cat-row" data-cat="spend" style="--c:#F2B95C">
+              <span class="cat-dot"></span>
+              <span class="cat-info"><strong>Spend &amp; cards</strong><em>Ramp</em></span>
+              <span class="cat-n">1</span>
+            </button>
+            <button class="cat-row" data-cat="workforce" style="--c:#E9899B">
+              <span class="cat-dot"></span>
+              <span class="cat-info"><strong>Workforce</strong><em>Workday</em></span>
+              <span class="cat-n">1</span>
+            </button>
+          </div>
+          <div class="panel-foot">
+            <a class="panel-link" href="#">See sync schedules &amp; field mappings
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <p class="panel-note">Core connectors shown. Billing, tax, and warehouse categories live in the full library.</p>
+          </div>
+        </div>
+
+        <!-- Accounting -->
+        <div class="panel" id="panel-accounting" style="--c:#5CE0A6">
+          <span class="kicker">Accounting · System of record</span>
+          <h3>A close that runs itself.</h3>
+          <p>Revenue from Stripe, spend from Ramp, cash from your banks, payroll from Workday — it all reaches your general ledger as structured, coded journals. Your ERP stays the system of record; LedgerNorth keeps it current.</p>
+          <div class="app-rows">
+            <div class="app-row" data-app="netsuite">
+              <span class="app-badge">NS</span>
+              <span class="app-info"><strong>Oracle NetSuite</strong><em>Two-way · GL journals · every 15 min</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+            <div class="app-row" data-app="quickbooks">
+              <span class="app-badge">QB</span>
+              <span class="app-info"><strong>QuickBooks</strong><em>Two-way · GL + invoicing · every 15 min</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+            <div class="app-row" data-app="xero">
+              <span class="app-badge">X</span>
+              <span class="app-info"><strong>Xero</strong><em>Two-way · GL + bills · every 15 min</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+            <div class="app-row" data-app="sage">
+              <span class="app-badge">SI</span>
+              <span class="app-info"><strong>Sage Intacct</strong><em>Two-way · GL journals · hourly</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+          </div>
+          <div class="panel-foot">
+            <a class="panel-link" href="#">Explore accounting integrations
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Payments -->
+        <div class="panel" id="panel-payments" style="--c:#6FA8FF">
+          <span class="kicker">Payments · Money in</span>
+          <h3>Revenue booked as it settles.</h3>
+          <p>Charges, refunds, disputes, and payout fees stream in from Stripe line by line — matched to invoices and posted to the ledger in minutes, not at month-end.</p>
+          <div class="app-rows">
+            <div class="app-row" data-app="stripe">
+              <span class="app-badge">S</span>
+              <span class="app-info"><strong>Stripe</strong><em>Two-way · charges, payouts, fees · every 5 min</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+          </div>
+          <div class="panel-foot">
+            <a class="panel-link" href="#">How Stripe reconciliation works
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Banking -->
+        <div class="panel" id="panel-banking" style="--c:#56C8DD">
+          <span class="kicker">Banking · Cash position</span>
+          <h3>Cash you can trust while it moves.</h3>
+          <p>Balances and transactions from every account flow in through Plaid — one live cash position that feeds forecasting, reconciliation, and the ledger automatically.</p>
+          <div class="app-rows">
+            <div class="app-row" data-app="plaid">
+              <span class="app-badge">P</span>
+              <span class="app-info"><strong>Plaid</strong><em>Secure read · balances &amp; transactions · every 15 min</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+          </div>
+          <div class="panel-foot">
+            <a class="panel-link" href="#">How Plaid cash sync works
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Spend -->
+        <div class="panel" id="panel-spend" style="--c:#F2B95C">
+          <span class="kicker">Spend &amp; cards</span>
+          <h3>Every swipe arrives pre-coded.</h3>
+          <p>Ramp transactions arrive with receipts, memos, and approvals attached, so purchases hit the right GL account the moment they clear — and outliers surface before they become write-offs.</p>
+          <div class="app-rows">
+            <div class="app-row" data-app="ramp">
+              <span class="app-badge">R</span>
+              <span class="app-info"><strong>Ramp</strong><em>Two-way · transactions + receipts · every 10 min</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+          </div>
+          <div class="panel-foot">
+            <a class="panel-link" href="#">How Ramp spend sync works
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Workforce -->
+        <div class="panel" id="panel-workforce" style="--c:#E9899B">
+          <span class="kicker">Workforce &amp; payroll</span>
+          <h3>Headcount that never drifts.</h3>
+          <p>Employee records, payroll journals, and org changes move between Workday and LedgerNorth, keeping the ledger, the headcount plan, and the actual org in agreement.</p>
+          <div class="app-rows">
+            <div class="app-row" data-app="workday">
+              <span class="app-badge">W</span>
+              <span class="app-info"><strong>Workday</strong><em>Two-way · payroll journals, HRIS · daily</em></span>
+              <span class="app-live">● Live</span>
+            </div>
+          </div>
+          <div class="panel-foot">
+            <a class="panel-link" href="#">How Workday payroll sync works
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+
+    <!-- ============ Explore the ecosystem ============ -->
+    <div class="explore">
+      <div class="explore-copy">
+        <span class="kicker" style="--c:#6FA8FF">Beyond the map</span>
+        <h3>The library keeps growing.</h3>
+        <p>Beyond these core connectors, LedgerNorth ships prebuilt integrations across billing, tax, and warehouse tooling — and an open API with webhooks for the systems nobody else supports.</p>
+      </div>
+      <div class="explore-actions">
+        <a class="btn-primary" href="#">Explore all integrations
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn-ghost" href="#">Read the API docs</a>
+      </div>
+      <div class="explore-trust">
+        <span>SOC 2 Type II</span>
+        <span>Least-privilege, revocable scopes</span>
+        <span>You approve every connection</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  var chips   = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  var wireGs  = Array.prototype.slice.call(document.querySelectorAll('.wire-g'));
+  var nodes   = Array.prototype.slice.call(document.querySelectorAll('.node'));
+  var panels  = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  var catRows = Array.prototype.slice.call(document.querySelectorAll('.cat-row'));
+  var mapCard = document.querySelector('.map-card');
+  var tip     = document.getElementById('tip');
+
+  function select(cat){
+    chips.forEach(function(c){ c.setAttribute('aria-pressed', String(c.dataset.cat === cat)); });
+    wireGs.forEach(function(g){
+      var on = (cat === 'all') || (g.dataset.cat === cat);
+      g.classList.toggle('active', on);
+      g.classList.toggle('dim', cat !== 'all' && !on);
+    });
+    nodes.forEach(function(n){
+      var on = (cat === 'all') || (n.dataset.cat === cat);
+      n.classList.toggle('dim', !on);
+    });
+    panels.forEach(function(p){ p.classList.toggle('show', p.id === 'panel-' + cat); });
+  }
+
+  chips.forEach(function(c){ c.addEventListener('click', function(){ select(c.dataset.cat); }); });
+  catRows.forEach(function(r){ r.addEventListener('click', function(){ select(r.dataset.cat); }); });
+  nodes.forEach(function(n){ n.addEventListener('click', function(){ select(n.dataset.cat); }); });
+
+  function highlight(app, on){
+    var g = document.querySelector('.wire-g[data-app="' + app + '"]');
+    if (g) g.classList.toggle('hover', on);
+    var n = document.querySelector('.node[data-app="' + app + '"]');
+    if (n) n.classList.toggle('hot', on);
+  }
+
+  function showTip(node){
+    if (!tip) return;
+    var ring = node.querySelector('.n-ring');
+    if (!ring) return;
+    tip.querySelector('strong').textContent = node.dataset.name;
+    tip.querySelector('span').textContent = node.dataset.meta;
+    var cr = mapCard.getBoundingClientRect();
+    var r = ring.getBoundingClientRect();
+    var left = r.left - cr.left + r.width / 2;
+    left = Math.max(96, Math.min(cr.width - 96, left));
+    tip.style.left = left + 'px';
+    tip.style.top = (r.top - cr.top - 12) + 'px';
+    tip.hidden = false;
+  }
+
+  function hideTip(){ if (tip) tip.hidden = true; }
+
+  nodes.forEach(function(n){
+    var app = n.dataset.app;
+    n.addEventListener('mouseenter', function(){ highlight(app, true); showTip(n); });
+    n.addEventListener('mouseleave', function(){ highlight(app, false); hideTip(); });
+    n.addEventListener('focus', function(){ highlight(app, true); showTip(n); });
+    n.addEventListener('blur', function(){ highlight(app, false); hideTip(); });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.app-row'), function(row){
+    row.addEventListener('mouseenter', function(){ highlight(row.dataset.app, true); });
+    row.addEventListener('mouseleave', function(){ highlight(row.dataset.app, false); });
+  });
+
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){
+    Array.prototype.forEach.call(document.querySelectorAll('svg'), function(s){
+      try { s.pauseAnimations(); } catch(e){}
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How SceneLilt localizes a locked video master for every market: ingest, transcription, dubbing, on-screen adaptation, review, and export.">
+<meta name="theme-color" content="#f3eee6">
+<title>How it works — SceneLilt</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23141110'/%3E%3Cpath d='M4 22c3-8 5-8 8 0s5 8 8 0 5-8 8 0' fill='none' stroke='%23c24e2a' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: #f3eee6;
+    color: #1a1612;
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", "Hiragino Sans", "Yu Gothic", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  img, svg { display: block; max-width: 100%; }
+  h1, h2, h3, p { margin: 0; }
+  ul, ol { margin: 0; padding: 0; }
+  a { color: inherit; }
+  button, input { font: inherit; }
+  ::selection { background: #f0c7b8; color: #1a1612; }
+  :focus-visible { outline: 2px solid #c24e2a; outline-offset: 3px; }
+  .skip {
+    position: absolute;
+    left: 12px;
+    top: -48px;
+    background: #141110;
+    color: #faf7f2;
+    padding: 8px 12px;
+    z-index: 40;
+  }
+  .skip:focus { top: 8px; }
+  .wrap { width: min(1120px, calc(100% - 40px)); margin-inline: auto; }
+  .serif { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; }
+  .mono { font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace; }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgba(243, 238, 230, 0.94);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #d9d0c3;
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 68px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .logo span {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.45rem;
+    letter-spacing: -0.03em;
+  }
+  .nav { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  .nav a {
+    text-decoration: none;
+    font-size: 0.92rem;
+    color: #3f3832;
+  }
+  .nav a[aria-current="page"] { box-shadow: inset 0 -1px 0 #c24e2a; }
+  .header-cta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .asof { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #6e675f; }
+  .btn {
+    display: inline-block;
+    text-decoration: none;
+    background: #c24e2a;
+    color: #faf7f2;
+    padding: 10px 14px;
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+  .btn:hover { background: #8e3418; }
+  .btn.dark { background: #141110; color: #faf7f2; }
+  .btn.dark:hover { background: #2a2420; }
+  .btn.ghost {
+    background: transparent;
+    color: #faf7f2;
+    border: 1px solid rgba(250, 247, 242, 0.45);
+  }
+
+  .intro { padding: 56px 0 36px; }
+  .intro-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.78fr);
+    gap: 48px;
+    align-items: end;
+  }
+  h1 {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(2.7rem, 5.4vw, 4.7rem);
+    line-height: 0.96;
+    letter-spacing: -0.03em;
+  }
+  h1 .eyebrow {
+    display: block;
+    font-family: "Avenir Next", "Segoe UI", sans-serif;
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #c24e2a;
+    margin-bottom: 14px;
+  }
+  .lilt { margin: 16px 0 18px; }
+  .dek { max-width: 64ch; color: #3a342e; font-size: 1.02rem; }
+  .dek + .dek { margin-top: 12px; }
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid #d9d0c3;
+  }
+  .stat strong {
+    display: block;
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  .stat span { display: block; color: #5e564e; font-size: 0.82rem; margin-top: 4px; }
+
+  .ticket {
+    background: #fffcf8;
+    border: 1px solid #1a1612;
+    box-shadow: 7px 7px 0 #1a1612;
+    padding: 16px 18px 18px;
+  }
+  .ticket-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #c8bfb4;
+    margin-bottom: 12px;
+  }
+  .ticket-kicker {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6e675f;
+  }
+  .stamp {
+    border: 1.5px solid #c24e2a;
+    color: #c24e2a;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 7px;
+    transform: rotate(-8deg);
+    font-weight: 700;
+  }
+  .ticket h2 {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.7rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin: 2px 0 4px;
+  }
+  .ticket .brand { color: #5e564e; font-size: 0.92rem; }
+  .ticket dl { display: grid; grid-template-columns: 92px 1fr; gap: 6px 10px; margin: 14px 0 0; font-size: 0.88rem; }
+  .ticket dt { color: #6e675f; }
+  .ticket dd { margin: 0; }
+  .barcode {
+    height: 28px;
+    margin-top: 16px;
+    background: repeating-linear-gradient(90deg, #1a1612 0 1px, transparent 1px 3px, #1a1612 3px 5px, transparent 5px 8px, #1a1612 8px 9px, transparent 9px 12px);
+    opacity: 0.85;
+  }
+
+  .fit { background: #e7dfd2; padding: 64px 0; border-top: 1px solid #d9d0c3; }
+  h2 {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(1.8rem, 3vw, 2.55rem);
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+  }
+  .section-kicker {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8e3418;
+    margin-bottom: 8px;
+  }
+  .lede { max-width: 68ch; color: #3a342e; margin-top: 12px; }
+  .flow {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .flow li {
+    background: #fffcf8;
+    border-top: 3px solid #1a1612;
+    padding: 12px 12px 14px;
+    min-height: 100%;
+  }
+  .flow li.in { border-top-color: #c24e2a; }
+  .flow .tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8e3418;
+    margin-bottom: 8px;
+  }
+  .flow h3 {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .flow p { font-size: 0.84rem; color: #3f3832; }
+  .flow .when { display: block; margin-top: 8px; font-size: 12px; color: #6e675f; }
+  .fit-note { margin-top: 18px; max-width: 78ch; }
+  .mini-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .mini-stats div { border-top: 1px solid #1a1612; padding-top: 8px; }
+  .mini-stats strong { display: block; font-size: 1.05rem; }
+  .mini-stats span { font-size: 0.8rem; color: #4a433c; }
+
+  .steps-head { padding: 64px 0 8px; }
+  .index {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .index a {
+    display: block;
+    text-decoration: none;
+    background: #fffcf8;
+    border: 1px solid #d9d0c3;
+    padding: 10px 10px 12px;
+    min-height: 100%;
+  }
+  .index a:hover { border-color: #1a1612; }
+  .index .n { display: block; color: #c24e2a; font-size: 12px; letter-spacing: 0.08em; }
+  .index strong { display: block; font-size: 0.92rem; margin-top: 4px; font-weight: 600; }
+
+  .step { position: relative; overflow: hidden; padding: 64px 0; border-top: 1px solid rgba(26, 22, 18, 0.12); }
+  .step.dark { background: #141110; color: #f3eee6; border-top-color: rgba(243, 238, 230, 0.08); }
+  .step::after {
+    content: attr(data-num);
+    position: absolute;
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: clamp(8rem, 18vw, 16rem);
+    line-height: 0.8;
+    right: -0.04em;
+    bottom: -0.12em;
+    color: rgba(26, 22, 18, 0.045);
+    pointer-events: none;
+  }
+  .step.dark::after { color: rgba(243, 238, 230, 0.045); }
+  .step .wrap { position: relative; z-index: 1; }
+  .step-grid {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) minmax(0, 1.08fr);
+    gap: 28px 32px;
+    align-items: start;
+  }
+  .num {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 2.4rem;
+    color: #c24e2a;
+    line-height: 0.9;
+  }
+  .step.dark .num { color: #e07a5a; }
+  .phase {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #6e675f;
+  }
+  .step.dark .phase { color: #b7aea3; }
+  h3.step-title {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(1.55rem, 2.5vw, 2.05rem);
+    letter-spacing: -0.025em;
+    line-height: 1.12;
+    margin-bottom: 12px;
+  }
+  .step p { color: #3a342e; }
+  .step.dark p { color: #ddd4c8; }
+  .step-copy p + p { margin-top: 10px; }
+  .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .role {
+    background: #fffcf8;
+    color: #1a1612;
+    border: 1px solid #d9d0c3;
+    padding: 12px;
+    font-size: 0.88rem;
+  }
+  .role strong {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .role.team strong { color: #1e4d6b; }
+  .role.product strong { color: #c24e2a; }
+  .flight-note {
+    border-left: 2px solid #c24e2a;
+    margin-top: 16px;
+    padding: 2px 0 2px 12px;
+    color: inherit;
+  }
+  .quote {
+    margin-top: 16px;
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.25rem;
+    line-height: 1.3;
+    color: #1a1612;
+  }
+  .step.dark .quote { color: #faf7f2; }
+  .quote cite { display: block; margin-top: 8px; font-style: normal; font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 0.82rem; color: #6e675f; }
+  .step.dark .quote cite { color: #b7aea3; }
+
+  .window {
+    background: #fffcf8;
+    color: #1a1612;
+    border: 1px solid #d4cdc2;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 18px 44px rgba(20, 18, 16, 0.14);
+  }
+  .window-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #221e1b;
+    color: #f3eee6;
+    padding: 9px 12px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .dots { display: flex; gap: 5px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; display: block; background: #6e675f; }
+  .dots i:first-child { background: #c24e2a; }
+  .window-bar b { font-weight: 600; }
+  .window-body { padding: 12px; }
+  .caption { margin-top: 8px; font-size: 11px; letter-spacing: 0.03em; color: #6e675f; }
+  .step.dark .caption { color: #b7aea3; }
+
+  .file {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    gap: 10px;
+    align-items: center;
+    background: #f6f1e8;
+    border: 1px solid #e4daca;
+    padding: 10px;
+  }
+  .file-ico {
+    width: 42px;
+    height: 42px;
+    background: #1a1612;
+    color: #f3eee6;
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+  .file strong { display: block; font-size: 0.86rem; word-break: break-all; }
+  .file span, .meta { color: #5e564e; font-size: 0.78rem; }
+  .chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chips li {
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid #d4cdc2;
+    color: #6e675f;
+    background: #fff;
+  }
+  .chips li.on { background: #1a1612; color: #faf7f2; border-color: #1a1612; }
+  .check-list { list-style: none; margin-top: 10px; display: grid; gap: 6px; }
+  .check-list li { font-size: 0.84rem; display: flex; gap: 8px; }
+  .check-list i {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    background: #2f6a56;
+    color: white;
+    font-style: normal;
+    font-size: 11px;
+    display: grid;
+    place-items: center;
+    margin-top: 2px;
+  }
+
+  .picture {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(ellipse at 50% 38%, rgba(255, 236, 214, 0.95), transparent 46%),
+      linear-gradient(155deg, #f0d4c0 0%, #c4846a 46%, #6a4336 100%);
+    overflow: hidden;
+  }
+  .picture.alt {
+    background:
+      radial-gradient(ellipse at 48% 36%, rgba(255, 244, 230, 0.9), transparent 42%),
+      linear-gradient(160deg, #e7d3bf 0%, #b87462 50%, #4e342c 100%);
+  }
+  .bottle {
+    position: absolute;
+    left: 50%;
+    top: 18%;
+    width: 46px;
+    height: 108px;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 8px 8px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.28), rgba(255,255,255,0.78) 42%, rgba(255,255,255,0.25));
+    border: 1px solid rgba(255,255,255,0.85);
+    box-shadow: 0 10px 24px rgba(70, 30, 18, 0.25);
+  }
+  .bottle::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: 14px;
+    width: 16px;
+    height: 12px;
+    background: #c6a15b;
+    border-radius: 2px 2px 0 0;
+  }
+  .bottle span {
+    position: absolute;
+    left: 0; right: 0;
+    top: 46%;
+    text-align: center;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    color: #6a4336;
+  }
+  .onscreen {
+    position: absolute;
+    left: 8%;
+    margin: 0;
+    color: #fffaf5;
+    text-shadow: 0 1px 8px rgba(60, 24, 14, 0.45);
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    letter-spacing: 0.04em;
+  }
+  .onscreen.super { top: 10%; font-size: 15px; }
+  .onscreen.claim { bottom: 16%; font-size: 12px; font-family: "Avenir Next", "Segoe UI", sans-serif; letter-spacing: 0; }
+  .onscreen.legal { bottom: 6%; font-size: 8px; font-family: "Avenir Next", "Segoe UI", sans-serif; opacity: 0.9; letter-spacing: 0; }
+  .hot {
+    position: absolute;
+    border: 1px dashed rgba(255, 250, 245, 0.85);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #fffaf5;
+    padding: 1px 4px;
+    text-transform: uppercase;
+  }
+  .hot.a { top: 8%; left: 6%; }
+  .hot.b { bottom: 22%; left: 6%; }
+  .player-bar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 2px 2px;
+    font-size: 11px;
+    color: #5e564e;
+  }
+  .scrub { height: 4px; background: #e4daca; position: relative; }
+  .scrub span { position: absolute; inset: 0 auto 0 0; background: #c24e2a; }
+  .detect { list-style: none; margin-top: 10px; display: grid; gap: 6px; }
+  .detect li {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 8px;
+    font-size: 0.78rem;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #efe7dc;
+  }
+  .detect li:last-child { border-bottom: 0; }
+  .tag-claim { color: #8e3418; }
+
+  .split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th, td { text-align: left; padding: 7px 8px; vertical-align: top; border-bottom: 1px solid #efe7dc; }
+  th {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6e675f;
+    font-weight: 600;
+  }
+  .voices { list-style: none; display: grid; gap: 6px; }
+  .voices li { display: flex; justify-content: space-between; gap: 8px; font-size: 0.8rem; border-bottom: 1px solid #efe7dc; padding-bottom: 6px; }
+  .pill {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 99px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+  .ok { background: #e7f3ec; color: #1e5644; }
+  .warn { background: #f8ecd8; color: #8a4e0f; }
+  .info { background: #e5f0f6; color: #1a4660; }
+  .hold { background: #f8e8e2; color: #8e3418; }
+  .muted { color: #5e564e; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .compare figcaption { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6e675f; margin-bottom: 4px; }
+  .edit-rows { display: grid; gap: 8px; margin-top: 10px; }
+  .edit-row { border: 1px solid #efe7dc; padding: 8px; background: #fff; }
+  .edit-row header { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #6e675f; margin-bottom: 4px; }
+  .edit-row p { font-size: 0.84rem; color: #1a1612; }
+  .tones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tones span { font-size: 12px; padding: 3px 8px; border: 1px solid #d4cdc2; color: #6e675f; }
+  .tones .sel { background: #1a1612; color: #faf7f2; border-color: #1a1612; }
+
+  .thread { list-style: none; display: grid; gap: 10px; }
+  .thread li { display: grid; grid-template-columns: 36px 1fr; gap: 8px; }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .av-ar { background: #c24e2a; }
+  .av-lv { background: #8a4e0f; }
+  .av-sh { background: #1e4d6b; }
+  .av-ks { background: #2f6a56; }
+  .av-la { background: #7a3e2e; }
+  .av-mp { background: #3e4c5e; }
+  .av-mc { background: #1e4d6b; }
+  .av-rc { background: #2f6a56; }
+  .av-jo { background: #8a4e0f; }
+  .thread p { font-size: 0.84rem; color: #1a1612; }
+  .thread .who { font-size: 0.78rem; color: #5e564e; margin-bottom: 2px; }
+  .gate {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    background: #1a1612;
+    color: #faf7f2;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+  }
+
+  .files { list-style: none; display: grid; gap: 6px; }
+  .files li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.8rem;
+    padding: 7px 0;
+    border-bottom: 1px solid #efe7dc;
+  }
+  .files small { display: block; color: #6e675f; font-size: 11px; }
+
+  .board { padding: 64px 0 72px; border-top: 1px solid #d9d0c3; }
+  .board-head { display: flex; justify-content: space-between; gap: 18px; align-items: end; flex-wrap: wrap; margin-bottom: 22px; }
+  .board-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; margin-bottom: 14px; }
+  .panel {
+    background: #fffcf8;
+    border: 1px solid #d9d0c3;
+    padding: 14px;
+  }
+  .panel h3 {
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .panel .sub { color: #5e564e; font-size: 0.84rem; margin-bottom: 12px; }
+  .bars { list-style: none; display: grid; gap: 8px; }
+  .bars li { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; align-items: center; font-size: 0.82rem; }
+  .track { height: 8px; background: #efe7dc; }
+  .fill { display: block; height: 100%; background: #c24e2a; }
+  .fill.done { background: #2f6a56; }
+  .fill.mid { background: #1e4d6b; }
+  .spec-list { list-style: none; display: grid; gap: 7px; font-size: 0.88rem; }
+  .spec-list li { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid #efe7dc; padding-bottom: 6px; }
+  .market-table { background: #fffcf8; }
+  .table-wrap { overflow-x: auto; border: 1px solid #d9d0c3; background: #fffcf8; margin-bottom: 14px; }
+  .market-table caption {
+    text-align: left;
+    padding: 12px 12px 0;
+    font-family: "Iowan Old Style", Palatino, Georgia, serif;
+    font-size: 1.3rem;
+  }
+  .market-table th, .market-table td { padding: 10px 12px; }
+  .cal { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .day { background: #f6f1e8; padding: 8px; min-height: 108px; }
+  .day .dow { display: block; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #6e675f; }
+  .day .date { display: block; font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 1.3rem; }
+  .day .evt { display: block; margin-top: 6px; font-size: 0.75rem; color: #3a342e; }
+  .day.today { background: #1a1612; color: #faf7f2; }
+  .day.today .dow, .day.today .evt { color: #ddd4c8; }
+  .roster { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .roster li { display: flex; gap: 8px; align-items: center; background: #f6f1e8; padding: 8px; }
+  .roster strong { display: block; font-size: 0.88rem; }
+  .roster em { display: block; font-style: normal; font-size: 0.75rem; color: #5e564e; }
+
+  .close { background: #141110; color: #f3eee6; padding: 64px 0; }
+  .close-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 36px; align-items: start; }
+  .close p { color: #ddd4c8; margin-top: 12px; max-width: 52ch; }
+  .slots { list-style: none; display: grid; gap: 8px; }
+  .slots li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid rgba(243, 238, 230, 0.2);
+    padding: 12px;
+  }
+  .slots strong { display: block; }
+  .slots span { color: #ddd4c8; font-size: 0.84rem; }
+  .close-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+
+  .site-footer { background: #0e0c0a; color: #c8bfb4; padding: 28px 0 36px; font-size: 0.84rem; }
+  .footer-inner { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+  .site-footer a { color: #f3eee6; }
+  .site-footer strong { color: #faf7f2; font-weight: 600; }
+
+  @media (max-width: 980px) {
+    .intro-grid, .step-grid, .board-grid, .close-grid, .split { grid-template-columns: 1fr; }
+    .flow, .index { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stat-row, .mini-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .step-grid { gap: 16px; }
+    .roles { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 720px) {
+    .wrap { width: min(1120px, calc(100% - 28px)); }
+    .flow, .index, .cal, .roster { grid-template-columns: 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .detect li { grid-template-columns: 1fr; gap: 2px; }
+    .bars li { grid-template-columns: 1fr; gap: 3px; }
+    .market-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .market-table tr { display: block; border-bottom: 8px solid #f3eee6; }
+    .market-table td {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 8px;
+      border-bottom: 0;
+    }
+    .market-table td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6e675f;
+    }
+    .header-inner { align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#how-it-works">Skip to How it works</a>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="logo" href="#how-it-works">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+        <rect x="1.2" y="1.2" width="25.6" height="25.6" fill="none" stroke="#1a1612" stroke-width="1.4"/>
+        <path d="M4 19c2.2-6 4.2-6 6.4 0s4.2 6 6.4 0 4.2-6 6.4 0" fill="none" stroke="#c24e2a" stroke-width="1.6"/>
+        <circle cx="7" cy="8" r="1.15" fill="#1a1612"/>
+        <circle cx="21" cy="8" r="1.15" fill="#1a1612"/>
+      </svg>
+      <span>SceneLilt</span>
+    </a>
+    <nav class="nav" aria-label="Section">
+      <a href="#how-it-works" aria-current="page">How it works</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#steps">Six steps</a>
+      <a href="#campaign">Live flight</a>
+      <a href="#walkthrough">Walkthrough</a>
+    </nav>
+    <div class="header-cta">
+      <p class="asof mono">SL-2481 · Fri 10 Apr 2026, 16:10 CET</p>
+      <a class="btn" href="#walkthrough">Book a walkthrough</a>
+    </div>
+  </div>
+</header>
+
+<main id="how-it-works">
+  <section class="intro">
+    <div class="wrap intro-grid">
+      <div>
+        <h1>
+          <span class="eyebrow">How it works</span>
+          One locked master. Every market’s cut.
+        </h1>
+        <svg class="lilt" viewBox="0 0 220 24" width="180" height="20" aria-hidden="true">
+          <path d="M2 16 C 30 16, 30 4, 58 4 S 86 16, 114 16 S 142 4, 170 4 198 16, 218 16" fill="none" stroke="#c24e2a" stroke-width="1.6"/>
+        </svg>
+        <p class="dek">SceneLilt is the localization bay for marketing teams. You upload a master video and select the markets and languages. The platform transcribes the original dialogue, identifies spoken and on-screen content, translates the copy, generates dubbed audio, and adapts on-screen text.</p>
+        <p class="dek">Teams compare each localized version with the original and edit language, timing, pronunciation, and tone. Reviewers comment on and approve individual market versions. Approved videos export in the formats required for publishing. The locked picture and music bed stay put — SceneLilt does not reopen the edit.</p>
+        <div class="stat-row" aria-label="Spring Refresh flight at a glance">
+          <div class="stat"><strong>30s</strong><span>EN-US master, picture locked</span></div>
+          <div class="stat"><strong>7</strong><span>markets in flight SL-2481</span></div>
+          <div class="stat"><strong>2h 18m</strong><span>upload to first review links</span></div>
+          <div class="stat"><strong>2 of 7</strong><span>markets approved, 4 files exported</span></div>
+        </div>
+      </div>
+      <aside class="ticket" aria-label="Job ticket for Spring Refresh">
+        <div class="ticket-top">
+          <p class="ticket-kicker mono">SceneLilt · job ticket</p>
+          <span class="stamp">Mid-flight</span>
+        </div>
+        <p class="brand">Lumière Botanics</p>
+        <h2>Spring Refresh<br>Glow Serum, 30s</h2>
+        <dl>
+          <dt>Job</dt><dd class="mono">SL-2481</dd>
+          <dt>Master</dt><dd>EN-US · 00:30 · 23.976 fps</dd>
+          <dt>Picture</dt><dd>1920×1080 · Rec.709 · 842 MB</dd>
+          <dt>Markets</dt><dd>FR, DE, JP, BR, MX, AE, KR</dd>
+          <dt>Deliverables</dt><dd>14 on the media plan</dd>
+          <dt>Producer</dt><dd>Maya Chen</dd>
+          <dt>Opened</dt><dd><time datetime="2026-04-08T09:14:00+02:00">8 Apr 2026, 09:14 CET</time></dd>
+          <dt>Stage</dt><dd>Review · 2 cleared, 5 open</dd>
+        </dl>
+        <div class="barcode" aria-hidden="true"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="fit" id="workflow">
+    <div class="wrap">
+      <p class="section-kicker mono">Where it sits</p>
+      <h2>Between picture lock and the publish sheet.</h2>
+      <p class="lede">SceneLilt does not replace the brief, the edit bay, or the in-market reviewer. It runs localization production — transcription, translation, dub, and type — and keeps every market version reviewable and exportable without a second timeline in the NLE.</p>
+      <ol class="flow">
+        <li>
+          <span class="tag">Before SceneLilt</span>
+          <h3>Picture lock</h3>
+          <p>Brand and the edit bay lock the master, the music bed, and the claim footnote.</p>
+          <span class="when mono">Done · Tue 7 Apr · Studio North</span>
+        </li>
+        <li class="in">
+          <span class="tag">SceneLilt</span>
+          <h3>Ingest and read</h3>
+          <p>Upload, market select, transcription, and on-screen detection. The master stays the source of truth.</p>
+          <span class="when mono">Done · Wed 8 Apr, 09:29 CET</span>
+        </li>
+        <li class="in">
+          <span class="tag">Shared</span>
+          <h3>Produce and refine</h3>
+          <p>Translation, dubbed audio, type adaptation, then edits to language, timing, pronunciation, and tone.</p>
+          <span class="when mono">In progress · JP, BR, KR, FR</span>
+        </li>
+        <li class="in">
+          <span class="tag">Reviewers</span>
+          <h3>Comment and approve</h3>
+          <p>Each market is approved on its own. A slow note in France does not hold Mexico.</p>
+          <span class="when mono">2 of 7 approved · DE, MX</span>
+        </li>
+        <li class="in">
+          <span class="tag">Then media ops</span>
+          <h3>Export and publish</h3>
+          <p>Approved cuts leave in the channel specs. Jules Okonkwo traffics them; he does not re-encode.</p>
+          <span class="when mono">4 files with media ops</span>
+        </li>
+      </ol>
+      <p class="fit-note">Reviewers never need the edit timeline. Media ops never receives a market that has not been approved. Editors stay in the edit bay.</p>
+      <div class="mini-stats" aria-label="Time spent on this 30-second flight">
+        <div><strong>11 min</strong><span>Maya’s setup: upload, markets, claim confirm</span></div>
+        <div><strong>2h 18m</strong><span>09:14 upload to 11:32 review links</span></div>
+        <div><strong>52 min</strong><span>Lena Vogel’s Germany approval, logged</span></div>
+        <div><strong>Same day</strong><span>DE and MX publish files exported 8 Apr</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="steps">
+    <div class="wrap steps-head">
+      <p class="section-kicker mono">Inside the product</p>
+      <h2>Six steps, one job, seven markets.</h2>
+      <p class="lede">The walkthrough below is job SL-2481 as it stands this afternoon — not a blank demo. Spring Refresh is a 30-second Glow Serum spot moving through SceneLilt for Lumière Botanics.</p>
+      <ol class="index">
+        <li><a href="#ingest"><span class="n mono">01</span><strong>Ingest</strong></a></li>
+        <li><a href="#read"><span class="n mono">02</span><strong>Read</strong></a></li>
+        <li><a href="#produce"><span class="n mono">03</span><strong>Produce</strong></a></li>
+        <li><a href="#refine"><span class="n mono">04</span><strong>Refine</strong></a></li>
+        <li><a href="#review"><span class="n mono">05</span><strong>Review</strong></a></li>
+        <li><a href="#deliver"><span class="n mono">06</span><strong>Deliver</strong></a></li>
+      </ol>
+    </div>
+
+    <article class="step" id="ingest" data-num="01">
+      <div class="wrap step-grid">
+        <div>
+          <span class="num">01</span>
+          <span class="phase mono">Ingest</span>
+        </div>
+        <div class="step-copy">
+          <h3 class="step-title">Upload the master. Name the markets and languages.</h3>
+          <p>The picture stays locked. A producer uploads the master and ticks the markets on the media plan — the actual flight, not a guess. SceneLilt opens one localization job, pins the brand glossary and claim rules to it, and treats that file as the source of truth for every version that follows.</p>
+          <p>Safe-area presets travel with the file, so a 9:16 social cut and a 16:9 broadcast master are planned at ingest, not invented at export.</p>
+          <div class="roles">
+            <div class="role team"><strong>Your team</strong>Uploads the locked cut and selects markets and languages from the brief.</div>
+            <div class="role product"><strong>SceneLilt</strong>Ingests the file, attaches the glossary, safe areas, and claim rules, and opens the job.</div>
+          </div>
+          <p class="flight-note">This flight: Maya Chen selected 7 of 10 slate markets at 09:21. Italy, Spain, and Canada (French) stay off Spring Refresh.</p>
+        </div>
+        <div>
+          <div class="window">
+            <div class="window-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><b class="mono">SL-2481 · Ingest</b></div>
+            <div class="window-body">
+              <div class="file">
+                <div class="file-ico mono">MOV</div>
+                <div>
+                  <strong class="mono">LB_SpringRefresh_GlowSerum_30s_EN-US.mov</strong>
+                  <span>00:30 · 23.976 fps · 1920×1080 · Rec.709 · 842 MB</span>
+                </div>
+              </div>
+              <p class="meta" style="margin-top:8px">Ingest complete in 4 min 12 sec · checksum matched · picture locked · uploaded by Maya Chen, 8 Apr 2026, 09:14 CET</p>
+              <ul class="chips" aria-label="Markets">
+                <li class="on">France · fr-FR</li>
+                <li class="on">Germany · de-DE</li>
+                <li class="on">Japan · ja-JP</li>
+                <li class="on">Brazil · pt-BR</li>
+                <li class="on">Mexico · es-MX</li>
+                <li class="on">UAE · ar-AE</li>
+                <li class="on">Korea · ko-KR</li>
+                <li>Italy · it-IT</li>
+                <li>Spain · es-ES</li>
+                <li>Canada · fr-CA</li>
+              </ul>
+              <ul class="check-list">
+                <li><i>✓</i><span>Glossary v3 attached · 148 terms · locked 6 Apr by Maya Chen</span></li>
+                <li><i>✓</i><span>Claim rule: do not strengthen clinical lines. Footnote travels with the claim.</span></li>
+                <li><i>✓</i><span>Safe areas: 16:9 broadcast, 9:16 social (250px clearance), 1:1 feed</span></li>
+              </ul>
+            </div>
+          </div>
+          <p class="caption mono">Product view · job SL-2481 · 7 markets selected</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="step dark" id="read" data-num="02">
+      <div class="wrap step-grid">
+        <div>
+          <span class="num">02</span>
+          <span class="phase mono">Read</span>
+        </div>
+        <div class="step-copy">
+          <h3 class="step-title">Transcribe the dialogue. Identify every on-screen line.</h3>
+          <p>Before anyone translates, SceneLilt listens and looks. Spoken lines are transcribed to timecode with the speaker labeled. On-screen content — supers, lower thirds, pack shots, end cards, legal lines — is detected separately, so a claim is never folded into the voiceover script.</p>
+          <p>Music is marked and left alone. Only dialogue and type move downstream.</p>
+          <div class="roles">
+            <div class="role team"><strong>Your team</strong>Confirms speaker labels and which on-screen lines are substantiated claims.</div>
+            <div class="role product"><strong>SceneLilt</strong>Transcribes spoken dialogue and identifies on-screen content, both locked to timecode.</div>
+          </div>
+          <p class="flight-note">This flight: read finished at 09:29. Five spoken lines, five on-screen regions, one claim flagged. Music bed 00:00:00–00:30:00 ignored.</p>
+        </div>
+        <div>
+          <div class="window">
+            <div class="window-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><b class="mono">SL-2481 · Read</b><span>EN-US master</span></div>
+            <div class="window-body">
+              <div class="picture" role="img" aria-label="Frame at 8 seconds showing Glow Serum bottle, super Glow from within, and the 14-day claim.">
+                <div class="bottle"><span>GLOW</span></div>
+                <span class="hot a">Super · 0.98</span>
+                <span class="hot b">Claim · 0.95</span>
+                <p class="onscreen super">GLOW FROM WITHIN</p>
+                <p class="onscreen claim">30% brighter in 14 days*</p>
+                <p class="onscreen legal">*Clinical study, n=42, 14 days. Results vary.</p>
+              </div>
+              <div class="player-bar mono"><span>00:08:14</span><span class="scrub"><span style="width:27%"></span></span><span>00:30:00</span></div>
+              <ul class="detect">
+                <li><span class="mono">00:00.40</span><span>VO · Priya Nandakumar — “There’s a kind of light that doesn’t come from outside.”</span><span class="pill info">Spoken</span></li>
+                <li><span class="mono">00:02.08</span><span>Super · “GLOW FROM WITHIN” · held to 00:07.20</span><span class="pill info">On-screen</span></li>
+                <li><span class="mono">00:08.14</span><span class="tag-claim">Claim · “30% brighter in 14 days*” · study n=42 · footnote must travel</span><span class="pill hold">Claim</span></li>
+                <li><span class="mono">00:18.02</span><span>Pack · “Lumière Botanics / Glow Serum” · brand, do not translate</span><span class="pill ok">Locked</span></li>
+                <li><span class="mono">00:26.10</span><span>End card · “Find your light.” plus legal line to 00:29.12</span><span class="pill info">On-screen</span></li>
+              </ul>
+            </div>
+          </div>
+          <p class="caption mono">Detection complete · speaker Priya Nandakumar · no second speaker · Maya confirmed claims at 09:25</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="step" id="produce" data-num="03">
+      <div class="wrap step-grid">
+        <div>
+          <span class="num">03</span>
+          <span class="phase mono">Produce</span>
+        </div>
+        <div class="step-copy">
+          <h3 class="step-title">Translate, dub, and adapt the on-screen text.</h3>
+          <p>Each market gets three tracks, not one blob of “the translation.” Copy is translated against the glossary. A matched voice generates the dubbed audio. On-screen text is rewritten for length, script, and reading direction — Arabic mirrors the layout, Japanese can run vertical, German drops a word so the claim still clears the bottle.</p>
+          <p>The spoken line can keep a figure the bottle cannot fit. The footnote still travels with the claim in every language.</p>
+          <div class="roles">
+            <div class="role team"><strong>Your team</strong>Sets voice direction and signs glossary exceptions. Kenji Sato cast the seven reads.</div>
+            <div class="role product"><strong>SceneLilt</strong>Translates, generates dubbed audio, and adapts on-screen text per market, including right-to-left.</div>
+          </div>
+          <p class="flight-note">This flight: 65 of 70 strings drafted. Korean dialogue is still in translation. German claim shortened to “Strahlender in 14 Tagen*” — the VO still says thirty percent.</p>
+        </div>
+        <div>
+          <div class="window">
+            <div class="window-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><b class="mono">SL-2481 · Produce</b></div>
+            <div class="window-body">
+              <div class="split">
+                <div>
+                  <table>
+                    <caption class="mono" style="text-align:left;caption-side:top;padding-bottom:6px;color:#6e675f">Localized strings</caption>
+                    <thead><tr><th>TC</th><th>Master</th><th>Market line</th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td class="mono">00:02</td>
+                        <td>GLOW FROM WITHIN</td>
+                        <td><span lang="fr">L’éclat vient de l’intérieur</span> · FR super</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">00:08</td>
+                        <td>30% brighter in 14 days*</td>
+                        <td><span lang="de">Strahlender in 14 Tagen*</span> · DE · shortened</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">00:00</td>
+                        <td>There’s a kind of light…</td>
+                        <td><span lang="ja">外から来る光じゃない。</span> · JA dialogue</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">00:26</td>
+                        <td>Find your light.</td>
+                        <td lang="ar" dir="rtl">اعثري على نورك.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p class="meta" style="margin-top:6px">Arabic end card uses feminine address, confirmed by Layla. Brand names Lumière Botanics and Glow Serum are untranslated in all 7 markets.</p>
+                </div>
+                <div>
+                  <p class="mono" style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#6e675f;margin-bottom:8px">Dubbed audio</p>
+                  <ul class="voices">
+                    <li><span>DE · Anke Berger</span><span class="pill ok">Take 1</span></li>
+                    <li><span>MX · Camila Ortiz</span><span class="pill ok">Take 1</span></li>
+                    <li><span>FR · Camille Laurent</span><span class="pill ok">Take 2</span></li>
+                    <li><span>JA · Yui Nakamura</span><span class="pill warn">Timing</span></li>
+                    <li><span>AE · Nour El-Sayed</span><span class="pill ok">Take 1</span></li>
+                    <li><span>BR · Helena Duarte</span><span class="pill info">Mixing</span></li>
+                    <li><span>KO · Seo-yeon Park</span><span class="pill hold">Queued</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="caption mono">Voice direction: warm alto, measured pace, matched to Priya Nandakumar · cast by Kenji Sato</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="step dark" id="refine" data-num="04">
+      <div class="wrap step-grid">
+        <div>
+          <span class="num">04</span>
+          <span class="phase mono">Refine</span>
+        </div>
+        <div class="step-copy">
+          <h3 class="step-title">Compare with the original. Edit language, timing, pronunciation, and tone.</h3>
+          <p>Put the master next to any localized version and play them on the same timecode. Nudge a line by frames if the dub lands late. Correct a pronunciation once — “Lumière” stays French in every market — and tag the tone the read should hold. Those notes feed the next pass. They do not live in a side email.</p>
+          <div class="roles">
+            <div class="role team"><strong>Your team</strong>Creative and linguists edit language, timing, pronunciation, and tone against the master.</div>
+            <div class="role product"><strong>SceneLilt</strong>Holds the compare view, the lexicon, and the tone tags on the job, not in a separate doc.</div>
+          </div>
+          <p class="flight-note">This flight: three pronunciation locks are in the lexicon. Japan’s pack-shot read is 4 frames late, noted by Kenji today at 10:20. France’s end card wording is still open.</p>
+        </div>
+        <div>
+          <div class="window">
+            <div class="window-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><b class="mono">SL-2481 · Compare</b><span>EN-US ↔ fr-FR · 00:08:14</span></div>
+            <div class="window-body">
+              <div class="compare">
+                <figure>
+                  <figcaption class="mono">Original · EN-US</figcaption>
+                  <div class="picture" role="img" aria-label="Original frame with English claim line.">
+                    <div class="bottle"><span>GLOW</span></div>
+                    <p class="onscreen super" style="font-size:12px">GLOW FROM WITHIN</p>
+                    <p class="onscreen claim">30% brighter in 14 days*</p>
+                  </div>
+                </figure>
+                <figure>
+                  <figcaption class="mono">Localized · fr-FR</figcaption>
+                  <div class="picture alt" role="img" aria-label="French frame with adapted super and claim.">
+                    <div class="bottle"><span>GLOW</span></div>
+                    <p class="onscreen super" style="font-size:11px" lang="fr">L’ÉCLAT VIENT DE L’INTÉRIEUR</p>
+                    <p class="onscreen claim" lang="fr">30 % plus éclatant en 14 jours*</p>
+                  </div>
+                </figure>
+              </div>
+              <div class="player-bar mono"><span>00:08:14</span><span class="scrub"><span style="width:27%"></span></span><span>sync locked</span></div>
+              <div class="edit-rows">
+                <div class="edit-row">
+                  <header><span>Language · FR end card</span><span class="pill warn">Open</span></header>
+                  <p>Current: <span lang="fr">“Trouvez votre lumière.”</span><br>Maya’s warmer alternate, 9 Apr 11:15: <span lang="fr">“Trouvez votre éclat.”</span> — waiting on Amélie.</p>
+                </div>
+                <div class="edit-row">
+                  <header><span>Timing · JA pack · 00:18:02</span><span class="pill info">−4 frames</span></header>
+                  <p>Yui Nakamura’s read lands late on the bottle. Nudge −4 frames. Re-render pending since 10:20 today. Kenji Sato.</p>
+                </div>
+                <div class="edit-row">
+                  <header><span>Pronunciation lexicon · 3 locks</span><span class="pill ok">Applied</span></header>
+                  <p>Lumière · /ly.mjɛʁ/ · keep French in all 7 dubs · Sofia Herrera, 8 Apr.<br>Serum · not “see-rum”. Botanics · English in every market.</p>
+                </div>
+                <div class="edit-row">
+                  <header><span>Tone · flight direction</span><span class="pill ok">Set</span></header>
+                  <div class="tones">
+                    <span class="sel">Warm</span>
+                    <span class="sel">Unhurried</span>
+                    <span class="sel">Confident</span>
+                    <span>Clinical</span>
+                    <span>Playful</span>
+                    <span>Hard-sell</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="caption mono">Compare is frame-locked to the master · edits write back to the market version, not a new timeline</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="step" id="review" data-num="05">
+      <div class="wrap step-grid">
+        <div>
+          <span class="num">05</span>
+          <span class="phase mono">Review</span>
+        </div>
+        <div class="step-copy">
+          <h3 class="step-title">Comment on a market. Approve that market. Leave the others moving.</h3>
+          <p>Approval is per market, not per campaign. France can be in notes while Mexico is cleared for export. Comments pin to a timecode or to a specific on-screen element, and a version cannot be exported until its reviewer approves it.</p>
+          <p>Review links are scoped. Amélie Roux’s link opens only France. She cannot approve Mexico, and she never sees the edit project.</p>
+          <div class="roles">
+            <div class="role team"><strong>Your reviewers</strong>Comment and approve their own market version. Brand can reply in the same thread.</div>
+            <div class="role product"><strong>SceneLilt</strong>Keeps the thread, the approval state, and the export hold until that market is cleared.</div>
+          </div>
+          <blockquote class="quote">“France can sit in notes while Mexico is already with media ops. We don’t hold the flight for the slowest market.”<cite>Maya Chen, Creative Producer, Lumière Botanics · noted on SL-2481</cite></blockquote>
+        </div>
+        <div>
+          <div class="window">
+            <div class="window-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><b class="mono">SL-2481 · Review</b></div>
+            <div class="window-body">
+              <div class="gate"><span>Export gate · 2 of 7 markets cleared</span><span class="mono">DE · MX</span></div>
+              <ul class="thread">
+                <li>
+                  <span class="avatar av-lv">LV</span>
+                  <div>
+                    <p class="who">Lena Vogel · Germany · <time datetime="2026-04-08T15:20:00+02:00">Wed 8 Apr, 15:20</time> · 52 min review</p>
+                    <p>End card tone is right. Claim footnote is present. Approved for Germany.</p>
+                    <span class="pill ok">Approved</span>
+                  </div>
+                </li>
+                <li>
+                  <span class="avatar av-sh">SH</span>
+                  <div>
+                    <p class="who">Sofia Herrera · Mexico · <time datetime="2026-04-08T17:05:00+02:00">Wed 8 Apr, 17:05</time> · 41 min review</p>
+                    <p>Keep “Lumière” French in the dub, not Spanish-ified. Added to the lexicon. Approved for Mexico.</p>
+                    <span class="pill ok">Approved</span>
+                  </div>
+                </li>
+                <li>
+                  <span class="avatar av-ar">AR</span>
+                  <div>
+                    <p class="who">Amélie Roux · France · 00:08:14 and 00:26:10 · <time datetime="2026-04-09T09:40:00+02:00">Thu 9 Apr, 09:40</time></p>
+                    <p>Claim line feels cramped against the bottle. End card “Trouvez votre lumière.” leans hard-sell — want the warmer alternate.</p>
+                    <span class="pill warn">2 comments open</span>
+                  </div>
+                </li>
+                <li>
+                  <span class="avatar av-la">LA</span>
+                  <div>
+                    <p class="who">Layla Al-Hassan · UAE · 00:26:10 · <time datetime="2026-04-09T16:48:00+02:00">Thu 9 Apr, 16:48</time></p>
+                    <p>After the RTL mirror, the Arabic end card is still left-aligned. Legal line collides with the bottle edge.</p>
+                    <span class="pill warn">RTL check open</span>
+                  </div>
+                </li>
+                <li>
+                  <span class="avatar av-ks">KS</span>
+                  <div>
+                    <p class="who">Kenji Sato · Japan · 00:18:02 · <time datetime="2026-04-10T10:20:00+02:00">Today, 10:20</time></p>
+                    <p>Pack-shot VO is 4 frames late. Do not send Japan to approval until the re-render lands.</p>
+                    <span class="pill info">Timing open</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <p class="caption mono">Threads are timecoded · approval is individual to the market · export stays held until that approval</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="step dark" id="deliver" data-num="06">
+      <div class="wrap step-grid">
+        <div>
+          <span class="num">06</span>
+          <span class="phase mono">Deliver</span>
+        </div>
+        <div class="step-copy">
+          <h3 class="step-title">Export approved videos in the formats publishing actually needs.</h3>
+          <p>When a market is approved, it leaves as the specs on the media plan — not a single generic download. Broadcast master, social cutdowns, burned-in or clean picture, caption sidecars. Held markets stay held, even if a preview render exists for reviewers.</p>
+          <p>Jules Okonkwo, media ops, received four files on 8 April and queued them to the publish sheet. He will traffic Germany and Mexico on Monday. He will not wait on France, and he will not re-encode.</p>
+          <div class="roles">
+            <div class="role team"><strong>Your media ops</strong>Confirms channel specs and traffics exported files to publishers.</div>
+            <div class="role product"><strong>SceneLilt</strong>Renders and packages only approved versions, in the formats the spec sheet names.</div>
+          </div>
+          <p class="flight-note">This flight: 4 publish files exported, 10 still held. Japan’s 9:16 preview is at 62% and remains export-locked until Kenji approves.</p>
+        </div>
+        <div>
+          <div class="window">
+            <div class="window-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><b class="mono">SL-2481 · Export</b><span>spec sheet SL-2481-MP</span></div>
+            <div class="window-body">
+              <p class="meta">Required formats, attached by Jules on 7 Apr: 16:9 H.264 8 Mbps AAC · ProRes 422 HQ · MXF XDCAM 50 · 9:16 H.264 with 250px title-safe · 1:1 burned-in · SRT UTF-8 sidecars.</p>
+              <ul class="files">
+                <li><div><strong class="mono">DE_de-DE_16x9_ProRes422HQ.mov</strong><small>1.12 GB · broadcast archive</small></div><span class="pill ok">Exported</span></li>
+                <li><div><strong class="mono">DE_de-DE_MXF_XDCAM50.mxf</strong><small>892 MB · broadcast</small></div><span class="pill ok">Exported</span></li>
+                <li><div><strong class="mono">MX_es-MX_16x9_h264.mp4</strong><small>46.8 MB · 1920×1080 · 8 Mbps</small></div><span class="pill ok">Exported</span></li>
+                <li><div><strong class="mono">MX_es-MX_1x1_burnedin.mp4</strong><small>31.4 MB · 1080×1080</small></div><span class="pill ok">Exported</span></li>
+                <li><div><strong class="mono">FR_fr-FR_16x9_h264.mp4</strong><small>Preview ready · publish export held</small></div><span class="pill warn">Held · review</span></li>
+                <li><div><strong class="mono">JP_ja-JP_9x16_h264.mp4</strong><small>Preview render 62% · not an export</small></div><span class="pill info">Locked</span></li>
+                <li><div><strong class="mono">BR_pt-BR_16x9_h264.mp4</strong><small>Queued behind Helena’s dub mix</small></div><span class="pill hold">Queued</span></li>
+                <li><div><strong class="mono">AE_ar-AE_16x9_clean.mp4</strong><small>Preview up · RTL fix open · clean picture</small></div><span class="pill warn">Held · RTL</span></li>
+                <li><div><strong class="mono">KR_ko-KR.srt</strong><small>4 KB draft sidecar for Min-jun · picture not exportable</small></div><span class="pill info">Draft only</span></li>
+              </ul>
+            </div>
+          </div>
+          <p class="caption mono">Naming · {Market}_{locale}_{ratio}_{codec} · only approved markets reach Jules</p>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="board" id="campaign">
+    <div class="wrap">
+      <div class="board-head">
+        <div>
+          <p class="section-kicker mono">Live flight · SL-2481</p>
+          <h2>Spring Refresh, as of this afternoon.</h2>
+          <p class="lede">Seven markets, one master, fourteen deliverables. Checklist progress counts seven gates: read, translate, dub, type, refine, approve, export.</p>
+        </div>
+        <p class="mono" style="font-size:12px;color:#6e675f">As of <time datetime="2026-04-10T16:10:00+02:00">Friday 10 April 2026, 16:10 CET</time></p>
+      </div>
+
+      <div class="board-grid">
+        <div class="panel">
+          <h3>Checklist by market</h3>
+          <p class="sub">Concrete completion, not a forecast. Germany and Mexico are the only markets through export.</p>
+          <ul class="bars">
+            <li><span>Germany</span><span class="track"><span class="fill done" style="width:100%"></span></span><span class="mono">7/7 · Approved</span></li>
+            <li><span>Mexico</span><span class="track"><span class="fill done" style="width:100%"></span></span><span class="mono">7/7 · Approved</span></li>
+            <li><span>France</span><span class="track"><span class="fill" style="width:57%"></span></span><span class="mono">4/7 · Refine</span></li>
+            <li><span>Japan</span><span class="track"><span class="fill mid" style="width:57%"></span></span><span class="mono">4/7 · Timing</span></li>
+            <li><span>UAE</span><span class="track"><span class="fill" style="width:43%"></span></span><span class="mono">3/7 · Type</span></li>
+            <li><span>Brazil</span><span class="track"><span class="fill mid" style="width:29%"></span></span><span class="mono">2/7 · Dub</span></li>
+            <li><span>Korea</span><span class="track"><span class="fill" style="width:14%"></span></span><span class="mono">1/7 · Translate</span></li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Market detail · France</h3>
+          <p class="sub">Open notes, so this is the version Maya is in today. Germany and Mexico are already with Jules.</p>
+          <ul class="spec-list">
+            <li><span>Locale</span><strong>fr-FR · Français (France)</strong></li>
+            <li><span>Voice</span><strong>Camille Laurent · take 2 accepted</strong></li>
+            <li><span>Strings</span><strong>10 of 10 drafted · 2 flagged</strong></li>
+            <li><span>Tone</span><strong>Warm, unhurried · end card in debate</strong></li>
+            <li><span>Reviewer</span><strong>Amélie Roux · link scoped to France</strong></li>
+            <li><span>Preview</span><strong>16:9 ready · publish export held</strong></li>
+            <li><span>Next</span><strong>Maya’s tone pass due Mon 13 Apr</strong></li>
+            <li><span>Owner time</span><strong>Comments opened Thu 9 Apr, 09:40 CET</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="market-table">
+          <caption>All seven markets</caption>
+          <thead>
+            <tr>
+              <th scope="col">Market</th>
+              <th scope="col">Language</th>
+              <th scope="col">Stage</th>
+              <th scope="col">Owner</th>
+              <th scope="col">Status</th>
+              <th scope="col">Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Market">France</td>
+              <td data-label="Language" lang="fr">Français (France)</td>
+              <td data-label="Stage"><span class="pill warn">Review</span></td>
+              <td data-label="Owner">Amélie Roux</td>
+              <td data-label="Status">2 open comments · export held</td>
+              <td data-label="Updated">Thu 9 Apr, 09:40</td>
+            </tr>
+            <tr>
+              <td data-label="Market">Germany</td>
+              <td data-label="Language" lang="de">Deutsch</td>
+              <td data-label="Stage"><span class="pill ok">Approved</span></td>
+              <td data-label="Owner">Lena Vogel</td>
+              <td data-label="Status">Cleared · 2 files with Jules</td>
+              <td data-label="Updated">Wed 8 Apr, 15:20</td>
+            </tr>
+            <tr>
+              <td data-label="Market">Japan</td>
+              <td data-label="Language" lang="ja">日本語</td>
+              <td data-label="Stage"><span class="pill info">Edit</span></td>
+              <td data-label="Owner">Kenji Sato</td>
+              <td data-label="Status">Pack shot −4 frames · re-render pending</td>
+              <td data-label="Updated">Fri 10 Apr, 10:20</td>
+            </tr>
+            <tr>
+              <td data-label="Market">Brazil</td>
+              <td data-label="Language" lang="pt">Português (Brasil)</td>
+              <td data-label="Stage"><span class="pill info">Dub</span></td>
+              <td data-label="Owner">Rafael Costa</td>
+              <td data-label="Status">Helena Duarte mix in progress</td>
+              <td data-label="Updated">Fri 10 Apr, 14:00</td>
+            </tr>
+            <tr>
+              <td data-label="Market">Mexico</td>
+              <td data-label="Language" lang="es">Español (México)</td>
+              <td data-label="Stage"><span class="pill ok">Approved</span></td>
+              <td data-label="Owner">Sofia Herrera</td>
+              <td data-label="Status">Cleared · 2 files with Jules</td>
+              <td data-label="Updated">Wed 8 Apr, 17:05</td>
+            </tr>
+            <tr>
+              <td data-label="Market">UAE</td>
+              <td data-label="Language" lang="ar" dir="rtl">العربية</td>
+              <td data-label="Stage"><span class="pill warn">Review</span></td>
+              <td data-label="Owner">Layla Al-Hassan</td>
+              <td data-label="Status">RTL end card colliding with bottle</td>
+              <td data-label="Updated">Thu 9 Apr, 16:48</td>
+            </tr>
+            <tr>
+              <td data-label="Market">Korea</td>
+              <td data-label="Language" lang="ko">한국어</td>
+              <td data-label="Stage"><span class="pill hold">Produce</span></td>
+              <td data-label="Owner">Min-jun Park</td>
+              <td data-label="Status">On-screen locked · dialogue translating</td>
+              <td data-label="Updated">Fri 10 Apr, 15:30</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="board-grid">
+        <div class="panel">
+          <h3>Review calendar · April 2026</h3>
+          <p class="sub">Workdays only. Weekend of 11–12 April is a render hold: no reviews booked, dub queue keeps running.</p>
+          <div class="cal">
+            <div class="day"><span class="dow mono">Mon 6</span><span class="date">6</span><span class="evt">Brief and glossary v3 locked by Maya Chen.</span></div>
+            <div class="day"><span class="dow mono">Tue 7</span><span class="date">7</span><span class="evt">Picture lock at Studio North. Spec sheet filed by Jules.</span></div>
+            <div class="day"><span class="dow mono">Wed 8</span><span class="date">8</span><span class="evt">Upload 09:14. Read 09:29. DE and MX approved. 4 files exported.</span></div>
+            <div class="day"><span class="dow mono">Thu 9</span><span class="date">9</span><span class="evt">Amélie opens 2 FR notes. Layla flags AE RTL. JA dub rendered.</span></div>
+            <div class="day today"><span class="dow mono">Fri 10 · today</span><span class="date">10</span><span class="evt">Kenji’s −4f note at 10:20. BR mix started 14:00. KR on-screen locked 15:30.</span></div>
+            <div class="day"><span class="dow mono">Mon 13</span><span class="date">13</span><span class="evt">Maya’s FR tone pass due. Jules traffics DE and MX. BR review target.</span></div>
+            <div class="day"><span class="dow mono">Tue 14</span><span class="date">14</span><span class="evt">Japan re-render review with Kenji Sato, 15:00 CET.</span></div>
+            <div class="day"><span class="dow mono">Wed 15</span><span class="date">15</span><span class="evt">Brazil approval window with Rafael Costa if the mix clears.</span></div>
+            <div class="day"><span class="dow mono">Thu 16</span><span class="date">16</span><span class="evt">UAE approval target. Layla Al-Hassan, RTL fix must be in.</span></div>
+            <div class="day"><span class="dow mono">Fri 17</span><span class="date">17</span><span class="evt">Publish window for any market approved by Thursday.</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Comment feed</h3>
+          <p class="sub">Four open or just-resolved notes. Nothing is sitting in an empty queue.</p>
+          <ul class="thread">
+            <li>
+              <span class="avatar av-mp">MP</span>
+              <div>
+                <p class="who">Min-jun Park · Korea · today, 15:30 CET</p>
+                <p>On-screen brand lock confirmed. Glow Serum stays in English. Dialogue translation still running — five lines left.</p>
+                <span class="pill info">Produce</span>
+              </div>
+            </li>
+            <li>
+              <span class="avatar av-ks">KS</span>
+              <div>
+                <p class="who">Kenji Sato · Japan · today, 10:20 CET · 00:18:02</p>
+                <p>Vertical super on the left is correct. Pack-shot voice is late. Holding approval.</p>
+                <span class="pill info">Open</span>
+              </div>
+            </li>
+            <li>
+              <span class="avatar av-la">LA</span>
+              <div>
+                <p class="who">Layla Al-Hassan · UAE · Thu 9 Apr, 16:48 · 00:26:10</p>
+                <p>Feminine address on the end card is intentional. Alignment after the mirror is not. Legal line must clear the bottle.</p>
+                <span class="pill warn">Open</span>
+              </div>
+            </li>
+            <li>
+              <span class="avatar av-mc">MC</span>
+              <div>
+                <p class="who">Maya Chen · France reply · Thu 9 Apr, 11:15</p>
+                <p>Offered “Trouvez votre éclat.” as the warmer end card. Asked Amélie to confirm before a new dub take.</p>
+                <span class="pill warn">Awaiting reviewer</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>People on this job</h3>
+        <p class="sub">Brand, localization, in-market review, and media ops — the workflow around the six product steps.</p>
+        <ul class="roster">
+          <li><span class="avatar av-mc">MC</span><span><strong>Maya Chen</strong><em>Creative producer · FR tone pass due Mon 13</em></span></li>
+          <li><span class="avatar av-ks">KS</span><span><strong>Kenji Sato</strong><em>Localization lead · JA timing, voice cast</em></span></li>
+          <li><span class="avatar av-ar">AR</span><span><strong>Amélie Roux</strong><em>FR reviewer · 2 comments open</em></span></li>
+          <li><span class="avatar av-lv">LV</span><span><strong>Lena Vogel</strong><em>DE reviewer · approved Wed 8, 52 min</em></span></li>
+          <li><span class="avatar av-sh">SH</span><span><strong>Sofia Herrera</strong><em>MX reviewer · approved Wed 8, 41 min</em></span></li>
+          <li><span class="avatar av-la">LA</span><span><strong>Layla Al-Hassan</strong><em>AE reviewer · RTL end card open</em></span></li>
+          <li><span class="avatar av-rc">RC</span><span><strong>Rafael Costa</strong><em>PT-BR reviewer · dub mix since 14:00</em></span></li>
+          <li><span class="avatar av-mp">MP</span><span><strong>Min-jun Park</strong><em>KO reviewer · on-screen locked 15:30</em></span></li>
+          <li><span class="avatar av-jo">JO</span><span><strong>Jules Okonkwo</strong><em>Media ops · 4 files queued for Mon 13</em></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="close" id="walkthrough">
+    <div class="wrap close-grid">
+      <div>
+        <p class="section-kicker mono" style="color:#e07a5a">See it on a real cut</p>
+        <h2>Walk a locked master through seven markets.</h2>
+        <p>Forty-five minutes. Bring a 15 or 30-second spot and the market list, or use Spring Refresh as the sample. We’ll run ingest, read, and a first dub in the session, then show how per-market approval gates export before anything reaches media ops.</p>
+        <div class="close-actions">
+          <a class="btn" href="#walkthrough">Hold Mon 13, 10:00 CET</a>
+          <a class="btn ghost" href="#campaign">Stay with this flight</a>
+        </div>
+      </div>
+      <div>
+        <ul class="slots">
+          <li>
+            <div>
+              <strong>Mon 13 Apr · 10:00–10:45 CET</strong>
+              <span>Nora Ellison, solutions · open · room for 4</span>
+            </div>
+            <span class="pill ok">Open</span>
+          </li>
+          <li>
+            <div>
+              <strong>Tue 14 Apr · 15:00–15:45 CET</strong>
+              <span>Jonah Adeyemi, solutions · open · room for 3</span>
+            </div>
+            <span class="pill ok">Open</span>
+          </li>
+          <li>
+            <div>
+              <strong>Wed 15 Apr · 09:00–09:45 CET</strong>
+              <span>Nora Ellison, solutions · open · room for 4</span>
+            </div>
+            <span class="pill ok">Open</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div>
+      <strong>SceneLilt</strong>
+      <p>Creative production for localized video. London · New York · Seoul.</p>
+      <p>14 Wharf Lane, London SE1 2XY · studio@scenelilt.com</p>
+    </div>
+    <div>
+      <p>Platform status: operational · no incidents in 90 days.</p>
+      <p>Job SL-2481 is a product walkthrough with a full campaign loaded.</p>
+      <p><a href="#how-it-works">How it works</a> · <a href="#workflow">Workflow</a> · <a href="#deliver">Export</a></p>
+      <p>© 2026 SceneLilt Ltd.</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

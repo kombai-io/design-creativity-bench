@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldline HVAC · Dispatch Board</title>
+<style>
+/* ============ base ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#eef2f7; --panel:#ffffff; --line:#dfe6ee; --line-soft:#ebf0f6;
+  --ink:#122033; --mut:#5c6c80; --faint:#93a1b3;
+  --navy:#16233a; --blue:#2563eb; --blue-soft:#eef4ff;
+  --red:#d92d20; --red-soft:#fef3f2; --amber:#b45309; --amber-soft:#fff8ec;
+  --green:#067647; --green-soft:#e8f6ef;
+  --shadow:0 1px 2px rgba(16,24,40,.07),0 1px 3px rgba(16,24,40,.09);
+}
+html,body{height:100%}
+body{
+  font:13px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--ink); min-width:1280px;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+button{font:inherit;cursor:pointer}
+select{font:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#c6d0dc;border-radius:8px;border:2px solid #fff}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============ top bar ============ */
+#topbar{
+  height:54px; flex:0 0 54px; background:var(--navy); color:#fff;
+  display:flex; align-items:center; gap:16px; padding:0 16px;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand b{font-size:15px;letter-spacing:.01em;display:block;line-height:1.1}
+.brand span{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#8fa3c0}
+.hstats{display:flex;gap:8px;margin-left:14px}
+.hstat{
+  display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.09);
+  border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:4px 11px;font-size:12px;color:#cfd9e6;white-space:nowrap;
+}
+.hstat b{color:#fff;font-size:12.5px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot.blue{background:#5b8def}.dot.amber{background:#f59e0b}.dot.red{background:#f1564b}
+.hright{margin-left:auto;display:flex;align-items:center;gap:12px}
+.ghostbtn{
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;
+  border-radius:8px;width:30px;height:30px;font-weight:700;
+}
+.ghostbtn:hover{background:rgba(255,255,255,.22)}
+.user{display:flex;align-items:center;gap:9px}
+.ava{width:31px;height:31px;border-radius:50%;background:#f59e0b;color:#3a2503;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.user b{font-size:12.5px;display:block;line-height:1.15}
+.user span{font-size:10.5px;color:#8fa3c0}
+
+/* ============ layout ============ */
+main{flex:1;display:grid;grid-template-columns:272px minmax(0,1fr) 344px;min-height:0}
+
+/* ============ roster ============ */
+#roster{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;min-height:0}
+.pane-h{
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);
+  font-weight:800;padding:11px 12px 7px;display:flex;align-items:center;gap:8px;
+}
+.pane-h .count{background:#eef2f7;color:var(--mut);border-radius:999px;padding:1px 8px;font-size:10.5px}
+.tcard{padding:10px 12px;border-bottom:1px solid var(--line-soft);cursor:pointer}
+.tcard:hover{background:#f8fafc}
+.tr1{display:flex;align-items:center;gap:8px}
+.tdot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.tdot.site{background:#12b76a}.tdot.route{background:#f59e0b}.tdot.free{background:#5b8def}
+.tname b{font-size:13px;display:block;line-height:1.15}
+.tname small{font-size:10.5px;color:var(--mut);display:block}
+.thrs{margin-left:auto;font-size:10.5px;color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tr2{font-size:11px;color:var(--mut);margin-top:5px}
+.tr2 b{color:#475467;font-weight:600}
+.tags{margin-top:5px}
+.c{display:inline-block;background:#eef2f7;color:#475467;border-radius:4px;padding:1px 5px;font-size:10px;margin:2px 3px 0 0}
+.c.cert{background:#e9f0ff;color:#2c52b8}
+.ubar{height:5px;background:#e9edf3;border-radius:4px;margin-top:8px;overflow:hidden}
+.ubar i{display:block;height:100%;border-radius:4px}
+.umeta{font-size:10.5px;color:var(--faint);margin-top:4px}
+
+/* ============ board ============ */
+#boardwrap{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fbfcfe}
+#toolbar{
+  height:54px;flex:0 0 54px;display:flex;align-items:center;gap:14px;
+  padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);
+}
+.tleft h1{font-size:15px;font-weight:700;line-height:1.1}
+.tleft span{font-size:11px;color:var(--mut)}
+.tright{margin-left:auto;display:flex;align-items:center;gap:12px}
+.legend{display:flex;align-items:center;gap:10px;font-size:10.5px;color:var(--mut);white-space:nowrap}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}
+.legend .sw-hatch{background:repeating-linear-gradient(45deg,rgba(229,72,77,.55) 0 3px,rgba(229,72,77,.12) 3px 6px)}
+#filterSel{border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;background:#fff;color:var(--ink)}
+#btnNew{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600}
+#btnNew:hover{background:#22344f}
+#board{flex:1;display:flex;min-height:0;overflow:hidden}
+#boardLabels{width:216px;flex:0 0 216px;border-right:1px solid var(--line);background:#fff;overflow:hidden}
+.corner{height:40px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;padding:0 12px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:800}
+.labrow{height:96px;border-bottom:1px solid var(--line-soft);padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.labrow:hover{background:#f8fafc}
+.labrow.hl{background:#fff7e0}
+.lr1{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700}
+.lr2{font-size:11px;color:var(--mut)}
+.lr3{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+#boardScroll{flex:1;overflow:auto;min-width:0}
+#canvas{position:relative}
+.ruler{height:40px;border-bottom:1px solid var(--line);position:relative;background:#fff}
+.hlab{position:absolute;top:14px;border-left:1px solid #cfd9e5;padding-left:6px;font-size:10.5px;color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mtick{position:absolute;bottom:0;width:1px;height:6px;background:#dfe6ee}
+.nowchip{position:absolute;top:3px;font-size:10.5px;font-weight:800;color:#e5484d;white-space:nowrap}
+.rowswrap{position:relative}
+.tlrow{
+  height:96px;border-bottom:1px solid var(--line-soft);position:relative;background:#f9fafc;
+  background-image:
+    repeating-linear-gradient(90deg,#e3e9f0 0 1px,transparent 1px 96px),
+    repeating-linear-gradient(90deg,#eef1f6 0 1px,transparent 1px 48px);
+}
+.tlrow.hl{background-color:#fff7e0}
+.tlrow.drop-hint{outline:2px dashed var(--blue);outline-offset:-2px;background-color:#eef4ff}
+.shiftband{position:absolute;top:0;bottom:0;background:#eff5ff;border-left:1px dashed #cfdff5;border-right:1px dashed #cfdff5}
+.nowline{position:absolute;top:0;bottom:0;width:0;border-left:2px solid #e5484d;z-index:6;pointer-events:none}
+.nowline::before{content:'';position:absolute;top:-4px;left:-4px;width:7px;height:7px;border-radius:50%;background:#e5484d}
+
+/* job blocks */
+.job{
+  position:absolute;top:10px;height:76px;border-radius:8px;border:1px solid #d8e0ea;
+  background:var(--pbg,#fff);box-shadow:var(--shadow);padding:7px 9px 6px 12px;
+  cursor:pointer;z-index:3;user-select:none;overflow:visible;
+}
+.job::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:8px 0 0 8px;background:var(--pc)}
+.job:hover{box-shadow:0 3px 10px rgba(16,24,40,.16)}
+.job.live{border-color:#8fd0ae}
+.job.done{opacity:.55;filter:saturate(.6)}
+.job.support{border-style:dashed;background:#fbfcfe}
+.job.dragging{opacity:.4}
+.job.selected{box-shadow:0 0 0 2px rgba(37,99,235,.45),var(--shadow)}
+.job.dim{opacity:.22;filter:grayscale(.7)}
+.jl1{display:flex;gap:6px;align-items:baseline;font-size:12px;white-space:nowrap;overflow:hidden}
+.jid{font-weight:800;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;color:var(--pc)}
+.jname{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.jflag{margin-left:auto;flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:#f59e0b;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.jl2{font-size:10.5px;color:var(--mut);margin-top:1px;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums}
+.live-t{color:var(--green);font-weight:800;font-size:9.5px;letter-spacing:.04em}
+.jl3{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;height:15px;overflow:hidden}
+.chip{font-size:9px;font-weight:800;letter-spacing:.04em;background:rgba(16,24,40,.07);color:#475467;border-radius:4px;padding:1.5px 4px;white-space:nowrap}
+.chip-bad{background:var(--red-soft);color:#c22a30}
+.proj{
+  position:absolute;height:68px;top:14px;z-index:1;border:1.5px dashed #e5484d;border-radius:7px;
+  background:repeating-linear-gradient(45deg,rgba(229,72,77,.16) 0 6px,rgba(229,72,77,.04) 6px 12px);
+  display:flex;align-items:flex-end;padding:3px 6px;color:#c22a30;font-size:10px;font-weight:800;white-space:nowrap;pointer-events:none;
+}
+.travel{
+  position:absolute;top:44px;transform:translateX(-50%);background:#fff;border:1px solid var(--line);
+  border-radius:999px;font-size:10px;color:var(--mut);padding:1px 8px;z-index:2;white-space:nowrap;
+  box-shadow:0 1px 2px rgba(16,24,40,.06);font-variant-numeric:tabular-nums;
+}
+.travel.bad{border-color:#e5484d;color:#c22a30;background:var(--red-soft);font-weight:700}
+
+/* ============ side panels ============ */
+#side{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.pane{display:flex;flex-direction:column;min-height:0}
+#issuesPane{flex:1.15;border-bottom:1px solid var(--line)}
+#queuePane{flex:1}
+.pane-scroll{overflow-y:auto;min-height:0;flex:1;padding-bottom:10px}
+.hint{font-size:10.5px;color:var(--faint);padding:0 12px 8px;line-height:1.4}
+.issue{
+  margin:0 10px 8px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);
+  border-left:4px solid #94a3b8;background:#fff;cursor:pointer;
+}
+.issue:hover{box-shadow:var(--shadow)}
+.issue.critical{border-left-color:var(--red);background:#fffafa}
+.issue.warning{border-left-color:#f59e0b}
+.issue.info{border-left-color:#94a3b8}
+.ir1{display:flex;align-items:center;gap:6px}
+.sevtag{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:1.5px 5px}
+.critical .sevtag{background:var(--red);color:#fff}
+.warning .sevtag{background:var(--amber-soft);color:var(--amber)}
+.info .sevtag{background:#eef2f7;color:var(--mut)}
+.ijob{margin-left:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;color:var(--faint)}
+.it{font-size:12.5px;font-weight:700;margin-top:5px}
+.id{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.4}
+.qcard{
+  margin:0 10px 10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);
+  border-left:4px solid var(--pc,#94a3b8);background:#fff;box-shadow:var(--shadow);
+  cursor:grab;user-select:none;
+}
+.qcard:active{cursor:grabbing}
+.qcard.dragging{opacity:.4}
+.qcard.dim{opacity:.25}
+.qr1{display:flex;align-items:center;gap:7px}
+.qid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;font-weight:800;color:var(--pc)}
+.qtype{font-size:9px;font-weight:800;letter-spacing:.05em;border:1px solid;border-radius:4px;padding:1px 5px;color:var(--tc,#475467);border-color:currentColor}
+.qprio{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--pc)}
+.qgrip{color:#c6d0dc;font-size:12px;margin-left:4px}
+.qcust{font-size:13px;font-weight:700;margin-top:5px}
+.qprob{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.4}
+.qmeta{font-size:11px;color:var(--mut);margin-top:6px;font-variant-numeric:tabular-nums}
+.qbest{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.qbest.none{color:var(--amber)}
+.mini{background:var(--blue);color:#fff;border:0;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;margin-left:auto}
+.mini:hover{background:#1d4fd8}
+
+/* ============ drawer ============ */
+#drawer{
+  position:fixed;top:0;right:0;bottom:0;width:412px;background:#fff;z-index:70;
+  box-shadow:-14px 0 34px rgba(16,24,40,.20);transform:translateX(105%);
+  transition:transform .22s ease;display:flex;flex-direction:column;
+}
+#drawer.open{transform:translateX(0)}
+.dhead{padding:14px 16px 12px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.dhead .x{margin-left:auto;border:0;background:#f1f4f8;border-radius:8px;width:28px;height:28px;font-size:14px;color:var(--mut);flex:0 0 auto}
+.dhead .x:hover{background:#e4e9f0}
+#drawerBody{overflow-y:auto;flex:1}
+.dsec{padding:12px 16px;border-bottom:1px solid var(--line-soft)}
+.dh{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;font-weight:800}
+.badge{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:2px 6px}
+.kv{display:grid;grid-template-columns:104px 1fr;gap:5px 10px;font-size:12.5px}
+.kv dt{color:var(--mut);font-size:11.5px}
+.kv dd{font-variant-numeric:tabular-nums}
+.flagbox{border-radius:8px;padding:7px 10px;font-size:11.5px;margin-bottom:6px;border:1px solid;line-height:1.4}
+.flagbox.critical{background:var(--red-soft);border-color:#f3b6b1;color:#8f1d14}
+.flagbox.warning{background:var(--amber-soft);border-color:#f3d1a0;color:#7c4a03}
+.flagbox.info{background:#f3f6fa;border-color:#d7e0ea;color:#475467}
+.arow{display:flex;gap:9px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px;background:#fbfcfe}
+.arow b{font-size:12.5px;display:block;line-height:1.2}
+.arow small{font-size:10.5px;color:var(--mut);display:block}
+.rolechip{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.06em;background:#e9f0ff;color:#2c52b8;border-radius:4px;padding:2px 6px;flex:0 0 auto}
+.rolechip.sup{background:#eef2f7;color:#5c6c80}
+.rm{border:0;background:transparent;color:#98a4b3;font-size:13px;padding:2px 4px;flex:0 0 auto}
+.rm:hover{color:var(--red)}
+.btn{border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;border:1px solid transparent;width:100%}
+.btn.ghost{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn.ghost:hover{background:#f6f8fb}
+.btn.navy{background:var(--navy);color:#fff}
+.cand{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px}
+.cand b{font-size:12.5px;display:block;line-height:1.2}
+.cand small{font-size:10.5px;color:var(--mut);display:block}
+.cst{font-size:10.5px;font-weight:700;white-space:nowrap;margin-left:auto}
+.cst.ok{color:var(--green)}
+.cst.no{color:var(--amber)}
+.cand .mini{margin-left:8px;flex:0 0 auto}
+.cand .mini:disabled{background:#e4e9f0;color:#98a4b3;cursor:not-allowed}
+#crewSel{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font-size:12px;background:#fff}
+.mutnote{font-size:11px;color:var(--faint);margin-top:6px;line-height:1.4}
+
+/* ============ toast ============ */
+#toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);
+  background:var(--navy);color:#fff;padding:10px 16px;border-radius:9px;font-size:12.5px;
+  box-shadow:0 10px 30px rgba(16,24,40,.35);opacity:0;pointer-events:none;transition:.2s;z-index:99;
+  max-width:560px;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{background:#b42318}
+#toast.warn{background:#96590a}
+#toast.ok{background:#16233a}
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <svg width="27" height="27" viewBox="0 0 27 27" aria-hidden="true"><rect width="27" height="27" rx="6" fill="#2563eb"/><path d="M5 18 L10.5 12.5 L14.5 15.5 L21 8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21" cy="8.5" r="2" fill="#fbbf24"/></svg>
+    <div><b>Fieldline HVAC</b><span>Commercial Dispatch</span></div>
+  </div>
+  <div class="hstats">
+    <span class="hstat"><i class="dot blue"></i><b id="stVisits">–</b>&nbsp;visits today</span>
+    <span class="hstat"><i class="dot amber"></i><b id="stUn">–</b>&nbsp;unassigned</span>
+    <span class="hstat"><i class="dot red"></i><b id="stIss">–</b>&nbsp;open issues</span>
+  </div>
+  <div class="hright">
+    <button class="ghostbtn" id="btnHelp" title="How to adjust the schedule" aria-label="Help">?</button>
+    <div class="user"><div class="ava">DK</div><div><b>Dana Kowalski</b><span>Dispatcher · Day shift</span></div></div>
+  </div>
+</header>
+
+<main>
+  <!-- technicians -->
+  <aside id="roster">
+    <div class="pane-h">Technicians <span class="count">5 on duty</span></div>
+    <div id="rosterList"></div>
+  </aside>
+
+  <!-- schedule board -->
+  <section id="boardwrap">
+    <div id="toolbar">
+      <div class="tleft">
+        <h1>Thursday, June 12</h1>
+        <span>Day schedule · service day 6:00 AM – 6:00 PM · now 8:40 AM</span>
+      </div>
+      <div class="tright">
+        <div class="legend">
+          <span><i style="background:#d92d20"></i>Emergency</span>
+          <span><i style="background:#dc6803"></i>High</span>
+          <span><i style="background:#2563eb"></i>Standard</span>
+          <span><i style="background:#64748b"></i>Low</span>
+          <span><i class="sw-hatch"></i>Projected overrun</span>
+        </div>
+        <select id="filterSel" aria-label="Filter by priority">
+          <option value="all">All priorities</option>
+          <option>Emergency</option>
+          <option>High</option>
+          <option>Standard</option>
+          <option>Low</option>
+        </select>
+        <button id="btnNew">＋ New visit</button>
+      </div>
+    </div>
+    <div id="board">
+      <div id="boardLabels"></div>
+      <div id="boardScroll"><div id="canvas"></div></div>
+    </div>
+  </section>
+
+  <!-- issues + queue -->
+  <aside id="side">
+    <section class="pane" id="issuesPane">
+      <div class="pane-h">Schedule issues <span class="count" id="issueCount">0</span></div>
+      <div class="pane-scroll" id="issuesList"></div>
+    </section>
+    <section class="pane" id="queuePane">
+      <div class="pane-h">Unassigned queue <span class="count" id="queueCount">0</span></div>
+      <div class="hint">Drag a card onto a technician's timeline to assign it. Drop a scheduled job back here to unassign.</div>
+      <div class="pane-scroll" id="queueList"></div>
+    </section>
+  </aside>
+</main>
+
+<aside id="drawer" aria-label="Visit details"><div id="drawerBody"></div></aside>
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+/* ================= constants & data ================= */
+const HOUR_W=96, DAY_START=360, DAY_END=1080, PAD=14, NOW=8*60+40;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+
+const PRIO={
+  Emergency:{c:"#d92d20",bg:"#fef3f2"},
+  High:{c:"#dc6803",bg:"#fff8ec"},
+  Standard:{c:"#2563eb",bg:"#eef4ff"},
+  Low:{c:"#64748b",bg:"#f3f6fa"}
+};
+const TYPEC={PM:"#0e8a8a",Repair:"#2563eb",Emergency:"#d92d20",Diagnostic:"#6941c6"};
+
+const TECHS=[
+ {id:"mw",name:"Marcus Webb",role:"Senior Service Tech",shift:[450,930],terr:"Downtown · North",certs:["EPA Universal","NATE"],systems:["RTU","Split systems","VRF","Gas heat","AHU"],status:"On site"},
+ {id:"dr",name:"Dana Reyes",role:"Lead Chiller Tech",shift:[390,900],terr:"Downtown · Riverside",certs:["EPA Type II","OSHA 10"],systems:["Chillers","Cooling towers","Boilers","AHU"],status:"En route"},
+ {id:"so",name:"Sam Okafor",role:"Service Tech II",shift:[480,990],terr:"Westside · Airport",certs:["EPA Universal","NATE"],systems:["RTU","VAV","Controls / BAS","AHU"],status:"En route"},
+ {id:"pn",name:"Priya Natarajan",role:"Service Tech II",shift:[420,930],terr:"North · Suburbs",certs:["EPA Type I","EPA Type II"],systems:["Split systems","RTU","Heat pumps","Light refrigeration"],status:"On site"},
+ {id:"lh",name:"Luis Herrera",role:"Controls Specialist",shift:[540,1050],terr:"Downtown · East",certs:["EPA Universal","Master Electrical"],systems:["Chillers","AHU","VAV","Controls / BAS"],status:"Available"}
+];
+
+const JOBS=[
+ {id:"J-1047",customer:"Lakeside Distribution Center",addr:"2200 Lakeside Pkwy",terr:"Riverside",type:"PM",priority:"Standard",
+  problem:"Quarterly PM — chiller plant & cooling tower: glycol check, water treatment, belts, condensers.",equip:"Chiller + cooling tower",
+  window:[390,600],dur:90,crew:1,skills:["Chillers"],certs:["EPA Type II"],parts:[],gear:[],
+  contact:null,access:null,travelMin:20,overrun:0,techs:["dr"],start:420},
+ {id:"J-1048",customer:"Crestline Hotel",addr:"500 Crestline Blvd",terr:"Downtown",type:"Diagnostic",priority:"High",
+  problem:"Chiller #2 low ΔT — suspected fouled tubes. Guest complaints on floors 6–9.",equip:"Centrifugal chiller · 250-ton",
+  window:[540,780],dur:120,crew:1,skills:["Chillers"],certs:["EPA Type II"],parts:[],gear:["ΔT / flow diagnostic kit"],
+  contact:{name:"F. Alvarez",role:"Facility Manager",required:true},access:null,travelMin:20,overrun:0,gearConflict:true,
+  techs:["dr"],start:570},
+ {id:"J-1041",customer:"Meridian Office Park",addr:"1420 Meridian Ave",terr:"Downtown",type:"PM",priority:"Standard",
+  problem:"Quarterly PM — RTU 1–4. Building engineer reports weak airflow on floor 2.",equip:"RTU ×4 (roof)",
+  window:[420,720],dur:120,crew:1,skills:["RTU"],certs:["EPA Universal"],parts:["Filter set (MERV-13)"],gear:[],
+  contact:{name:"T. Brandt",role:"Building Engineer",required:false},access:null,travelMin:15,overrun:0,
+  techs:["mw"],start:450},
+ {id:"J-1044",customer:"Coldline Logistics Warehouse",addr:"7400 Freight Way",terr:"Airport",type:"Repair",priority:"High",
+  problem:"RTU-2 compressor failed Monday. Replace R-410A scroll compressor, pull vacuum, recharge. Expect brazing delays — unit is corroded.",equip:"RTU-2 · 25-ton",
+  window:[480,960],dur:240,crew:2,skills:["RTU","AHU"],certs:["EPA Universal"],
+  parts:["R-410A scroll compressor","Filter drier","R-410A · 25 lb"],gear:["Recovery machine"],
+  contact:{name:"D. Moss",role:"Warehouse Supervisor",required:true},access:{label:"Dock access via Gate B",window:[420,960]},
+  travelMin:25,overrun:90,techs:["so"],start:570},
+ {id:"J-1052",customer:"Airport Way Office Center",addr:"915 Airport Way",terr:"Airport",type:"Repair",priority:"Standard",
+  problem:"VAV actuator failure — zone 3 stuck closed. Replace actuator, recalibrate.",equip:"VAV box · zone 3",
+  window:[780,1080],dur:90,crew:1,skills:["VAV"],certs:[],parts:["VAV actuator 24V"],gear:[],
+  contact:null,access:null,travelMin:35,overrun:0,techs:["so"],start:855},
+ {id:"J-1045",customer:"Bluebird Early Learning Center",addr:"412 Birchwood Ln",terr:"North",type:"PM",priority:"Standard",
+  problem:"Seasonal PM — 2 split systems. Nap rooms must stay online; quiet-hours work only.",equip:"Split systems ×2",
+  window:[450,690],dur:60,crew:1,skills:["Split systems"],certs:["EPA Type II"],parts:[],gear:[],
+  contact:{name:"M. Sandoval",role:"Center Director",required:true},access:{label:"Director must be present · noisy work by 11:30 AM",window:[450,690]},
+  travelMin:15,overrun:0,techs:["pn"],start:480},
+ {id:"J-1049",customer:"Northgate Mall — Food Court",addr:"66 Northgate Cir",terr:"North",type:"Repair",priority:"High",
+  problem:"RTU-3 short-cycling; suspected run capacitor and contactor. Dining area warm since yesterday.",equip:"RTU-3 · 20-ton",
+  window:[600,840],dur:120,crew:1,skills:["RTU"],certs:[],parts:["Run capacitor 45/5","Contactor 2-pole 40A"],gear:[],
+  contact:null,access:{label:"Roof access via service corridor only",window:[570,900]},
+  travelMin:25,overrun:0,techs:["pn"],start:645},
+ {id:"J-1046",customer:"Fenwick & Co. Law Offices",addr:"1200 Market St · Suite 900",terr:"Downtown",type:"Repair",priority:"Standard",
+  problem:"VAV zone 4 not cooling — partner offices. Client meetings until 10:00 AM.",equip:"VAV zone 4",
+  window:[600,900],dur:90,crew:1,skills:["VAV"],certs:[],parts:[],gear:["Multimeter","BAS laptop"],
+  contact:{name:"K. Whitmore",role:"Office Manager",required:true},access:{label:"Access after 10:00 AM · escort required",window:[600,900]},
+  travelMin:20,overrun:0,techs:["lh"],start:630},
+ {id:"J-1051",customer:"Riverside Data Annex",addr:"77 River Rd",terr:"Riverside",type:"PM",priority:"High",
+  problem:"CRAC unit PM — filters, coil clean, condensate test. Critical uptime site; check-in at security.",equip:"CRAC ×2",
+  window:[780,1050],dur:120,crew:1,skills:["Chillers"],certs:["EPA Universal"],parts:["CRAC filter set"],gear:[],
+  contact:{name:"Security desk",role:"Check-in required",required:true},access:null,travelMin:15,overrun:0,
+  techs:["lh"],start:810},
+ {id:"J-1043",customer:"Harborview Medical Plaza",addr:"88 Harborview Blvd",terr:"Downtown",type:"Emergency",priority:"Emergency",
+  problem:"AHU-1 down — no cooling. Server room at 84 °F and climbing; exam rooms affected. Needs fast response.",equip:"AHU-1 (rooftop air handler)",
+  window:[480,720],dur:120,crew:1,skills:["RTU","AHU"],certs:["EPA Universal"],parts:["Belt set — AHU-1"],gear:["Amp probe / megohmmeter"],
+  contact:{name:"Security desk",role:"Escort to mechanical roof",required:true},access:{label:"Loading-dock escort only",window:[420,780]},
+  travelMin:0,overrun:0,techs:[],start:null},
+ {id:"J-1050",customer:"Summit Self Storage",addr:"5300 Summit Rd",terr:"North",type:"PM",priority:"Low",
+  problem:"Filter change — 20 wall units. Flexible afternoon window.",equip:"Wall units ×20",
+  window:[720,1020],dur:120,crew:1,skills:[],certs:[],parts:["Filter set (assorted)"],gear:[],
+  contact:null,access:null,travelMin:15,overrun:0,techs:[],start:null}
+];
+
+let ISSUES=[], CUR=null, dragId=null;
+
+/* ================= helpers ================= */
+const byTech=id=>TECHS.find(t=>t.id===id);
+const jobById=id=>JOBS.find(j=>j.id===id);
+const assignedTo=tid=>JOBS.filter(j=>j.techs.includes(tid)&&j.start!==null);
+const fmtT=m=>{const h=Math.floor(m/60),mm=m%60,ap=h>=12?"PM":"AM",hh=((h+11)%12)+1;return hh+":"+String(mm).padStart(2,"0")+" "+ap;};
+const fmtS=m=>{const h=Math.floor(m/60),mm=m%60,a=h>=12?"p":"a",hh=((h+11)%12)+1;return hh+":"+String(mm).padStart(2,"0")+a;};
+const fmtDur=m=>{const h=Math.floor(m/60),r=m%60;return h?(r?h+"h "+r+"m":h+"h"):r+"m";};
+const hLab=h=>h<12?h+" AM":(h===12?"12 PM":(h-12)+" PM");
+const x=m=>PAD+(m-DAY_START)/60*HOUR_W;
+const qualifies=(t,j)=>{
+  if(j.skills.length&&!j.skills.some(s=>t.systems.includes(s)))return false;
+  return j.certs.every(c=>t.certs.includes(c));
+};
+function isFree(tid,s,e,ignoreId){
+  const t=byTech(tid);
+  if(s<t.shift[0]||e>t.shift[1])return false;
+  return assignedTo(tid).filter(j=>j.id!==ignoreId).every(j=>e<=j.start||s>=j.start+j.dur);
+}
+function firstSlot(tid,dur,window,ignoreId){
+  const t=byTech(tid);
+  const list=assignedTo(tid).filter(j=>j.id!==ignoreId).sort((a,b)=>a.start-b.start);
+  let cur=Math.max(window[0],t.shift[0]);
+  for(const j of list){
+    if(cur+dur+(j.travelMin||0)<=j.start)break;
+    cur=Math.max(cur,j.start+j.dur+(j.overrun||0)+15);
+  }
+  if(cur+dur<=t.shift[1]&&cur+dur<=window[1])return cur;
+  return null;
+}
+function candidatesFor(job){
+  const res=[];
+  for(const t of TECHS){
+    if(job.techs.includes(t.id)||!qualifies(t,job))continue;
+    const w=job.window||[t.shift[0],t.shift[1]];
+    const win=[Math.max(w[0],t.shift[0]),Math.min(w[1],t.shift[1])];
+    const slot=firstSlot(t.id,job.dur,win,job.id);
+    const any=slot===null?firstSlot(t.id,job.dur,[t.shift[0],t.shift[1]],job.id):slot;
+    res.push({t,slot:any,win:slot,terrMatch:!!(job.terr&&t.terr.includes(job.terr))});
+  }
+  res.sort((a,b)=>(b.terrMatch-a.terrMatch)||((a.win??99999)-(b.win??99999)));
+  return res;
+}
+function validateAssign(job,tech,start){
+  const end=start+job.dur;
+  if(start<tech.shift[0])return{ok:false,msg:"before "+tech.name.split(" ")[0]+"'s shift start ("+fmtT(tech.shift[0])+")"};
+  if(end>tech.shift[1])return{ok:false,msg:"runs past end of shift ("+fmtT(tech.shift[1])+")"};
+  const ms=job.skills.filter(s=>!tech.systems.includes(s));
+  if(job.skills.length&&ms.length===job.skills.length)return{ok:false,msg:tech.name+" doesn't service this equipment ("+job.skills.join(" / ")+")"};
+  const mc=job.certs.filter(c=>!tech.certs.includes(c));
+  if(mc.length)return{ok:false,msg:tech.name+" lacks certification: "+mc.join(", ")};
+  if(job.access&&(start<job.access.window[0]||end>job.access.window[1]))
+    return{ok:false,msg:"site access only "+fmtS(job.access.window[0])+"–"+fmtS(job.access.window[1])+" ("+job.access.label+")"};
+  const clash=assignedTo(tech.id).filter(j=>j.id!==job.id).find(j=>start<j.start+j.dur&&j.start<end);
+  if(clash)return{ok:true,warn:true,msg:"double-booked — overlaps "+clash.id+" ("+fmtS(clash.start)+"–"+fmtS(clash.start+clash.dur)+")"};
+  if(job.window&&end>job.window[1])return{ok:true,warn:true,msg:"will miss the required window by "+fmtDur(end-job.window[1])};
+  return{ok:true};
+}
+let tTimer;
+function toast(msg,type){
+  const el=$("#toast");el.textContent=msg;el.className="show "+(type||"");
+  clearTimeout(tTimer);tTimer=setTimeout(()=>el.className="",4200);
+}
+
+/* ================= issues engine ================= */
+function computeIssues(){
+  const out=[];
+  for(const j of JOBS.filter(j=>!j.techs.length)){
+    if(j.priority==="Emergency"){
+      const left=Math.max(0,j.window[1]-NOW);
+      out.push({sev:"critical",jobId:j.id,title:"Emergency call unassigned",
+        detail:j.customer+" — respond by "+fmtT(j.window[1])+" ("+fmtDur(left)+" left). Needs "+j.skills.join(" / ")+" experience + "+j.certs.join(", ")+". Dock escort required."});
+    }else{
+      out.push({sev:"info",jobId:j.id,title:"Unassigned — flexible window",
+        detail:j.customer+" — "+fmtT(j.window[0])+"–"+fmtT(j.window[1])+" window, "+fmtDur(j.dur)+". Any available tech."});
+    }
+  }
+  for(const t of TECHS){
+    const all=assignedTo(t.id).sort((a,b)=>a.start-b.start);
+    for(let i=0;i<all.length;i++)for(let k=i+1;k<all.length;k++){
+      const a=all[i],b=all[k];
+      if(b.start<a.start+a.dur&&a.start<b.start+b.dur)
+        out.push({sev:"warning",jobId:b.id,title:"Double-booked",
+          detail:t.name+": "+a.id+" ("+fmtS(a.start)+"–"+fmtS(a.start+a.dur)+") overlaps "+b.id+" ("+fmtS(b.start)+"–"+fmtS(b.start+b.dur)+")."});
+    }
+    for(const j of all){
+      if(j.techs[0]!==t.id)continue;
+      if(j.start<t.shift[0]||j.start+j.dur>t.shift[1])
+        out.push({sev:"warning",jobId:j.id,title:"Outside working hours",
+          detail:j.id+" falls outside "+t.name+"'s shift ("+fmtT(t.shift[0])+"–"+fmtT(t.shift[1])+")."});
+      if(j.window&&j.start+j.dur>j.window[1])
+        out.push({sev:"warning",jobId:j.id,title:"Past required window",
+          detail:j.customer+" must be finished by "+fmtT(j.window[1])+"; current plan ends "+fmtT(j.start+j.dur)+"."});
+      if(j.access&&(j.start<j.access.window[0]||j.start+j.dur>j.access.window[1]))
+        out.push({sev:"warning",jobId:j.id,title:"Access restriction violated",detail:j.customer+": "+j.access.label+" ("+fmtS(j.access.window[0])+"–"+fmtS(j.access.window[1])+")."});
+    }
+    const prim=all.filter(j=>j.techs[0]===t.id);
+    for(let i=0;i<prim.length;i++){
+      const j=prim[i],next=prim[i+1];
+      if(next){
+        const gap=next.start-(j.start+j.dur);
+        if(gap<j.travelMin)
+          out.push({sev:"warning",jobId:next.id,title:"Not enough travel time",
+            detail:t.name+": "+j.travelMin+" min drive needed between "+j.id+" and "+next.id+"; only "+fmtDur(Math.max(0,gap))+" free."});
+      }
+      if(j.overrun){
+        const proj=j.start+j.dur+j.overrun;
+        let d=j.id+" "+j.customer+" is projected to run until "+fmtT(proj)+" (+"+fmtDur(j.overrun)+").";
+        if(next&&proj+next.travelMin>next.start)
+          d+=" With "+next.travelMin+" min travel, "+next.id+" ("+fmtT(next.start)+" start) is at risk — move it later or reassign.";
+        out.push({sev:"warning",jobId:j.id,title:"Repair likely to overrun",detail:d});
+      }
+    }
+  }
+  for(const j of JOBS){
+    if(j.techs.length&&j.crew>j.techs.length){
+      const open=TECHS.filter(t=>!j.techs.includes(t.id)&&qualifies(t,j)&&isFree(t.id,j.start,j.start+j.dur,j.id)).map(t=>t.name);
+      out.push({sev:"warning",jobId:j.id,title:"Needs a "+j.crew+"-tech crew",
+        detail:j.customer+": only "+j.techs.length+" of "+j.crew+" assigned ("+fmtS(j.start)+"–"+fmtS(j.start+j.dur)+"). Compressor lift requires two people. "+
+          (open.length?"Qualified & free: "+open.join(", ")+".":"No other qualified tech is free in this window.")});
+    }
+    if(j.gearConflict&&j.techs.length)
+      out.push({sev:"warning",jobId:j.id,title:"Diagnostic kit conflict",
+        detail:j.customer+" needs the ΔT / flow kit at "+fmtT(j.start)+" — the kit is on Luis Herrera's truck until ~12:00 PM. Arrange a handoff or slip the start."});
+  }
+  const ord={critical:0,warning:1,info:2};
+  out.sort((a,b)=>ord[a.sev]-ord[b.sev]);
+  return out;
+}
+
+/* ================= rendering ================= */
+function renderStats(){
+  $("#stVisits").textContent=JOBS.length;
+  $("#stUn").textContent=JOBS.filter(j=>!j.techs.length).length;
+  $("#stIss").textContent=ISSUES.length;
+}
+function renderRoster(){
+  $("#rosterList").innerHTML=TECHS.map(t=>{
+    const jobs=assignedTo(t.id),load=jobs.reduce((s,j)=>s+j.dur,0),span=t.shift[1]-t.shift[0];
+    const pct=Math.round(load/span*100);
+    const dc=t.status==="On site"?"site":t.status==="En route"?"route":"free";
+    const bar=pct>100?"#d92d20":pct>85?"#dc6803":"#2563eb";
+    return `<div class="tcard" data-tech="${t.id}">
+      <div class="tr1"><span class="tdot ${dc}"></span>
+        <div class="tname"><b>${t.name}</b><small>${t.role} · ${t.status}</small></div>
+        <span class="thrs">${fmtS(t.shift[0])}–${fmtS(t.shift[1])}</span></div>
+      <div class="tr2"><b>Territory:</b> ${t.terr}</div>
+      <div class="tags">${t.certs.map(c=>`<span class="c cert">${esc(c)}</span>`).join("")}${t.systems.map(s=>`<span class="c">${esc(s)}</span>`).join("")}</div>
+      <div class="ubar"><i style="width:${Math.min(100,pct)}%;background:${bar}"></i></div>
+      <div class="umeta">${fmtDur(load)} scheduled · ${pct}% of shift · ${jobs.length} job${jobs.length!==1?"s":""}</div>
+    </div>`;
+  }).join("");
+}
+
+function blockHTML(j,support){
+  const end=j.start+j.dur;
+  const st=end<=NOW?"done":(j.start<=NOW?"live":"sched");
+  const flagged=ISSUES.some(i=>i.jobId===j.id&&i.sev!=="info");
+  const chips=[];
+  if(j.crew>1)chips.push(`<span class="chip ${j.techs.length<j.crew?"chip-bad":""}" title="Requires ${j.crew} technicians">CREW ×${j.crew}</span>`);
+  if(j.parts.length)chips.push(`<span class="chip" title="Parts: ${esc(j.parts.join(", "))}">PARTS</span>`);
+  if(j.gear.length)chips.push(`<span class="chip ${j.gearConflict?"chip-bad":""}" title="Equipment: ${esc(j.gear.join(", "))}">KIT</span>`);
+  if(j.contact&&j.contact.required)chips.push(`<span class="chip" title="${esc(j.contact.name)} (${esc(j.contact.role)}) must be present">CONTACT</span>`);
+  if(j.access)chips.push(`<span class="chip" title="${esc(j.access.label)} · ${fmtS(j.access.window[0])}–${fmtS(j.access.window[1])}">ACCESS</span>`);
+  if(support)chips.unshift(`<span class="chip">SUPPORT</span>`);
+  const p=PRIO[j.priority];
+  const stTxt=st==="live"?' · <span class="live-t">● IN PROGRESS</span>':st==="done"?' · <span style="color:#067647">✓ done</span>':"";
+  return `<div class="job ${st}${support?" support":""}" ${(!support&&st!=="done")?'draggable="true"':""}
+    data-id="${j.id}" data-priority="${j.priority}"
+    style="left:${x(j.start)}px;width:${j.dur/60*HOUR_W}px;--pc:${p.c};--pbg:${p.bg}"
+    title="${esc(j.id+" · "+j.customer+"\n"+j.problem)}">
+    <div class="jl1"><span class="jid">${j.id}</span><span class="jname">${esc(j.customer)}</span>${flagged?'<span class="jflag" title="Has schedule issues">!</span>':""}</div>
+    <div class="jl2">${fmtS(j.start)}–${fmtS(end)} · ${fmtDur(j.dur)}${stTxt}</div>
+    <div class="jl3">${chips.join("")}</div>
+  </div>`;
+}
+
+function renderBoard(){
+  const W=PAD*2+(DAY_END-DAY_START)/60*HOUR_W;
+  let ruler='<div class="ruler">';
+  for(let h=6;h<=18;h++){
+    ruler+=`<div class="hlab" style="left:${x(h*60)}px">${hLab(h)}</div>`;
+    if(h<18)ruler+=`<div class="mtick" style="left:${x(h*60+30)}px"></div>`;
+  }
+  ruler+=`<div class="nowchip" style="left:${x(NOW)+7}px">Now · ${fmtT(NOW)}</div></div>`;
+
+  let rows="";
+  for(const t of TECHS){
+    const prim=JOBS.filter(j=>j.techs[0]===t.id&&j.start!==null).sort((a,b)=>a.start-b.start);
+    const sup=JOBS.filter(j=>j.techs.length&&j.techs[0]!==t.id&&j.techs.includes(t.id)&&j.start!==null);
+    let inner=`<div class="shiftband" style="left:${x(t.shift[0])}px;width:${x(t.shift[1])-x(t.shift[0])}px" title="Working hours ${fmtS(t.shift[0])}–${fmtS(t.shift[1])}"></div>`;
+    prim.forEach((j,i)=>{
+      if(i>0){
+        const pv=prim[i-1],gap=j.start-(pv.start+pv.dur);
+        if(gap>=8){
+          const bad=gap<j.travelMin;
+          inner+=`<div class="travel ${bad?"bad":""}" style="left:${(x(pv.start+pv.dur)+x(j.start))/2}px"
+            title="Drive time ${esc(pv.customer)} → ${esc(j.customer)}: ${j.travelMin} min available window ${fmtDur(Math.max(0,gap))}">${bad?"⚠ ":""}▸ ${j.travelMin} min${bad?" · tight":""}</div>`;
+        }
+      }
+      inner+=blockHTML(j,false);
+      if(j.overrun)inner+=`<div class="proj" style="left:${x(j.start+j.dur)+2}px;width:${j.overrun/60*HOUR_W-4}px" title="Projected overrun +${fmtDur(j.overrun)}">+${fmtDur(j.overrun)} projected</div>`;
+    });
+    sup.forEach(j=>inner+=blockHTML(j,true));
+    rows+=`<div class="tlrow" data-tech="${t.id}">${inner}</div>`;
+  }
+  const canvas=$("#canvas");
+  canvas.style.width=W+"px";
+  canvas.innerHTML=ruler+`<div class="rowswrap">${rows}<div class="nowline" style="left:${x(NOW)}px"></div></div>`;
+
+  $("#boardLabels").innerHTML=`<div class="corner">Technicians · Thu Jun 12</div>`+TECHS.map(t=>{
+    const jobs=assignedTo(t.id),load=jobs.reduce((s,j)=>s+j.dur,0);
+    const dc=t.status==="On site"?"site":t.status==="En route"?"route":"free";
+    return `<div class="labrow" data-tech="${t.id}">
+      <div class="lr1"><span class="tdot ${dc}"></span>${t.name}</div>
+      <div class="lr2">${t.role} · ${t.terr}</div>
+      <div class="lr3">${jobs.length} job${jobs.length!==1?"s":""} · ${fmtDur(load)} scheduled</div>
+    </div>`;
+  }).join("");
+
+  // drop targets
+  canvas.querySelectorAll(".tlrow").forEach(row=>{
+    row.addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="move";row.classList.add("drop-hint");});
+    row.addEventListener("dragleave",()=>row.classList.remove("drop-hint"));
+    row.addEventListener("drop",e=>{
+      e.preventDefault();row.classList.remove("drop-hint");
+      const id=e.dataTransfer.getData("text/plain")||dragId;
+      const job=jobById(id);if(!job)return;
+      const tech=byTech(row.dataset.tech);
+      const rect=row.getBoundingClientRect();
+      let mins=DAY_START+((e.clientX-rect.left-PAD)/HOUR_W)*60;
+      mins=Math.max(DAY_START,Math.min(DAY_END,Math.round(mins/15)*15));
+      if(job.techs.length===1&&job.techs[0]===tech.id&&job.start===mins)return;
+      const v=validateAssign(job,tech,mins);
+      if(!v.ok){toast("Can't place "+job.id+" with "+tech.name+": "+v.msg,"err");return;}
+      job.techs=[tech.id];job.start=mins;
+      renderAll();
+      toast(v.warn?(job.id+" → "+tech.name+" at "+fmtT(mins)+" — warning: "+v.msg):(job.id+" assigned to "+tech.name+" at "+fmtT(mins)),v.warn?"warn":"ok");
+      if(CUR===job.id)renderDrawer(job.id);
+    });
+  });
+  if(CUR){const b=canvas.querySelector(`.job[data-id="${CUR}"]`);if(b)b.classList.add("selected");}
+  // keep filter state
+  const v=$("#filterSel").value;
+  if(v!=="all")canvas.querySelectorAll(".job").forEach(el=>el.classList.toggle("dim",el.dataset.priority!==v));
+}
+
+function renderIssues(){
+  $("#issueCount").textContent=ISSUES.length;
+  $("#issuesList").innerHTML=ISSUES.map(i=>`
+    <div class="issue ${i.sev}" data-id="${i.jobId}" title="Open visit details">
+      <div class="ir1"><span class="sevtag">${i.sev}</span><span class="ijob">${i.jobId}</span></div>
+      <div class="it">${esc(i.title)}</div>
+      <div class="id">${esc(i.detail)}</div>
+    </div>`).join("")||'<div class="hint">No open issues — schedule is clean.</div>';
+}
+
+function renderQueue(){
+  const un=JOBS.filter(j=>!j.techs.length);
+  $("#queueCount").textContent=un.length;
+  $("#queueList").innerHTML=un.map(j=>{
+    const p=PRIO[j.priority];
+    const cands=candidatesFor(j),best=cands.find(c=>c.win!==null);
+    const chips=[];
+    if(j.crew>1)chips.push(`<span class="chip">CREW ×${j.crew}</span>`);
+    if(j.skills.length)chips.push(`<span class="chip" title="Required equipment experience">SKILL: ${esc(j.skills.join(" / "))}</span>`);
+    if(j.certs.length)chips.push(`<span class="chip cert">${esc(j.certs.join(", "))}</span>`);
+    chips.push(`<span class="chip" title="Service territory">${esc(j.terr)}</span>`);
+    return `<div class="qcard" draggable="true" data-id="${j.id}" data-priority="${j.priority}" style="--pc:${p.c}" title="Drag onto a timeline row, or click for details">
+      <div class="qr1"><span class="qid">${j.id}</span>
+        <span class="qtype" style="--tc:${TYPEC[j.type]||"#475467"}">${j.type}</span>
+        <span class="qprio">${j.priority}</span><span class="qgrip">⠿</span></div>
+      <div class="qcust">${esc(j.customer)}</div>
+      <div class="qprob">${esc(j.problem)}</div>
+      <div class="qmeta">Window ${fmtS(j.window[0])}–${fmtS(j.window[1])} · ${fmtDur(j.dur)} · ${esc(j.equip)}</div>
+      <div class="tags" style="margin-top:5px">${chips.join("")}</div>
+      ${best
+        ?`<div class="qbest">Suggested: <b>${best.t.name}</b> — free ${fmtT(best.win)}${best.terrMatch?" · in territory":""}
+           <button class="mini" data-assign="${j.id}" data-tech="${best.t.id}" data-start="${best.win}">Assign ${fmtS(best.win)}</button></div>`
+        :`<div class="qbest none">No qualified tech has an open slot inside the window.</div>`}
+    </div>`;
+  }).join("")||'<div class="hint">Queue is empty — everything is assigned.</div>';
+  const v=$("#filterSel").value;
+  if(v!=="all")$("#queueList").querySelectorAll(".qcard").forEach(el=>el.classList.toggle("dim",el.dataset.priority!==v));
+}
+
+function renderAll(){
+  ISSUES=computeIssues();
+  renderStats();renderRoster();renderBoard();renderIssues();renderQueue();
+}
+
+/* ================= drawer ================= */
+function renderDrawer(id){
+  const j=jobById(id);if(!j)return;
+  const p=PRIO[j.priority],end=j.start!==null?j.start+j.dur:null;
+  const flags=ISSUES.filter(i=>i.jobId===id);
+  const assigned=j.techs.length>0;
+  // travel context
+  let travel="—";
+  if(assigned){
+    const t=byTech(j.techs[0]);
+    const prim=JOBS.filter(q=>q.techs[0]===t.id&&q.start!==null).sort((a,b)=>a.start-b.start);
+    const ix=prim.findIndex(q=>q.id===id);
+    travel=ix===0?`First job — from shop, ~${j.travelMin||10} min`
+      :ix>0?`After ${prim[ix-1].id} · ${j.travelMin} min drive from ${esc(prim[ix-1].addr)}`:"—";
+  }
+  const reqChips=[];
+  if(j.crew>1)reqChips.push(`<span class="chip ${j.techs.length<j.crew?"chip-bad":""}">CREW OF ${j.crew} REQUIRED</span>`);
+  if(j.contact&&j.contact.required)reqChips.push(`<span class="chip">ON-SITE CONTACT MUST BE PRESENT</span>`);
+  if(j.access)reqChips.push(`<span class="chip">RESTRICTED ACCESS · ${fmtS(j.access.window[0])}–${fmtS(j.access.window[1])}</span>`);
+
+  let html=`
+  <div class="dhead">
+    <div style="min-width:0">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="jid" style="color:${p.c};font-size:12px">${j.id}</span>
+        <span class="badge" style="background:${p.bg};color:${p.c}">${j.priority}</span>
+        <span class="badge" style="background:#fff;border:1px solid ${TYPEC[j.type]||"#94a3b8"};color:${TYPEC[j.type]||"#5c6c80"}">${j.type}</span>
+      </div>
+      <div style="font-size:16px;font-weight:800;margin-top:6px;line-height:1.2">${esc(j.customer)}</div>
+      <div style="font-size:11.5px;color:var(--mut);margin-top:2px">${esc(j.addr)} · ${esc(j.terr)} territory</div>
+    </div>
+    <button class="x" data-close-drawer aria-label="Close">✕</button>
+  </div>
+  <div id="dscroll">`;
+
+  if(flags.length){
+    html+=`<div class="dsec"><div class="dh">Why this visit is flagged</div>`+
+      flags.map(f=>`<div class="flagbox ${f.sev}"><b>${esc(f.title)}.</b> ${esc(f.detail)}</div>`).join("")+`</div>`;
+  }
+
+  html+=`<div class="dsec"><div class="dh">Timing</div>
+    <dl class="kv">
+      <dt>Service window</dt><dd>${fmtT(j.window[0])} – ${fmtT(j.window[1])}${j.priority==="Emergency"?" · <b style='color:#c22a30'>respond-by "+fmtT(j.window[1])+" ("+fmtDur(Math.max(0,j.window[1]-NOW))+" left)</b>":""}</dd>
+      <dt>Scheduled</dt><dd>${assigned?fmtT(j.start)+" – "+fmtT(end):"<b style='color:#b45309'>Not assigned yet</b>"}</dd>
+      <dt>Duration</dt><dd>${fmtDur(j.dur)}${j.overrun?` · <b style="color:#c22a30">projected +${fmtDur(j.overrun)} overrun (finish ${fmtT(end+j.overrun)})</b>`:""}</dd>
+      <dt>Travel</dt><dd>${travel}</dd>
+    </dl></div>`;
+
+  html+=`<div class="dsec"><div class="dh">Reported problem</div>
+    <div style="font-size:12.5px;line-height:1.5">${esc(j.problem)}</div>
+    <dl class="kv" style="margin-top:9px"><dt>Equipment</dt><dd>${esc(j.equip)}</dd></dl>
+    ${reqChips.length?`<div class="tags" style="margin-top:8px">${reqChips.join("")}</div>`:""}
+  </div>`;
+
+  html+=`<div class="dsec"><div class="dh">Requirements</div><dl class="kv">
+    <dt>Parts</dt><dd>${j.parts.length?esc(j.parts.join(", "))+" <span style='color:#067647;font-size:11px'>(on truck)</span>":"None"}</dd>
+    <dt>Diagnostics</dt><dd>${j.gear.length?esc(j.gear.join(", "))+(j.gearConflict?" <b style='color:#c22a30;font-size:11px'>— kit is on Luis's truck until ~12:00 PM</b>":""):"None"}</dd>
+    <dt>Crew size</dt><dd>${j.crew} technician${j.crew>1?"s":""}${j.crew>1?" (compressor lift / safety spotter)":""}</dd>
+    <dt>On-site contact</dt><dd>${j.contact?esc(j.contact.name)+" — "+esc(j.contact.role)+(j.contact.required?" · <b>must be present</b>":" · optional"):"None required"}</dd>
+    <dt>Access</dt><dd>${j.access?esc(j.access.label)+" ("+fmtS(j.access.window[0])+"–"+fmtS(j.access.window[1])+")":"Unrestricted"}</dd>
+  </dl></div>`;
+
+  if(assigned){
+    html+=`<div class="dsec"><div class="dh">Assignment (${j.techs.length}/${j.crew})</div>`;
+    html+=j.techs.map((tid,i)=>{
+      const t=byTech(tid);
+      return `<div class="arow"><div style="min-width:0"><b>${t.name}</b>
+        <small>${t.role} · shift ${fmtS(t.shift[0])}–${fmtS(t.shift[1])}</small>
+        <small>${esc(t.systems.join(", "))}</small></div>
+        <span class="rolechip ${i?"sup":""}">${i?"Support":"Primary"}</span>
+        <button class="rm" data-remove="${tid}" title="Remove from this visit" aria-label="Remove">✕</button></div>`;
+    }).join("");
+    if(j.crew>j.techs.length){
+      const opts=TECHS.filter(t=>!j.techs.includes(t.id)&&qualifies(t,j)).map(t=>{
+        const av=isFree(t.id,j.start,end,j.id);
+        return `<option value="${t.id}" ${av?"":"disabled"}>${t.name} — ${av?"available "+fmtS(j.start)+"–"+fmtS(end):"busy / off shift"}</option>`;
+      });
+      html+=`<select id="crewSel" data-crew="${j.id}"><option value="">Add second technician…</option>${opts.join("")}</select>
+        <div class="mutnote">Only qualified techs who are free ${fmtS(j.start)}–${fmtS(end)} can be added.</div>`;
+    }
+    html+=`<div style="margin-top:10px"><button class="btn ghost" data-unassign="${j.id}">Unassign visit → send back to queue</button></div></div>`;
+  }else{
+    const cands=candidatesFor(j);
+    html+=`<div class="dsec"><div class="dh">Suggested technicians</div>`;
+    html+=cands.length?cands.map(c=>`
+      <div class="cand"><div style="min-width:0"><b>${c.t.name}</b><small>${c.t.role} · ${c.t.terr}${c.terrMatch?" · ✓ in territory":""}</small></div>
+        <span class="cst ${c.win!==null?"ok":"no"}">${c.win!==null?"Free "+fmtT(c.win):(c.slot!==null?"Next free "+fmtT(c.slot)+" — after window":"No opening today")}</span>
+        <button class="mini" data-assign="${j.id}" data-tech="${c.t.id}" data-start="${c.win}" ${c.win===null?"disabled":""}>${c.win!==null?"Assign "+fmtS(c.win):"—"}</button>
+      </div>`).join(""):'<div class="mutnote">No technician matches the required skills / certifications.</div>';
+    html+=`<div class="mutnote">Or drag the queue card directly onto the timeline to place it by hand.</div></div>`;
+  }
+  html+=`</div>`;
+  $("#drawerBody").innerHTML=html;
+}
+function openDrawer(id){
+  CUR=id;renderDrawer(id);
+  $("#drawer").classList.add("open");
+  document.querySelectorAll(".job.selected").forEach(el=>el.classList.remove("selected"));
+  const b=document.querySelector(`.job[data-id="${id}"]`);if(b)b.classList.add("selected");
+}
+function closeDrawer(){
+  CUR=null;$("#drawer").classList.remove("open");
+  document.querySelectorAll(".job.selected").forEach(el=>el.classList.remove("selected"));
+}
+function doAssign(jobId,techId,start){
+  const j=jobById(jobId),t=byTech(techId);if(!j||!t)return;
+  const v=validateAssign(j,t,start);
+  if(!v.ok){toast("Can't assign "+j.id+" to "+t.name+": "+v.msg,"err");return;}
+  j.techs=[t.id];j.start=start;renderAll();
+  toast(v.warn?(j.id+" → "+t.name+" at "+fmtT(start)+" — warning: "+v.msg):(j.id+" assigned to "+t.name+" at "+fmtT(start)),v.warn?"warn":"ok");
+  if(CUR===j.id)renderDrawer(j.id);
+}
+
+/* ================= global events ================= */
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-close-drawer]")){closeDrawer();return;}
+  const as=e.target.closest("[data-assign]");
+  if(as){doAssign(as.dataset.assign,as.dataset.tech,+as.dataset.start);return;}
+  const rm=e.target.closest("[data-remove]");
+  if(rm&&CUR){
+    const j=jobById(CUR);
+    j.techs=j.techs.filter(t=>t!==rm.dataset.remove);
+    if(!j.techs.length)j.start=null;
+    renderAll();renderDrawer(CUR);
+    toast(j.techs.length?("Technician removed from "+j.id):(j.id+" unassigned — back in the queue"),"ok");
+    return;
+  }
+  const ua=e.target.closest("[data-unassign]");
+  if(ua){
+    const j=jobById(ua.dataset.unassign);
+    j.techs=[];j.start=null;renderAll();renderDrawer(j.id);
+    toast(j.id+" unassigned — back in the queue","ok");return;
+  }
+  const hit=e.target.closest(".job,.qcard,.issue");
+  if(hit&&hit.dataset.id){openDrawer(hit.dataset.id);return;}
+  const lr=e.target.closest(".labrow,.tcard");
+  if(lr){
+    const tid=lr.dataset.tech;
+    const on=lr.classList.contains("hl");
+    document.querySelectorAll(".labrow,.tcard,.tlrow").forEach(el=>el.classList.remove("hl"));
+    if(!on){
+      document.querySelectorAll(`[data-tech="${tid}"]`).forEach(el=>el.classList.add("hl"));
+    }
+  }
+});
+$("#drawerBody").addEventListener("change",e=>{
+  const sel=e.target.closest("[data-crew]");if(!sel||!sel.value)return;
+  const j=jobById(sel.dataset.crew),t=byTech(sel.value);
+  if(!j||!t)return;
+  if(!qualifies(t,j)){toast(t.name+" isn't qualified for "+j.id,"err");return;}
+  if(!isFree(t.id,j.start,j.start+j.dur,j.id)){toast(t.name+" is not free "+fmtS(j.start)+"–"+fmtS(j.start+j.dur),"err");return;}
+  j.techs.push(t.id);renderAll();renderDrawer(j.id);
+  toast(t.name+" added to the "+j.id+" crew","ok");
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+
+document.addEventListener("dragstart",e=>{
+  const b=e.target.closest('.job[draggable="true"],.qcard');if(!b)return;
+  dragId=b.dataset.id;
+  e.dataTransfer.setData("text/plain",dragId);
+  e.dataTransfer.effectAllowed="move";
+  b.classList.add("dragging");
+});
+document.addEventListener("dragend",()=>{
+  dragId=null;
+  document.querySelectorAll(".dragging").forEach(el=>el.classList.remove("dragging"));
+  document.querySelectorAll(".drop-hint").forEach(el=>el.classList.remove("drop-hint"));
+});
+
+// queue as unassign dropzone
+const queueEl=$("#queuePane");
+queueEl.addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="move";queueEl.style.background="#f0f6ff";});
+queueEl.addEventListener("dragleave",()=>queueEl.style.background="");
+queueEl.addEventListener("drop",e=>{
+  e.preventDefault();queueEl.style.background="";
+  const id=e.dataTransfer.getData("text/plain")||dragId;
+  const j=jobById(id);if(!j||!j.techs.length)return;
+  j.techs=[];j.start=null;renderAll();
+  toast(j.id+" moved back to the unassigned queue","ok");
+  if(CUR===j.id)renderDrawer(j.id);
+});
+
+$("#filterSel").addEventListener("change",()=>{
+  const v=$("#filterSel").value;
+  document.querySelectorAll('[data-priority]').forEach(el=>el.classList.toggle("dim",v!=="all"&&el.dataset.priority!==v));
+});
+$("#btnNew").addEventListener("click",()=>toast("New work orders arrive from the intake queue — out of scope for this preview.","warn"));
+$("#btnHelp").addEventListener("click",()=>toast("Adjust the schedule: drag blocks between rows/lanes to reassign, drag queue cards onto a timeline, drop a job on the queue to unassign, and use the drawer to add a second tech. Issues recompute live.","ok"));
+$("#boardScroll").addEventListener("scroll",function(){$("#boardLabels").scrollTop=this.scrollTop;});
+
+/* ================= init ================= */
+renderAll();
+$("#boardScroll").scrollLeft=Math.max(0,x(NOW)-300);
+</script>
+</body>
+</html>

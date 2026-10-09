@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProShield ID // Athlete Identity Verification</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-page: #0a0a0c;
+            --bg-panel: #141418;
+            --bg-active: #1e1e24;
+            --bg-error: #2d0a0a;
+            --bg-accent: #ffcc00;
+            --bg-success: #0a2d0a;
+            
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-muted: #606060;
+            --text-error: #ff4d4d;
+            --text-on-accent: #000000;
+            --text-success: #4dff4d;
+
+            --border-ui: #333333;
+            --border-active: #ffcc00;
+            --border-error: #ff4d4d;
+            
+            /* Typography */
+            --font-main: "Inter", system-ui, -apple-system, sans-serif;
+            --font-mono: "JetBrains Mono", "SF Mono", monospace;
+            --size-xs: 0.7rem;
+            --size-sm: 0.8rem;
+            --size-base: 0.9rem;
+            --size-lg: 1.1rem;
+            --size-xl: 1.4rem;
+
+            /* Spacing */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 12px;
+            --space-lg: 16px;
+            --space-xl: 24px;
+
+            /* Radii */
+            --radius-none: 0;
+            --radius-sm: 2px;
+            --radius-md: 4px;
+
+            /* Shadows */
+            --shadow-elevation: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: var(--radius-none);
+            padding: var(--radius-none);
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            font-size: var(--size-base);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Error Overlay State */
+        .error-banner {
+            background-color: var(--bg-error);
+            border-bottom: 2px solid var(--border-error);
+            padding: var(--space-md) var(--space-xl);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .error-content {
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+        }
+
+        .error-icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-error);
+        }
+
+        .error-msg {
+            color: var(--text-error);
+            font-weight: 700;
+            font-size: var(--size-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-resolve {
+            background-color: var(--text-error);
+            color: var(--bg-page);
+            border: none;
+            padding: var(--space-sm) var(--space-lg);
+            font-weight: 800;
+            font-size: var(--size-xs);
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+        }
+
+        /* Header */
+        header {
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-ui);
+            padding: var(--space-sm) var(--space-xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-title {
+            font-size: var(--size-base);
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--bg-accent);
+        }
+
+        .status-bar {
+            display: flex;
+            gap: var(--space-xl);
+            font-family: var(--font-mono);
+            font-size: var(--size-xs);
+            color: var(--text-muted);
+        }
+
+        /* Main Layout */
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar - Master List */
+        .master-pane {
+            width: 320px;
+            border-right: 1px solid var(--border-ui);
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-panel);
+        }
+
+        .pane-header {
+            padding: var(--space-md);
+            border-bottom: 1px solid var(--border-ui);
+            font-size: var(--size-xs);
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .athlete-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-xs);
+        }
+
+        .athlete-item {
+            display: flex;
+            align-items: center;
+            padding: var(--space-sm);
+            border: 1px solid transparent;
+            margin-bottom: var(--space-xs);
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--bg-page);
+        }
+
+        .athlete-item.active {
+            background-color: var(--bg-active);
+            border-color: var(--border-active);
+        }
+
+        .drag-handle {
+            padding: var(--space-xs);
+            margin-right: var(--space-sm);
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .drag-handle span {
+            width: 12px;
+            height: 2px;
+            background-color: var(--text-muted);
+        }
+
+        .athlete-info {
+            flex: 1;
+        }
+
+        .athlete-name {
+            display: block;
+            font-weight: 600;
+            font-size: var(--size-sm);
+        }
+
+        .athlete-meta {
+            font-size: var(--size-xs);
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Detail Pane */
+        .detail-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background-color: var(--bg-page);
+        }
+
+        .detail-header {
+            padding: var(--space-lg) var(--space-xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 1px solid var(--border-ui);
+        }
+
+        .detail-id-card {
+            display: flex;
+            gap: var(--space-lg);
+            align-items: center;
+        }
+
+        .id-badge {
+            width: 60px;
+            height: 60px;
+            background-color: var(--bg-active);
+            border: 1px solid var(--border-ui);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .id-badge svg {
+            width: 40px;
+            height: 40px;
+            fill: var(--text-muted);
+        }
+
+        .id-text h1 {
+            font-size: var(--size-xl);
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+
+        .id-stats {
+            display: flex;
+            gap: var(--space-lg);
+            margin-top: var(--space-xs);
+        }
+
+        .stat-chip {
+            font-size: var(--size-xs);
+            font-family: var(--font-mono);
+            padding: 2px 6px;
+            background-color: var(--bg-active);
+            border: 1px solid var(--border-ui);
+        }
+
+        /* Media Grid - Extremely Dense */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1px;
+            background-color: var(--border-ui);
+            border-bottom: 1px solid var(--border-ui);
+        }
+
+        .media-card {
+            background-color: var(--bg-panel);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        .media-placeholder {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background-color: var(--bg-page);
+            border: 1px solid var(--border-ui);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .media-placeholder::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, transparent 48%, var(--border-ui) 49%, var(--border-ui) 51%, transparent 52%);
+            opacity: 0.3;
+        }
+
+        .media-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .media-title {
+            font-size: var(--size-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .media-timestamp {
+            font-size: var(--size-xs);
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+        }
+
+        .media-analysis {
+            font-size: var(--size-xs);
+            background: var(--bg-page);
+            padding: var(--space-xs);
+            border-left: 2px solid var(--bg-accent);
+        }
+
+        /* Verification Table */
+        .data-section {
+            padding: var(--space-xl);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--size-sm);
+            font-family: var(--font-mono);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: var(--space-sm);
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-ui);
+            text-transform: uppercase;
+            font-size: var(--size-xs);
+        }
+
+        .data-table td {
+            padding: var(--space-sm);
+            border-bottom: 1px solid var(--border-ui);
+        }
+
+        .data-table tr:hover {
+            background-color: var(--bg-active);
+        }
+
+        .val-match { color: var(--text-success); }
+        .val-mismatch { color: var(--text-error); font-weight: bold; }
+
+        /* Actions Footer */
+        .detail-footer {
+            margin-top: auto;
+            padding: var(--space-lg) var(--space-xl);
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border-ui);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space-md);
+        }
+
+        .btn {
+            padding: var(--space-md) var(--space-xl);
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 1px solid var(--border-ui);
+            cursor: pointer;
+            font-size: var(--size-sm);
+        }
+
+        .btn-primary {
+            background-color: var(--bg-accent);
+            color: var(--text-on-accent);
+            border-color: var(--bg-accent);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-primary);
+        }
+
+        /* Utilities */
+        .dragging {
+            opacity: 0.5;
+            border: 1px dashed var(--bg-accent);
+        }
+
+        [role="alert"] {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body role="application">
+
+    <!-- Error State Overlay -->
+    <div class="error-banner" role="alert" aria-live="assertive">
+        <div class="error-content">
+            <svg class="error-icon" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <div class="error-msg">
+                Critical Error: Biometric Hash Sync Failure (ERR_8829). 
+                Comparison data for <span style="text-decoration: underline;">Thorne, Marcus</span> may be stale.
+            </div>
+        </div>
+        <button class="btn-resolve" onclick="location.reload()" aria-label="Force Resync Data">
+            Force Re-Sync Registry
+        </button>
+    </div>
+
+    <!-- Main App Header -->
+    <header>
+        <div class="app-title">ProShield ID // Scanner v4.2</div>
+        <div class="status-bar">
+            <span>LOC: STADIUM_WEST_GATE_04</span>
+            <span>OP: FIELD_TECH_992</span>
+            <span>NET: 4G_ENCRYPTED</span>
+            <span style="color: var(--text-success)">● LIVE</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Master List: Athlete Queue -->
+        <aside class="master-pane" role="complementary" aria-label="Athlete Queue">
+            <div class="pane-header">
+                <span>Verification Queue</span>
+                <span>8 Records</span>
+            </div>
+            <div class="athlete-list" id="draggable-list" role="list">
+                <div class="athlete-item active" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Marcus Thorne</span>
+                        <span class="athlete-meta">FIFA-ID: 99281-B • U17</span>
+                    </div>
+                </div>
+                <div class="athlete-item" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Leonid Volkov</span>
+                        <span class="athlete-meta">FIFA-ID: 88412-K • U17</span>
+                    </div>
+                </div>
+                <div class="athlete-item" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Chen Wei</span>
+                        <span class="athlete-meta">FIFA-ID: 77201-X • U17</span>
+                    </div>
+                </div>
+                <div class="athlete-item" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Amara Okafor</span>
+                        <span class="athlete-meta">FIFA-ID: 66219-M • U17</span>
+                    </div>
+                </div>
+                <div class="athlete-item" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Diego Ramirez</span>
+                        <span class="athlete-meta">FIFA-ID: 55430-P • U17</span>
+                    </div>
+                </div>
+                <div class="athlete-item" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Sarah Jenkins</span>
+                        <span class="athlete-meta">FIFA-ID: 44291-L • U17</span>
+                    </div>
+                </div>
+                <div class="athlete-item" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Yuki Sato</span>
+                        <span class="athlete-meta">FIFA-ID: 33104-Y • U17</span>
+                    </div>
+                </div>
+                <div class="athlete-item" draggable="true" role="listitem">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="athlete-info">
+                        <span class="athlete-name">Omar Al-Fayed</span>
+                        <span class="athlete-meta">FIFA-ID: 22019-S • U17</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Detail Pane: Profile & Media Comparison -->
+        <article class="detail-pane" role="main">
+            <div class="detail-header">
+                <div class="detail-id-card">
+                    <div class="id-badge">
+                        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                    <div class="id-text">
+                        <h1>Marcus Thorne</h1>
+                        <div class="id-stats">
+                            <span class="stat-chip">DOB: 2007-05-14</span>
+                            <span class="stat-chip">CLUB: Manchester Acad.</span>
+                            <span class="stat-chip">CITIZEN: GBR</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="id-status-badge" style="color: var(--text-error); font-weight: bold; font-family: var(--font-mono); font-size: var(--size-xs);">
+                    STATUS: PENDING_RE_AUTH
+                </div>
+            </div>
+
+            <!-- The Dense Media Block -->
+            <section class="media-grid" aria-label="Biometric Media Comparison">
+                <!-- Media Item 1 -->
+                <div class="media-card">
+                    <div class="media-label">
+                        <span class="media-title">Passport Scan</span>
+                        <span class="media-timestamp">REF: 2023-01-12</span>
+                    </div>
+                    <div class="media-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" style="fill: var(--text-muted); opacity: 0.2;"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+                    </div>
+                    <div class="media-analysis">OCR Verified: MATCH (98.2%)</div>
+                </div>
+                <!-- Media Item 2 -->
+                <div class="media-card">
+                    <div class="media-label">
+                        <span class="media-title">Live Gate Feed</span>
+                        <span class="media-timestamp">CAM_04: 14:02:11</span>
+                    </div>
+                    <div class="media-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" style="fill: var(--text-muted); opacity: 0.2;"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                    </div>
+                    <div class="media-analysis">Face Geometry: ANALYSIS_FAIL</div>
+                </div>
+                <!-- Media Item 3 -->
+                <div class="media-card">
+                    <div class="media-label">
+                        <span class="media-title">Legacy Profile</span>
+                        <span class="media-timestamp">FIFA_DB: 2021-08-15</span>
+                    </div>
+                    <div class="media-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" style="fill: var(--text-muted); opacity: 0.2;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08s5.97 1.09 6 3.08c-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                    </div>
+                    <div class="media-analysis">Age Progression: CONSISTENT</div>
+                </div>
+                <!-- Media Item 4 -->
+                <div class="media-card">
+                    <div class="media-label">
+                        <span class="media-title">Action Capture</span>
+                        <span class="media-timestamp">U16_FINALS: 2022</span>
+                    </div>
+                    <div class="media-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" style="fill: var(--text-muted); opacity: 0.2;"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    </div>
+                    <div class="media-analysis">Height/Build: MATCH</div>
+                </div>
+                <!-- Media Item 5 -->
+                <div class="media-card">
+                    <div class="media-label">
+                        <span class="media-title">Fingerprint Hash</span>
+                        <span class="media-timestamp">INDEX_L: ENCRYPTED</span>
+                    </div>
+                    <div class="media-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" style="fill: var(--text-muted); opacity: 0.2;"><path d="M17.81 4.47c-.08 0-.16-.01-.23-.01C15.66 4.42 14 4.83 13 5.41c-.95.56-1.6 1.47-2.3 2.42l-.45.62c-.61.81-1.21 1.63-1.99 2.16-1.15.77-2.17.82-2.99.15-.69-.56-1.03-1.61-.95-2.94.02-.37-.26-.69-.64-.71-.37-.02-.7.26-.72.63-.11 1.92.35 3.51 1.58 4.5 1.48 1.19 3.38 1.07 5.07-.06.94-.64 1.58-1.5 2.2-2.32l.4-.54c.7-.95 1.2-1.6 1.84-1.98.74-.44 1.89-.73 3.39-.68.38.01.7-.28.71-.66.01-.38-.28-.7-.66-.71z"/></svg>
+                    </div>
+                    <div class="media-analysis" style="color: var(--text-error)">SYNC_INTERRUPTED</div>
+                </div>
+                <!-- Media Item 6 -->
+                <div class="media-card">
+                    <div class="media-label">
+                        <span class="media-title">Iris Pattern</span>
+                        <span class="media-timestamp">LEFT_EYE: CACHE</span>
+                    </div>
+                    <div class="media-placeholder">
+                        <svg width="64" height="64" viewBox="0 0 24 24" style="fill: var(--text-muted); opacity: 0.2;"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    </div>
+                    <div class="media-analysis">Validation: STALE_DATA</div>
+                </div>
+            </section>
+
+            <!-- Data Table -->
+            <section class="data-section">
+                <table class="data-table" role="grid">
+                    <thead>
+                        <tr>
+                            <th scope="col">Attribute</th>
+                            <th scope="col">Central Registry</th>
+                            <th scope="col">Local Scan</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Primary ID</td>
+                            <td>FIFA-99281-B</td>
+                            <td>FIFA-99281-B</td>
+                            <td class="val-match">VERIFIED</td>
+                        </tr>
+                        <tr>
+                            <td>Age Grade</td>
+                            <td>U17 (Active)</td>
+                            <td>U17 (Active)</td>
+                            <td class="val-match">VERIFIED</td>
+                        </tr>
+                        <tr>
+                            <td>Height (cm)</td>
+                            <td>182.5</td>
+                            <td>183.1</td>
+                            <td class="val-match">TOLERANCE_OK</td>
+                        </tr>
+                        <tr>
+                            <td>Weight (kg)</td>
+                            <td>76.2</td>
+                            <td>78.4</td>
+                            <td class="val-match">TOLERANCE_OK</td>
+                        </tr>
+                        <tr>
+                            <td>Biometric Key</td>
+                            <td>0xAF22...110</td>
+                            <td>0xBC44...998</td>
+                            <td class="val-mismatch">MISMATCH</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Sticky Footer Controls -->
+            <footer class="detail-footer">
+                <button class="btn btn-secondary">Flag for Review</button>
+                <button class="btn btn-secondary">Request ID Scan</button>
+                <button class="btn btn-primary" disabled title="Sync error must be resolved first">Commit Verification</button>
+            </footer>
+        </article>
+    </main>
+
+    <script>
+        // Simple Drag and Drop implementation
+        const list = document.getElementById('draggable-list');
+        let dragSrcEl = null;
+
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+            this.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            this.style.borderTop = '2px solid var(--bg-accent)';
+        }
+
+        function handleDragLeave(e) {
+            this.style.borderTop = '1px solid transparent';
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            if (dragSrcEl !== this) {
+                dragSrcEl.innerHTML = this.innerHTML;
+                this.innerHTML = e.dataTransfer.getData('text/html');
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            items.forEach(function (item) {
+                item.style.borderTop = '1px solid transparent';
+            });
+        }
+
+        let items = document.querySelectorAll('.athlete-item');
+        items.forEach(function(item) {
+            item.addEventListener('dragstart', handleDragStart, false);
+            item.addEventListener('dragenter', handleDragEnter, false);
+            item.addEventListener('dragover', handleDragOver, false);
+            item.addEventListener('dragleave', handleDragLeave, false);
+            item.addEventListener('drop', handleDrop, false);
+            item.addEventListener('dragend', handleDragEnd, false);
+            
+            // Selection logic
+            item.addEventListener('click', function() {
+                items.forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
+

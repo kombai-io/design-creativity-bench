@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440, initial-scale=1">
+<title>LedgerNorth · Integrations</title>
+<style>
+:root{
+  --paper:#F4F2EC;
+  --card:#FFFFFF;
+  --ink:#0D1B2A;
+  --ink2:#36424F;
+  --muted:#5D6978;
+  --line:#E0DCD2;
+  --line2:#ECE9E1;
+  --accent:#0C7563;
+  --accent2:#2BBF9C;
+  --accent-soft:#DFF0EA;
+  --navy:#0B1726;
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--sans);-webkit-font-smoothing:antialiased;min-width:1340px}
+a{color:inherit}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:3px}
+
+.integrations{padding:120px 0 136px;border-top:1px solid var(--line)}
+.wrap{width:1280px;margin:0 auto}
+
+/* ---------- Header ---------- */
+.eyebrow{display:inline-flex;align-items:center;gap:10px;margin:0 0 22px;font:600 12px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.eyebrow .dot{width:8px;height:8px;border-radius:2px;background:currentColor;transform:rotate(45deg)}
+.eyebrow.light{color:#7FDCC4}
+.int-head{display:grid;grid-template-columns:720px 1fr;gap:80px;align-items:end}
+.int-head h2{font-family:var(--serif);font-weight:500;font-size:66px;line-height:1.02;letter-spacing:-.025em;margin:0}
+.int-head h2 em{font-style:italic;color:var(--accent)}
+.int-lede p{font-size:18px;line-height:1.6;color:var(--ink2);margin:0 0 20px}
+.textlink{display:inline-flex;gap:8px;align-items:center;color:var(--ink);font-weight:600;font-size:15px;text-decoration:none;border-bottom:1.5px solid var(--accent);padding-bottom:3px}
+.textlink:hover{color:var(--accent)}
+
+.stats{list-style:none;margin:64px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.stats li{padding:26px 28px 0 0}
+.stats li + li{padding-left:28px;border-left:1px solid var(--line)}
+.stats strong{display:block;font-family:var(--serif);font-size:42px;font-weight:500;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:lining-nums}
+.stats span{display:block;font-size:14px;color:var(--muted);margin-top:8px;max-width:250px;line-height:1.45}
+
+/* ---------- Toolbar ---------- */
+.toolbar{margin:88px 0 18px;display:flex;justify-content:space-between;align-items:center;scroll-margin-top:32px}
+.filters{display:flex;gap:8px}
+.filters button{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink2);font:500 14px/1 var(--sans);padding:9px 10px 9px 15px;border-radius:999px;cursor:pointer;display:inline-flex;gap:9px;align-items:center;transition:background .18s,color .18s,border-color .18s}
+.filters button:hover{border-color:#C9C3B6;color:var(--ink)}
+.filters button span{font-size:12px;color:var(--muted);background:var(--paper);border-radius:999px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.filters button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.filters button[aria-pressed="true"] span{background:rgba(255,255,255,.14);color:#fff}
+.hint{margin:0;font-size:14px;color:var(--muted);display:flex;gap:8px;align-items:center}
+
+/* ---------- Explorer ---------- */
+.explorer{display:grid;grid-template-columns:820px 1fr;gap:24px}
+.map{position:relative;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;min-height:664px;
+  background:
+    radial-gradient(520px 320px at 50% 52%, rgba(43,191,156,.10), transparent 70%),
+    radial-gradient(rgba(255,255,255,.055) 1px, transparent 1px) 0 0/22px 22px,
+    var(--navy)}
+.stage{position:relative;width:820px;height:500px;margin:auto 0}
+.wires{position:absolute;left:0;top:0}
+.wire{fill:none;stroke:#2A4262;stroke-width:1.5;transition:stroke .25s,opacity .25s}
+.wire.is-active{stroke:var(--accent2);stroke-width:2}
+.wire.is-dim{opacity:.25}
+.cap{fill:var(--navy);stroke:#3E5C80;stroke-width:1.5;transition:opacity .25s}
+.cap.is-dim{opacity:.25}
+.pulse{fill:#5FD4B8;opacity:.45;transition:opacity .25s}
+.pulse.is-active{opacity:1;fill:#8CF0D6}
+.pulse.is-dim{opacity:0}
+
+.colhead{position:absolute;top:32px;width:208px}
+.colhead small{display:block;font:600 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:#6F87A5}
+.colhead strong{display:block;margin-top:8px;color:#fff;font-size:15px;font-weight:600}
+.colhead.c{left:318px;width:184px;text-align:center}
+
+.node{position:absolute;width:208px;height:64px;display:flex;align-items:center;gap:12px;padding:0 14px 0 12px;background:#12243A;border:1px solid #233A57;border-radius:14px;color:#fff;text-align:left;cursor:pointer;font:inherit;transition:border-color .2s,background .2s,opacity .25s,box-shadow .2s,transform .2s}
+.node:hover{border-color:#3A5A80;background:#152B45}
+.node.is-selected{border-color:var(--accent2);background:#123049;box-shadow:0 0 0 4px rgba(43,191,156,.16),0 14px 30px rgba(0,0,0,.35)}
+.node.is-dim{opacity:.28}
+.node .n-text{display:flex;flex-direction:column;min-width:0;flex:1}
+.node strong{font-size:14.5px;font-weight:600;line-height:1.2;white-space:nowrap}
+.node small{font-size:12px;color:#8DA2BC;margin-top:3px;white-space:nowrap}
+.node .n-dir{font-size:14px;color:#6F87A5;flex:none}
+.node.is-selected .n-dir{color:#8CF0D6}
+
+.hub{position:absolute;left:318px;top:164px;width:184px;height:240px;background:#FBFAF6;border-radius:18px;padding:16px 16px 12px;color:var(--ink);box-shadow:0 0 0 6px rgba(95,212,184,.10),0 24px 60px rgba(0,0,0,.45);display:flex;flex-direction:column}
+.hub::before{content:"";position:absolute;inset:-7px;border-radius:25px;border:1px solid rgba(95,212,184,.55);animation:ring 3.2s ease-out infinite;pointer-events:none}
+@keyframes ring{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.13)}}
+.hub-top{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line2)}
+.hub-top strong{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.hub-top small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.hub-list{list-style:none;margin:auto 0 0;padding:0}
+.hub-list li{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;font-size:12.5px;color:var(--ink2)}
+.hub-list li + li{border-top:1px dashed var(--line)}
+.hub-list li span{display:flex;align-items:center;gap:7px}
+.hub-list li span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent2)}
+.hub-list em{font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--ink);font-weight:600}
+
+.legend{display:flex;align-items:center;gap:26px;padding:16px 24px;border-top:1px solid #1C2F46;color:#8DA2BC;font-size:12.5px}
+.legend .li{display:inline-flex;align-items:center;gap:9px}
+.legend .tag{display:inline-grid;place-items:center;width:22px;height:18px;border-radius:5px;background:#16304A;color:#8CF0D6;font-size:12px}
+.legend .status{margin-left:auto;display:inline-flex;align-items:center;gap:8px;color:#BFE9DD}
+.legend .status i{width:7px;height:7px;border-radius:50%;background:#3DDC97;box-shadow:0 0 0 3px rgba(61,220,151,.18)}
+
+/* ---------- Logos ---------- */
+.logo{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:10px;font-weight:800;font-size:16px;letter-spacing:-.03em;flex:none;position:relative;font-family:var(--sans);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);line-height:1}
+.logo.lg{width:52px;height:52px;border-radius:13px;font-size:21px}
+.logo.sm{width:32px;height:32px;border-radius:8px;font-size:13px}
+.lg-plaid{background:#15181D;color:#fff}
+.lg-stripe{background:#635BFF;color:#fff}
+.lg-ramp{background:#E3EC3C;color:#15171A}
+.lg-workday{background:#0A6FD6;color:#fff}
+.lg-workday::after{content:"";position:absolute;top:18%;right:18%;width:17%;height:17%;border-radius:50%;background:#F7A823}
+.lg-netsuite{background:#22375A;color:#fff}
+.lg-intacct{background:#0E9F52;color:#fff}
+.lg-quickbooks{background:#2CA01C;color:#fff;border-radius:50% !important}
+.lg-xero{background:#13B5EA;color:#fff;border-radius:50% !important;font-weight:700}
+.ln-mark{display:inline-block;flex:none}
+
+/* ---------- Detail panel ---------- */
+.detail{background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px 26px 22px;display:flex;flex-direction:column;min-height:664px}
+.detail.anim > *{animation:rise .38s cubic-bezier(.2,.7,.2,1) both}
+.detail.anim > *:nth-child(2){animation-delay:.03s}
+.detail.anim > *:nth-child(3){animation-delay:.06s}
+.detail.anim > *:nth-child(4){animation-delay:.09s}
+.detail.anim > *:nth-child(5){animation-delay:.12s}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.d-head{display:flex;align-items:center;gap:14px}
+.d-title h3{margin:0;font-size:21px;font-weight:650;letter-spacing:-.01em;line-height:1.2}
+.d-title p{margin:3px 0 0;font-size:13px;color:var(--muted)}
+.live{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.live i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(12,117,99,.18)}
+.d-tag{margin:16px 0 18px;font-size:15px;line-height:1.5;color:var(--ink2)}
+.d-meta{display:grid;grid-template-columns:1fr 1fr;margin:0;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.d-meta div{padding:12px 0}
+.d-meta div:nth-child(odd){padding-right:16px;border-right:1px solid var(--line2)}
+.d-meta div:nth-child(even){padding-left:16px}
+.d-meta div:nth-child(-n+2){border-bottom:1px solid var(--line2)}
+.d-meta dt{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.d-meta dd{margin:4px 0 0;font-size:14px;font-weight:600;color:var(--ink)}
+.d-label{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px;font-size:12px;font-weight:650;letter-spacing:.09em;text-transform:uppercase;color:var(--ink)}
+.d-label .aside{text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);display:inline-flex;align-items:center;gap:5px;font-size:12px}
+.d-label .aside .dir{margin-left:6px}
+.objects{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.objects li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2);background:#F7F6F2;border-radius:8px;padding:7px 9px;white-space:nowrap;overflow:hidden}
+.dir{font:700 9.5px/1 var(--mono);letter-spacing:.04em;padding:3px 5px;border-radius:4px;flex:none}
+.dir.in{background:#E3ECF7;color:#2A5C9A}
+.dir.out{background:#DFF0EA;color:#0C7563}
+.dir.both{background:#F5EBD9;color:#8F5A0E}
+.log{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:12px}
+.log li{display:grid;grid-template-columns:42px 1fr;gap:10px;padding:7px 0;border-top:1px dashed var(--line);white-space:nowrap}
+.log li:first-child{border-top:0}
+.log time{color:var(--muted)}
+.log span{color:var(--ink2);overflow:hidden;text-overflow:ellipsis}
+.d-foot{margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;align-items:center;font-size:13px;border-top:1px solid var(--line2)}
+.d-foot a{color:var(--ink);font-weight:600;text-decoration:none}
+.d-foot a:hover{color:var(--accent)}
+.d-foot span{color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.d-foot span b{font-weight:600;color:var(--ink2)}
+
+/* ---------- Outcomes ---------- */
+.outcomes{margin-top:120px}
+.o-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;gap:60px}
+.o-head h3{font-family:var(--serif);font-weight:500;font-size:42px;letter-spacing:-.02em;margin:0;line-height:1.08;max-width:640px}
+.o-head p{max-width:440px;margin:0;color:var(--ink2);font-size:16px;line-height:1.6}
+.o-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.o-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:24px;display:flex;flex-direction:column;transition:transform .22s,box-shadow .22s,border-color .22s}
+.o-card:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(13,27,42,.08);border-color:#D4CFC3}
+.combo{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.stack{display:flex}
+.stack .logo{width:34px;height:34px;font-size:13px;border-radius:9px;box-shadow:0 0 0 3px #fff}
+.stack .logo + .logo{margin-left:-7px}
+.combo-lbl{font-size:12px;color:var(--muted);font-weight:500}
+.o-card h4{font-size:19px;line-height:1.25;margin:0 0 10px;font-weight:650;letter-spacing:-.01em}
+.o-card p{margin:0 0 20px;font-size:14.5px;color:var(--ink2);line-height:1.55}
+.ticket{background:#F7F6F2;border:1px solid var(--line2);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:11.5px;color:var(--ink2);margin-bottom:22px}
+.ticket .t-head{display:flex;justify-content:space-between;color:var(--muted);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding-bottom:7px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+.ticket .row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;white-space:nowrap}
+.ticket .row.total{border-top:1px dashed #D2CCBE;margin-top:5px;padding-top:8px;color:var(--ink);font-weight:700}
+.ticket .row.ok{color:var(--accent);font-weight:600;padding-top:6px}
+.o-metric{margin-top:auto;padding-top:18px;border-top:1px solid var(--line2);display:flex;align-items:center;gap:14px}
+.o-metric strong{font-family:var(--serif);font-size:34px;font-weight:500;color:var(--accent);letter-spacing:-.02em;line-height:1;white-space:nowrap}
+.o-metric span{font-size:13px;color:var(--muted);line-height:1.35}
+.o-note{margin:18px 0 0;font-size:12.5px;color:var(--muted)}
+
+/* ---------- Explore strip ---------- */
+.explore{margin-top:96px;position:relative;color:#fff;border-radius:24px;padding:56px;display:grid;grid-template-columns:1fr 520px;gap:80px;align-items:center;
+  background:
+    radial-gradient(640px 320px at 92% 0%, rgba(43,191,156,.20), transparent 70%),
+    radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0/22px 22px,
+    var(--navy)}
+.explore h3{font-family:var(--serif);font-weight:500;font-size:44px;line-height:1.06;letter-spacing:-.02em;margin:0 0 16px}
+.ex-copy > p{color:#B3C2D3;font-size:16.5px;line-height:1.6;margin:0;max-width:560px}
+.trust{list-style:none;padding:0;margin:28px 0 0;display:flex;gap:24px;font-size:13.5px;color:#D5E0EB}
+.trust li{display:flex;align-items:center;gap:8px}
+.trust li b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(43,191,156,.2);color:#8CF0D6;font-size:10px}
+.ex-label{display:block;font:600 12px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:#8DA2BC;margin-bottom:12px}
+.search{position:relative}
+.search > svg{position:absolute;left:17px;top:19px;pointer-events:none}
+.search input{width:100%;height:58px;border-radius:12px;border:1px solid transparent;padding:0 16px 0 48px;font:15px var(--sans);color:var(--ink);background:#fff;outline:none}
+.search input:focus{box-shadow:0 0 0 4px rgba(43,191,156,.35)}
+.search input::placeholder{color:#7C8795}
+.results{position:absolute;left:0;right:0;top:66px;background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.4);list-style:none;margin:0;padding:6px;z-index:5;color:var(--ink)}
+.results[hidden]{display:none}
+.results button{width:100%;display:flex;gap:12px;align-items:center;padding:9px 10px;border:0;background:none;border-radius:9px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.results button:hover,.results button.is-active{background:#F3F1EB}
+.results .r-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.results .r-text strong{font-size:14px;font-weight:600}
+.results .r-text small{font-size:12px;color:var(--muted)}
+.results .r-go{font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap}
+.results .r-empty{padding:12px 12px;font-size:13.5px;color:var(--ink2)}
+.results .r-empty a{color:var(--accent);font-weight:600}
+.popular{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;font-size:13px;color:#8DA2BC}
+.popular button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:#E3EAF2;border-radius:999px;padding:6px 12px;font:500 13px var(--sans);cursor:pointer;transition:background .18s,border-color .18s}
+.popular button:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.32)}
+.ex-btns{display:flex;gap:12px;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 22px;border-radius:12px;font-weight:600;font-size:15px;text-decoration:none;transition:background .18s,border-color .18s}
+.btn-primary{background:#fff;color:var(--navy)}
+.btn-primary:hover{background:#E4F5EF}
+.btn-ghost{color:#fff;border:1px solid rgba(255,255,255,.24)}
+.btn-ghost:hover{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.04)}
+.request{margin:18px 0 0;font-size:13.5px;color:#8DA2BC}
+.request a{color:#fff;font-weight:600}
+
+@media (prefers-reduced-motion: reduce){
+  .hub::before{animation:none;opacity:.5}
+  .pulse{display:none}
+  .detail.anim > *{animation:none}
+  .o-card:hover{transform:none}
+}
+</style>
+</head>
+<body>
+
+<section class="integrations" id="integrations" aria-labelledby="int-title">
+  <div class="wrap">
+
+    <!-- Header -->
+    <header class="int-head">
+      <div>
+        <p class="eyebrow"><span class="dot"></span>Integrations</p>
+        <h2 id="int-title">Plugs into the finance stack <em>you already run.</em></h2>
+      </div>
+      <div class="int-lede">
+        <p>LedgerNorth sits between the systems where money moves (your bank, Stripe, Ramp, and Workday) and the general ledger where your books close. Connect them once, and reconciliations, accruals, and journal entries stay current on their own.</p>
+        <a class="textlink" href="#int-map">See how your data flows <span aria-hidden="true">↓</span></a>
+      </div>
+    </header>
+
+    <ul class="stats">
+      <li><strong>8</strong><span>native connectors, built and maintained by LedgerNorth engineers</span></li>
+      <li><strong>15 min</strong><span>default sync interval, with real-time webhooks where supported</span></li>
+      <li><strong>2-way</strong><span>GL sync: journals post straight to your ledger, no CSV imports</span></li>
+      <li><strong>4.1 days</strong><span>median month-end close for teams with every system connected</span></li>
+    </ul>
+
+    <!-- Filter toolbar -->
+    <div class="toolbar" id="int-map">
+      <div class="filters" role="group" aria-label="Filter integrations by category">
+        <button type="button" data-filter="all" aria-pressed="true">All <span>8</span></button>
+        <button type="button" data-filter="ledger" aria-pressed="false">Accounting &amp; ERP <span>4</span></button>
+        <button type="button" data-filter="banking" aria-pressed="false">Banking <span>1</span></button>
+        <button type="button" data-filter="payments" aria-pressed="false">Payments <span>1</span></button>
+        <button type="button" data-filter="spend" aria-pressed="false">Spend management <span>1</span></button>
+        <button type="button" data-filter="workforce" aria-pressed="false">Workforce <span>1</span></button>
+      </div>
+      <p class="hint">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2l9 5-4 1.2L6.6 12 3 2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        Select any system to see exactly what syncs
+      </p>
+    </div>
+
+    <!-- Map + detail -->
+    <div class="explorer">
+      <div class="map">
+        <div class="stage" role="group" aria-label="LedgerNorth integration map">
+          <svg class="wires" id="wires" viewBox="0 0 820 500" width="820" height="500" aria-hidden="true">
+            <!-- Sources into LedgerNorth -->
+            <path id="w-plaid"   class="wire" data-id="plaid"   d="M232 140 C 275 140 275 224 318 224"/>
+            <path id="w-stripe"  class="wire" data-id="stripe"  d="M232 236 C 275 236 275 264 318 264"/>
+            <path id="w-ramp"    class="wire" data-id="ramp"    d="M232 332 C 275 332 275 304 318 304"/>
+            <path id="w-workday" class="wire" data-id="workday" d="M232 428 C 275 428 275 344 318 344"/>
+            <!-- LedgerNorth to general ledgers -->
+            <path id="w-netsuite"   class="wire" data-id="netsuite"   d="M502 224 C 545 224 545 140 588 140"/>
+            <path id="w-intacct"    class="wire" data-id="intacct"    d="M502 264 C 545 264 545 236 588 236"/>
+            <path id="w-quickbooks" class="wire" data-id="quickbooks" d="M502 304 C 545 304 545 332 588 332"/>
+            <path id="w-xero"       class="wire" data-id="xero"       d="M502 344 C 545 344 545 428 588 428"/>
+
+            <!-- end caps -->
+            <circle class="cap" data-id="plaid" cx="232" cy="140" r="3.5"/><circle class="cap" data-id="plaid" cx="318" cy="224" r="3.5"/>
+            <circle class="cap" data-id="stripe" cx="232" cy="236" r="3.5"/><circle class="cap" data-id="stripe" cx="318" cy="264" r="3.5"/>
+            <circle class="cap" data-id="ramp" cx="232" cy="332" r="3.5"/><circle class="cap" data-id="ramp" cx="318" cy="304" r="3.5"/>
+            <circle class="cap" data-id="workday" cx="232" cy="428" r="3.5"/><circle class="cap" data-id="workday" cx="318" cy="344" r="3.5"/>
+            <circle class="cap" data-id="netsuite" cx="502" cy="224" r="3.5"/><circle class="cap" data-id="netsuite" cx="588" cy="140" r="3.5"/>
+            <circle class="cap" data-id="intacct" cx="502" cy="264" r="3.5"/><circle class="cap" data-id="intacct" cx="588" cy="236" r="3.5"/>
+            <circle class="cap" data-id="quickbooks" cx="502" cy="304" r="3.5"/><circle class="cap" data-id="quickbooks" cx="588" cy="332" r="3.5"/>
+            <circle class="cap" data-id="xero" cx="502" cy="344" r="3.5"/><circle class="cap" data-id="xero" cx="588" cy="428" r="3.5"/>
+
+            <!-- moving data pulses -->
+            <circle class="pulse" data-id="plaid" r="3"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#w-plaid"/></animateMotion></circle>
+            <circle class="pulse" data-id="stripe" r="3"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#w-stripe"/></animateMotion></circle>
+            <circle class="pulse" data-id="ramp" r="3"><animateMotion dur="3.1s" repeatCount="indefinite"><mpath href="#w-ramp"/></animateMotion></circle>
+            <circle class="pulse" data-id="workday" r="3"><animateMotion dur="3.6s" repeatCount="indefinite"><mpath href="#w-workday"/></animateMotion></circle>
+
+            <circle class="pulse" data-id="netsuite" r="3"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#w-netsuite"/></animateMotion></circle>
+            <circle class="pulse" data-id="netsuite" r="2.5"><animateMotion dur="3.4s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-netsuite"/></animateMotion></circle>
+            <circle class="pulse" data-id="intacct" r="3"><animateMotion dur="2.3s" repeatCount="indefinite"><mpath href="#w-intacct"/></animateMotion></circle>
+            <circle class="pulse" data-id="intacct" r="2.5"><animateMotion dur="3.2s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-intacct"/></animateMotion></circle>
+            <circle class="pulse" data-id="quickbooks" r="3"><animateMotion dur="2.9s" repeatCount="indefinite"><mpath href="#w-quickbooks"/></animateMotion></circle>
+            <circle class="pulse" data-id="quickbooks" r="2.5"><animateMotion dur="3.7s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-quickbooks"/></animateMotion></circle>
+            <circle class="pulse" data-id="xero" r="3"><animateMotion dur="3.3s" repeatCount="indefinite"><mpath href="#w-xero"/></animateMotion></circle>
+            <circle class="pulse" data-id="xero" r="2.5"><animateMotion dur="2.7s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#w-xero"/></animateMotion></circle>
+          </svg>
+
+          <div class="colhead" style="left:24px"><small>Sources</small><strong>Where money moves</strong></div>
+          <div class="colhead c"><small>Finance-ops layer</small><strong>Where it reconciles</strong></div>
+          <div class="colhead" style="left:588px"><small>System of record</small><strong>Where the books close</strong></div>
+
+          <!-- Source nodes -->
+          <button class="node" type="button" data-id="plaid" style="left:24px;top:108px" aria-controls="detail" aria-pressed="false">
+            <span class="logo lg-plaid">P</span>
+            <span class="n-text"><strong>Plaid</strong><small>Bank feeds</small></span>
+            <span class="n-dir" aria-hidden="true">→</span>
+          </button>
+          <button class="node" type="button" data-id="stripe" style="left:24px;top:204px" aria-controls="detail" aria-pressed="false">
+            <span class="logo lg-stripe">S</span>
+            <span class="n-text"><strong>Stripe</strong><small>Payouts &amp; fees</small></span>
+            <span class="n-dir" aria-hidden="true">→</span>
+          </button>
+          <button class="node" type="button" data-id="ramp" style="left:24px;top:300px" aria-controls="detail" aria-pressed="false">
+            <span class="logo lg-ramp">R</span>
+            <span class="n-text"><strong>Ramp</strong><small>Card spend &amp; bills</small></span>
+            <span class="n-dir" aria-hidden="true">⇄</span>
+          </button>
+          <button class="node" type="button" data-id="workday" style="left:24px;top:396px" aria-controls="detail" aria-pressed="false">
+            <span class="logo lg-workday">W</span>
+            <span class="n-text"><strong>Workday</strong><small>Payroll &amp; headcount</small></span>
+            <span class="n-dir" aria-hidden="true">→</span>
+          </button>
+
+          <!-- Hub -->
+          <div class="hub">
+            <div class="hub-top">
+              <svg class="ln-mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0B1726"/><path d="M16 6 L23.5 24.5 L16 20.2 L8.5 24.5 Z" fill="#5FD4B8"/><path d="M16 6 L16 20.2 L8.5 24.5 Z" fill="#2BBF9C"/></svg>
+              <div><strong>LedgerNorth</strong><small>Today, 09:45</small></div>
+            </div>
+            <ul class="hub-list">
+              <li><span>Matched</span><em>12,480</em></li>
+              <li><span>Reconciled</span><em>38 accts</em></li>
+              <li><span>Accrued</span><em>46 JEs</em></li>
+              <li><span>Posted</span><em>1,184 lines</em></li>
+            </ul>
+          </div>
+
+          <!-- Ledger nodes -->
+          <button class="node" type="button" data-id="netsuite" style="left:588px;top:108px" aria-controls="detail" aria-pressed="true">
+            <span class="logo lg-netsuite">N</span>
+            <span class="n-text"><strong>NetSuite</strong><small>Oracle · ERP</small></span>
+            <span class="n-dir" aria-hidden="true">⇄</span>
+          </button>
+          <button class="node" type="button" data-id="intacct" style="left:588px;top:204px" aria-controls="detail" aria-pressed="false">
+            <span class="logo lg-intacct">Si</span>
+            <span class="n-text"><strong>Sage Intacct</strong><small>ERP · Multi-entity</small></span>
+            <span class="n-dir" aria-hidden="true">⇄</span>
+          </button>
+          <button class="node" type="button" data-id="quickbooks" style="left:588px;top:300px" aria-controls="detail" aria-pressed="false">
+            <span class="logo lg-quickbooks">qb</span>
+            <span class="n-text"><strong>QuickBooks</strong><small>Online · GL</small></span>
+            <span class="n-dir" aria-hidden="true">⇄</span>
+          </button>
+          <button class="node" type="button" data-id="xero" style="left:588px;top:396px" aria-controls="detail" aria-pressed="false">
+            <span class="logo lg-xero">x</span>
+            <span class="n-text"><strong>Xero</strong><small>Multi-org GL</small></span>
+            <span class="n-dir" aria-hidden="true">⇄</span>
+          </button>
+        </div>
+
+        <div class="legend">
+          <span class="li"><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" stroke="#3E5C80" stroke-width="1.5"/><circle cx="21" cy="4" r="3" fill="#5FD4B8"/></svg>Data read into LedgerNorth</span>
+          <span class="li"><span class="tag" aria-hidden="true">⇄</span>Two-way sync, with write-back</span>
+          <span class="status"><i></i>8 of 8 connectors operational</span>
+        </div>
+      </div>
+
+      <aside class="detail" id="detail" aria-live="polite" aria-label="Integration details"></aside>
+    </div>
+
+    <!-- Outcomes -->
+    <div class="outcomes">
+      <div class="o-head">
+        <h3>What becomes possible once your systems talk to each other.</h3>
+        <p>One connector moves data. Two or three together take whole steps out of your close. Finance teams usually switch on these combinations first.</p>
+      </div>
+
+      <div class="o-grid">
+        <article class="o-card">
+          <div class="combo">
+            <div class="stack"><span class="logo lg-stripe">S</span><span class="logo lg-plaid">P</span><span class="logo lg-quickbooks">qb</span></div>
+            <span class="combo-lbl">Stripe · Plaid · QuickBooks</span>
+          </div>
+          <h4>Payouts matched to deposits, automatically</h4>
+          <p>Each Stripe payout is split into charges, refunds, and fees. LedgerNorth matches it to the bank deposit and posts every piece to the right account.</p>
+          <div class="ticket" aria-label="Example payout reconciliation">
+            <div class="t-head"><span>Payout po_1QkX9e</span><span>Jun 14</span></div>
+            <div class="row"><span>Charges (412)</span><span>$40,112.30</span></div>
+            <div class="row"><span>Refunds (6)</span><span>−$577.55</span></div>
+            <div class="row"><span>Stripe fees</span><span>−$1,114.20</span></div>
+            <div class="row total"><span>Deposit</span><span>$38,420.55</span></div>
+            <div class="row ok"><span>✓ Matched · Chase ···4417</span></div>
+          </div>
+          <div class="o-metric"><strong>97%</strong><span>of payouts auto-matched as they arrive</span></div>
+        </article>
+
+        <article class="o-card">
+          <div class="combo">
+            <div class="stack"><span class="logo lg-ramp">R</span><span class="logo lg-intacct">Si</span></div>
+            <span class="combo-lbl">Ramp · Sage Intacct</span>
+          </div>
+          <h4>Card spend coded before month-end</h4>
+          <p>Ramp transactions arrive with the GL account, department, and entity already filled in, and post to Sage Intacct as they clear.</p>
+          <div class="ticket" aria-label="Example coded card transaction">
+            <div class="t-head"><span>AWS · card ···2291</span><span>$18,204.00</span></div>
+            <div class="row"><span>GL account</span><span>6410 Hosting</span></div>
+            <div class="row"><span>Department</span><span>Engineering</span></div>
+            <div class="row"><span>Entity</span><span>100 · Halden US</span></div>
+            <div class="row total"><span>Receipt</span><span>✓ Attached</span></div>
+            <div class="row ok"><span>✓ Posted to AP · Jun 14</span></div>
+          </div>
+          <div class="o-metric"><strong>6.5 hrs</strong><span>saved per close on spend coding</span></div>
+        </article>
+
+        <article class="o-card">
+          <div class="combo">
+            <div class="stack"><span class="logo lg-workday">W</span><span class="logo lg-netsuite">N</span></div>
+            <span class="combo-lbl">Workday · NetSuite</span>
+          </div>
+          <h4>Accruals that follow real headcount</h4>
+          <p>When people are hired, leave, or get a pay change in Workday, payroll accruals and department allocations update before the close starts.</p>
+          <div class="ticket" aria-label="Example payroll accrual">
+            <div class="t-head"><span>June payroll accrual</span><span>Jun 30</span></div>
+            <div class="row"><span>Base · 1,284 workers</span><span>$1,398,200</span></div>
+            <div class="row"><span>New hires (3)</span><span>+$21,450</span></div>
+            <div class="row"><span>Terminations (1)</span><span>−$6,120</span></div>
+            <div class="row"><span>Employer taxes</span><span>+$48,970</span></div>
+            <div class="row total"><span>Posted to NetSuite</span><span>$1,462,500</span></div>
+          </div>
+          <div class="o-metric"><strong>±0.8%</strong><span>accrual-to-actual payroll variance</span></div>
+        </article>
+
+        <article class="o-card">
+          <div class="combo">
+            <div class="stack"><span class="logo lg-netsuite">N</span><span class="logo lg-xero">x</span></div>
+            <span class="combo-lbl">NetSuite · Xero</span>
+          </div>
+          <h4>One close across NetSuite and Xero</h4>
+          <p>Is the parent company on NetSuite and a newly acquired subsidiary still on Xero? Consolidate both, with FX and eliminations, and no re-keying.</p>
+          <div class="ticket" aria-label="Example multi-entity consolidation">
+            <div class="t-head"><span>Q2 consolidation</span><span>Jun 30</span></div>
+            <div class="row"><span>Halden Inc · NetSuite</span><span>USD</span></div>
+            <div class="row"><span>Halden UK · Xero</span><span>GBP</span></div>
+            <div class="row"><span>FX rate (closing)</span><span>1.2712</span></div>
+            <div class="row"><span>Eliminations</span><span>4 entries</span></div>
+            <div class="row total"><span>Consolidated TB</span><span>✓ Balanced</span></div>
+          </div>
+          <div class="o-metric"><strong>2.5 days</strong><span>faster multi-entity consolidation</span></div>
+        </article>
+      </div>
+      <p class="o-note">Figures are medians across LedgerNorth customer workspaces that have each combination connected, January–June 2025. The sample records are for illustration only.</p>
+    </div>
+
+    <!-- Explore the directory -->
+    <div class="explore">
+      <div class="ex-copy">
+        <p class="eyebrow light"><span class="dot"></span>Integrations directory</p>
+        <h3>Explore every connector, field&nbsp;by&nbsp;field.</h3>
+        <p>Every listing shows which objects sync, which direction they move, the permission scopes required, and a step-by-step setup guide. That way finance and IT can plan the rollout before your first call with us.</p>
+        <ul class="trust">
+          <li><b aria-hidden="true">✓</b>SOC 2 Type II audited</li>
+          <li><b aria-hidden="true">✓</b>Least-privilege OAuth scopes</li>
+          <li><b aria-hidden="true">✓</b>Field-level audit log</li>
+        </ul>
+      </div>
+      <div class="ex-actions">
+        <label for="int-search" class="ex-label">Search the directory</label>
+        <div class="search" id="search-box">
+          <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="#5D6978" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="#5D6978" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="int-search" type="search" autocomplete="off" spellcheck="false" placeholder="Try “NetSuite”, “bank feeds”, or “payroll”" aria-controls="int-results">
+          <ul id="int-results" class="results" hidden></ul>
+        </div>
+        <div class="popular">
+          <span>Popular:</span>
+          <button type="button" data-q="NetSuite">NetSuite</button>
+          <button type="button" data-q="bank feeds">bank feeds</button>
+          <button type="button" data-q="payroll">payroll</button>
+          <button type="button" data-q="multi-entity">multi-entity</button>
+          <button type="button" data-q="fees">fees</button>
+        </div>
+        <div class="ex-btns">
+          <a class="btn btn-primary" href="#integrations">Browse all integrations <span aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="#integrations">View API &amp; webhooks</a>
+        </div>
+        <p class="request">Using a system that isn’t listed? <a href="#integrations">Request an integration</a>. Our integrations team reviews every request.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  var INT = {
+    netsuite:{name:'Oracle NetSuite', short:'NetSuite', mono:'N', cat:'ledger', catLabel:'Accounting & ERP',
+      tagline:'Two-way GL sync for books with multiple subsidiaries and currencies, including OneWorld and custom segments.',
+      sync:'Two-way', freq:'Every 15 minutes', setup:'~20 minutes', auth:'Token-based auth',
+      objects:[['in','Chart of accounts'],['in','Subsidiaries'],['in','Classes & depts'],['both','Vendors'],['out','Journal entries'],['out','Vendor bills']],
+      log:[['09:45','Posted JE-2025-1184 · 42 lines · US-01'],['09:30','Refreshed 1,206 accounts · 6 subs'],['09:15','Synced FX rates · EUR, GBP, CAD']],
+      plan:'Growth & Enterprise', keywords:'erp gl general ledger multi-entity multi-currency subsidiaries oneworld consolidation oracle'},
+    intacct:{name:'Sage Intacct', short:'Sage Intacct', mono:'Si', cat:'ledger', catLabel:'Accounting & ERP',
+      tagline:'Two-way sync that works with the dimensions, entities, and approval workflows you’ve set up in Sage Intacct.',
+      sync:'Two-way', freq:'Every 15 minutes', setup:'~15 minutes', auth:'Web Services sender ID',
+      objects:[['in','Dimensions'],['in','Entities'],['in','GL accounts'],['both','Vendors'],['out','Journal entries'],['out','AP bills']],
+      log:[['09:44','Posted 96 Ramp lines to AP · Entity 100'],['09:31','New dimension mapped · PRJ-Q3-LAUNCH'],['09:00','Allocation run posted · 14 depts']],
+      plan:'Growth & Enterprise', keywords:'erp gl general ledger dimensions multi-entity allocations sage'},
+    quickbooks:{name:'QuickBooks Online', short:'QuickBooks', mono:'qb', cat:'ledger', catLabel:'Accounting & ERP',
+      tagline:'Fast two-way sync for growing teams that keep their books in QuickBooks Online, with classes and locations.',
+      sync:'Two-way', freq:'Every 15 minutes', setup:'5 minutes', auth:'Intuit OAuth 2.0',
+      objects:[['in','Chart of accounts'],['in','Classes & locations'],['both','Customers'],['both','Vendors'],['out','Journal entries'],['out','Deposits']],
+      log:[['09:41','Stripe payout posted as deposit'],['09:41','Fees split to 6120 · $1,114.20'],['09:40','Refunds posted to 4010 · $577.55']],
+      plan:'All plans', keywords:'gl general ledger smb qbo intuit'},
+    xero:{name:'Xero', short:'Xero', mono:'x', cat:'ledger', catLabel:'Accounting & ERP',
+      tagline:'Two-way sync across multiple Xero organisations, with tracking categories and multi-currency support.',
+      sync:'Two-way', freq:'Every 30 minutes', setup:'5 minutes', auth:'Xero OAuth 2.0',
+      objects:[['in','Chart of accounts'],['in','Tracking categories'],['both','Contacts'],['in','Bank transactions'],['out','Manual journals'],['out','Bills']],
+      log:[['09:38','Posted consolidation JE · Halden UK Ltd'],['09:36','Converted 212 lines GBP→USD · 1.2712'],['09:30','Synced 3 tracking categories']],
+      plan:'All plans', keywords:'gl general ledger multi-org multi-entity multi-currency uk'},
+    plaid:{name:'Plaid', short:'Plaid', mono:'P', cat:'banking', catLabel:'Banking',
+      tagline:'Bank feeds from your operating, payroll, and reserve accounts, reconciled against the ledger every day.',
+      sync:'Read-only', freq:'Every 4 hrs + daily', setup:'3 minutes', auth:'Plaid Link · OAuth',
+      objects:[['in','Transactions'],['in','Daily balances'],['in','Account metadata'],['in','Pending items'],['in','ACH & wire detail'],['in','Statements']],
+      log:[['09:42','Imported 214 txns · Operating ···4417'],['09:42','Balance confirmed · $4,812,306.19'],['05:40','Imported 38 txns · Payroll ···0921']],
+      plan:'All plans', keywords:'bank feeds bank accounts cash balances transactions treasury reconciliation'},
+    stripe:{name:'Stripe', short:'Stripe', mono:'S', cat:'payments', catLabel:'Payments',
+      tagline:'Every payout broken down into charges, refunds, fees, and disputes, then matched to the bank deposit.',
+      sync:'Read-only', freq:'Real-time webhooks', setup:'2 minutes', auth:'Stripe Connect · OAuth',
+      objects:[['in','Payouts'],['in','Balance transactions'],['in','Charges & refunds'],['in','Processing fees'],['in','Disputes'],['in','Invoices']],
+      log:[['09:41','Payout $38,420.55 matched · ···4417'],['09:12','Dispute opened · $1,250.00 → AR queue'],['08:55','Received 1,882 balance transactions']],
+      plan:'All plans', keywords:'payments payouts fees refunds disputes revenue cash matching'},
+    ramp:{name:'Ramp', short:'Ramp', mono:'R', cat:'spend', catLabel:'Spend management',
+      tagline:'Card spend, receipts, and bills arrive already coded to the right GL account, department, and entity.',
+      sync:'Read + write-back', freq:'Every 15 minutes', setup:'4 minutes', auth:'OAuth 2.0',
+      objects:[['in','Card transactions'],['in','Receipts & memos'],['in','Reimbursements'],['in','Bill payments'],['both','GL coding'],['both','Departments']],
+      log:[['09:44','Coded 96 card lines · 5 sent to review'],['09:20','Wrote GL codes back to Ramp · 91 lines'],['08:10','Receipt matched · AWS · $18,204.00']],
+      plan:'All plans', keywords:'cards expenses spend receipts reimbursements bills ap coding'},
+    workday:{name:'Workday', short:'Workday', mono:'W', cat:'workforce', catLabel:'Workforce',
+      tagline:'Headcount, cost centers, and payroll results feed straight into accruals and department allocations.',
+      sync:'Read-only', freq:'Nightly + payroll close', setup:'~30 min with IT', auth:'Integration system user',
+      objects:[['in','Workers & positions'],['in','Cost centers'],['in','Compensation'],['in','Payroll results'],['in','Time-off balances'],['in','Hire & term events']],
+      log:[['02:00','Synced 1,284 workers · 37 cost centers'],['02:01','3 hires, 1 term → accrual updated'],['02:04','Imported payroll PR-0613 · $2,914,880']],
+      plan:'Enterprise plan', keywords:'payroll hr hris headcount accruals compensation workforce people'}
+  };
+  var ORDER = ['netsuite','intacct','quickbooks','xero','plaid','stripe','ramp','workday'];
+  var DIR_LABEL = {in:'read', out:'posted', both:'two-way'};
+
+  var nodes = Array.prototype.slice.call(document.querySelectorAll('.node'));
+  var svgEls = Array.prototype.slice.call(document.querySelectorAll('#wires [data-id]'));
+  var filterBtns = Array.prototype.slice.call(document.querySelectorAll('[data-filter]'));
+  var detail = document.getElementById('detail');
+  var state = {selected:'netsuite', filter:'all'};
+
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function badge(t){return '<b class="dir '+t+'">'+(t==='both'?'2-WAY':t.toUpperCase())+'</b>';}
+
+  function renderDetail(id){
+    var d = INT[id];
+    var types = [];
+    d.objects.forEach(function(o){ if(types.indexOf(o[0])<0) types.push(o[0]); });
+    types.sort(function(a,b){return ['in','out','both'].indexOf(a)-['in','out','both'].indexOf(b);});
+    var key = types.map(function(t){return badge(t)+' '+DIR_LABEL[t];}).join('');
+    var objs = d.objects.map(function(o){return '<li>'+badge(o[0])+'<span>'+esc(o[1])+'</span></li>';}).join('');
+    var log = d.log.map(function(l){return '<li><time>'+esc(l[0])+'</time><span>'+esc(l[1])+'</span></li>';}).join('');
+    return ''+
+      '<div class="d-head">'+
+        '<span class="logo lg lg-'+id+'">'+esc(d.mono)+'</span>'+
+        '<div class="d-title"><h3>'+esc(d.name)+'</h3><p>'+esc(d.catLabel)+' · Native connector</p></div>'+
+        '<span class="live"><i></i>Live</span>'+
+      '</div>'+
+      '<p class="d-tag">'+esc(d.tagline)+'</p>'+
+      '<dl class="d-meta">'+
+        '<div><dt>Sync</dt><dd>'+esc(d.sync)+'</dd></div>'+
+        '<div><dt>Frequency</dt><dd>'+esc(d.freq)+'</dd></div>'+
+        '<div><dt>Setup time</dt><dd>'+esc(d.setup)+'</dd></div>'+
+        '<div><dt>Authentication</dt><dd>'+esc(d.auth)+'</dd></div>'+
+      '</dl>'+
+      '<div><div class="d-label"><span>What syncs</span><span class="aside">'+key+'</span></div><ul class="objects">'+objs+'</ul></div>'+
+      '<div><div class="d-label"><span>Recent activity</span><span class="aside">Sample workspace · Today</span></div><ol class="log">'+log+'</ol></div>'+
+      '<div class="d-foot"><a href="#integrations">Read the '+esc(d.short)+' setup guide →</a><span>Available on <b>'+esc(d.plan)+'</b></span></div>';
+  }
+
+  function select(id, animate){
+    state.selected = id;
+    nodes.forEach(function(n){
+      var on = n.getAttribute('data-id')===id;
+      n.classList.toggle('is-selected', on);
+      n.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    svgEls.forEach(function(el){
+      var on = el.getAttribute('data-id')===id;
+      el.classList.toggle('is-active', on);
+    });
+    detail.innerHTML = renderDetail(id);
+    if(animate){
+      detail.classList.remove('anim');
+      void detail.offsetWidth;
+      detail.classList.add('anim');
+    }
+  }
+
+  function matches(id){ return state.filter==='all' || INT[id].cat===state.filter; }
+
+  function applyFilter(cat){
+    state.filter = cat;
+    filterBtns.forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-filter')===cat ? 'true':'false'); });
+    nodes.forEach(function(n){ n.classList.toggle('is-dim', !matches(n.getAttribute('data-id'))); });
+    svgEls.forEach(function(el){ el.classList.toggle('is-dim', !matches(el.getAttribute('data-id'))); });
+    if(!matches(state.selected)){
+      var first = ORDER.filter(matches)[0];
+      if(first) select(first, true);
+    }
+  }
+
+  nodes.forEach(function(n){
+    n.addEventListener('click', function(){
+      var id = n.getAttribute('data-id');
+      if(!matches(id)) applyFilter('all');
+      select(id, true);
+    });
+  });
+  filterBtns.forEach(function(b){
+    b.addEventListener('click', function(){ applyFilter(b.getAttribute('data-filter')); });
+  });
+
+  // Initial render
+  select('netsuite', false);
+  applyFilter('all');
+
+  // Reduced motion: pause SMIL pulses
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    var w = document.getElementById('wires');
+    if(w && w.pauseAnimations) w.pauseAnimations();
+  }
+
+  // ---------- Directory search ----------
+  var input = document.getElementById('int-search');
+  var results = document.getElementById('int-results');
+  var box = document.getElementById('search-box');
+  var activeIdx = -1;
+
+  function search(q){
+    q = q.trim().toLowerCase();
+    if(!q){ results.hidden = true; results.innerHTML=''; return; }
+    var hits = [];
+    ORDER.forEach(function(id){
+      var d = INT[id], why = null;
+      if(d.name.toLowerCase().indexOf(q)>-1 || d.short.toLowerCase().indexOf(q)>-1){ why = d.catLabel+' · '+d.sync; }
+      else if(d.catLabel.toLowerCase().indexOf(q)>-1){ why = 'Category: '+d.catLabel; }
+      else {
+        for(var i=0;i<d.objects.length;i++){ if(d.objects[i][1].toLowerCase().indexOf(q)>-1){ why = 'Syncs: '+d.objects[i][1]; break; } }
+        if(!why){
+          var kw = d.keywords.split(' ');
+          var phraseHit = d.keywords.indexOf(q)>-1;
+          if(phraseHit){ why = 'Related: '+q; }
+          else { for(var k=0;k<kw.length;k++){ if(kw[k].indexOf(q)===0){ why='Related: '+kw[k]; break; } } }
+        }
+      }
+      if(why) hits.push({id:id, why:why});
+    });
+    activeIdx = -1;
+    if(!hits.length){
+      results.innerHTML = '<li class="r-empty">No connector matches “'+esc(q)+'” yet. <a href="#integrations">Request it</a> and our integrations team will review it.</li>';
+    } else {
+      results.innerHTML = hits.map(function(h){
+        var d = INT[h.id];
+        return '<li><button type="button" data-id="'+h.id+'"><span class="logo sm lg-'+h.id+'">'+esc(d.mono)+'</span><span class="r-text"><strong>'+esc(d.name)+'</strong><small>'+esc(h.why)+'</small></span><span class="r-go">Show on map →</span></button></li>';
+      }).join('');
+    }
+    results.hidden = false;
+  }
+
+  function goTo(id){
+    applyFilter('all');
+    select(id, true);
+    results.hidden = true;
+    document.getElementById('int-map').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  input.addEventListener('input', function(){ search(input.value); });
+  input.addEventListener('focus', function(){ if(input.value.trim()) search(input.value); });
+  input.addEventListener('keydown', function(e){
+    var btns = results.querySelectorAll('button[data-id]');
+    if(e.key==='Escape'){ results.hidden = true; return; }
+    if(!btns.length) return;
+    if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+      e.preventDefault();
+      activeIdx = e.key==='ArrowDown' ? Math.min(btns.length-1, activeIdx+1) : Math.max(0, activeIdx-1);
+      Array.prototype.forEach.call(btns, function(b,i){ b.classList.toggle('is-active', i===activeIdx); });
+    } else if(e.key==='Enter'){
+      e.preventDefault();
+      var b = btns[activeIdx>-1 ? activeIdx : 0];
+      goTo(b.getAttribute('data-id'));
+    }
+  });
+  results.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('button[data-id]') : null;
+    if(b) goTo(b.getAttribute('data-id'));
+  });
+  document.addEventListener('click', function(e){
+    if(!box.contains(e.target) && !(e.target.closest && e.target.closest('.popular'))) results.hidden = true;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.popular button'), function(b){
+    b.addEventListener('click', function(){
+      input.value = b.getAttribute('data-q');
+      search(input.value);
+      input.focus();
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TalentPulse ATS | Candidate Deep-Dive - Alex Chen</title>
+  <style>
+    /* Global Reset & Design Tokens */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      
+      /* Colors */
+      --bg-canvas: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-hover: #e2e8f0;
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-tertiary: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-border: #c7d2fe;
+      
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+      --success-text: #065f46;
+      
+      --warning: #f59e0b;
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+      --warning-text: #92400e;
+      
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --danger-border: #fecaca;
+      --danger-text: #991b1b;
+      
+      --info: #0284c7;
+      --info-bg: #f0f9ff;
+      --info-border: #bae6fd;
+      --info-text: #0369a1;
+      
+      --purple: #8b5cf6;
+      --purple-bg: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --purple-text: #5b21b6;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+      --radius-full: 9999px;
+      
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* SVG utility */
+    .icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+
+    /* Top Navigation */
+    .nav-header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .nav-inner {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 19px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-pulse {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      list-style: none;
+    }
+
+    .nav-link {
+      padding: 8px 14px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-link:hover {
+      color: var(--text-main);
+      background-color: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background-color: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-search-wrapper {
+      flex: 1;
+      max-width: 380px;
+      position: relative;
+    }
+
+    .nav-search-wrapper input {
+      width: 100%;
+      height: 36px;
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0 12px 0 34px;
+      font-size: 13px;
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    .nav-search-wrapper input:focus {
+      background-color: var(--bg-surface);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .nav-search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-tertiary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px 4px 4px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-full);
+      background-color: var(--bg-surface);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Sub-header / Breadcrumbs & Stage Pipeline */
+    .subnav-bar {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 24px;
+    }
+
+    .subnav-inner {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .breadcrumbs-and-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .breadcrumbs a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .breadcrumbs a:hover {
+      color: var(--primary);
+    }
+
+    .breadcrumbs .sep {
+      color: var(--text-tertiary);
+    }
+
+    .breadcrumbs .current {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+
+    .badge-active {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+    }
+
+    .badge-success {
+      background-color: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+    }
+
+    .badge-warning {
+      background-color: var(--warning-bg);
+      color: var(--warning-text);
+      border: 1px solid var(--warning-border);
+    }
+
+    .badge-info {
+      background-color: var(--info-bg);
+      color: var(--info-text);
+      border: 1px solid var(--info-border);
+    }
+
+    .badge-danger {
+      background-color: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-border);
+    }
+
+    .badge-purple {
+      background-color: var(--purple-bg);
+      color: var(--purple-text);
+      border: 1px solid var(--purple-border);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      outline: none;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-default {
+      background-color: var(--bg-surface);
+      border-color: var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-default:hover {
+      background-color: var(--bg-subtle);
+      border-color: #cbd5e1;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      box-shadow: 0 2px 4px rgba(79, 70, 229, 0.25);
+    }
+
+    .btn-success {
+      background-color: var(--success);
+      color: #ffffff;
+    }
+
+    .btn-success:hover {
+      background-color: #059669;
+    }
+
+    .btn-danger-outline {
+      background-color: transparent;
+      border-color: var(--danger-border);
+      color: var(--danger-text);
+    }
+
+    .btn-danger-outline:hover {
+      background-color: var(--danger-bg);
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Pipeline Stepper */
+    .pipeline-stepper-container {
+      background: var(--bg-subtle);
+      border-radius: var(--radius-lg);
+      padding: 10px 14px;
+      overflow-x: auto;
+    }
+
+    .pipeline-stepper {
+      display: flex;
+      align-items: center;
+      min-width: 760px;
+      gap: 6px;
+    }
+
+    .stage-item {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      position: relative;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .stage-item:hover {
+      border-color: var(--primary-border);
+      transform: translateY(-1px);
+    }
+
+    .stage-item.completed {
+      background-color: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .stage-item.current {
+      background-color: var(--primary-light);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .stage-num {
+      width: 22px;
+      height: 22px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stage-item.completed .stage-num {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .stage-item.current .stage-num {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .stage-item.upcoming .stage-num {
+      background-color: var(--bg-subtle);
+      color: var(--text-tertiary);
+      border: 1px solid var(--border-color);
+    }
+
+    .stage-details {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .stage-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .stage-sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Candidate Header Hero */
+    .hero-banner {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 24px;
+    }
+
+    .hero-inner {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .hero-main-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .candidate-avatar {
+      width: 74px;
+      height: 74px;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: white;
+      font-size: 26px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid #e0e7ff;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .candidate-avatar .status-dot {
+      position: absolute;
+      bottom: -3px;
+      right: -3px;
+      width: 16px;
+      height: 16px;
+      border-radius: var(--radius-full);
+      background-color: var(--success);
+      border: 2.5px solid white;
+    }
+
+    .candidate-headings {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .candidate-name-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .candidate-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .candidate-curr-role {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .candidate-contact-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .contact-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+
+    .contact-item:hover {
+      color: var(--primary);
+    }
+
+    .copy-btn-mini {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      padding: 2px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .copy-btn-mini:hover {
+      color: var(--text-main);
+      background-color: var(--bg-subtle);
+    }
+
+    .hero-quick-stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      min-width: 120px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-chip-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-tertiary);
+    }
+
+    .stat-chip-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Main Content Layout */
+    .main-container {
+      max-width: 1600px;
+      margin: 24px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+      flex: 1;
+      width: 100%;
+    }
+
+    @media (max-width: 1200px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .col-left, .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Section Card */
+    .card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xs);
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .card:hover {
+      border-color: #cbd5e1;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background-color: #ffffff;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    /* Highlight Banner: Next Meeting */
+    .meeting-card {
+      background: linear-gradient(to right, #ffffff, #faf5ff);
+      border: 1.5px solid #e9d5ff;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.06);
+    }
+
+    .meeting-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .meeting-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .meeting-info-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .meeting-time-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6b21a8;
+      background-color: #f3e8ff;
+      padding: 4px 10px;
+      border-radius: var(--radius-md);
+      width: fit-content;
+    }
+
+    .meeting-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .meeting-meta-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .meeting-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .meeting-participants-box {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .participants-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-tertiary);
+    }
+
+    .interviewer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .interviewer-info {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .interviewer-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      background-color: #e0e7ff;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .interviewer-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .interviewer-role {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .interviewer-tag {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .meeting-actions-bar {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* Dual Grid for Preferences & Work Auth */
+    .dual-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .dual-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .info-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-tertiary);
+    }
+
+    .info-value {
+      font-size: 13.5px;
+      color: var(--text-main);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .timeline-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: var(--radius-md);
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    /* Activities & Timeline Section */
+    .activity-filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      background-color: #fafbfc;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .activity-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+    }
+
+    .tab-pill {
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      cursor: pointer;
+      background: none;
+      transition: all 0.15s ease;
+    }
+
+    .tab-pill:hover {
+      background-color: var(--bg-hover);
+      color: var(--text-main);
+    }
+
+    .tab-pill.active {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .timeline-container {
+      position: relative;
+      padding: 20px;
+    }
+
+    .timeline-container::before {
+      content: "";
+      position: absolute;
+      top: 35px;
+      bottom: 30px;
+      left: 36px;
+      width: 2px;
+      background-color: var(--border-color);
+      z-index: 0;
+    }
+
+    .timeline-entry {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 22px;
+      z-index: 1;
+    }
+
+    .timeline-entry:last-child {
+      margin-bottom: 0;
+    }
+
+    .timeline-icon-box {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-full);
+      background-color: var(--bg-surface);
+      border: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-xs);
+    }
+
+    .timeline-icon-box.scorecard {
+      border-color: #818cf8;
+      background-color: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .timeline-icon-box.assessment {
+      border-color: #6ee7b7;
+      background-color: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .timeline-icon-box.email {
+      border-color: #93c5fd;
+      background-color: var(--info-bg);
+      color: var(--info-text);
+    }
+
+    .timeline-icon-box.call {
+      border-color: #fcd34d;
+      background-color: var(--warning-bg);
+      color: var(--warning-text);
+    }
+
+    .timeline-icon-box.note {
+      border-color: #d8b4fe;
+      background-color: var(--purple-bg);
+      color: var(--purple-text);
+    }
+
+    .timeline-content {
+      flex: 1;
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      transition: all 0.15s ease;
+    }
+
+    .timeline-content:hover {
+      background-color: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .timeline-author-role {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .timeline-time {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .timeline-body {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .scorecard-snippet {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background-color: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .score-stars {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #f59e0b;
+      font-weight: 700;
+      font-size: 12.5px;
+    }
+
+    /* Right Column: Matched Jobs & Tasks */
+    .matched-job-card {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      background-color: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .matched-job-card:hover {
+      border-color: var(--primary-border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .matched-job-card.primary-job {
+      border-color: var(--primary);
+      background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+    }
+
+    .job-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .job-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .match-rate {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      background-color: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+      white-space: nowrap;
+    }
+
+    .job-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .job-salary-pill {
+      font-size: 12px;
+      font-weight: 600;
+      color: #047857;
+      background-color: #ecfdf5;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* Tasks List */
+    .tasks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      transition: all 0.15s ease;
+    }
+
+    .task-item:hover {
+      background-color: #ffffff;
+      border-color: #cbd5e1;
+    }
+
+    .task-checkbox {
+      margin-top: 3px;
+      width: 17px;
+      height: 17px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .task-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .task-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .task-item.completed .task-title {
+      text-decoration: line-through;
+      color: var(--text-tertiary);
+    }
+
+    .task-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .priority-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .priority-high {
+      background-color: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-border);
+    }
+
+    .priority-med {
+      background-color: var(--warning-bg);
+      color: var(--warning-text);
+      border: 1px solid var(--warning-border);
+    }
+
+    .priority-low {
+      background-color: var(--bg-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .add-task-form {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .add-task-input {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      outline: none;
+    }
+
+    .add-task-input:focus {
+      border-color: var(--primary);
+    }
+
+    /* Tech radar / skills chips */
+    .skills-cluster {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .skill-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      background-color: #f1f5f9;
+      color: #334155;
+      border: 1px solid #e2e8f0;
+    }
+
+    .skill-chip.verified {
+      background-color: #eef2ff;
+      color: #4338ca;
+      border-color: #c7d2fe;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(3px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: #ffffff;
+      border-radius: var(--radius-xl);
+      max-width: 580px;
+      width: 100%;
+      box-shadow: var(--shadow-xl);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      animation: modalSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalSlide {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .modal-close-btn:hover {
+      color: var(--text-main);
+      background-color: var(--bg-subtle);
+    }
+
+    .modal-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-height: 75vh;
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      background-color: #fafbfc;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13.5px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      outline: none;
+      background-color: #ffffff;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #1e293b;
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      font-weight: 500;
+      box-shadow: var(--shadow-xl);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast.info {
+      border-left: 4px solid var(--primary);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .nav-inner {
+        padding: 0 16px;
+      }
+      .nav-links {
+        display: none;
+      }
+      .subnav-bar, .hero-banner, .main-container {
+        padding: 16px;
+      }
+      .hero-main-info {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Application Navigation -->
+  <header class="nav-header">
+    <div class="nav-inner">
+      <div style="display: flex; align-items: center; gap: 28px;">
+        <a href="#" class="nav-brand">
+          <div class="brand-pulse">
+            <svg class="icon" style="width: 18px; height: 18px;" viewBox="0 0 24 24">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          TalentPulse
+        </a>
+
+        <nav>
+          <ul class="nav-links">
+            <li><a href="#" class="nav-link">Dashboard</a></li>
+            <li><a href="#" class="nav-link">Jobs (14)</a></li>
+            <li><a href="#" class="nav-link active">Candidates</a></li>
+            <li><a href="#" class="nav-link">Pipeline</a></li>
+            <li><a href="#" class="nav-link">Sourcing Hub</a></li>
+            <li><a href="#" class="nav-link">Analytics</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="nav-search-wrapper">
+        <svg class="icon nav-search-icon" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Search candidate, skill, requisition (Press '/' to focus)..." />
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn btn-default btn-sm" onclick="triggerToast('Sync with Greenhouse & LinkedIn active')">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Integrations
+        </button>
+        <div class="user-pill" title="Tech Recruiting Lead">
+          <div class="user-avatar">SJ</div>
+          <span style="display: none; @media(min-width: 1024px){display: inline;}">Sarah Jenkins</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sub-header & Breadcrumbs / Stage Stepper -->
+  <section class="subnav-bar">
+    <div class="subnav-inner">
+      <div class="breadcrumbs-and-actions">
+        <div class="breadcrumbs">
+          <a href="#">Candidates</a>
+          <span class="sep">/</span>
+          <a href="#">Pipeline</a>
+          <span class="sep">/</span>
+          <a href="#">Interviewing</a>
+          <span class="sep">/</span>
+          <span class="current">Alex Chen (Senior Backend / Distributed Systems)</span>
+          <span class="badge-pill badge-active" style="margin-left: 8px;">Active Candidate</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn btn-default btn-sm" onclick="openShareModal()">
+            <svg class="icon" viewBox="0 0 24 24">
+              <circle cx="18" cy="5" r="3"/>
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Share Profile
+          </button>
+          
+          <button class="btn btn-default btn-sm" onclick="openLogActivityModal()">
+            <svg class="icon" viewBox="0 0 24 24">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Log Activity
+          </button>
+
+          <button class="btn btn-primary btn-sm" onclick="advanceStageWorkflow()">
+            <svg class="icon" viewBox="0 0 24 24">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            Advance to Final Round
+          </button>
+
+          <button class="btn btn-danger-outline btn-sm" onclick="confirmRejectModal()">
+            Reject
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive Pipeline Stage Stepper -->
+      <div class="pipeline-stepper-container">
+        <div class="pipeline-stepper" id="pipelineStepper">
+          <div class="stage-item completed" onclick="setPipelineStage(1, 'Applied & Sourced')">
+            <div class="stage-num">✓</div>
+            <div class="stage-details">
+              <span class="stage-title">1. Sourced</span>
+              <span class="stage-sub">Oct 10 • LinkedIn</span>
+            </div>
+          </div>
+
+          <div class="stage-item completed" onclick="setPipelineStage(2, 'Recruiter Screen')">
+            <div class="stage-num">✓</div>
+            <div class="stage-details">
+              <span class="stage-title">2. Recruiter Screen</span>
+              <span class="stage-sub">Oct 14 • 4.8 / 5.0</span>
+            </div>
+          </div>
+
+          <div class="stage-item completed" onclick="setPipelineStage(3, 'Technical Assessment')">
+            <div class="stage-num">✓</div>
+            <div class="stage-details">
+              <span class="stage-title">3. Coding Screen</span>
+              <span class="stage-sub">Oct 19 • 98th Percentile</span>
+            </div>
+          </div>
+
+          <div class="stage-item current" onclick="setPipelineStage(4, 'Virtual Onsite (System Design)')">
+            <div class="stage-num">4</div>
+            <div class="stage-details">
+              <span class="stage-title">4. Virtual Onsite</span>
+              <span class="stage-sub">Tomorrow • 2 Rounds</span>
+            </div>
+          </div>
+
+          <div class="stage-item upcoming" onclick="setPipelineStage(5, 'Leadership & Team Match')">
+            <div class="stage-num">5</div>
+            <div class="stage-details">
+              <span class="stage-title">5. Exec & Values</span>
+              <span class="stage-sub">Pending Onsite</span>
+            </div>
+          </div>
+
+          <div class="stage-item upcoming" onclick="setPipelineStage(6, 'Offer Proposal')">
+            <div class="stage-num">6</div>
+            <div class="stage-details">
+              <span class="stage-title">6. Offer & Close</span>
+              <span class="stage-sub">Target $395k TC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Candidate Hero Banner -->
+  <section class="hero-banner">
+    <div class="hero-inner">
+      <div class="hero-main-info">
+        <div class="candidate-avatar">
+          AC
+          <div class="status-dot" title="Actively interviewing"></div>
+        </div>
+
+        <div class="candidate-headings">
+          <div class="candidate-name-row">
+            <h1 class="candidate-name">Alex Chen</h1>
+            <span class="badge-pill badge-purple">Senior Software Engineer</span>
+            <span class="badge-pill badge-info">Distributed Systems Specialist</span>
+            <span class="badge-pill badge-success">Top 5% Assessment</span>
+          </div>
+
+          <p class="candidate-curr-role">
+            Currently at <strong>Stripe</strong> (Infrastructure & High-Throughput Ingestion) • 5.5 Years Total Tech Exp
+          </p>
+
+          <div class="candidate-contact-bar">
+            <div class="contact-item">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <span id="candEmail">alex.chen@devmail.io</span>
+              <button class="copy-btn-mini" onclick="copyText('alex.chen@devmail.io', 'Email copied!')" title="Copy Email">
+                <svg class="icon" style="width: 13px; height: 13px;" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+
+            <span style="color: var(--border-color);">•</span>
+
+            <div class="contact-item">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span id="candPhone">+1 (415) 890-2341</span>
+              <button class="copy-btn-mini" onclick="copyText('+1 (415) 890-2341', 'Phone copied!')" title="Copy Phone">
+                <svg class="icon" style="width: 13px; height: 13px;" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+
+            <span style="color: var(--border-color);">•</span>
+
+            <div class="contact-item">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+              <span>Source: <strong>LinkedIn Recruiter</strong> (Sourced by S. Jenkins)</span>
+            </div>
+
+            <span style="color: var(--border-color);">•</span>
+
+            <div class="contact-item">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+              <a href="#" style="color: var(--primary); text-decoration: none;" onclick="triggerToast('Opening GitHub profile: github.com/alexchen-dev'); return false;">github.com/alexchen-dev</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-quick-stats">
+        <div class="stat-chip">
+          <span class="stat-chip-label">Scorecard Avg</span>
+          <span class="stat-chip-val">
+            <span style="color: #f59e0b;">★</span> 4.85 <span style="font-size: 12px; color: var(--text-tertiary); font-weight: 500;">/ 5.0</span>
+          </span>
+        </div>
+
+        <div class="stat-chip">
+          <span class="stat-chip-label">Primary Match</span>
+          <span class="stat-chip-val" style="color: var(--primary);">
+            96% <span style="font-size: 11px; font-weight: 500; color: var(--text-muted);">Staff Infra</span>
+          </span>
+        </div>
+
+        <div class="stat-chip">
+          <span class="stat-chip-label">Availability</span>
+          <span class="stat-chip-val">
+            30 Days <span style="font-size: 11px; font-weight: 500; color: var(--success);">(Flexible)</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Body -->
+  <main class="main-container">
+    
+    <!-- LEFT COLUMN (Detailed Workflows) -->
+    <div class="col-left">
+
+      <!-- 1. Next Meeting Spotlight Card -->
+      <section class="card meeting-card">
+        <div class="card-header" style="background: transparent; border-bottom: 1px solid #ede9fe;">
+          <div class="card-title-group">
+            <div class="card-title-icon" style="background-color: #ede9fe; color: #7c3aed;">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div>
+              <h2 class="card-title">Next Scheduled Meeting</h2>
+              <p class="card-subtitle">Upcoming interview event in candidate's pipeline</p>
+            </div>
+          </div>
+
+          <span class="meeting-time-badge" id="meetingCountdownBadge">
+            <svg class="icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Tomorrow • In 19 Hours
+          </span>
+        </div>
+
+        <div class="card-body">
+          <div class="meeting-grid">
+            <div class="meeting-info-box">
+              <h3 class="meeting-title" id="meetingNameText">Round 4: System Design & Architecture Deep Dive</h3>
+              
+              <div class="meeting-meta-list">
+                <div class="meeting-meta-item">
+                  <svg class="icon" style="color: var(--primary);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <strong id="meetingDateTimeText">Thursday, Oct 24, 2025 • 2:00 PM – 3:15 PM PDT</strong> (75 mins)
+                </div>
+
+                <div class="meeting-meta-item">
+                  <svg class="icon" style="color: #059669;" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  <span>Google Meet: <a href="#" onclick="triggerToast('Launching virtual interview room...'); return false;" style="color: var(--primary); font-family: var(--font-mono); font-size: 12.5px;">meet.google.com/tp-tech-789</a></span>
+                </div>
+
+                <div class="meeting-meta-item">
+                  <svg class="icon" style="color: var(--text-tertiary);" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  <span>Focus: <em>Real-time event aggregation, Raft consensus, distributed caching</em></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Participants Box -->
+            <div class="meeting-participants-box">
+              <div class="participants-title">Interviewers & Participants (2)</div>
+              
+              <div class="interviewer-row">
+                <div class="interviewer-info">
+                  <div class="interviewer-avatar">MV</div>
+                  <div>
+                    <div class="interviewer-name">Marcus Vance</div>
+                    <div class="interviewer-role">Principal Architect • Core Platform</div>
+                  </div>
+                </div>
+                <span class="interviewer-tag">Lead Evaluator</span>
+              </div>
+
+              <div class="interviewer-row">
+                <div class="interviewer-info">
+                  <div class="interviewer-avatar" style="background-color: #fce7f3; color: #db2777;">PS</div>
+                  <div>
+                    <div class="interviewer-name">Priya Sharma</div>
+                    <div class="interviewer-role">Staff Engineer • Data Infrastructure</div>
+                  </div>
+                </div>
+                <span class="interviewer-tag">Panelist</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Meeting Actions -->
+          <div class="meeting-actions-bar">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn btn-default btn-sm" onclick="copyCalendarInviteLink()">
+                <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Get Calendar Invite Link
+              </button>
+
+              <button class="btn btn-default btn-sm" onclick="downloadIcsFile()">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download .ICS
+              </button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn btn-primary btn-sm" onclick="openRescheduleModal()">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Reschedule Next Interview
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Dual Cards: Candidate Preferences & Work Auth / Clearance -->
+      <div class="dual-grid">
+
+        <!-- What They Are Looking For -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-title-icon" style="background-color: #ecfdf5; color: #059669;">
+                <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4M12 16V8"/></svg>
+              </div>
+              <div>
+                <h2 class="card-title">What They Are Looking For</h2>
+                <p class="card-subtitle">Candidate expectations & preferences</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="info-list">
+              <div class="info-row">
+                <span class="info-label">Target Role & Level</span>
+                <span class="info-value">
+                  <strong>Staff / Lead Backend Engineer</strong>
+                  <span class="badge-pill badge-active" style="font-size: 11px;">IC6 / L6 equivalent</span>
+                </span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Target Compensation</span>
+                <span class="info-value" style="font-size: 14px;">
+                  <strong>$240k - $265k Base</strong>
+                  <span style="color: var(--text-tertiary);">|</span>
+                  <span style="color: var(--text-muted);">$380k - $420k Total Comp</span>
+                </span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Notice Period & Availability</span>
+                <span class="info-value">
+                  <strong>30 calendar days</strong>
+                  <span class="badge-pill badge-success" style="font-size: 11px;">Can start Dec 1, 2025</span>
+                </span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Work Model Preference</span>
+                <span class="info-value">
+                  <svg class="icon" style="color: #6366f1;" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                  <strong>Hybrid (SF Bay Area, 2-3 days/wk)</strong> or <strong>Remote (US)</strong>
+                </span>
+              </div>
+
+              <div class="info-row" style="background-color: var(--bg-subtle); padding: 10px; border-radius: var(--radius-md);">
+                <span class="info-label" style="color: var(--text-muted);">Key Motivators</span>
+                <span style="font-size: 12.5px; color: var(--text-main); margin-top: 2px;">
+                  High-throughput stream processing (100k+ QPS), modern Go / Rust stack, architectural autonomy. Not interested in legacy maintenance.
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Work Authorization & Clearance Status -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-title-icon" style="background-color: #eff6ff; color: #2563eb;">
+                <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div>
+                <h2 class="card-title">Work Auth & Clearance</h2>
+                <p class="card-subtitle">Immigration, security & compliance status</p>
+              </div>
+            </div>
+            <span class="badge-pill badge-success">Verified</span>
+          </div>
+
+          <div class="card-body">
+            <div class="info-list">
+              <div class="info-row">
+                <span class="info-label">Visa / Work Authorization</span>
+                <span class="info-value">
+                  <strong>H-1B Specialty Occupation</strong>
+                  <span class="badge-pill badge-info">Transfer Ready</span>
+                </span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Status Timeline & Expiration</span>
+                <div class="timeline-pill">
+                  <svg class="icon" style="color: var(--warning);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Valid until: <strong>Oct 14, 2027</strong> (I-797 approved, 2 yrs remaining)</span>
+                </div>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Security Clearance Level</span>
+                <span class="info-value">
+                  <strong>Secret (Inactive / Re-activatable)</strong>
+                  <span class="badge-pill badge-warning" title="Held at previous defense contract">Eligible for Public Trust</span>
+                </span>
+              </div>
+
+              <div class="info-row">
+                <span class="info-label">Background Check Status</span>
+                <span class="info-value">
+                  <svg class="icon" style="color: #10b981;" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <strong style="color: var(--success-text);">Checkr Pre-Clearance: Completed</strong>
+                  <span style="font-size: 12px; color: var(--text-tertiary);">(Oct 12, 2025)</span>
+                </span>
+              </div>
+
+              <div class="info-row" style="background-color: #f8fafc; padding: 10px; border-radius: var(--radius-md); border-left: 3px solid #3b82f6;">
+                <span class="info-label" style="color: #1e40af;">Legal Counsel Note</span>
+                <span style="font-size: 12px; color: #334155; margin-top: 2px;">
+                  Fragomen & associates verified transfer packet. Normal USCIS 15-day premium processing applies; candidate can work upon receipt notice.
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 3. Activities, Scorecards, Assessments & History -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title-icon" style="background-color: #fdf2f8; color: #db2777;">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+              <h2 class="card-title">Activity Timeline & Evaluations</h2>
+              <p class="card-subtitle">Calls, interview scorecards, emails, and code assessments</p>
+            </div>
+          </div>
+
+          <button class="btn btn-default btn-sm" onclick="openLogActivityModal()">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Activity
+          </button>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="activity-filter-bar">
+          <div class="activity-tabs" id="activityTabs">
+            <button class="tab-pill active" onclick="filterActivities('all', this)">All Activities (6)</button>
+            <button class="tab-pill" onclick="filterActivities('scorecard', this)">Scorecards (2)</button>
+            <button class="tab-pill" onclick="filterActivities('assessment', this)">Assessments (1)</button>
+            <button class="tab-pill" onclick="filterActivities('call', this)">Calls (1)</button>
+            <button class="tab-pill" onclick="filterActivities('email', this)">Emails (1)</button>
+            <button class="tab-pill" onclick="filterActivities('note', this)">Notes (1)</button>
+          </div>
+
+          <button class="btn btn-default btn-sm" style="font-size: 11.5px; padding: 3px 8px;" onclick="toggleFullActivityHistory(this)">
+            Show Full 18-Month History
+          </button>
+        </div>
+
+        <!-- Timeline items -->
+        <div class="timeline-container" id="timelineList">
+
+          <!-- Item 1: Scorecard Coding Screen -->
+          <div class="timeline-entry" data-category="scorecard">
+            <div class="timeline-icon-box scorecard">
+              <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <div>
+                  <span class="timeline-author-role">Technical Coding Screen — Scorecard Submitted</span>
+                  <span style="font-size: 12px; color: var(--text-muted);">by David Kim (Staff Software Engineer)</span>
+                </div>
+                <span class="timeline-time">Oct 19, 2025 • 4:15 PM</span>
+              </div>
+              <div class="timeline-body">
+                "Alex solved the concurrent lock-free queue problem in Go with flawless time-complexity analysis. Implemented graceful shutdown and handled goroutine leak edge cases without prompting. Outstanding architectural maturity."
+              </div>
+              <div class="scorecard-snippet">
+                <div class="score-stars">
+                  <span>Recommendation:</span>
+                  <span class="badge-pill badge-success" style="font-size: 11px;">Strong Hire (4.9 / 5.0)</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); display: flex; gap: 12px;">
+                  <span>Algorithms: <strong>5/5</strong></span>
+                  <span>Concurrency: <strong>5/5</strong></span>
+                  <span>Code Cleanliness: <strong>4.8/5</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 2: Technical Assessment Result -->
+          <div class="timeline-entry" data-category="assessment">
+            <div class="timeline-icon-box assessment">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <div>
+                  <span class="timeline-author-role">HackerRank Distributed Systems Benchmark</span>
+                  <span class="badge-pill badge-success" style="margin-left: 6px; font-size: 11px;">Automated Proctor Verified</span>
+                </div>
+                <span class="timeline-time">Oct 17, 2025 • 11:30 AM</span>
+              </div>
+              <div class="timeline-body">
+                Completed 3 problem modules (Network Partition Recovery, Distributed Key-Value Store, Memory Buffering) in 68 minutes out of 90 minutes allotted.
+              </div>
+              <div class="scorecard-snippet" style="background-color: #f0fdf4;">
+                <span style="font-weight: 700; color: #166534; font-size: 12.5px;">Overall Score: 98 / 100 (99th Percentile Benchmark)</span>
+                <span style="font-size: 12px; color: #15803d;">Language: Go 1.22 • 100% test cases passed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 3: Email Thread -->
+          <div class="timeline-entry" data-category="email">
+            <div class="timeline-icon-box email">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <div>
+                  <span class="timeline-author-role">Email: System Design Schedule Confirmation & Prep Guide</span>
+                  <span style="font-size: 12px; color: var(--text-muted);">to Alex Chen &lt;alex.chen@devmail.io&gt;</span>
+                </div>
+                <span class="timeline-time">Oct 16, 2025 • 2:40 PM</span>
+              </div>
+              <div class="timeline-body">
+                Candidate replied: <em>"Received the invite and briefing document. Look forward to meeting Marcus and Priya tomorrow! I've also uploaded my recent whitepaper on consensus protocols for reference."</em>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 4: Recruiter Screen Scorecard -->
+          <div class="timeline-entry" data-category="scorecard">
+            <div class="timeline-icon-box scorecard">
+              <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <div>
+                  <span class="timeline-author-role">Recruiter Screen Scorecard</span>
+                  <span style="font-size: 12px; color: var(--text-muted);">by Sarah Jenkins (Lead Tech Recruiter)</span>
+                </div>
+                <span class="timeline-time">Oct 14, 2025 • 3:30 PM</span>
+              </div>
+              <div class="timeline-body">
+                "Super articulate communicator. Wants to stay on the individual contributor Staff track. Compensation expectations ($250k base / $400k TC) fit our Band 6 engineering matrix. High buy-in on our distributed database roadmap."
+              </div>
+              <div class="scorecard-snippet">
+                <span class="badge-pill badge-active" style="font-size: 11px;">Stage: Advance to Tech Screen</span>
+                <span style="font-size: 12px; color: var(--text-muted);">Culture & Mission Fit: <strong>5/5</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 5: Phone Call Log -->
+          <div class="timeline-entry" data-category="call">
+            <div class="timeline-icon-box call">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <div>
+                  <span class="timeline-author-role">Recruiter Call: Compensation Alignment Check</span>
+                  <span style="font-size: 12px; color: var(--text-muted);">Duration: 18 mins • Logged by S. Jenkins</span>
+                </div>
+                <span class="timeline-time">Oct 14, 2025 • 10:00 AM</span>
+              </div>
+              <div class="timeline-body">
+                Discussed equity refresh cycles, 401(k) match, and health plan. Alex confirmed that unvested equity cliff at Stripe is Nov 15th, making Dec 1st an optimal onboarding date.
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 6: Internal Note -->
+          <div class="timeline-entry" data-category="note">
+            <div class="timeline-icon-box note">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <div>
+                  <span class="timeline-author-role">Internal Sourcing Note</span>
+                  <span style="font-size: 12px; color: var(--text-muted);">by Sarah Jenkins</span>
+                </div>
+                <span class="timeline-time">Oct 10, 2025 • 9:15 AM</span>
+              </div>
+              <div class="timeline-body">
+                "Identified through his open-source Raft implementation repository (1,200 GitHub stars). Currently spearheading partitioned database migrations at Stripe. Receptive to our distributed storage scale."
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="padding: 16px 20px; text-align: center; background-color: #fafbfc; border-top: 1px solid var(--border-color);">
+          <button class="btn btn-default btn-sm" onclick="openLogActivityModal()">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Log New Scorecard, Call, or Assessment
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT COLUMN (Requisitions, Open Tasks, Skills) -->
+    <div class="col-right">
+
+      <!-- 4. Open Tasks Card -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title-icon" style="background-color: #fff7ed; color: #ea580c;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div>
+              <h2 class="card-title">Open Tasks</h2>
+              <p class="card-subtitle"><span id="taskPendingCount">3</span> action items pending</p>
+            </div>
+          </div>
+          <span class="badge-pill badge-warning" id="taskBadge">3 Due Soon</span>
+        </div>
+
+        <div class="card-body">
+          <div class="tasks-list" id="taskList">
+            
+            <div class="task-item" id="task-1">
+              <input type="checkbox" class="task-checkbox" onchange="toggleTask('task-1')" />
+              <div class="task-details">
+                <span class="task-title">Prep briefing document for Marcus & Priya</span>
+                <div class="task-footer">
+                  <span class="priority-badge priority-high">High</span>
+                  <span>Due: Today 5:00 PM</span>
+                  <span>• S. Jenkins</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="task-item" id="task-2">
+              <input type="checkbox" class="task-checkbox" onchange="toggleTask('task-2')" />
+              <div class="task-details">
+                <span class="task-title">Verify certified copy of I-797 Form with Fragomen</span>
+                <div class="task-footer">
+                  <span class="priority-badge priority-med">Med</span>
+                  <span>Due: Oct 25</span>
+                  <span>• Immigration Ops</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="task-item" id="task-3">
+              <input type="checkbox" class="task-checkbox" onchange="toggleTask('task-3')" />
+              <div class="task-details">
+                <span class="task-title">Draft prelim compensation package outline ($255k base)</span>
+                <div class="task-footer">
+                  <span class="priority-badge priority-med">Med</span>
+                  <span>Due: Oct 26</span>
+                  <span>• Total Rewards</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="task-item completed" id="task-4">
+              <input type="checkbox" class="task-checkbox" checked onchange="toggleTask('task-4')" />
+              <div class="task-details">
+                <span class="task-title">Send calendar invite & video link to candidate</span>
+                <div class="task-footer">
+                  <span class="priority-badge priority-low">Done</span>
+                  <span>Completed Oct 16</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Quick Add Task -->
+          <form class="add-task-form" onsubmit="handleAddTask(event)">
+            <input type="text" id="newTaskInput" class="add-task-input" placeholder="Add a new recruiter task..." required />
+            <button type="submit" class="btn btn-default btn-sm" style="padding: 6px 10px;">
+              Add
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 5. Matched Job Requisitions Card -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title-icon" style="background-color: #e0e7ff; color: #4338ca;">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <div>
+              <h2 class="card-title">Matched Requisitions</h2>
+              <p class="card-subtitle">AI & skill-matched open headcount</p>
+            </div>
+          </div>
+          <span class="badge-pill badge-active">3 Matched</span>
+        </div>
+
+        <div class="card-body" style="display: flex; flex-direction: column; gap: 12px;">
+          
+          <!-- Primary Matched Job -->
+          <div class="matched-job-card primary-job">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span class="badge-pill badge-purple" style="font-size: 10.5px;">Current Consideration</span>
+              <span class="match-rate">
+                <svg class="icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                96% Match
+              </span>
+            </div>
+            <div class="job-title-row">
+              <h3 class="job-name">Staff Distributed Systems Engineer</h3>
+            </div>
+            <div class="job-meta-row">
+              <span>Core Infrastructure</span>
+              <span>•</span>
+              <span>San Francisco (Hybrid)</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+              <span class="job-salary-pill">$240k - $275k + 0.15% Eq</span>
+              <span style="font-size: 11px; color: var(--text-tertiary);">REQ-1049</span>
+            </div>
+          </div>
+
+          <!-- Secondary Matched Job -->
+          <div class="matched-job-card">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Alternative Match</span>
+              <span class="match-rate" style="background-color: #f0fdf4; color: #166534; border-color: #bbf7d0;">
+                91% Match
+              </span>
+            </div>
+            <div class="job-title-row">
+              <h3 class="job-name">Principal Backend Architect</h3>
+            </div>
+            <div class="job-meta-row">
+              <span>Payments Platform</span>
+              <span>•</span>
+              <span>SF / Remote (US)</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+              <span class="job-salary-pill">$250k - $290k + Equity</span>
+              <span style="font-size: 11px; color: var(--text-tertiary);">REQ-0982</span>
+            </div>
+          </div>
+
+          <!-- Third Matched Job -->
+          <div class="matched-job-card">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Secondary Match</span>
+              <span class="match-rate" style="background-color: #f8fafc; color: var(--text-muted); border-color: #e2e8f0;">
+                88% Match
+              </span>
+            </div>
+            <div class="job-title-row">
+              <h3 class="job-name">Staff Database Reliability Engineer</h3>
+            </div>
+            <div class="job-meta-row">
+              <span>Cloud Foundations</span>
+              <span>•</span>
+              <span>Full Remote</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+              <span class="job-salary-pill">$230k - $260k + Equity</span>
+              <span style="font-size: 11px; color: var(--text-tertiary);">REQ-1120</span>
+            </div>
+          </div>
+
+          <button class="btn btn-default btn-sm" style="width: 100%; margin-top: 4px;" onclick="openAllJobsModal()">
+            View Full List of Matched Jobs (5 Total)
+          </button>
+        </div>
+      </section>
+
+      <!-- 6. Tech Stack Radar & Skills Overview -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-title-icon" style="background-color: #f0fdf4; color: #16a34a;">
+              <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            </div>
+            <div>
+              <h2 class="card-title">Verified Tech Skills</h2>
+              <p class="card-subtitle">Assessed via HackerRank & panel screens</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="skills-cluster">
+            <span class="skill-chip verified">Go (Golang) • 99%</span>
+            <span class="skill-chip verified">Distributed Consensus (Raft)</span>
+            <span class="skill-chip verified">Kafka & Event Streaming</span>
+            <span class="skill-chip verified">High-Throughput Concurrency</span>
+            <span class="skill-chip">Kubernetes</span>
+            <span class="skill-chip">Rust (Intermediate)</span>
+            <span class="skill-chip">Cassandra / ScyllaDB</span>
+            <span class="skill-chip">gRPC & Protobuf</span>
+            <span class="skill-chip">AWS (EKS, DynamoDB)</span>
+            <span class="skill-chip">Redis Architecture</span>
+          </div>
+
+          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+            <span>GitHub Activity: <strong>1,420 commits/yr</strong></span>
+            <span style="color: var(--success); font-weight: 600;">Top 2% Active</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- MODAL: Share Profile -->
+  <div class="modal-overlay" id="shareModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Share Candidate Profile</h3>
+        <button class="modal-close-btn" onclick="closeModal('shareModal')">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 13.5px; color: var(--text-muted);">
+          Share Alex Chen's candidate deep-dive link with interview panelists, engineering directors, or external recruiting partners.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Access Permissions</label>
+          <select class="form-control" id="sharePermissionSelect">
+            <option value="full">Full Interview Dossier (Scorecards + Clearance + Comp)</option>
+            <option value="panel">Hiring Panel View (Hides Compensation & Clearance Notes)</option>
+            <option value="blind">Blind Technical View (Anonymized PII for unbiased review)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Secure Profile Link (Expires in 7 days)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="form-control" id="shareLinkInput" readonly value="https://app.talentpulse.io/shared/candidates/c_alexchen_88f921a?token=tp_sec_9921" />
+            <button class="btn btn-default" onclick="copyText(document.getElementById('shareLinkInput').value, 'Share link copied!')">
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <div style="padding: 12px; background-color: var(--bg-subtle); border-radius: var(--radius-md); font-size: 12.5px; color: var(--text-muted);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <svg class="icon" style="color: #6366f1;" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <strong>Slack Instant Share:</strong>
+          </div>
+          <p>Post candidate debrief summary directly to <code>#hiring-infra-staff</code> for quick review.</p>
+          <button class="btn btn-default btn-sm" style="margin-top: 8px;" onclick="triggerToast('Slack link shared to #hiring-infra-staff'); closeModal('shareModal');">
+            Send to #hiring-infra-staff Slack Channel
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('shareModal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Reschedule Next Interview -->
+  <div class="modal-overlay" id="rescheduleModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Reschedule System Design Interview</h3>
+        <button class="modal-close-btn" onclick="closeModal('rescheduleModal')">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form onsubmit="handleRescheduleSubmit(event)">
+        <div class="modal-body">
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Updating this round will send updated calendar invites to <strong>Alex Chen</strong> and panelists <strong>Marcus Vance</strong> & <strong>Priya Sharma</strong>.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Select New Date</label>
+            <input type="date" class="form-control" id="rescheduleDate" value="2025-10-28" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Available Time Slot (PDT)</label>
+            <select class="form-control" id="rescheduleTime" required>
+              <option value="10:00 AM – 11:15 AM PDT">10:00 AM – 11:15 AM PDT (Both Panelists Available)</option>
+              <option value="1:30 PM – 2:45 PM PDT">1:30 PM – 2:45 PM PDT (Both Panelists Available)</option>
+              <option value="3:30 PM – 4:45 PM PDT" selected>3:30 PM – 4:45 PM PDT (Recommended Slot)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reason for Rescheduling</label>
+            <select class="form-control" id="rescheduleReason">
+              <option value="Candidate requested time adjustment">Candidate requested time adjustment</option>
+              <option value="Interviewer scheduling conflict">Interviewer scheduling conflict</option>
+              <option value="Additional panelist added">Additional panelist added</option>
+              <option value="Emergency conflict">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Note to Candidate & Panel</label>
+            <textarea class="form-control" rows="2" placeholder="Hi Alex, per your note, we have updated your System Design round to the new slot..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" onclick="closeModal('rescheduleModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm & Send Invites</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Calendar Invite Links -->
+  <div class="modal-overlay" id="calendarLinkModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Calendar Invite Links</h3>
+        <button class="modal-close-btn" onclick="closeModal('calendarLinkModal')">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-muted);">
+          Share direct one-click calendar booking links or add directly to your preferred calendar suite.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Direct Calendar Meeting URL</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="form-control" id="calDirectUrl" readonly value="https://cal.talentpulse.io/events/tp-onsite-alexchen-oct24" />
+            <button class="btn btn-default" onclick="copyText(document.getElementById('calDirectUrl').value, 'Calendar URL copied!')">
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+          <button class="btn btn-default" onclick="triggerToast('Opening Google Calendar invite creator...'); closeModal('calendarLinkModal');">
+            Add to Google Calendar
+          </button>
+          <button class="btn btn-default" onclick="triggerToast('Opening Outlook / Office365 invite...'); closeModal('calendarLinkModal');">
+            Add to Outlook
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('calendarLinkModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Log Activity -->
+  <div class="modal-overlay" id="logActivityModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Log New Candidate Activity</h3>
+        <button class="modal-close-btn" onclick="closeModal('logActivityModal')">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form onsubmit="handleLogActivitySubmit(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Activity Type</label>
+            <select class="form-control" id="newActType" required>
+              <option value="call">Phone Call / Check-in</option>
+              <option value="scorecard">Scorecard / Evaluation</option>
+              <option value="note">Internal Recruiter Note</option>
+              <option value="email">Email Communication</option>
+              <option value="assessment">Take-home / Code Assessment</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Subject / Title</label>
+            <input type="text" class="form-control" id="newActTitle" placeholder="e.g. Prep debrief, compensation sync, panel feedback" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Details / Notes</label>
+            <textarea class="form-control" id="newActDetails" rows="4" placeholder="Enter key details, quotes, evaluation findings, or takeaways..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Author / Recruiter</label>
+            <input type="text" class="form-control" value="Sarah Jenkins (Lead Tech Recruiter)" readonly />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" onclick="closeModal('logActivityModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save to Candidate File</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Full Matched Requisitions List -->
+  <div class="modal-overlay" id="allJobsModal">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 class="modal-title">All Matched Requisitions for Alex Chen</h3>
+        <button class="modal-close-btn" onclick="closeModal('allJobsModal')">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-muted);">
+          Alex is currently being considered for <strong>Staff Distributed Systems Engineer</strong>. You can switch their primary requisition or cross-consider them for other open pipeline roles.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- Job 1 -->
+          <div class="matched-job-card primary-job">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge-pill badge-purple">Current Primary Requisition</span>
+              <span class="match-rate">96% Skill Match</span>
+            </div>
+            <h4 class="job-name" style="font-size: 15px;">Staff Distributed Systems Engineer (Platform Eng)</h4>
+            <div class="job-meta-row">
+              <span>Department: Core Infrastructure</span>
+              <span>•</span>
+              <span>Location: SF (Hybrid)</span>
+              <span>•</span>
+              <span>Req ID: REQ-1049</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span class="job-salary-pill">$240,000 - $275,000 + Equity</span>
+              <span class="badge-pill badge-success">Active In Round 4</span>
+            </div>
+          </div>
+
+          <!-- Job 2 -->
+          <div class="matched-job-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge-pill badge-info">Alternative Opening</span>
+              <span class="match-rate">91% Skill Match</span>
+            </div>
+            <h4 class="job-name" style="font-size: 15px;">Principal Backend Architect (Fintech Core)</h4>
+            <div class="job-meta-row">
+              <span>Department: Payments Platform</span>
+              <span>•</span>
+              <span>Location: SF / Remote</span>
+              <span>•</span>
+              <span>Req ID: REQ-0982</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span class="job-salary-pill">$250,000 - $290,000 + Equity</span>
+              <button class="btn btn-default btn-sm" onclick="triggerToast('Candidate added to cross-consideration for REQ-0982'); closeModal('allJobsModal');">
+                Cross-Consider
+              </button>
+            </div>
+          </div>
+
+          <!-- Job 3 -->
+          <div class="matched-job-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge-pill badge-info">Alternative Opening</span>
+              <span class="match-rate">88% Skill Match</span>
+            </div>
+            <h4 class="job-name" style="font-size: 15px;">Staff Database Reliability Engineer</h4>
+            <div class="job-meta-row">
+              <span>Department: Cloud Foundations</span>
+              <span>•</span>
+              <span>Location: Full Remote (US)</span>
+              <span>•</span>
+              <span>Req ID: REQ-1120</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span class="job-salary-pill">$230,000 - $260,000 + Equity</span>
+              <button class="btn btn-default btn-sm" onclick="triggerToast('Candidate added to cross-consideration for REQ-1120'); closeModal('allJobsModal');">
+                Cross-Consider
+              </button>
+            </div>
+          </div>
+
+          <!-- Job 4 -->
+          <div class="matched-job-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge-pill badge-info">Alternative Opening</span>
+              <span class="match-rate">85% Skill Match</span>
+            </div>
+            <h4 class="job-name" style="font-size: 15px;">Senior Infrastructure Engineer, Kubernetes Mesh</h4>
+            <div class="job-meta-row">
+              <span>Department: Developer Productivity</span>
+              <span>•</span>
+              <span>Location: SF / New York</span>
+              <span>•</span>
+              <span>Req ID: REQ-1135</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span class="job-salary-pill">$215,000 - $245,000 + Equity</span>
+              <button class="btn btn-default btn-sm" onclick="triggerToast('Candidate added to cross-consideration for REQ-1135'); closeModal('allJobsModal');">
+                Cross-Consider
+              </button>
+            </div>
+          </div>
+
+          <!-- Job 5 -->
+          <div class="matched-job-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge-pill badge-info">Alternative Opening</span>
+              <span class="match-rate">82% Skill Match</span>
+            </div>
+            <h4 class="job-name" style="font-size: 15px;">Staff Performance & Low-Latency Engineer</h4>
+            <div class="job-meta-row">
+              <span>Department: High-Speed Networking</span>
+              <span>•</span>
+              <span>Location: Mountain View, CA</span>
+              <span>•</span>
+              <span>Req ID: REQ-1088</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span class="job-salary-pill">$245,000 - $280,000 + Equity</span>
+              <button class="btn btn-default btn-sm" onclick="triggerToast('Candidate added to cross-consideration for REQ-1088'); closeModal('allJobsModal');">
+                Cross-Consider
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-default" onclick="closeModal('allJobsModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Hub -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Interactive JavaScript Engine -->
+  <script>
+    // Toast Notification System
+    function triggerToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      let iconSvg = '<svg class="icon" style="color:#10b981;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+      if (type === 'info') {
+        iconSvg = '<svg class="icon" style="color:#818cf8;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+      }
+
+      toast.innerHTML = `${iconSvg} <span>${message}</span>`;
+      container.appendChild(toast);
+
+      // Trigger animation
+      setTimeout(() => toast.classList.add('show'), 10);
+
+      // Auto remove
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Modal Handlers
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+    // Close modal on Escape or clicking outside
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(m => {
+          m.classList.remove('active');
+        });
+        document.body.style.overflow = '';
+      }
+    });
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      });
+    });
+
+    function openShareModal() {
+      openModal('shareModal');
+    }
+
+    function openRescheduleModal() {
+      openModal('rescheduleModal');
+    }
+
+    function openLogActivityModal() {
+      openModal('logActivityModal');
+    }
+
+    function openAllJobsModal() {
+      openModal('allJobsModal');
+    }
+
+    // Copy to Clipboard Utility
+    function copyText(text, toastMsg = 'Copied to clipboard!') {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          triggerToast(toastMsg);
+        }).catch(() => fallbackCopy(text, toastMsg));
+      } else {
+        fallbackCopy(text, toastMsg);
+      }
+    }
+
+    function fallbackCopy(text, toastMsg) {
+      const tempInput = document.createElement('input');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      triggerToast(toastMsg);
+    }
+
+    function copyCalendarInviteLink() {
+      openModal('calendarLinkModal');
+    }
+
+    function downloadIcsFile() {
+      const icsContent = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//TalentPulse ATS//Interview Scheduling//EN",
+        "BEGIN:VEVENT",
+        "SUMMARY:Alex Chen - System Design & Architecture Deep Dive",
+        "DESCRIPTION:Candidate: Alex Chen\\nPanelists: Marcus Vance, Priya Sharma\\nRole: Staff Distributed Systems Engineer",
+        "LOCATION:https://meet.google.com/tp-tech-789",
+        "DTSTART:20251024T210000Z",
+        "DTEND:20251024T221500Z",
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ].join("\r\n");
+
+      const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.setAttribute("download", "Alex_Chen_System_Design_Interview.ics");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      triggerToast("Calendar .ICS invite downloaded successfully!");
+    }
+
+    // Reschedule form submission
+    function handleRescheduleSubmit(e) {
+      e.preventDefault();
+      const dateVal = document.getElementById('rescheduleDate').value;
+      const timeVal = document.getElementById('rescheduleTime').value;
+
+      // Update UI spotlight card
+      document.getElementById('meetingDateTimeText').innerText = `${dateVal} • ${timeVal}`;
+      document.getElementById('meetingCountdownBadge').innerHTML = `
+        <svg class="icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Rescheduled • Oct 28
+      `;
+
+      closeModal('rescheduleModal');
+      triggerToast(`Meeting rescheduled to ${dateVal} (${timeVal})`);
+
+      // Add audit log into timeline
+      insertActivityEntry({
+        category: 'call',
+        title: 'Interview Rescheduled: System Design Deep Dive',
+        author: 'by Sarah Jenkins',
+        time: 'Just now',
+        body: `Updated to ${dateVal} at ${timeVal}. Both candidate and interview panel automatically re-notified via Google Calendar integration.`
+      });
+    }
+
+    // Pipeline Stepper stage updater
+    function setPipelineStage(stageNum, stageName) {
+      const items = document.querySelectorAll('.stage-item');
+      items.forEach((item, idx) => {
+        item.classList.remove('completed', 'current', 'upcoming');
+        const numElem = item.querySelector('.stage-num');
+        if (idx + 1 < stageNum) {
+          item.classList.add('completed');
+          numElem.innerText = '✓';
+        } else if (idx + 1 === stageNum) {
+          item.classList.add('current');
+          numElem.innerText = (idx + 1).toString();
+        } else {
+          item.classList.add('upcoming');
+          numElem.innerText = (idx + 1).toString();
+        }
+      });
+      triggerToast(`Alex Chen moved to stage: ${stageName}`, 'info');
+    }
+
+    function advanceStageWorkflow() {
+      setPipelineStage(5, 'Leadership & Team Match');
+      triggerToast('Candidate advanced to Exec & Values round! Scheduling requests sent.', 'success');
+    }
+
+    function confirmRejectModal() {
+      if (confirm("Are you sure you want to archive or reject Alex Chen? This will cancel pending calendar invites.")) {
+        triggerToast("Candidate moved to Archive/Rejected. Feedback sent.", "info");
+      }
+    }
+
+    // Activity Filter Function
+    function filterActivities(category, btnElem) {
+      // Update tab buttons
+      document.querySelectorAll('#activityTabs .tab-pill').forEach(b => b.classList.remove('active'));
+      btnElem.classList.add('active');
+
+      const entries = document.querySelectorAll('#timelineList .timeline-entry');
+      entries.forEach(entry => {
+        if (category === 'all' || entry.getAttribute('data-category') === category) {
+          entry.style.display = 'flex';
+        } else {
+          entry.style.display = 'none';
+        }
+      });
+    }
+
+    let fullHistoryExpanded = false;
+    function toggleFullActivityHistory(btn) {
+      fullHistoryExpanded = !fullHistoryExpanded;
+      if (fullHistoryExpanded) {
+        btn.innerText = "Show Recent Only (Last 30 Days)";
+        triggerToast("Expanded full historical timeline (includes 2024 sourced records)");
+      } else {
+        btn.innerText = "Show Full 18-Month History";
+        triggerToast("Filtered to active pipeline cycle");
+      }
+    }
+
+    // Add activity submit handler
+    function handleLogActivitySubmit(e) {
+      e.preventDefault();
+      const type = document.getElementById('newActType').value;
+      const title = document.getElementById('newActTitle').value;
+      const details = document.getElementById('newActDetails').value;
+
+      insertActivityEntry({
+        category: type,
+        title: title,
+        author: 'by Sarah Jenkins (Lead Tech Recruiter)',
+        time: 'Just now',
+        body: details
+      });
+
+      closeModal('logActivityModal');
+      e.target.reset();
+      triggerToast('Activity recorded in candidate timeline!');
+    }
+
+    function insertActivityEntry(data) {
+      const container = document.getElementById('timelineList');
+      const entry = document.createElement('div');
+      entry.className = 'timeline-entry';
+      entry.setAttribute('data-category', data.category);
+
+      let iconHtml = '<svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+      
+      if (data.category === 'scorecard') {
+        iconHtml = '<svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+      } else if (data.category === 'assessment') {
+        iconHtml = '<svg class="icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+      } else if (data.category === 'email') {
+        iconHtml = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
+      } else if (data.category === 'call') {
+        iconHtml = '<svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+      }
+
+      entry.innerHTML = `
+        <div class="timeline-icon-box ${data.category}">
+          ${iconHtml}
+        </div>
+        <div class="timeline-content">
+          <div class="timeline-header">
+            <div>
+              <span class="timeline-author-role">${data.title}</span>
+              <span style="font-size: 12px; color: var(--text-muted);">${data.author}</span>
+            </div>
+            <span class="timeline-time">${data.time}</span>
+          </div>
+          <div class="timeline-body">${data.body}</div>
+        </div>
+      `;
+
+      container.insertBefore(entry, container.firstChild);
+    }
+
+    // Task Checklist Handlers
+    function toggleTask(taskId) {
+      const taskElem = document.getElementById(taskId);
+      if (taskElem) {
+        taskElem.classList.toggle('completed');
+        updateTaskCounts();
+      }
+    }
+
+    function updateTaskCounts() {
+      const pending = document.querySelectorAll('.task-item:not(.completed)').length;
+      document.getElementById('taskPendingCount').innerText = pending;
+      const badge = document.getElementById('taskBadge');
+      if (badge) {
+        badge.innerText = `${pending} Pending`;
+        if (pending === 0) {
+          badge.className = 'badge-pill badge-success';
+          badge.innerText = 'All Caught Up';
+        } else {
+          badge.className = 'badge-pill badge-warning';
+        }
+      }
+    }
+
+    function handleAddTask(e) {
+      e.preventDefault();
+      const input = document.getElementById('newTaskInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const newId = 'task-' + Date.now();
+      const taskList = document.getElementById('taskList');
+      const taskDiv = document.createElement('div');
+      taskDiv.className = 'task-item';
+      taskDiv.id = newId;
+
+      taskDiv.innerHTML = `
+        <input type="checkbox" class="task-checkbox" onchange="toggleTask('${newId}')" />
+        <div class="task-details">
+          <span class="task-title">${text}</span>
+          <div class="task-footer">
+            <span class="priority-badge priority-high">High</span>
+            <span>Due: Tomorrow</span>
+            <span>• S. Jenkins</span>
+          </div>
+        </div>
+      `;
+
+      taskList.insertBefore(taskDiv, taskList.firstChild);
+      input.value = '';
+      updateTaskCounts();
+      triggerToast('New recruiter task added!');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ÆGIS IDENTITY | Forensic Audit Terminal</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-deep: #0a0c10;
+            --bg-surface: #14181f;
+            --bg-elevated: #1e242e;
+            --bg-active: #2a3241;
+            --border-subtle: #2d3544;
+            --border-strong: #454f63;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #586069;
+            --accent-primary: #3fb950;
+            --accent-danger: #f85149;
+            --accent-warning: #d29922;
+            --accent-info: #58a6ff;
+            --accent-glow: rgba(63, 185, 80, 0.15);
+            
+            /* Typography */
+            --font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            --font-size-xs: 10px;
+            --font-size-sm: 12px;
+            --font-size-md: 14px;
+            --font-size-lg: 18px;
+            --font-size-xl: 24px;
+            --font-weight-bold: 700;
+            --font-weight-normal: 400;
+
+            /* Spacing */
+            --space-unit: 4px;
+            --space-xs: 4px;
+            --space-s: 8px;
+            --space-m: 16px;
+            --space-l: 24px;
+            --space-xl: 32px;
+
+            /* Effects */
+            --radius-s: 2px;
+            --radius-m: 4px;
+            --shadow-pop: 0 8px 24px rgba(0,0,0,0.5);
+            --transition-fast: 0.15s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: var(--font-family-sans);
+            font-size: var(--font-size-md);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Layout Structure */
+        .app-container {
+            display: grid;
+            grid-template-columns: 60px 300px 1fr;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* Navigation Pane */
+        .nav-pane {
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--space-m) 0;
+            gap: var(--space-l);
+        }
+
+        .nav-item {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-m);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: background-color var(--transition-fast);
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--bg-active);
+            color: var(--accent-primary);
+        }
+
+        .logo-box {
+            background: var(--accent-primary);
+            color: var(--bg-deep);
+            font-weight: var(--font-weight-bold);
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-s);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--space-l);
+        }
+
+        /* List Pane */
+        .list-pane {
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pane-header {
+            padding: var(--space-m);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pane-header h2 {
+            font-size: var(--font-size-sm);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+
+        .search-bar {
+            padding: var(--space-s) var(--space-m);
+            background: var(--bg-deep);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .search-bar input {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            padding: var(--space-xs) var(--space-s);
+            font-size: var(--font-size-sm);
+            border-radius: var(--radius-s);
+        }
+
+        .scrollable-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .identity-card {
+            padding: var(--space-m);
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: background-color var(--transition-fast);
+        }
+
+        .identity-card:hover {
+            background-color: var(--bg-active);
+        }
+
+        .identity-card.selected {
+            background-color: var(--bg-active);
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .identity-card .name {
+            font-weight: var(--font-weight-bold);
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--space-xs);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .identity-card .meta {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            font-family: var(--font-family-mono);
+        }
+
+        .risk-badge {
+            font-size: var(--font-size-xs);
+            padding: 2px 6px;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+
+        .risk-high { color: var(--accent-danger); border: 1px solid var(--accent-danger); }
+        .risk-med { color: var(--accent-warning); border: 1px solid var(--accent-warning); }
+
+        /* Detail Pane */
+        .detail-pane {
+            background-color: var(--bg-deep);
+            overflow-y: auto;
+            padding: var(--space-xl);
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: var(--space-l);
+            align-content: start;
+        }
+
+        .section {
+            grid-column: span 12;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-m);
+            padding: var(--space-m);
+        }
+
+        .section-half { grid-column: span 6; }
+        .section-third { grid-column: span 4; }
+
+        .section-title {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-bold);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-m);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: var(--space-s);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Stats & Content */
+        .big-stat {
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-xl);
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-m);
+        }
+
+        /* Charts */
+        .chart-container {
+            height: 120px;
+            display: flex;
+            align-items: flex-end;
+            gap: var(--space-s);
+            padding-top: var(--space-m);
+        }
+
+        .bar {
+            flex: 1;
+            background: var(--accent-info);
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            position: relative;
+        }
+
+        .bar:hover { opacity: 1; }
+
+        .bar::after {
+            content: attr(data-value);
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-muted);
+            padding: var(--space-s);
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: var(--font-weight-normal);
+            text-transform: uppercase;
+            font-size: var(--font-size-xs);
+        }
+
+        td {
+            padding: var(--space-s);
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-family: var(--font-family-mono);
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            bottom: var(--space-l);
+            right: var(--space-l);
+            background: var(--bg-elevated);
+            border-left: 4px solid var(--accent-danger);
+            padding: var(--space-m);
+            box-shadow: var(--shadow-pop);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: var(--space-m);
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+            border-radius: var(--radius-m);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast-icon {
+            color: var(--accent-danger);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* CTA Section */
+        .cta-box {
+            grid-column: span 12;
+            background: linear-gradient(90deg, #1e242e 0%, #2a3241 100%);
+            border: 1px solid var(--accent-primary);
+            padding: var(--space-l);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cta-content h3 {
+            color: var(--accent-primary);
+            margin-bottom: var(--space-s);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: var(--bg-deep);
+            border: none;
+            padding: var(--space-s) var(--space-l);
+            font-weight: var(--font-weight-bold);
+            border-radius: var(--radius-s);
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-strong);
+            color: var(--text-primary);
+            padding: var(--space-s) var(--space-l);
+            border-radius: var(--radius-s);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+        }
+
+        /* Detail Elements */
+        .biometric-visual {
+            height: 60px;
+            background: repeating-linear-gradient(90deg, transparent, transparent 10px, var(--border-subtle) 11px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wave-path {
+            fill: none;
+            stroke: var(--accent-warning);
+            stroke-width: 2;
+        }
+
+        .risk-meter {
+            height: 4px;
+            background: var(--bg-deep);
+            width: 100%;
+            margin-top: var(--space-s);
+            position: relative;
+        }
+
+        .risk-fill {
+            height: 100%;
+            background: var(--accent-danger);
+            width: 84%;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-xs);
+            margin-top: var(--space-s);
+        }
+
+        .tag {
+            background: var(--bg-active);
+            padding: 2px 8px;
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            border-radius: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Pane 1: Global Navigation -->
+        <nav class="nav-pane" role="navigation" aria-label="Main Navigation">
+            <div class="logo-box" aria-hidden="true">Æ</div>
+            <div class="nav-item active" title="Dashboard" role="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            </div>
+            <div class="nav-item" title="Identities" role="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="nav-item" title="Network Map" role="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div class="nav-item" title="Logs" role="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            </div>
+            <div style="margin-top: auto;" class="nav-item" title="Settings" role="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+        </nav>
+
+        <!-- Pane 2: List Pane -->
+        <aside class="list-pane">
+            <header class="pane-header">
+                <h2>Priority Watchlist</h2>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </header>
+            <div class="search-bar">
+                <input type="text" placeholder="Search identities...">
+            </div>
+            <div class="scrollable-list" role="listbox" aria-label="Identity List">
+                <div class="identity-card selected" role="option" aria-selected="true">
+                    <div class="name">
+                        Darius Thorne
+                        <span class="risk-badge risk-high">Critical</span>
+                    </div>
+                    <div class="meta">ID: 882-990-PX | CTO - NexaSys</div>
+                </div>
+                <div class="identity-card" role="option">
+                    <div class="name">
+                        Elena Rodriguez
+                        <span class="risk-badge risk-med">Medium</span>
+                    </div>
+                    <div class="meta">ID: 104-552-ER | Lead Counsel</div>
+                </div>
+                <div class="identity-card" role="option">
+                    <div class="name">
+                        Marcus Vane
+                        <span class="risk-badge risk-med">Medium</span>
+                    </div>
+                    <div class="meta">ID: 442-881-MV | Treasury Manager</div>
+                </div>
+                <div class="identity-card" role="option">
+                    <div class="name">
+                        Sarah Jenkins
+                        <span class="risk-badge risk-high">Critical</span>
+                    </div>
+                    <div class="meta">ID: 902-113-SJ | Sr. DevOps Eng</div>
+                </div>
+                <div class="identity-card" role="option">
+                    <div class="name">
+                        Robert Chen
+                        <span class="risk-badge" style="color: var(--text-muted); border: 1px solid var(--border-subtle);">Low</span>
+                    </div>
+                    <div class="meta">ID: 223-109-RC | HR Director</div>
+                </div>
+                <div class="identity-card" role="option">
+                    <div class="name">
+                        Amina Kouri
+                        <span class="risk-badge risk-med">Medium</span>
+                    </div>
+                    <div class="meta">ID: 771-002-AK | Product Lead</div>
+                </div>
+                <div class="identity-card" role="option">
+                    <div class="name">
+                        Liam O'Neill
+                        <span class="risk-badge risk-high">Critical</span>
+                    </div>
+                    <div class="meta">ID: 554-321-LO | Data Architect</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Pane 3: Detail Pane -->
+        <main class="detail-pane" role="main">
+            <!-- Section 1: Hero Identity -->
+            <div class="section">
+                <div class="section-title">
+                    Identity Forensic Profile: Darius Thorne
+                    <span style="font-family: var(--font-family-mono); color: var(--accent-danger);">#ACTIVE_THREAT_DETECTED</span>
+                </div>
+                <div class="data-grid">
+                    <div>
+                        <div class="big-stat">882/1000</div>
+                        <div class="stat-label">Identity Health Score</div>
+                        <div class="risk-meter"><div class="risk-fill"></div></div>
+                    </div>
+                    <div>
+                        <div class="big-stat" style="color: var(--accent-danger);">14</div>
+                        <div class="stat-label">MFA Bypass Attempts</div>
+                    </div>
+                    <div>
+                        <div class="big-stat" style="color: var(--accent-warning);">03</div>
+                        <div class="stat-label">Known Database Leaks</div>
+                    </div>
+                    <div>
+                        <div class="big-stat" style="color: var(--accent-info);">09</div>
+                        <div class="stat-label">Anomalous Locations</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Threat Vectors Chart -->
+            <div class="section section-half">
+                <div class="section-title">Infiltration Vector Probability (24h)</div>
+                <div class="chart-container">
+                    <div class="bar" style="height: 80%;" data-value="Phish"></div>
+                    <div class="bar" style="height: 40%;" data-value="Brute"></div>
+                    <div class="bar" style="height: 95%; background-color: var(--accent-danger);" data-value="Sess_Hijack"></div>
+                    <div class="bar" style="height: 30%;" data-value="Token"></div>
+                    <div class="bar" style="height: 55%;" data-value="Social"></div>
+                    <div class="bar" style="height: 20%;" data-value="Proxy"></div>
+                </div>
+            </div>
+
+            <!-- Section 3: Biometric Baseline -->
+            <div class="section section-half">
+                <div class="section-title">Keystroke Dynamics Anomaly</div>
+                <div class="biometric-visual">
+                    <svg width="100%" height="60" preserveAspectRatio="none">
+                        <path d="M0,30 Q50,10 100,50 T200,30 T300,45 T400,15 T500,30" class="wave-path"></path>
+                    </svg>
+                </div>
+                <div class="tag-list">
+                    <span class="tag">Dwell Time: +45ms</span>
+                    <span class="tag">Flight Time: -12ms</span>
+                    <span class="tag">Error Rate: 4.2%</span>
+                    <span class="tag" style="border: 1px solid var(--accent-warning);">ABNORMALITY DETECTED</span>
+                </div>
+            </div>
+
+            <!-- Section 4: Event Logs -->
+            <div class="section">
+                <div class="section-title">Identity Access Event Log (Real-time)</div>
+                <table role="table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp (UTC)</th>
+                            <th>Action</th>
+                            <th>IP Address</th>
+                            <th>Resource</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2023-10-27 14:22:11</td>
+                            <td>OAuth Grant (Admin)</td>
+                            <td>185.22.14.99</td>
+                            <td>Vault_AWS_Main</td>
+                            <td style="color: var(--accent-danger);">CHALLENGE_FAILED</td>
+                        </tr>
+                        <tr>
+                            <td>2023-10-27 14:18:05</td>
+                            <td>Login Attempt</td>
+                            <td>45.90.12.3</td>
+                            <td>O365_Web_Auth</td>
+                            <td style="color: var(--accent-primary);">SUCCESS_MFA</td>
+                        </tr>
+                        <tr>
+                            <td>2023-10-27 14:05:44</td>
+                            <td>Session Refresh</td>
+                            <td>185.22.14.99</td>
+                            <td>Internal_Slack</td>
+                            <td style="color: var(--accent-warning);">WARNED_LOCATION</td>
+                        </tr>
+                        <tr>
+                            <td>2023-10-27 13:44:12</td>
+                            <td>File Access</td>
+                            <td>45.90.12.3</td>
+                            <td>Confidential_M&A.pdf</td>
+                            <td style="color: var(--accent-primary);">SUCCESS</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Section 5: Dark Web Exposure -->
+            <div class="section section-third">
+                <div class="section-title">Dark Web Monitoring</div>
+                <div style="font-size: var(--font-size-xs); line-height: 1.6;">
+                    <div style="margin-bottom: var(--space-s);">
+                        <strong style="color: var(--accent-danger);">Breach Found:</strong> Ledger-X Leak (2022)<br>
+                        <span style="color: var(--text-muted);">Email, Cleartext Pwd, DOB</span>
+                    </div>
+                    <div>
+                        <strong style="color: var(--accent-warning);">Forum Mention:</strong> "RaidForums"<br>
+                        <span style="color: var(--text-muted);">User Handle matched corporate ID.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 6: Device Fingerprinting -->
+            <div class="section section-third">
+                <div class="section-title">Authorized Devices</div>
+                <div style="display: flex; flex-direction: column; gap: var(--space-s);">
+                    <div style="display: flex; align-items: center; gap: var(--space-s);">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-primary);"></div>
+                        <span style="font-size: var(--font-size-sm);">MacBook Pro (Primary) - NYC</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-s);">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-primary);"></div>
+                        <span style="font-size: var(--font-size-sm);">iPhone 14 Pro - NYC</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-s);">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-danger);"></div>
+                        <span style="font-size: var(--font-size-sm);">Linux Workstation - St. Petersburg</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 7: Remediation -->
+            <div class="section section-third">
+                <div class="section-title">Automated Actions</div>
+                <button class="btn-outline" style="width: 100%; margin-bottom: var(--space-s); color: var(--accent-danger); border-color: var(--accent-danger);">
+                    FORCE PASSWORD RESET
+                </button>
+                <button class="btn-outline" style="width: 100%; margin-bottom: var(--space-s);">
+                    SUSPEND SESSION
+                </button>
+                <button class="btn-outline" style="width: 100%;">
+                    NOTIFY IT SECURITY
+                </button>
+            </div>
+
+            <!-- CTA Section -->
+            <div class="cta-box">
+                <div class="cta-content">
+                    <h3>Secure Darius Thorne's Identity Now</h3>
+                    <p style="font-size: var(--font-size-sm); color: var(--text-secondary);">Your trial of ÆGIS Advanced Remediation ends in 48 hours. Sign up to enable auto-kill for high-risk sessions.</p>
+                </div>
+                <button class="btn-primary" role="button">Enable Protection Plan</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast" role="status" aria-live="polite">
+        <div class="toast-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <div>
+            <div style="font-weight: var(--font-weight-bold); font-size: var(--font-size-sm);">Critical Threat Alert</div>
+            <div style="font-size: var(--font-size-xs); color: var(--text-secondary);">Unauthorized lateral movement attempt detected from 185.22.14.99 targeting DB_PRODUCTION.</div>
+        </div>
+        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; margin-left: auto;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    </div>
+
+</body>
+</html>
+

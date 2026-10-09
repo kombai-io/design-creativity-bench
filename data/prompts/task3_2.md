@@ -1,0 +1,1 @@
+Web app screen to invite a marketing manager to an ad account workspace on customer engagement platform 'PulseNotify'

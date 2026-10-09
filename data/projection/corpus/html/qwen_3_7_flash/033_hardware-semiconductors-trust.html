@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FirmGuard — Hardware Root-of-Trust Diagnostics</title>
+<style>
+:root {
+  /* ── Colours ───────────────────────────────────── */
+  --clr-bg-page:        #0B0F14;
+  --clr-bg-shell:       #11161D;
+  --clr-bg-panel:       #161C25;
+  --clr-bg-card:        #1A2130;
+  --clr-bg-card-hover:  #1F2839;
+  --clr-bg-input:       #0D1117;
+  --clr-bg-badge:       #212733;
+  --clr-bg-stripe-alt:  #141922;
+
+  --clr-border-default: #2A3140;
+  --clr-border-subtle:  #1F2633;
+  --clr-border-focus:   #4A90E2;
+  --clr-border-dashed:  #3A4255;
+
+  --clr-fg-primary:     #E4E8EF;
+  --clr-fg-secondary:   #9BA3B0;
+  --clr-fg-muted:       #667085;
+  --clr-fg-inverse:     #0B0F14;
+
+  --clr-brand-amber:    #D4A017;
+  --clr-brand-green:    #5EB85E;
+  --clr-brand-amberGrn:#8BB83B;
+  --clr-brand-raspBerry:#DF2A5E;
+  --clr-brand-orange:   #D97A2C;
+  --clr-brand-blue:     #4A90E2;
+  --clr-brand-purple:   #9B6BDF;
+  --clr-brand-cyan:     #3DCBD8;
+
+  --clr-ok:             #3FB950;
+  --clr-ok-bg:          #12311A;
+  --clr-ok-border:      #1E5228;
+  --clr-warn:           #D29922;
+  --clr-warn-bg:        #362A10;
+  --clr-warn-border:    #5C4818;
+  --clr-error:          #E0115F;
+  --clr-error-bg:       #3B1020;
+  --clr-error-border:   #631834;
+  --clr-critical:       #F85149;
+  --clr-critical-bg:    #3B1015;
+  --clr-critical-border:#631822;
+  --clr-info:           #4A90E2;
+  --clr-info-bg:        #0F2340;
+  --clr-info-border:    #1E3D6A;
+
+  /* ── Typography ────────────────────────────────── */
+  --ff-sans:  -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --ff-mono:  'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+
+  --fs-xxs: 9px;
+  --fs-xs:  11px;
+  --fs-sm:  12px;
+  --fs-md:  13px;
+  --fs-base: 14px;
+  --fs-lg:  16px;
+  --fs-xl:  20px;
+  --fs-2xl: 24px;
+
+  /* ── Spacing ───────────────────────────────────── */
+  --sp-xxs: 2px;
+  --sp-xs:  4px;
+  --sp-sm:  6px;
+  --sp-md:  8px;
+  --sp-lg:  12px;
+  --sp-xl:  16px;
+  --sp-2xl: 20px;
+  --sp-3xl: 24px;
+  --sp-4xl: 32px;
+  --sp-5xl: 40px;
+
+  /* ── Radii ─────────────────────────────────────── */
+  --rad-none: 0;
+  --rad-sm:   3px;
+  --rad-md:   5px;
+  --rad-lg:   8px;
+  --rad-pill: 999px;
+
+  /* ── Shadows ───────────────────────────────────── */
+  --sh-sm:  0 1px 3px rgba(0,0,0,0.35);
+  --sh-md:  0 4px 14px rgba(0,0,0,0.4);
+  --sh-lg:  0 8px 28px rgba(0,0,0,0.5);
+  --sh-glow-ok:     0 0 10px rgba(63,185,80,0.12);
+  --sh-glow-warn:   0 0 10px rgba(210,153,34,0.12);
+  --sh-glow-error:  0 0 10px rgba(224,17,95,0.12);
+  --sh-glow-crit:   0 0 12px rgba(248,81,73,0.18);
+}
+
+/* ── Reset ────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: var(--fs-base); background: var(--clr-bg-page); color: var(--clr-fg-primary); }
+body { font-family: var(--ff-sans); min-height: 100vh; overflow-x: hidden; }
+button { font-family: inherit; cursor: pointer; }
+table { border-collapse: collapse; width: 100%; }
+::-webkit-scrollbar { width: var(--sp-md); height: var(--sp-md); }
+::-webkit-scrollbar-track { background: var(--clr-bg-shell); }
+::-webkit-scrollbar-thumb { background: var(--clr-border-default); border-radius: var(--rad-sm); }
+
+/* ── Utility ──────────────────────────────────────── */
+.mono { font-family: var(--ff-mono); }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-xs { gap: var(--sp-xs); }
+.gap-sm { gap: var(--sp-sm); }
+.gap-md { gap: var(--sp-md); }
+.gap-lg { gap: var(--sp-lg); }
+
+/* ═══════════════════════════════════════════════════
+   HEADER BAR
+   ═══════════════════════════════════════════════════ */
+.header {
+  background: var(--clr-bg-shell);
+  border-bottom: 1px solid var(--clr-border-default);
+  padding: var(--sp-md) var(--sp-xl);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  max-width: calc(1280px + var(--sp-xl) * 2);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-xl);
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+}
+.header-brand svg { flex-shrink: 0; }
+.header-brand h1 {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--clr-fg-primary);
+}
+.header-brand span.sub {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+  font-weight: 400;
+  margin-left: var(--sp-sm);
+  padding-left: var(--sp-sm);
+  border-left: 1px solid var(--clr-border-default);
+}
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-lg);
+}
+.health-score {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-xs);
+}
+.health-score .value {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-family: var(--ff-mono);
+  color: var(--clr-warn);
+}
+.health-score .label {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xl);
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+}
+.header-meta .dot {
+  width: var(--sp-xs);
+  height: var(--sp-xs);
+  border-radius: 50%;
+  background: var(--clr-ok);
+  display: inline-block;
+  margin-right: var(--sp-xs);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Toolbar row ──────────────────────────────────── */
+.toolbar {
+  background: var(--clr-bg-panel);
+  border-bottom: 1px solid var(--clr-border-subtle);
+  padding: var(--sp-sm) var(--sp-xl);
+}
+.toolbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-lg);
+}
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xs) var(--sp-sm);
+  border-radius: var(--rad-pill);
+  border: 1px solid var(--clr-border-default);
+  background: var(--clr-bg-input);
+  color: var(--clr-fg-secondary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.filter-chip:hover { border-color: var(--clr-border-focus); color: var(--clr-fg-primary); }
+.filter-chip.active {
+  background: var(--clr-info-bg);
+  border-color: var(--clr-info-border);
+  color: var(--clr-info);
+}
+.filter-chip .count {
+  background: var(--clr-bg-badge);
+  padding: var(--sp-xxs) var(--sp-xs);
+  border-radius: var(--rad-pill);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xxs);
+  color: var(--clr-fg-muted);
+}
+.toolbar-actions { display: flex; align-items: center; gap: var(--sp-sm); }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xs) var(--sp-md);
+  border-radius: var(--rad-md);
+  border: 1px solid var(--clr-border-default);
+  background: var(--clr-bg-input);
+  color: var(--clr-fg-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+.btn:hover { border-color: var(--clr-border-focus); color: var(--clr-fg-primary); }
+.btn-primary {
+  background: var(--clr-info);
+  border-color: var(--clr-info);
+  color: #fff;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-danger {
+  background: transparent;
+  border-color: var(--clr-error-border);
+  color: var(--clr-error);
+}
+.btn-danger:hover { background: var(--clr-error-bg); }
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--clr-bg-input);
+  border: 1px solid var(--clr-border-default);
+  border-radius: var(--rad-md);
+  padding: var(--sp-xs) var(--sp-sm);
+  gap: var(--sp-xs);
+}
+.search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--clr-fg-primary);
+  font-size: var(--fs-xs);
+  width: 180px;
+  font-family: var(--ff-sans);
+}
+.search-box input::placeholder { color: var(--clr-fg-muted); }
+.search-box svg { flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════════════════ */
+.tabs-wrap {
+  background: var(--clr-bg-panel);
+  border-bottom: 1px solid var(--clr-border-subtle);
+}
+.tabs-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--sp-xl);
+}
+.tablist {
+  display: flex;
+  list-style: none;
+  gap: 0;
+  position: relative;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--clr-fg-muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  padding: var(--sp-md) var(--sp-lg);
+  position: relative;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+.tab-btn:hover { color: var(--clr-fg-secondary); }
+.tab-btn[aria-selected="true"] {
+  color: var(--clr-fg-primary);
+}
+.tab-btn[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: var(--sp-lg);
+  right: var(--sp-lg);
+  height: 2px;
+  background: var(--clr-info);
+  border-radius: var(--rad-sm) var(--rad-sm) 0 0;
+}
+.tab-btn .tab-badge {
+  font-size: var(--fs-xxs);
+  padding: var(--sp-xxs) var(--sp-xs);
+  border-radius: var(--rad-pill);
+  background: var(--clr-error-bg);
+  color: var(--clr-error);
+  font-family: var(--ff-mono);
+  font-weight: 600;
+}
+.tab-panel { display: none; padding: var(--sp-xl); }
+.tab-panel[aria-hidden="false"] { display: block; }
+
+/* ═══════════════════════════════════════════════════
+   FLEET STATUS SUMMARY STRIP
+   ═══════════════════════════════════════════════════ */
+.fleet-summary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-xl);
+}
+.summary-stat {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--rad-md);
+  padding: var(--sp-lg);
+  position: relative;
+  overflow: hidden;
+}
+.summary-stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px;
+  height: 100%;
+}
+.summary-stat.stat-ok::before     { background: var(--clr-ok); }
+.summary-stat.stat-warn::before   { background: var(--clr-warn); }
+.summary-stat.stat-error::before  { background: var(--clr-error); }
+.summary-stat.stat-total::before  { background: var(--clr-brand-amber); }
+.summary-stat.stat-attn::before   { background: var(--clr-brand-blue); }
+.summary-stat .stat-value {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  font-family: var(--ff-mono);
+  line-height: 1;
+  margin-bottom: var(--sp-xs);
+}
+.stat-ok .stat-value     { color: var(--clr-ok); }
+.stat-warn .stat-value   { color: var(--clr-warn); }
+.stat-error .stat-value  { color: var(--clr-error); }
+.stat-total .stat-value  { color: var(--clr-fg-primary); }
+.stat-attn .stat-value   { color: var(--clr-info); }
+.summary-stat .stat-label {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--sp-xs);
+}
+.summary-stat .stat-detail {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-secondary);
+  font-family: var(--ff-mono);
+}
+
+/* ═══════════════════════════════════════════════════
+   DEVICE CARDS GRID
+   ═══════════════════════════════════════════════════ */
+.cards-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-lg);
+}
+.cards-header h2 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--clr-fg-primary);
+}
+.cards-header .view-toggle {
+  display: flex;
+  gap: var(--sp-xs);
+}
+.view-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--clr-border-default);
+  border-radius: var(--rad-sm);
+  background: var(--clr-bg-input);
+  color: var(--clr-fg-muted);
+  cursor: pointer;
+}
+.view-btn.active { color: var(--clr-info); border-color: var(--clr-info-border); }
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-md);
+}
+
+/* ── Individual Card ────────────────────────────────── */
+.device-card {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--rad-md);
+  position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
+}
+.device-card:hover { border-color: var(--clr-border-default); }
+.device-card.state-ok       { border-left: 3px solid var(--clr-ok); }
+.device-card.state-warn     { border-left: 3px solid var(--clr-warn); box-shadow: var(--sh-glow-warn); }
+.device-card.state-error    { border-left: 3px solid var(--clr-error); box-shadow: var(--sh-glow-error); }
+.device-card.state-critical { border-left: 3px solid var(--clr-critical); box-shadow: var(--sh-glow-crit); }
+
+/* Drag handle */
+.card-handle {
+  position: absolute;
+  top: var(--sp-md);
+  left: var(--sp-md);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: var(--clr-fg-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+}
+.device-card:hover .card-handle,
+.device-card.dragging .card-handle { opacity: 1; }
+.card-handle:active { cursor: grabbing; }
+.card-handle svg { width: 14px; height: 14px; }
+
+/* Card top row */
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--sp-lg) var(--sp-lg) var(--sp-sm);
+  padding-left: calc(var(--sp-lg) + 18px);
+}
+.card-device-name {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--clr-fg-primary);
+  line-height: 1.3;
+}
+.card-serial {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+  font-family: var(--ff-mono);
+  margin-top: var(--sp-xxs);
+}
+.card-state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xxs) var(--sp-sm);
+  border-radius: var(--rad-pill);
+  font-size: var(--fs-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.badge-ok { background: var(--clr-ok-bg); color: var(--clr-ok); border: 1px solid var(--clr-ok-border); }
+.badge-warn { background: var(--clr-warn-bg); color: var(--clr-warn); border: 1px solid var(--clr-warn-border); }
+.badge-error { background: var(--clr-error-bg); color: var(--clr-error); border: 1px solid var(--clr-error-border); }
+.badge-critical { background: var(--clr-critical-bg); color: var(--clr-critical); border: 1px solid var(--clr-critical-border); }
+
+/* Card body */
+.card-body {
+  padding: 0 var(--sp-lg);
+}
+.card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-md);
+}
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xxs);
+}
+.metric-item .metric-label {
+  font-size: var(--fs-xxs);
+  color: var(--clr-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.metric-item .metric-val {
+  font-size: var(--fs-sm);
+  color: var(--clr-fg-secondary);
+  font-family: var(--ff-mono);
+}
+.metric-item .metric-val.ok  { color: var(--clr-ok); }
+.metric-item .metric-val.warn { color: var(--clr-warn); }
+.metric-item .metric-val.err { color: var(--clr-error); }
+
+/* Error detail section inside card */
+.card-error-detail {
+  background: var(--clr-error-bg);
+  border: 1px solid var(--clr-error-border);
+  border-radius: var(--rad-sm);
+  padding: var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+.card-error-detail .error-code {
+  font-size: var(--fs-xs);
+  color: var(--clr-error);
+  font-weight: 600;
+  margin-bottom: var(--sp-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+.card-error-detail .error-desc {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-secondary);
+  line-height: 1.5;
+}
+.card-error-detail .error-hash {
+  font-size: var(--fs-xxs);
+  color: var(--clr-fg-muted);
+  font-family: var(--ff-mono);
+  margin-top: var(--sp-xs);
+  word-break: break-all;
+}
+
+/* Warning detail */
+.card-warn-detail {
+  background: var(--clr-warn-bg);
+  border: 1px solid var(--clr-warn-border);
+  border-radius: var(--rad-sm);
+  padding: var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+.card-warn-detail .warn-title {
+  font-size: var(--fs-xs);
+  color: var(--clr-warn);
+  font-weight: 600;
+  margin-bottom: var(--sp-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+.card-warn-detail .warn-desc {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-secondary);
+  line-height: 1.5;
+}
+
+/* Card footer */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-md) var(--sp-lg);
+  border-top: 1px solid var(--clr-border-subtle);
+  margin-top: var(--sp-xs);
+}
+.card-footer .meta {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+}
+.card-footer .actions {
+  display: flex;
+  gap: var(--sp-xs);
+}
+.card-action-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--rad-sm);
+  border: 1px solid var(--clr-border-subtle);
+  background: var(--clr-bg-input);
+  color: var(--clr-fg-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.card-action-btn:hover { border-color: var(--clr-border-focus); color: var(--clr-fg-primary); }
+.card-action-btn.danger:hover { border-color: var(--clr-error-border); color: var(--clr-error); }
+
+/* ═══════════════════════════════════════════════════
+   TRUST CHAIN TABLE PANEL
+   ═══════════════════════════════════════════════════ */
+.panel-section {
+  margin-bottom: var(--sp-3xl);
+}
+.panel-section:last-child { margin-bottom: 0; }
+.panel-section h3 {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--clr-fg-primary);
+  margin-bottom: var(--sp-md);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.panel-section h3 .section-count {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+  font-weight: 400;
+}
+
+.data-table-wrap {
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--rad-md);
+  overflow: hidden;
+}
+.data-table {
+  font-size: var(--fs-xs);
+}
+.data-table thead th {
+  background: var(--clr-bg-stripe-alt);
+  color: var(--clr-fg-secondary);
+  font-weight: 600;
+  text-align: left;
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--clr-border-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--fs-xxs);
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--clr-border-subtle);
+  color: var(--clr-fg-secondary);
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: var(--clr-bg-card-hover); }
+.data-table .mono-cell {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-primary);
+}
+.data-table .hash-cell {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xxs);
+  color: var(--clr-fg-muted);
+  word-break: break-all;
+}
+.data-table .pcr-row td {
+  background: var(--clr-bg-stripe-alt);
+}
+
+.status-dot {
+  width: var(--sp-sm);
+  height: var(--sp-sm);
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: var(--sp-xs);
+}
+.status-dot.green  { background: var(--clr-ok); }
+.status-dot.yellow { background: var(--clr-warn); }
+.status-dot.red    { background: var(--clr-error); }
+.status-dot.gray   { background: var(--clr-fg-muted); }
+
+/* ═══════════════════════════════════════════════════
+   EVENT TIMELINE PANEL
+   ═══════════════════════════════════════════════════ */
+.timeline {
+  position: relative;
+  padding-left: var(--sp-2xl);
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--clr-border-default);
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: var(--sp-xl);
+}
+.timeline-item:last-child { margin-bottom: 0; }
+.timeline-dot {
+  position: absolute;
+  left: calc(-1 * var(--sp-2xl));
+  top: var(--sp-xs);
+  width: var(--sp-lg);
+  height: var(--sp-lg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid;
+  background: var(--clr-bg-page);
+}
+.timeline-dot.dot-ok     { border-color: var(--clr-ok); }
+.timeline-dot.dot-error  { border-color: var(--clr-error); }
+.timeline-dot.dot-warn   { border-color: var(--clr-warn); }
+.timeline-dot.dot-info   { border-color: var(--clr-info); }
+.timeline-dot::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.timeline-dot.dot-ok::after     { background: var(--clr-ok); }
+.timeline-dot.dot-error::after  { background: var(--clr-error); }
+.timeline-dot.dot-warn::after   { background: var(--clr-warn); }
+.timeline-dot.dot-info::after   { background: var(--clr-info); }
+
+.timeline-timestamp {
+  font-size: var(--fs-xxs);
+  color: var(--clr-fg-muted);
+  font-family: var(--ff-mono);
+  margin-bottom: var(--sp-xs);
+}
+.timeline-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-fg-primary);
+  margin-bottom: var(--sp-xs);
+}
+.timeline-body {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-secondary);
+  line-height: 1.6;
+}
+.timeline-body .event-tag {
+  display: inline-block;
+  padding: var(--sp-xxs) var(--sp-xs);
+  border-radius: var(--rad-sm);
+  font-size: var(--fs-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-right: var(--sp-xs);
+}
+.tag-boot     { background: var(--clr-info-bg); color: var(--clr-info); }
+.tag-attest   { background: var(--clr-ok-bg); color: var(--clr-ok); }
+.tag-failure  { background: var(--clr-error-bg); color: var(--clr-error); }
+.tag-update   { background: var(--clr-warn-bg); color: var(--clr-warn); }
+.tag-policy   { background: #1E1A3A; color: var(--clr-brand-purple); }
+
+/* ═══════════════════════════════════════════════════
+   REMEDIATION PANEL
+   ═══════════════════════════════════════════════════ */
+.remediation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+.remediation-item {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--rad-md);
+  overflow: hidden;
+}
+.remediation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-md) var(--sp-lg);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.remediation-header:hover { background: var(--clr-bg-card-hover); }
+.remediation-header .rem-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--clr-fg-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+.remediation-header .rem-severity {
+  font-size: var(--fs-xxs);
+  padding: var(--sp-xxs) var(--sp-xs);
+  border-radius: var(--rad-pill);
+  font-weight: 600;
+}
+.sev-high   { background: var(--clr-error-bg); color: var(--clr-error); border: 1px solid var(--clr-error-border); }
+.sev-medium { background: var(--clr-warn-bg); color: var(--clr-warn); border: 1px solid var(--clr-warn-border); }
+.sev-low    { background: var(--clr-info-bg); color: var(--clr-info); border: 1px solid var(--clr-info-border); }
+.remediation-header .rem-chevron {
+  color: var(--clr-fg-muted);
+  transition: transform 0.2s ease;
+}
+.remediation-item.open .rem-chevron { transform: rotate(180deg); }
+
+.remediation-body {
+  display: none;
+  padding: 0 var(--sp-lg) var(--sp-lg);
+  border-top: 1px solid var(--clr-border-subtle);
+}
+.remediation-item.open .remediation-body { display: block; }
+.remed-step {
+  display: flex;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-md);
+  align-items: flex-start;
+}
+.remed-step:last-child { margin-bottom: 0; }
+.step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--clr-info-bg);
+  color: var(--clr-info);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: var(--sp-xs);
+}
+.step-content { flex: 1; }
+.step-text {
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--sp-xs);
+}
+.step-command {
+  background: var(--clr-bg-input);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--rad-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  color: var(--clr-brand-green);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+}
+.copy-btn {
+  background: none;
+  border: none;
+  color: var(--clr-fg-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: var(--sp-xs);
+}
+.copy-btn:hover { color: var(--clr-fg-primary); }
+.remed-note {
+  margin-top: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-md);
+  background: var(--clr-warn-bg);
+  border: 1px solid var(--clr-warn-border);
+  border-radius: var(--rad-sm);
+  font-size: var(--fs-xs);
+  color: var(--clr-warn);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-xs);
+}
+
+/* ═══════════════════════════════════════════════════
+   EMPTY / ERROR STATE OVERLAY
+   ═══════════════════════════════════════════════════ */
+.error-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(11,15,20,0.85);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.error-overlay.visible { display: flex; }
+.error-dialog {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-error-border);
+  border-radius: var(--rad-lg);
+  padding: var(--sp-3xl);
+  max-width: 520px;
+  width: calc(100% - var(--sp-4xl));
+  text-align: center;
+  box-shadow: var(--sh-glow-error);
+}
+.error-dialog svg.error-icon { margin-bottom: var(--sp-lg); }
+.error-dialog h2 {
+  font-size: var(--fs-xl);
+  color: var(--clr-error);
+  margin-bottom: var(--sp-md);
+}
+.error-dialog p {
+  font-size: var(--fs-sm);
+  color: var(--clr-fg-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--sp-lg);
+}
+.error-dialog .error-code-display {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  color: var(--clr-fg-muted);
+  background: var(--clr-bg-input);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--rad-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  margin-bottom: var(--sp-lg);
+  word-break: break-all;
+}
+.error-actions {
+  display: flex;
+  gap: var(--sp-md);
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════
+   DRAG STYLES
+   ═══════════════════════════════════════════════════ */
+.device-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.97);
+  border-color: var(--clr-info-border);
+}
+.cards-grid.drag-over .device-card {
+  border-color: var(--clr-info-border);
+}
+.drop-indicator {
+  height: 2px;
+  background: var(--clr-info);
+  margin: var(--sp-xs) 0;
+  border-radius: var(--rad-sm);
+  display: none;
+}
+.cards-grid.drag-over .drop-indicator { display: block; }
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVE FALLBACK
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  .cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .fleet-summary { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .cards-grid { grid-template-columns: 1fr; }
+  .fleet-summary { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ═══════════════════════════════════════════════════
+   SCROLLBAR & ANIMATIONS
+   ═══════════════════════════════════════════════════ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+.shake { animation: shake 0.4s ease-in-out; }
+
+/* Progress bar */
+.progress-bar {
+  height: 4px;
+  background: var(--clr-border-subtle);
+  border-radius: var(--rad-pill);
+  overflow: hidden;
+  margin-top: var(--sp-xs);
+}
+.progress-bar .fill {
+  height: 100%;
+  border-radius: var(--rad-pill);
+  transition: width 0.3s ease;
+}
+.fill-ok  { background: var(--clr-ok); }
+.fill-warn { background: var(--clr-warn); }
+.fill-err { background: var(--clr-error); }
+
+/* Tooltip style label */
+.attr-lineage {
+  display: inline-block;
+  padding: 2px var(--sp-xs);
+  background: var(--clr-bg-badge);
+  border-radius: var(--rad-sm);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xxs);
+  color: var(--clr-fg-muted);
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--clr-border-subtle);
+  margin: var(--sp-xl) 0;
+}
+
+/* Inline code */
+code {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  background: var(--clr-bg-input);
+  border: 1px solid var(--clr-border-subtle);
+  padding: 1px var(--sp-xs);
+  border-radius: var(--rad-sm);
+  color: var(--clr-brand-cyan);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <!-- Shield SVG logo -->
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 2L3 7V14C3 20.627 7.75 26.45 14 28C20.25 26.45 25 20.627 25 14V7L14 2Z" fill="#1A2130" stroke="#4A90E2" stroke-width="1.5"/>
+        <path d="M14 9L11 12L13 14L17 10L14 9Z" fill="#4A90E2"/>
+        <path d="M14 13L11 16L13 18L17 14L14 13Z" fill="#4A90E2" opacity="0.6"/>
+        <path d="M14 17L12 19L13 20L16 17.5L14 17Z" fill="#4A90E2" opacity="0.3"/>
+      </svg>
+      <h1>FirmGuard<span class="sub">Hardware Root-of-Trust Diagnostics</span></h1>
+    </div>
+    <div class="header-status">
+      <div class="health-score">
+        <span class="value">72</span>
+        <span class="label">Trust Score</span>
+      </div>
+      <div class="header-meta">
+        <span><span class="dot"></span> Live — Cluster eu-west-1a</span>
+        <span>Attestation window: closed</span>
+        <span>Last sync: 2025-01-14T08:42:19Z</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════
+     TOOLBAR
+     ═══════════════════════════════════════════════════ -->
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <div class="toolbar-filters">
+      <button class="filter-chip active" onclick="filterCards('all', this)">All Devices</button>
+      <button class="filter-chip" onclick="filterCards('error', this)">Errors <span class="count">4</span></button>
+      <button class="filter-chip" onclick="filterCards('warn', this)">Warnings <span class="count">3</span></button>
+      <button class="filter-chip" onclick="filterCards('ok', this)">Healthy <span class="count">9</span></button>
+      <button class="filter-chip" onclick="filterCards('critical', this)">Critical <span class="count">1</span></button>
+    </div>
+    <div class="toolbar-actions">
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search serial, hostname…" id="searchInput" oninput="searchCards(this.value)">
+      </div>
+      <button class="btn" title="Refresh data">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+      <button class="btn" title="Export report">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+      <button class="btn btn-danger" onclick="showErrorOverlay()" title="Simulate connection failure">⚠ Force Error State</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TABS
+     ═══════════════════════════════════════════════════ -->
+<div class="tabs-wrap">
+  <div class="tabs-inner">
+    <div role="tablist" aria-label="Diagnostics views">
+      <button class="tab-btn" role="tab" aria-selected="true" aria-controls="panel-fleet" id="tab-fleet" onclick="switchTab('fleet')">
+        Fleet Overview
+        <span class="tab-badge" style="background:var(--clr-error-bg);color:var(--clr-error)">4</span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-chain" id="tab-chain" onclick="switchTab('chain')">
+        Trust Chain Diagnostics
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-events" id="tab-events" onclick="switchTab('events')">
+        Attestation Event Log
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-remediation" id="tab-remediation" onclick="switchTab('remediation')">
+        Remediation Guides
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB PANEL: FLEET OVERVIEW
+     ═══════════════════════════════════════════════════ -->
+<div class="tab-panel" role="tabpanel" id="panel-fleet" aria-labelledby="tab-fleet" aria-hidden="false">
+
+  <!-- Summary stats -->
+  <div class="fleet-summary">
+    <div class="summary-stat stat-total">
+      <div class="stat-label">Total Nodes</div>
+      <div class="stat-value">17</div>
+      <div class="stat-detail">eu-west-1a · us-east-2b · ap-south-1c</div>
+    </div>
+    <div class="summary-stat stat-ok">
+      <div class="stat-label">Passing Attestation</div>
+      <div class="stat-value">9</div>
+      <div class="stat-detail">Last checked 3 min ago</div>
+    </div>
+    <div class="summary-stat stat-warn">
+      <div class="stat-label">Degraded / Warning</div>
+      <div class="stat-value">3</div>
+      <div class="stat-detail">Clock drift · firmware mismatch</div>
+    </div>
+    <div class="summary-stat stat-error">
+      <div class="stat-label">Failed Attestation</div>
+      <div class="stat-value">4</div>
+      <div class="stat-detail">PCR mismatch · key rotation needed</div>
+    </div>
+    <div class="summary-stat stat-attn">
+      <div class="stat-label">Pending Review</div>
+      <div class="stat-value">1</div>
+      <div class="stat-detail">Cross-region revocation detected</div>
+    </div>
+  </div>
+
+  <!-- Cards header -->
+  <div class="cards-header">
+    <h2>Device Nodes <span style="font-weight:400;color:var(--clr-fg-muted);font-size:var(--fs-sm);">(drag handles to reorder)</span></h2>
+    <div class="view-toggle">
+      <button class="view-btn active" title="Grid view">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="view-btn" title="List view">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Cards Grid -->
+  <div class="cards-grid" id="cardsGrid">
+
+    <!-- Card 1 — OK -->
+    <div class="device-card state-ok" data-state="ok" data-name="SGX-WKS-01A" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">SGX-WKS-01A</div>
+          <div class="card-serial">SN: HTG-K7M2-8XPQ-4RZN</div>
+        </div>
+        <span class="card-state-badge badge-ok"><span class="status-dot green" style="width:6px;height:6px;margin:0"></span> Trusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Infineon SLB9672</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val ok">Active · RC40</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-13T22:07:14Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">ME 12.0.83.2714</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val mono">8a3f…c1d9</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">10d 10h 35m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: eu-west-1a · Rack R-04</span>
+        <div class="actions">
+          <button class="card-action-btn" title="View details" aria-label="View details for SGX-WKS-01A">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest" aria-label="Re-attest SGX-WKS-01A">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 — OK -->
+    <div class="device-card state-ok" data-state="ok" data-name="SGX-WKS-02B" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">SGX-WKS-02B</div>
+          <div class="card-serial">SN: HTG-M3P9-2WQR-7YTK</div>
+        </div>
+        <span class="card-state-badge badge-ok"><span class="status-dot green" style="width:6px;height:6px;margin:0"></span> Trusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Nuvoton NPCT750</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val ok">Active · RC40</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-12T14:33:02Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">ME 12.0.83.2714</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val mono">4f2a…b8e1</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">11d 18h 9m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: eu-west-1a · Rack R-04</span>
+        <div class="actions">
+          <button class="card-action-btn" title="View details" aria-label="View details for SGX-WKS-02B">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest" aria-label="Re-attest SGX-WKS-02B">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 — ERROR: PCR Mismatch -->
+    <div class="device-card state-error" data-state="error" data-name="KVM-HGX-07C" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">KVM-HGX-07C</div>
+          <div class="card-serial">SN: HTG-R8F3-5LMN-0DVP</div>
+        </div>
+        <span class="card-state-badge badge-error"><span class="status-dot red" style="width:6px;height:6px;margin:0"></span> Untrusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-error-detail">
+          <div class="error-code">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            PCR7 MISMATCH — Expected bootloader hash did not match measured value
+          </div>
+          <div class="error-desc">
+            PCR register 7 measured <span class="mono">a1f2-8d93</span> vs expected <span class="mono">a1f2-8d77</span>. Likely caused by unplanned BMC firmware update during the Jan 13 maintenance window.
+          </div>
+          <div class="error-hash">Full hash: 8c44f8d772ab1e93a8c067d2e93f1ba5f2a7c8d932e14f77a90bc31d26e5f8a1</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val err">v2.0, Infineon</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val warn">Deactivated</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-14T01:22:08Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val warn">ME 12.1.0.1002 ▲</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val err mono">a1f2…8d93</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">7h 20m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: us-east-2b · Rack R-11</span>
+        <div class="actions">
+          <button class="card-action-btn danger" title="Force rollback" aria-label="Force rollback on KVM-HGX-07C">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest" aria-label="Re-attest KVM-HGX-07C">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 — CRITICAL -->
+    <div class="device-card state-critical" data-state="critical" data-name="ATHLON-CPU-14D" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">ATHLON-CPU-14D</div>
+          <div class="card-serial">SN: HTG-Y5K8-9ZWC-3MQN</div>
+        </div>
+        <span class="card-state-badge badge-critical"><span class="status-dot red" style="width:6px;height:6px;margin:0"></span> Revoked</span>
+      </div>
+      <div class="card-body">
+        <div class="card-error-detail">
+          <div class="error-code">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            ROOT OF TRUST REVOKED — EK certificate found in CRL
+          </div>
+          <div class="error-desc">
+            Endorsement Key certificate <span class="attr-lineage">AK-EK: 8f7a2d</span> appears in the AMD PSP revocation list issued 2025-01-10. Cross-contamination risk from sibling node ATHLON-CPU-14D-STANDBY. Node quarantined.
+          </div>
+          <div class="error-hash">EK thumbprint: sha384:7a2f91d4c8e3b056fa92d71ce84f03b6591da720c3ef884510b273a64fc90d1582e371b4af9dc06f</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val err">Revoked</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val err">Inaccessible</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">—</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val err">PSA-08.02.01.03</span></div>
+          <div class="metric-item"><span class="metric-label">Status</span><span class="metric-val err">Quarantined</span></div>
+          <div class="metric-item"><span class="metric-label">Last Seen</span><span class="metric-val">2025-01-10T18:41Z</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: us-east-2b · Rack R-13 — QUARANTINED</span>
+        <div class="actions">
+          <button class="card-action-btn danger" title="Isolate from network" aria-label="Isolate ATHLON-CPU-14D">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+          <button class="card-action-btn" title="View EK details" aria-label="View EK details for ATHLON-CPU-14D">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 — WARN -->
+    <div class="device-card state-warn" data-state="warn" data-name="EPYC-GPU-03E" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">EPYC-GPU-03E</div>
+          <div class="card-serial">SN: HTG-Q4N7-1JKL-6WRS</div>
+        </div>
+        <span class="card-state-badge badge-warn"><span class="status-dot yellow" style="width:6px;height:6px;margin:0"></span> Degraded</span>
+      </div>
+      <div class="card-body">
+        <div class="card-warn-detail">
+          <div class="warn-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Clock Drift Detected — RTC offset > 450ms
+          </div>
+          <div class="warn-desc">Real-time clock drift has exceeded the 400ms threshold used for anti-replay validation. Immediate time sync required before next attest cycle.</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Microchip OPTIGA</span></div>
+          <div class="metric-item"><span class="metric-label">RTC Offset</span><span class="metric-val warn">+512ms</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-13T16:45:31Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">ME 12.0.83.2714</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val ok mono">3e91…d42c</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">15h 57m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: eu-west-1a · Rack R-07</span>
+        <div class="actions">
+          <button class="card-action-btn" title="Sync clock" aria-label="Sync clock on EPYC-GPU-03E">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest" aria-label="Re-attest EPYC-GPU-03E">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 — OK -->
+    <div class="device-card state-ok" data-state="ok" data-name="ZEN4-NIC-09F" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">ZEN4-NIC-09F</div>
+          <div class="card-serial">SN: HTG-V2H6-4BXD-8NTK</div>
+        </div>
+        <span class="card-state-badge badge-ok"><span class="status-dot green" style="width:6px;height:6px;margin:0"></span> Trusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, STMicroelectronics</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val ok">Active · RC40</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-11T09:12:44Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">ME 12.0.83.2714</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val mono">6b1c…f7e4</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">13d 1h 30m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: ap-south-1c · Rack R-02</span>
+        <div class="actions">
+          <button class="card-action-btn" title="View details">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7 — ERROR: Key Rotation Needed -->
+    <div class="device-card state-error" data-state="error" data-name="RYZEN-BMC-11G" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">RYZEN-BMC-11G</div>
+          <div class="card-serial">SN: HTG-T6J1-3CPH-9MWQ</div>
+        </div>
+        <span class="card-state-badge badge-error"><span class="status-dot red" style="width:6px;height:6px;margin:0"></span> Untrusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-error-detail">
+          <div class="error-code">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            KEY ROTATION REQUIRED — Attestation signing key expired 2025-01-09
+          </div>
+          <div class="error-desc">
+            Device attestation key pair (CSR generated 2024-07-09) has expired. Remote attestation calls return <code>DISTINCTION_INDICATOR: INVALID_SIGNING_KEY</code>. Re-key provisioning required via out-of-band console.
+          </div>
+          <div class="error-hash">Key ID: ASK-2024-07-09-RTX4 :: Expires: 2025-01-09T00:00:00Z</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Infineon</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val warn">Stale Quote</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-10T06:15:22Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">ME 12.0.83.2714</span></div>
+          <div class="metric-item"><span class="metric-label">ASK Expiry</span><span class="metric-val err">EXPIRED (-5d)</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">4d 2h 27m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: us-east-2b · Rack R-09</span>
+        <div class="actions">
+          <button class="card-action-btn" title="Provision new key" aria-label="Provision new attestation key for RYZEN-BMC-11G">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8 — OK -->
+    <div class="device-card state-ok" data-state="ok" data-name="GENOA-DIMM-05H" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">GENOA-DIMM-05H</div>
+          <div class="card-serial">SN: HTG-L9W3-7FVN-2BKX</div>
+        </div>
+        <span class="card-state-badge badge-ok"><span class="status-dot green" style="width:6px;height:6px;margin:0"></span> Trusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Nuvoton</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val ok">Active · RC40</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-08T03:44:19Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">ME 12.0.83.2714</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val mono">2d88…e1a3</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">16d 5h 58m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: eu-west-1a · Rack R-06</span>
+        <div class="actions">
+          <button class="card-action-btn" title="View details">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 9 — WARN: Firmware Outdated -->
+    <div class="device-card state-warn" data-state="warn" data-name="TURIN-RAID-16I" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">TURIN-RAID-16I</div>
+          <div class="card-serial">SN: HTG-D8R2-0GHJ-5YPW</div>
+        </div>
+        <span class="card-state-badge badge-warn"><span class="status-dot yellow" style="width:6px;height:6px;margin:0"></span> Degraded</span>
+      </div>
+      <div class="card-body">
+        <div class="card-warn-detail">
+          <div class="warn-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Firmware Version Mismatch — running ME 11.0.82.2401 while baseline is 12.0.83.2714
+          </div>
+          <div class="warn-desc">Intel ME firmware on this node is 11 minor versions behind the approved baseline. Known CVE mitigation (CVE-2024-15XX series) requires ≥ 12.0.x.</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Infineon</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val ok">Active · RC40</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-14T04:12:55Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val warn">ME 11.0.82.2401 ▼</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val ok mono">7c55…a290</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">4h 30m</span></div>
+        </div>
+        <div style="margin-top:var(--sp-sm)">
+          <div class="metric-item" style="flex-direction:row;align-items:center;gap:var(--sp-sm)">
+            <span class="metric-label" style="flex:0 0 auto">Baseline Compliance</span>
+            <span style="flex:1">
+              <div class="progress-bar"><div class="fill fill-warn" style="width: 72%"></div></div>
+            </span>
+            <span class="metric-val warn" style="font-size:var(--fs-xxs);flex:0 0 auto">72%</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: ap-south-1c · Rack R-10</span>
+        <div class="actions">
+          <button class="card-action-btn" title="Schedule firmware update" aria-label="Schedule firmware update for TURIN-RAID-16I">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 10 — ERROR: Quoting Error -->
+    <div class="device-card state-error" data-state="error" data-name="STRATIX-FPGA-12J" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">STRATIX-FPGA-12J</div>
+          <div class="card-serial">SN: HTG-Z3M5-8QTG-4BNL</div>
+        </div>
+        <span class="card-state-badge badge-error"><span class="status-dot red" style="width:6px;height:6px;margin:0"></span> Untrusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-error-detail">
+          <div class="error-code">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            QUOTE GENERATION FAILED — Platform configuration register corruption
+          </div>
+          <div class="error-desc">
+            TPM was unable to generate a valid quote. PCR bank initialization returned error <span class="mono">TPM_RC_PCR_CHANGED (0x01A4)</span>. Possible tampering or corrupted NVRAM partition detected.
+          </div>
+          <div class="error-hash">Last known good PCR set: 2025-01-12T19:33:01Z — Bank SHA256: ba38…</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val err">Quote Error 0x01A4</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val err">N/A (FPGA)</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-13T19:41:27Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val warn">PRoD v4.1.0</span></div>
+          <div class="metric-item"><span class="metric-label">PCR Bank</span><span class="metric-val err">CORRUPT</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">13h 1m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: eu-west-1a · Rack R-03</span>
+        <div class="actions">
+          <button class="card-action-btn danger" title="Clear NVRAM and re-provision" aria-label="Clear NVRAM on STRATIX-FPGA-12J">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 11 — OK -->
+    <div class="device-card state-ok" data-state="ok" data-name="EPYC-ILO-08K" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">EPYC-ILO-08K</div>
+          <div class="card-serial">SN: HTG-P5N8-2WXF-7CYL</div>
+        </div>
+        <span class="card-state-badge badge-ok"><span class="status-dot green" style="width:6px;height:6px;margin:0"></span> Trusted</span>
+      </div>
+      <div class="card-body">
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Nuvoton NPCT750</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val ok">Active · RC40</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-09T11:28:33Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">ILO v3.61.00</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val mono">9f12…c847</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">15d 17h 14m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: eu-west-1a · Rack R-05</span>
+        <div class="actions">
+          <button class="card-action-btn" title="View details">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 12 — ERROR: Network Isolation -->
+    <div class="device-card state-error" data-state="error" data-name="MI300-AIC-18L" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">MI300-AIC-18L</div>
+          <div class="card-serial">SN: HTG-B7Q4-1DMR-6WKP</div>
+        </div>
+        <span class="card-state-badge badge-error"><span class="status-dot red" style="width:6px;height:6px;margin:0"></span> Offline</span>
+      </div>
+      <div class="card-body">
+        <div class="card-error-detail">
+          <div class="error-code">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            NETWORK ISOLATED — Unable to reach remote attestation service
+          </div>
+          <div class="error-desc">
+            Last successful attestation completed 2025-01-11T22:14:07Z. Since then, three heartbeat attempts have failed. Egress ACL changed on VLAN 440 without corresponding ticket.
+          </div>
+          <div class="error-hash">ACL rule matched: DENY ALL from 10.22.44.0/24 → attestation-gateway.internal</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val warn">Unknown (offline)</span></div>
+          <div class="metric-item"><span class="metric-label">SEV-SNP</span><span class="metric-val warn">Unknown</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">—</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val">—</span></div>
+          <div class="metric-item"><span class="metric-label">Network</span><span class="metric-val err">ISOLATED</span></div>
+          <div class="metric-item"><span class="metric-label">Offline Since</span><span class="metric-val err">3d 10h</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: ap-south-1c · Rack R-08 — OFFLINE</span>
+        <div class="actions">
+          <button class="card-action-btn" title="Check ACL rules" aria-label="Check ACL rules for MI300-AIC-18L">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 13 — WARN -->
+    <div class="device-card state-warn" data-state="warn" data-name="CAVIUM-NVMe-20M" draggable="true">
+      <div class="card-handle" title="Drag to reorder">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+      </div>
+      <div class="card-top">
+        <div>
+          <div class="card-device-name">CAVIUM-NVMe-20M</div>
+          <div class="card-serial">SN: HTG-F1X9-6NVB-3JTL</div>
+        </div>
+        <span class="card-state-badge badge-warn"><span class="status-dot yellow" style="width:6px;height:6px;margin:0"></span> Degraded</span>
+      </div>
+      <div class="card-body">
+        <div class="card-warn-detail">
+          <div class="warn-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            NVMe Secure Erase pending — self-encryption key flagged for rotation
+          </div>
+          <div class="warn-desc">Self-Encryption Drive (SED) master password requires rotation per compliance policy CP-2024/SEC-07. Current SED rotation count: 47 / maximum 50.</div>
+        </div>
+        <div class="card-metrics">
+          <div class="metric-item"><span class="metric-label">TPM</span><span class="metric-val ok">v2.0, Microchip</span></div>
+          <div class="metric-item"><span class="metric-label">SED Rotations</span><span class="metric-val warn">47/50</span></div>
+          <div class="metric-item"><span class="metric-label">Boot Time</span><span class="metric-val">2025-01-13T08:19:44Z</span></div>
+          <div class="metric-item"><span class="metric-label">Firmware</span><span class="metric-val ok">SED FW v2.18</span></div>
+          <div class="metric-item"><span class="metric-label">PCR-7 Hash</span><span class="metric-val ok mono">e4a0…18f7</span></div>
+          <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-val">1d 20h 23m</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="meta">Zone: us-east-2b · Rack R-12</span>
+        <div class="actions">
+          <button class="card-action-btn" title="Rotate SED key" aria-label="Rotate SED key for CAVIUM-NVMe-20M">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="card-action-btn" title="Re-attest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end cards-grid -->
+</div><!-- end panel-fleet -->
+
+<!-- ═══════════════════════════════════════════════════
+     TAB PANEL: TRUST CHAIN DIAGNOSTICS
+     ═══════════════════════════════════════════════════ -->
+<div class="tab-panel" role="tabpanel" id="panel-chain" aria-labelledby="tab-chain" aria-hidden="true">
+  <div class="panel-section">
+    <h3>Platform Configuration Register Readings <span class="section-count">— all banks, all nodes</span></h3>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Node</th>
+            <th scope="col">PCR Bank</th>
+            <th scope="col">PCR 0</th>
+            <th scope="col">PCR 4</th>
+            <th scope="col">PCR 7</th>
+            <th scope="col">PCR 9</th>
+            <th scope="col">PCR 10</th>
+            <th scope="col">Match</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="8" style="background:var(--clr-bg-stripe-alt);padding:var(--sp-sm) var(--sp-md);font-size:var(--fs-xs);font-weight:600;color:var(--clr-fg-secondary)">SGX-WKS-01A</td></tr>
+          <tr class="mono-cell"><td></td><td>SHA256</td><td>d8e3f721...</td><td>44ac9102...</td><td>8a3fc1d9...</td><td>e2910f4a...</td><td>b74cdd83...</td><td><span class="status-dot green"></span> Match</td></tr>
+          <tr class="mono-cell"><td></td><td>SHA384</td><td>a1f29384...</td><td>cc7e2290...</td><td>d45eb71a...</td><td>f8201c3b...</td><td>3e91aa76...</td><td><span class="status-dot green"></span> Match</td></tr>
+
+          <tr><td colspan="8" style="background:var(--clr-bg-stripe-alt);padding:var(--sp-sm) var(--sp-md);font-size:var(--fs-xs);font-weight:600;color:var(--clr-fg-secondary)">KVM-HGX-07C — MISMATCH DETECTED</td></tr>
+          <tr class="pcr-row mono-cell"><td></td><td>SHA256</td><td>d8e3f721...</td><td>44ac9102...</td><td style="color:var(--clr-error)">a1f28d93...</td><td>e2910f4a...</td><td>b74cdd83...</td><td style="color:var(--clr-error)"><span class="status-dot red"></span> FAIL</td></tr>
+          <tr class="mono-cell"><td></td><td>SHA384</td><td>a1f29384...</td><td>cc7e2290...</td><td>d45eb71a...</td><td>f8201c3b...</td><td>3e91aa76...</td><td><span class="status-dot green"></span> Match</td></tr>
+
+          <tr><td colspan="8" style="background:var(--clr-bg-stripe-alt);padding:var(--sp-sm) var(--sp-md);font-size:var(--fs-xs);font-weight:600;color:var(--clr-fg-secondary)">ATHLON-CPU-14D — REVOKED</td></tr>
+          <tr class="pcr-row mono-cell"><td></td><td>SHA256</td><td>████████...</td><td>████████...</td><td>████████...</td><td>████████...</td><td>████████...</td><td style="color:var(--clr-error)"><span class="status-dot red"></span> EK REVOKED</td></tr>
+
+          <tr><td colspan="8" style="background:var(--clr-bg-stripe-alt);padding:var(--sp-sm) var(--sp-md);font-size:var(--fs-xs);font-weight:600;color:var(--clr-fg-secondary)">GENOA-DIMM-05H</td></tr>
+          <tr class="mono-cell"><td></td><td>SHA256</td><td>d8e3f721...</td><td>44ac9102...</td><td>2d88e1a3...</td><td>e2910f4a...</td><td>b74cdd83...</td><td><span class="status-dot green"></span> Match</td></tr>
+          <tr class="mono-cell"><td></td><td>SHA384</td><td>a1f29384...</td><td>cc7e2290...</td><td>c8f214e0...</td><td>f8201c3b...</td><td>3e91aa76...</td><td><span class="status-dot green"></span> Match</td></tr>
+
+          <tr><td colspan="8" style="background:var(--clr-bg-stripe-alt);padding:var(--sp-sm) var(--sp-md);font-size:var(--fs-xs);font-weight:600;color:var(--clr-fg-secondary)">STRATIX-FPGA-12J — CORRUPTION DETECTED</td></tr>
+          <tr class="pcr-row mono-cell"><td></td><td>SHA256</td><td style="color:var(--clr-error)">ERR:0x01A4</td><td style="color:var(--clr-error)">ERR:0x01A4</td><td style="color:var(--clr-error)">ERR:0x01A4</td><td style="color:var(--clr-error)">ERR:0x01A4</td><td style="color:var(--clr-error)">ERR:0x01A4</td><td style="color:var(--clr-error)"><span class="status-dot red"></span> CORRUPT</td></tr>
+
+          <tr><td colspan="8" style="background:var(--clr-bg-stripe-alt);padding:var(--sp-sm) var(--sp-md);font-size:var(--fs-xs);font-weight:600;color:var(--clr-fg-secondary)">RYZEN-BMC-11G</td></tr>
+          <tr class="mono-cell"><td></td><td>SHA256</td><td>d8e3f721...</td><td>44ac9102...</td><td>91c7d4e2...</td><td>e2910f4a...</td><td>b74cdd83...</td><td><span class="status-dot green"></span> Match</td></tr>
+          <tr class="mono-cell"><td></td><td>SHA384</td><td>a1f29384...</td><td>cc7e2290...</td><td>f3a8201b...</td><td>f8201c3b...</td><td>3e91aa76...</td><td><span class="status-dot green"></span> Match</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h3>Root-of-Trust Chain of Evidence</h3>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Chain Stage</th>
+            <th scope="col">Component</th>
+            <th scope="col">Version</th>
+            <th scope="col">Hash (SHA-256)</th>
+            <th scope="col">Verified By</th>
+            <th scope="col">Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="mono-cell">
+            <td style="font-weight:600;color:var(--clr-fg-primary)">0 — Pre-Boot</td>
+            <td>BMC UEFI Firmware</td>
+            <td>v3.61.00</td>
+            <td class="hash-cell">bf38a192e70dc4f56a8913b0274e65cd90aff182e7c30db567a89f021e4c3d71</td>
+            <td>Silicon ROM</td>
+            <td><span class="status-dot green"></span> PASS</td>
+          </tr>
+          <tr class="mono-cell">
+            <td style="font-weight:600;color:var(--clr-fg-primary)">1 — Bootloader</td>
+            <td>GRUB 2.06-signed</td>
+            <td>2.06~rc1-3</td>
+            <td class="hash-cell">c2e91f4807d3a6b51e9482cf305874de19bfa307d8e416cb78f20a932f5d6e08</td>
+            <td>BMC ROM</td>
+            <td><span class="status-dot green"></span> PASS</td>
+          </tr>
+          <tr class="mono-cell">
+            <td style="font-weight:600;color:var(--clr-fg-primary)">2 — Kernel</td>
+            <td>Linux 6.1.71-fortis</td>
+            <td>6.1.71-custom</td>
+            <td class="hash-cell">88e120f4a9b73c56d0e291847f3a52be041c8675df3e902ab71f56c84d39ea12</td>
+            <td>GRUB SHIM</td>
+            <td><span class="status-dot green"></span> PASS</td>
+          </tr>
+          <tr class="mono-cell">
+            <td style="font-weight:600;color:var(--clr-fg-primary)">3 — Initramfs</td>
+            <td>Custom initrd-hardened</td>
+            <td>v2024.12.3</td>
+            <td class="hash-cell">d741f8c902e5b63a910d47fe82536cb019ae4872f63d0951ba8c27e43f601b95</td>
+            <td>KERNEL</td>
+            <td><span class="status-dot green"></span> PASS</td>
+          </tr>
+          <tr class="mono-cell">
+            <td style="font-weight:600;color:var(--clr-fg-primary)">4 — Userspace</td>
+            <td>firmguard-agent</td>
+            <td>1.8.4-stable</td>
+            <td class="hash-cell">1a9f27e830c4d6b587e0913f42065dba73c918e4fd250a3b9c67e14f8023d567</td>
+            <td>INITRAMFS</td>
+            <td><span class="status-dot green"></span> PASS</td>
+          </tr>
+          <tr class="mono-cell">
+            <td style="font-weight:600;color:var(--clr-fg-primary)">5 — Runtime</td>
+            <td>TEE enclave (SEV-SNP)</td>
+            <td>RC40 / SNP 1.60</td>
+            <td class="hash-cell">ee4a90f237d58b61c9e20487f3a61bd9057238e4cf160a3d2b79f581c034e290</td>
+            <td>firmguard-agent</td>
+            <td><span class="status-dot green"></span> PASS</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div><!-- end panel-chain -->
+
+<!-- ═══════════════════════════════════════════════════
+     TAB PANEL: ATTESTATION EVENT LOG
+     ═══════════════════════════════════════════════════ -->
+<div class="tab-panel" role="tabpanel" id="panel-events" aria-labelledby="tab-events" aria-hidden="true">
+  <div class="panel-section">
+    <h3>Recent Attestation Events <span class="section-count">— last 48 hours</span></h3>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot dot-error"></div>
+        <div class="timeline-timestamp">2025-01-14T08:33:12Z</div>
+        <div class="timeline-title"><span class="event-tag tag-failure">Failure</span> PCR7 mismatch on KVM-HGX-07C</div>
+        <div class="timeline-body">Remote attestation service reported measured PCR7 hash <span class="mono">a1f2-8d93</span> does not match stored baseline <span class="mono">a1f2-8d77</span>. Node moved to degraded queue. Incident ticket INC-20250114-007 opened.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot dot-warn"></div>
+        <div class="timeline-timestamp">2025-01-14T06:17:44Z</div>
+        <div class="timeline-title"><span class="event-tag tag-update">Update</span> Scheduled BMC firmware deployed to TURIN-RAID-16I</div>
+        <div class="timeline-body">Attempted push of Intel ME baseline 12.0.83.2714 — rollback triggered because post-install PCR measurement deviated by 2 bytes. Node remains on ME 11.0.82.2401.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot dot-info"></div>
+        <div class="timeline-timestamp">2025-01-14T04:00:01Z</div>
+        <div class="timeline-title"><span class="event-tag tag-attest">Routine</span> Batch attestation cycle initiated</div>
+        <div class="timeline-body">Scheduled attestation sweep started across all 17 nodes. Sequential mode, timeout 30s per node. Expected completion: 04:15Z.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot dot-error"></div>
+        <div class="timeline-timestamp">2025-01-13T22:48:33Z</div>
+        <div class="timeline-title"><span class="event-tag tag-failure">Failure</span> STRATIX-FPGA-12J quote generation error (0x01A4)</div>
+        <div class="timeline-body">TPM returned TPM_RC_PCR_CHANGED when generating remote quote. PCR bank showed signs of corruption — last known-good snapshot preserved at <span class="mono">2025-01-12T19:33:01Z</span>.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot dot-warn"></div>
+        <div class="timeline-timestamp">2025-01-13T18:12:07Z</div>
+        <div class="timeline-title"><span class="event-tag tag-policy">Policy</span> EK revocation list updated from AMD CSP</div>
+        <div class="timeline-body">Downloaded new Certificate Revocation List from AMD PSP endpoint. 3 EK certificates added to blacklist. ATHLON-CPU-14D matched immediately and was quarantined.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot dot-error"></div>
+        <div class="timeline-timestamp">2025-01-13T14:33:51Z</div>
+        <div class="timeline-title"><span class="event-tag tag-failure">Failure</span> MI300-AIC-18L heartbeat lost — network isolation suspected</div>
+        <div class="timeline-body">Three consecutive heartbeat intervals elapsed without response. VLAN 440 egress ACL query confirms outbound traffic to attestation gateway has been denied since 2025-01-11.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot dot-warn"></div>
+        <div class="timeline-timestamp">2025-01-13T09:45:22Z</div>
+        <div class="timeline-title"><span class="event-tag tag-update">Warning</span> RTC drift on EPYC-GPU-03E exceeds 400ms threshold</div>
+        <div class="timeline-body">Hardware real-time clock has drifted +512ms relative to NTP source time.windows.com. Anti-replay window validation may produce false negatives if not corrected within the next attestation cycle.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot dot-ok"></div>
+        <div class="timeline-timestamp">2025-01-12T19:33:01Z</div>
+        <div class="timeline-title"><span class="event-tag tag-attest">Success</span> Full fleet attestation passed — 14/14 checked nodes</div>
+        <div class="timeline-body">All participating nodes returned valid quotes matching stored PCR baselines. EK certificates verified against current AMD and Intel CRLs. Zero anomalies recorded.</div>
+      </div>
+    </div>
+  </div>
+</div><!-- end panel-events -->
+
+<!-- ═══════════════════════════════════════════════════
+     TAB PANEL: REMEDIATION GUIDES
+     ═══════════════════════════════════════════════════ -->
+<div class="tab-panel" role="tabpanel" id="panel-remediation" aria-labelledby="tab-remediation" aria-hidden="true">
+  <div class="panel-section">
+    <h3>Active Remediation Procedures <span class="section-count">— 4 items require attention</span></h3>
+    <div class="remediation-list">
+
+      <div class="remediation-item open">
+        <div class="remediation-header" onclick="toggleRemediation(this)">
+          <div class="rem-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            KVM-HGX-07C — Restore Baseline PCR-7 Measurement
+          </div>
+          <span class="rem-severity sev-high">High</span>
+          <svg class="rem-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="remediation-body">
+          <div class="step-content">
+            <div class="step-text">The BMC firmware update (ME 12.1.0.1002) installed during the maintenance window altered the boot path measured in PCR 7. Revert to the approved baseline firmware.</div>
+          </div>
+          <div class="step-content">
+            <div class="remed-step">
+              <div class="step-num">1</div>
+              <div><div class="step-text">Roll back to baseline ME firmware via IPMI SEL:</div>
+              <div class="step-command">
+                ipmitool raw 0x30 0x68 0x01 0x0C 0x00 0x83 0x27 0x14
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-step">
+              <div class="step-num">2</div>
+              <div><div class="step-text">Trigger cold reboot after rollback:</div>
+              <div class="step-command">
+                ipmitool mc reset cold
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-step">
+              <div class="step-num">3</div>
+              <div><div class="step-text">Verify PCR-7 matches baseline after boot:</div>
+              <div class="step-command">
+                tpm2_pcrread sha256:7
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-step">
+              <div class="step-num">4</div>
+              <div><div class="step-text">If confirmed, close incident INC-20250114-007:</div>
+              <div class="step-command">
+                curl -X POST https://incident-mgr.internal/close/inc-20250114-007
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              This procedure requires physical access to the IPMI network segment. Do not execute during active inference workloads — GPU MIG instances will be invalidated.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="remediation-item">
+        <div class="remediation-header" onclick="toggleRemediation(this)">
+          <div class="rem-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            ATHLON-CPU-14D — Replace Revoked EK Certificate
+          </div>
+          <span class="rem-severity sev-high">Critical</span>
+          <svg class="rem-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="remediation-body">
+          <div class="step-content">
+            <div class="remed-step">
+              <div class="step-num">1</div>
+              <div><div class="step-text">Request new EK certificate from AMD PSP provisioning service using the node's AK public key:</div>
+              <div class="step-command">
+                curl -X POST https://esp.amd.internal/v1/ek-provision \
+  --cert ak_pub.der --out new_ek.pem
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-step">
+              <div class="step-num">2</div>
+              <div><div class="step-text">Flash new EK into TPM NVRAM via platform setup utility:</div>
+              <div class="step-command">
+                tpm2_evictcontrol -C o -c 0x81010001 new_ek.pem
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Node is currently quarantined. Coordinate with network operations to lift VLAN restriction only after EK replacement is confirmed by a second operator. Dual-authorisation required.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="remediation-item">
+        <div class="remediation-header" onclick="toggleRemediation(this)">
+          <div class="rem-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            RYZEN-BMC-11G — Provision New Attestation Signing Key
+          </div>
+          <span class="rem-severity sev-high">High</span>
+          <svg class="rem-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="remediation-body">
+          <div class="step-content">
+            <div class="remed-step">
+              <div class="step-num">1</div>
+              <div><div class="step-text">Generate new attestation signing key pair in TPM storage:</div>
+              <div class="step-command">
+                tpm2_createprimary -C e -c ek.ctx
+                tpm2_create -G ecc -u ask.pub -r ask.priv -C ek.ctx
+                tpm2_load -C ek.ctx -u ask.pub -r ask.priv -c ask.ctx
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-step">
+              <div class="step-num">2</div>
+              <div><div class="step-text">Submit CSR to internal PKI:</div>
+              <div class="step-command">
+                tpm2_certifycreation -c ask.ctx -c ek.ctx -d new_cert.pem -s new_sig.sig
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              During key rotation, this node cannot participate in remote attestation. Schedule a 15-minute maintenance window.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="remediation-item">
+        <div class="remediation-header" onclick="toggleRemediation(this)">
+          <div class="rem-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            MI300-AIC-18L — Restore Egress ACL for Attestation
+          </div>
+          <span class="rem-severity sev-medium">Medium</span>
+          <svg class="rem-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="remediation-body">
+          <div class="step-content">
+            <div class="remed-step">
+              <div class="step-num">1</div>
+              <div><div class="step-text">Open change request for ACL revert on VLAN 440:</div>
+              <div class="step-command">
+                curl -X POST https://network-opsgenie.internal/changereq \
+  -d '{"vlan":440,"rule":"PERMIT 10.22.44.0/24 -> attestation-gw","reason":"INC-20250111-044"}'
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+            <div class="remed-step">
+              <div class="step-num">2</div>
+              <div><div class="step-text">Verify connectivity and trigger manual attestation:</div>
+              <div class="step-command">
+                ping -c3 attestation-gateway.internal
+                firmguard-cli attest force --node MI300-AIC-18L
+                <button class="copy-btn" title="Copy command">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><!-- end panel-remediation -->
+
+<!-- ═══════════════════════════════════════════════════
+     ERROR OVERLAY (simulates a fatal connection loss)
+     ═══════════════════════════════════════════════════ -->
+<div class="error-overlay" id="errorOverlay" role="dialog" aria-modal="true" aria-labelledby="errorTitle" aria-describedby="errorDesc">
+  <div class="error-dialog">
+    <svg class="error-icon" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="30" stroke="var(--clr-error)" stroke-width="2.5" fill="var(--clr-error-bg)"/>
+      <line x1="22" y1="22" x2="42" y2="42" stroke="var(--clr-error)" stroke-width="3" stroke-linecap="round"/>
+      <line x1="42" y1="22" x2="22" y2="42" stroke="var(--clr-error)" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <h2 id="errorTitle">Attestation Gateway Connection Failed</h2>
+    <p id="errorDesc">
+      FirmGuard was unable to establish a secure channel to the central attestation authority at <code>attestation-gateway.internal:8443</code>. 
+      Remote quote validation is suspended until connectivity is restored. All locally cached baseline hashes will be used for subsequent checks.
+    </p>
+    <div class="error-code-display mono">
+      ERR_CONN_REFUSED 0xE001 — TLS handshake timed out after 15000ms<br>
+      Target: 10.10.1.200:8443 · Source: 10.10.1.17 · TLS 1.3
+    </div>
+    <div class="error-actions">
+      <button class="btn btn-primary" onclick="hideErrorOverlay()">Retry Connection</button>
+      <button class="btn" onclick="hideErrorOverlay()">Dismiss (Use Cached Data)</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* ═══════════════════════════════════════════════════
+   TAB SWITCHING
+   ═══════════════════════════════════════════════════ */
+function switchTab(tabId) {
+  // Hide all panels
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    panel.setAttribute('aria-hidden', 'true');
+    panel.style.display = 'none';
+  });
+  // Deselect all tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.setAttribute('aria-selected', 'false');
+  });
+  // Show selected panel
+  const targetPanel = document.getElementById('panel-' + tabId);
+  targetPanel.setAttribute('aria-hidden', 'false');
+  targetPanel.style.display = 'block';
+  // Select target tab
+  document.getElementById('tab-' + tabId).setAttribute('aria-selected', 'true');
+}
+
+// Initialize tabs
+document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+  if (!btn.getAttribute('aria-selected') || btn.getAttribute('aria-selected') === 'true') {
+    // First tab already set
+  }
+});
+const firstTab = document.querySelector('[aria-selected="true"]');
+if (firstTab) {
+  const panelId = firstTab.getAttribute('aria-controls');
+  const panel = document.getElementById(panelId);
+  if (panel) {
+    panel.setAttribute('aria-hidden', 'false');
+    panel.style.display = 'block';
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   FILTER CARDS
+   ═══════════════════════════════════════════════════ */
+function filterCards(state, btn) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+
+  const cards = document.querySelectorAll('.device-card');
+  cards.forEach(card => {
+    if (state === 'all' || card.dataset.state === state) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   SEARCH CARDS
+   ═══════════════════════════════════════════════════ */
+function searchCards(query) {
+  const q = query.toLowerCase();
+  const cards = document.querySelectorAll('.device-card');
+  cards.forEach(card => {
+    const name = (card.dataset.name || '').toLowerCase();
+    const serial = card.querySelector('.card-serial')?.textContent.toLowerCase() || '';
+    if (name.includes(q) || serial.includes(q) || q === '') {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   REMEDIATION ACCORDION
+   ═══════════════════════════════════════════════════ */
+function toggleRemediation(header) {
+  const item = header.parentElement;
+  item.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════════════════
+   ERROR OVERLAY
+   ═══════════════════════════════════════════════════ */
+function showErrorOverlay() {
+  document.getElementById('errorOverlay').classList.add('visible');
+}
+function hideErrorOverlay() {
+  document.getElementById('errorOverlay').classList.remove('visible');
+}
+
+/* ═══════════════════════════════════════════════════
+   DRAG AND DROP
+   ═══════════════════════════════════════════════════ */
+const grid = document.getElementById('cardsGrid');
+let dragSrcEl = null;
+
+grid.addEventListener('dragstart', function(e) {
+  const card = e.target.closest('.device-card');
+  if (!card) return;
+  dragSrcEl = card;
+  card.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', '');
+});
+
+grid.addEventListener('dragend', function(e) {
+  const card = e.target.closest('.device-card');
+  if (card) card.classList.remove('dragging');
+  document.querySelectorAll('.device-card').forEach(c => c.classList.remove('drag-over'));
+  grid.classList.remove('drag-over');
+  dragSrcEl = null;
+});
+
+grid.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  grid.classList.add('drag-over');
+
+  const card = e.target.closest('.device-card');
+  if (card && card !== dragSrcEl) {
+    const rect = card.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    if (e.clientY < midY) {
+      grid.insertBefore(dragSrcEl, card);
+    } else {
+      grid.insertBefore(dragSrcEl, card.nextSibling);
+    }
+  }
+});
+
+grid.addEventListener('dragleave', function(e) {
+  if (!grid.contains(e.relatedTarget)) {
+    grid.classList.remove('drag-over');
+  }
+});
+
+grid.addEventListener('drop', function(e) {
+  e.preventDefault();
+  grid.classList.remove('drag-over');
+});
+
+/* Keyboard support for tabs */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    hideErrorOverlay();
+  }
+});
+</script>
+
+</body>
+</html>

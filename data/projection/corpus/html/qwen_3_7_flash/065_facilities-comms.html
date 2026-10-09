@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FacComms Investigation Workspace — Signal Topology Review</title>
+<style>
+:root {
+  --clr-bg-deep: #0e1117;
+  --clr-surface: #161b22;
+  --clr-surface-elevated: #1c2230;
+  --clr-surface-hover: #232a3a;
+  --clr-border-subtle: #2a3142;
+  --clr-border-active: #3d4f6a;
+  --clr-accent-primary: #4e8cff;
+  --clr-accent-secondary: #36d6a5;
+  --clr-accent-warn: #f5a623;
+  --clr-accent-danger: #e85d6f;
+  --clr-accent-purple: #a78bfa;
+  --clr-text-primary: #e6edf3;
+  --clr-text-secondary: #8b949e;
+  --clr-text-muted: #545d68;
+  --clr-chart-1: #4e8cff;
+  --clr-chart-2: #36d6a5;
+  --clr-chart-3: #f5a623;
+  --clr-chart-4: #a78bfa;
+  --clr-chart-5: #e85d6f;
+  --clr-chart-6: #56b6c2;
+  --font-mono: 'Courier New', Courier, monospace;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --size-xs: calc(var(--unit) * 0.5);
+  --size-sm: calc(var(--unit) * 0.75);
+  --size-md: var(--unit);
+  --size-lg: calc(var(--unit) * 1.5);
+  --size-xl: calc(var(--unit) * 2);
+  --size-2xl: calc(var(--unit) * 3);
+  --size-3xl: calc(var(--unit) * 4);
+  --radius-sm: calc(var(--unit) * 0.15);
+  --radius-md: calc(var(--unit) * 0.35);
+  --radius-lg: calc(var(--unit) * 0.6);
+  --shadow-card: 0 var(--size-xs) calc(var(--unit) * 2) rgba(0,0,0,0.35);
+  --shadow-elevated: 0 var(--size-md) calc(var(--unit) * 4) rgba(0,0,0,0.5);
+  --shadow-glow-blue: 0 0 calc(var(--unit) * 1.5) rgba(78,140,255,0.15);
+  --shadow-glow-green: 0 0 calc(var(--unit) * 1.5) rgba(54,214,165,0.12);
+  --unit: 8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: calc(var(--unit) * 0.875); }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--clr-bg-deep);
+  color: var(--clr-text-primary);
+  line-height: calc(var(--unit) * 1.625);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Canvas workspace */
+.workspace-canvas {
+  width: 1280px;
+  margin: 0 auto;
+  padding: var(--size-2xl) var(--size-xl);
+  position: relative;
+  min-height: calc(100vh - var(--size-3xl));
+}
+
+.canvas-grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0);
+  background-size: calc(var(--unit) * 5) calc(var(--unit) * 5);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.workspace-canvas > * { position: relative; z-index: 1; }
+
+/* Section layout grid */
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--size-lg);
+  margin-bottom: var(--size-2xl);
+}
+
+.section-grid.span-2 { grid-template-column: span 2; }
+
+/* Floating panel / card */
+.panel {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: box-shadow var(--size-sm) ease, border-color var(--size-sm) ease;
+}
+.panel:hover {
+  border-color: var(--clr-border-active);
+  box-shadow: var(--shadow-elevated);
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-md) var(--size-lg);
+  border-bottom: 1px solid var(--clr-border-subtle);
+  gap: var(--size-sm);
+}
+.panel-title {
+  font-size: calc(var(--unit) * 0.9375);
+  font-weight: 600;
+  letter-spacing: calc(var(--unit) * 0.02);
+  text-transform: uppercase;
+  color: var(--clr-text-secondary);
+}
+.panel-body { padding: var(--size-lg); }
+
+/* Page header */
+.page-header {
+  margin-bottom: var(--size-2xl);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.page-header h1 {
+  font-size: calc(var(--unit) * 1.75);
+  font-weight: 700;
+  letter-spacing: calc(var(--unit) * -0.01);
+}
+.page-header-meta {
+  font-size: calc(var(--unit) * 0.75);
+  color: var(--clr-text-muted);
+  display: flex;
+  gap: var(--size-lg);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-xs);
+  padding: var(--size-xs) var(--size-sm);
+  border-radius: var(--radius-sm);
+  font-size: calc(var(--unit) * 0.625);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: calc(var(--unit) * 0.05);
+}
+.badge-green { background: rgba(54,214,165,0.12); color: var(--clr-accent-secondary); }
+.badge-yellow { background: rgba(245,166,35,0.12); color: var(--clr-accent-warn); }
+.badge-red { background: rgba(232,93,111,0.12); color: var(--clr-accent-danger); }
+.badge-blue { background: rgba(78,140,255,0.12); color: var(--clr-accent-primary); }
+
+/* KPI row */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--size-md);
+  margin-bottom: var(--size-lg);
+}
+.kpi-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--size-md) var(--size-lg);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.kpi-card.blue::before { background: var(--clr-chart-1); }
+.kpi-card.green::before { background: var(--clr-chart-2); }
+.kpi-card.yellow::before { background: var(--clr-chart-3); }
+.kpi-card.red::before { background: var(--clr-chart-5); }
+.kpi-card.purple::before { background: var(--clr-chart-4); }
+.kpi-card.teal::before { background: var(--clr-chart-6); }
+.kpi-label {
+  font-size: calc(var(--unit) * 0.625);
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: calc(var(--unit) * 0.05);
+  margin-bottom: var(--size-xs);
+}
+.kpi-value {
+  font-size: calc(var(--unit) * 1.625);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1.2;
+}
+.kpi-sub {
+  font-size: calc(var(--unit) * 0.625);
+  color: var(--clr-text-secondary);
+  margin-top: var(--size-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--size-xs);
+}
+.kpi-sub .trend-up { color: var(--clr-accent-secondary); }
+.kpi-sub .trend-down { color: var(--clr-accent-danger); }
+
+/* Mini sparkline SVG area */
+.sparkline-area {
+  width: calc(var(--unit) * 8);
+  height: calc(var(--unit) * 2.5);
+}
+
+/* Tabs */
+.tabs-widget { display: flex; flex-direction: column; }
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--clr-border-subtle);
+  gap: 0;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--size-md) var(--size-lg);
+  color: var(--clr-text-muted);
+  font-size: calc(var(--unit) * 0.8125);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--size-sm) ease, border-color var(--size-sm) ease;
+  font-family: var(--font-sans);
+}
+.tab-btn:hover { color: var(--clr-text-secondary); }
+.tab-btn[aria-selected="true"] {
+  color: var(--clr-accent-primary);
+  border-bottom-color: var(--clr-accent-primary);
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: calc(var(--unit) * 0.75);
+}
+.data-table thead th {
+  text-align: left;
+  padding: var(--size-sm) var(--size-md);
+  font-size: calc(var(--unit) * 0.625);
+  text-transform: uppercase;
+  letter-spacing: calc(var(--unit) * 0.05);
+  color: var(--clr-text-muted);
+  border-bottom: 1px solid var(--clr-border-subtle);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: var(--size-sm) var(--size-md);
+  border-bottom: 1px solid rgba(42,49,66,0.5);
+  color: var(--clr-text-secondary);
+  vertical-align: middle;
+}
+.data-table tbody tr:hover { background: var(--clr-surface-hover); }
+.data-table tbody td.mono { font-family: var(--font-mono); font-weight: 500; color: var(--clr-text-primary); }
+.status-dot {
+  display: inline-block;
+  width: var(--size-xs);
+  height: var(--size-xs);
+  border-radius: 50%;
+  margin-right: var(--size-xs);
+}
+.status-dot.green { background: var(--clr-accent-secondary); }
+.status-dot.yellow { background: var(--clr-accent-warn); }
+.status-dot.red { background: var(--clr-accent-danger); }
+.status-dot.blue { background: var(--clr-accent-primary); }
+
+/* Bar chart */
+.bar-chart { display: flex; align-items: flex-end; gap: var(--size-sm); height: calc(var(--unit) * 8); }
+.bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-xs);
+}
+.bar-fill {
+  width: 100%;
+  max-width: calc(var(--unit) * 3);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: height var(--size-lg) ease;
+  min-height: 2px;
+}
+.bar-label {
+  font-size: calc(var(--unit) * 0.5625);
+  color: var(--clr-text-muted);
+  writing-mode: horizontal-tb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Horizontal bar */
+.h-bar-list { display: flex; flex-direction: column; gap: var(--size-sm); }
+.h-bar-row { display: flex; align-items: center; gap: var(--size-sm); }
+.h-bar-track {
+  flex: 1;
+  height: calc(var(--unit) * 1.25);
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.h-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.8s ease;
+}
+.h-bar-label {
+  font-size: calc(var(--unit) * 0.625);
+  color: var(--clr-text-secondary);
+  width: calc(var(--unit) * 5);
+  flex-shrink: 0;
+}
+.h-bar-val {
+  font-size: calc(var(--unit) * 0.6875);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--clr-text-primary);
+  width: calc(var(--unit) * 3.5);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Comparison panel */
+.comparison-strip {
+  background: linear-gradient(135deg, rgba(78,140,255,0.06) 0%, rgba(54,214,165,0.06) 100%);
+  border: 1px solid var(--clr-border-active);
+  border-radius: var(--radius-lg);
+  padding: var(--size-xl);
+  margin-bottom: var(--size-lg);
+  box-shadow: var(--shadow-glow-blue);
+}
+.comparison-strip h3 {
+  font-size: calc(var(--unit) * 0.9375);
+  font-weight: 700;
+  margin-bottom: var(--size-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--size-sm);
+}
+.comparison-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--size-xl);
+}
+.compare-col { text-align: center; }
+.compare-col .label {
+  font-size: calc(var(--unit) * 0.6875);
+  text-transform: uppercase;
+  letter-spacing: calc(var(--unit) * 0.06);
+  color: var(--clr-text-muted);
+  margin-bottom: var(--size-sm);
+}
+.compare-col .highlight {
+  font-size: calc(var(--unit) * 2);
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1.1;
+}
+.compare-col .sub {
+  font-size: calc(var(--unit) * 0.6875);
+  color: var(--clr-text-secondary);
+  margin-top: var(--size-xs);
+}
+.compare-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vs-badge {
+  width: calc(var(--unit) * 2.5);
+  height: calc(var(--unit) * 2.5);
+  border-radius: 50%;
+  background: var(--clr-surface);
+  border: 2px solid var(--clr-border-active);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--unit) * 0.625);
+  font-weight: 700;
+  color: var(--clr-text-muted);
+}
+
+/* Donut chart */
+.donut-container {
+  display: flex;
+  align-items: center;
+  gap: var(--size-xl);
+}
+.donut-svg { width: calc(var(--unit) * 8); height: calc(var(--unit) * 8); flex-shrink: 0; }
+.donut-legend { display: flex; flex-direction: column; gap: var(--size-sm); flex: 1; }
+.legend-item { display: flex; align-items: center; gap: var(--size-sm); font-size: calc(var(--unit) * 0.6875); }
+.legend-swatch {
+  width: var(--size-sm);
+  height: var(--size-sm);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-val { margin-left: auto; font-family: var(--font-mono); font-weight: 600; font-size: calc(var(--unit) * 0.6875); }
+
+/* Gauge */
+.gauge-row { display: flex; gap: var(--size-xl); justify-content: space-around; flex-wrap: wrap; }
+.gauge-item { text-align: center; }
+.gauge-svg { width: calc(var(--unit) * 6); height: calc(var(--unit) * 3.5); }
+.gauge-label {
+  font-size: calc(var(--unit) * 0.625);
+  color: var(--clr-text-muted);
+  margin-top: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: calc(var(--unit) * 0.04);
+}
+.gauge-val {
+  font-size: calc(var(--unit) * 1.125);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--clr-text-primary);
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--size-md);
+  padding: var(--size-md) var(--size-lg);
+  background: var(--clr-surface-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-border-subtle);
+  margin-bottom: var(--size-lg);
+  flex-wrap: wrap;
+}
+.filter-group { display: flex; align-items: center; gap: var(--size-xs); }
+.filter-label {
+  font-size: calc(var(--unit) * 0.6875);
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: calc(var(--unit) * 0.04);
+  font-weight: 600;
+}
+.filter-select {
+  appearance: none;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--size-xs) var(--size-sm);
+  color: var(--clr-text-primary);
+  font-size: calc(var(--unit) * 0.75);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+}
+.filter-select:focus { border-color: var(--clr-accent-primary); }
+.filter-btn {
+  background: var(--clr-accent-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--size-xs) var(--size-md);
+  color: #fff;
+  font-size: calc(var(--unit) * 0.75);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.filter-btn:hover { opacity: 0.9; }
+.filter-separator {
+  width: 1px;
+  height: calc(var(--unit) * 1.75);
+  background: var(--clr-border-subtle);
+}
+
+/* Timeline / incidents list */
+.incident-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-md);
+  padding: var(--size-md) 0;
+  border-bottom: 1px solid rgba(42,49,66,0.5);
+}
+.incident-item:last-child { border-bottom: none; }
+.inc-icon {
+  width: calc(var(--unit) * 2);
+  height: calc(var(--unit) * 2);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: calc(var(--unit) * 0.8125);
+}
+.inc-icon.critical { background: rgba(232,93,111,0.15); color: var(--clr-accent-danger); }
+.inc-icon.warning { background: rgba(245,166,35,0.15); color: var(--clr-accent-warn); }
+.inc-icon.info { background: rgba(78,140,255,0.15); color: var(--clr-accent-primary); }
+.inc-details { flex: 1; }
+.inc-title { font-size: calc(var(--unit) * 0.8125); font-weight: 600; color: var(--clr-text-primary); }
+.inc-meta { font-size: calc(var(--unit) * 0.625); color: var(--clr-text-muted); margin-top: var(--size-xs); }
+
+/* Dialog overlay */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--size-md) ease;
+}
+.dialog-overlay.open { opacity: 1; pointer-events: auto; }
+.dialog-box {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border-active);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  width: 90%;
+  max-width: calc(var(--unit) * 48);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-lg) var(--size-xl);
+  border-bottom: 1px solid var(--clr-border-subtle);
+}
+.dialog-header h3 { font-size: calc(var(--unit) * 1.0625); font-weight: 700; }
+.dialog-close {
+  background: none;
+  border: none;
+  color: var(--clr-text-muted);
+  font-size: calc(var(--unit) * 1.25);
+  cursor: pointer;
+  padding: var(--size-xs);
+  line-height: 1;
+}
+.dialog-close:hover { color: var(--clr-text-primary); }
+.dialog-body { padding: var(--size-xl); }
+
+/* Line chart SVG area */
+.line-chart-svg { width: 100%; height: calc(var(--unit) * 8); }
+
+/* Responsive tweaks */
+@media (max-width: 1300px) {
+  .workspace-canvas { width: 100%; padding: var(--size-lg); }
+}
+
+/* Utility */
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.text-green { color: var(--clr-accent-secondary); }
+.text-yellow { color: var(--clr-accent-warn); }
+.text-red { color: var(--clr-accent-danger); }
+.text-blue { color: var(--clr-accent-primary); }
+.text-muted { color: var(--clr-text-muted); }
+.mono { font-family: var(--font-mono); }
+.mb-sm { margin-bottom: var(--size-sm); }
+.mb-md { margin-bottom: var(--size-md); }
+.mb-lg { margin-bottom: var(--size-lg); }
+.gap-md { gap: var(--size-md); }
+
+/* Section titles */
+.section-heading {
+  font-size: calc(var(--unit) * 1.125);
+  font-weight: 700;
+  margin-bottom: var(--size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--size-sm);
+}
+.section-heading .section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--unit) * 2);
+  height: calc(var(--unit) * 2);
+  border-radius: var(--radius-sm);
+  background: rgba(78,140,255,0.1);
+  color: var(--clr-accent-primary);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--clr-border-subtle); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="canvas-grid-bg"></div>
+
+<div class="workspace-canvas">
+
+  <!-- PAGE HEADER -->
+  <header class="page-header">
+    <div>
+      <h1>Signal Topology — Q4 Investigation Log</h1>
+      <p style="color:var(--clr-text-muted); font-size:calc(var(--unit)*0.75); margin-top:var(--size-xs);">
+        Facility Communications Infrastructure · North American Distribution Network · Last sync: Dec 14, 2024 08:47 EST
+      </p>
+    </div>
+    <div class="page-header-meta">
+      <span class="badge badge-green">● System nominal</span>
+      <span class="badge badge-blue">Revision 24.12</span>
+      <button class="filter-btn" onclick="toggleDialog()">Run Drill Analysis</button>
+    </div>
+  </header>
+
+  <!-- FILTER BAR (Section 0) -->
+  <div class="filter-bar" role="search" aria-label="Data filters">
+    <div class="filter-group">
+      <span class="filter-label">Region</span>
+      <select class="filter-select" id="filterRegion" onchange="applyFilters()">
+        <option value="all">All Regions</option>
+        <option value="naeast">North East</option>
+        <option value="nawest">North West</option>
+        <option value="southeast">Southeast</option>
+        <option value="central">Central</option>
+      </select>
+    </div>
+    <div class="filter-separator"></div>
+    <div class="filter-group">
+      <span class="filter-label">Date Range</span>
+      <select class="filter-select" id="filterDate">
+        <option>Last 7 days</option>
+        <option selected>Last 30 days</option>
+        <option>Last 90 days</option>
+        <option>FYTD</option>
+      </select>
+    </div>
+    <div class="filter-separator"></div>
+    <div class="filter-group">
+      <span class="filter-label">Severity</span>
+      <select class="filter-select" id="filterSeverity">
+        <option value="all">All Levels</option>
+        <option value="critical">Critical Only</option>
+        <option value="warning">Warning+</option>
+      </select>
+    </div>
+    <div class="filter-separator"></div>
+    <div class="filter-group">
+      <span class="filter-label">Service Type</span>
+      <select class="filter-select">
+        <option>All Services</option>
+        <option>PABX Lines</option>
+        <option>Data Circuits</option>
+        <option>WiFi Mesh</option>
+        <option>SIP Trunks</option>
+      </select>
+    </div>
+    <div class="filter-separator"></div>
+    <button class="filter-btn" onclick="resetFilters()" style="background:transparent;border:1px solid var(--clr-border-subtle);color:var(--clr-text-secondary);">Reset All</button>
+  </div>
+
+  <!-- COMPARISON STRIP (items pulled out) -->
+  <div class="comparison-strip" role="region" aria-label="Side-by-side comparison: Hub-Alpha vs Hub-Beta">
+    <h3>
+      <svg width="calc(var(--unit)*1.5)" height="calc(var(--unit)*1.5)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-12"/></svg>
+      Comparison Pull-Out — Hub-Alpha vs. Hub-Beta (Dec 2024)
+    </h3>
+    <div class="comparison-columns">
+      <div class="compare-col">
+        <div class="label">Hub-Alpha<br><small style="color:var(--clr-text-muted)">Primary switching node, Newark</small></div>
+        <div class="highlight text-blue">99.94%</div>
+        <div class="sub">Uptime SLA compliance</div>
+      </div>
+      <div class="compare-vs">
+        <div class="vs-badge">VS</div>
+      </div>
+      <div class="compare-col">
+        <div class="label">Hub-Beta<br><small style="color:var(--clr-text-muted)">Secondary switching node, Jersey City</small></div>
+        <div class="highlight text-green">99.87%</div>
+        <div class="sub">Uptime SLA compliance</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--size-lg);margin-top:var(--size-xl);padding-top:var(--size-xl);border-top:1px solid var(--clr-border-subtle);">
+      <div>
+        <div class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;">Avg Latency</div>
+        <div class="mono" style="font-size:calc(var(--unit)*1.125);font-weight:700;">12ms <span class="text-green" style="font-size:calc(var(--unit)*0.625);">▼ 3ms</span></div>
+      </div>
+      <div>
+        <div class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;">Packet Loss</div>
+        <div class="mono" style="font-size:calc(var(--unit)*1.125);font-weight:700;">0.02%</div>
+      </div>
+      <div>
+        <div class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;">Throughput</div>
+        <div class="mono" style="font-size:calc(var(--unit)*1.125);font-weight:700;">8.4 Gbps</div>
+      </div>
+      <div>
+        <div class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;">Active Incidents</div>
+        <div class="mono" style="font-size:calc(var(--unit)*1.125);font-weight:700;" class="text-yellow">3 open</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: KPI ROW -->
+  <section aria-label="Key performance indicators">
+    <div class="kpi-row">
+      <div class="kpi-card blue">
+        <div class="kpi-label">Total Sites Monitored</div>
+        <div class="kpi-value">147</div>
+        <div class="kpi-sub"><span class="trend-up">▲ 8</span> new this quarter</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Network Uptime</div>
+        <div class="kpi-value">99.91%</div>
+        <div class="kpi-sub"><span class="trend-up">▲ 0.03%</span> vs last month</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-label">Open P1/P2 Tickets</div>
+        <div class="kpi-value">23</div>
+        <div class="kpi-sub"><span class="trend-down">▲ 5</span> since yesterday</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Critical Outages (30d)</div>
+        <div class="kpi-value">4</div>
+        <div class="kpi-sub"><span class="trend-up">▼ 2</span> improvement</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label">Avg Response Time</div>
+        <div class="kpi-value">18m</div>
+        <div class="kpi-sub"><span class="trend-up">▲ 4m</span> degradation</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-label">Bandwidth Utilization</div>
+        <div class="kpi-value">73.2%</div>
+        <div class="kpi-sub"><span class="trend-up">▲ 5.1%</span> headroom shrinking</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: SIGNAL COVERAGE MAP + GAUGES -->
+  <div class="section-grid" style="grid-template-columns: 1fr 1fr;">
+    <section class="panel" aria-label="Signal coverage gauges">
+      <div class="panel-header">
+        <span class="panel-title">Coverage Gauges by Region</span>
+        <span class="badge badge-green">Live</span>
+      </div>
+      <div class="panel-body">
+        <div class="gauge-row">
+          <div class="gauge-item">
+            <svg class="gauge-svg" viewBox="0 0 120 70">
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8" stroke-linecap="round"/>
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--clr-chart-1)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="16"/>
+              <text x="60" y="52" text-anchor="middle" fill="var(--clr-text-primary)" font-size="18" font-weight="700" font-family="monospace">90%</text>
+            </svg>
+            <div class="gauge-label">NE</div>
+          </div>
+          <div class="gauge-item">
+            <svg class="gauge-svg" viewBox="0 0 120 70">
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8" stroke-linecap="round"/>
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--clr-chart-2)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="28"/>
+              <text x="60" y="52" text-anchor="middle" fill="var(--clr-text-primary)" font-size="18" font-weight="700" font-family="monospace">82%</text>
+            </svg>
+            <div class="gauge-label">NW</div>
+          </div>
+          <div class="gauge-item">
+            <svg class="gauge-svg" viewBox="0 0 120 70">
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8" stroke-linecap="round"/>
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--clr-chart-3)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="22"/>
+              <text x="60" y="52" text-anchor="middle" fill="var(--clr-text-primary)" font-size="18" font-weight="700" font-family="monospace">86%</text>
+            </svg>
+            <div class="gauge-label">SE</div>
+          </div>
+          <div class="gauge-item">
+            <svg class="gauge-svg" viewBox="0 0 120 70">
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8" stroke-linecap="round"/>
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--clr-chart-4)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="38"/>
+              <text x="60" y="52" text-anchor="middle" fill="var(--clr-text-primary)" font-size="18" font-weight="700" font-family="monospace">76%</text>
+            </svg>
+            <div class="gauge-label">Central</div>
+          </div>
+        </div>
+        <div style="margin-top:var(--size-lg);">
+          <div class="flex-between mb-sm">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);text-transform:uppercase;">Overall Capacity Health</span>
+            <span class="mono" style="font-size:calc(var(--unit)*0.8125);font-weight:600;">76.4%</span>
+          </div>
+          <div class="h-bar-track" style="height:calc(var(--unit)*1.75);">
+            <div class="h-bar-fill" style="width:76.4%;background:linear-gradient(90deg,var(--clr-chart-2),var(--clr-chart-1));"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Incident distribution">
+      <div class="panel-header">
+        <span class="panel-title">Traffic by Protocol</span>
+      </div>
+      <div class="panel-body">
+        <div class="donut-container">
+          <svg class="donut-svg" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="14"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="var(--clr-chart-1)" stroke-width="14" stroke-dasharray="95 143" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="var(--clr-chart-2)" stroke-width="14" stroke-dasharray="56 182" stroke-dashoffset="-95" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="var(--clr-chart-3)" stroke-width="14" stroke-dasharray="45 193" stroke-dashoffset="-151" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="var(--clr-chart-4)" stroke-width="14" stroke-dasharray="38 200" stroke-dashoffset="-196" transform="rotate(-90 50 50)"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="var(--clr-chart-5)" stroke-width="14" stroke-dasharray="33 205" stroke-dashoffset="-234" transform="rotate(-90 50 50)"/>
+            <text x="50" y="47" text-anchor="middle" fill="var(--clr-text-primary)" font-size="14" font-weight="700" font-family="monospace">2.4M</text>
+            <text x="50" y="60" text-anchor="middle" fill="var(--clr-text-muted)" font-size="7">messages/day</text>
+          </svg>
+          <div class="donut-legend">
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--clr-chart-1);"></span> SIP / VoIP <span class="legend-val">40%</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--clr-chart-2);"></span> TCP Data <span class="legend-val">24%</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--clr-chart-3);"></span> UDP Multicast <span class="legend-val">19%</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--clr-chart-4);"></span> MQTT IoT <span class="legend-val">16%</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--clr-chart-5);"></span> SNMP Trap <span class="legend-val">14%</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SECTION 3: THROUGHPUT TIMELINE -->
+  <section class="panel mb-lg" aria-label="Bandwidth throughput timeline">
+    <div class="panel-header">
+      <span class="panel-title">30-Day Throughput Trend — Aggregate (Gbps)</span>
+      <div style="display:flex;gap:var(--size-sm);align-items:center;">
+        <span class="text-muted" style="font-size:calc(var(--unit)*0.625);">Peak:</span>
+        <span class="mono text-green" style="font-size:calc(var(--unit)*0.75);font-weight:600;">12.8 Gbps · Dec 3</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <svg class="line-chart-svg" viewBox="0 0 700 200" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--clr-chart-1)" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="var(--clr-chart-1)" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--clr-chart-2)" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="var(--clr-chart-2)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- Grid lines -->
+        <line x1="40" y1="20" x2="690" y2="20" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="40" y1="60" x2="690" y2="60" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="40" y1="100" x2="690" y2="100" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="40" y1="140" x2="690" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="40" y1="180" x2="690" y2="180" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <!-- Y labels -->
+        <text x="35" y="24" text-anchor="end" fill="var(--clr-text-muted)" font-size="9">14</text>
+        <text x="35" y="64" text-anchor="end" fill="var(--clr-text-muted)" font-size="9">11</text>
+        <text x="35" y="104" text-anchor="end" fill="var(--clr-text-muted)" font-size="9">8</text>
+        <text x="35" y="144" text-anchor="end" fill="var(--clr-text-muted)" font-size="9">5</text>
+        <text x="35" y="184" text-anchor="end" fill="var(--clr-text-muted)" font-size="9">2</text>
+        <!-- X labels -->
+        <text x="40" y="196" fill="var(--clr-text-muted)" font-size="8">Nov 15</text>
+        <text x="173" y="196" fill="var(--clr-text-muted)" font-size="8">Nov 22</text>
+        <text x="306" y="196" fill="var(--clr-text-muted)" font-size="8">Nov 29</text>
+        <text x="440" y="196" fill="var(--clr-text-muted)" font-size="8">Dec 6</text>
+        <text x="573" y="196" fill="var(--clr-text-muted)" font-size="8">Dec 13</text>
+        <!-- Area fills -->
+        <path d="M40 100 L73 90 L106 95 L140 80 L173 70 L206 60 L240 65 L273 55 L306 50 L340 40 L373 35 L406 30 L440 25 L473 35 L506 40 L540 30 L573 28 L606 32 L640 38 L673 42 L690 45 L690 180 L40 180 Z" fill="url(#gradBlue)"/>
+        <!-- Blue line -->
+        <polyline points="40,100 73,90 106,95 140,80 173,70 206,60 240,65 273,55 306,50 340,40 373,35 406,30 440,25 473,35 506,40 540,30 573,28 606,32 640,38 673,42 690,45" fill="none" stroke="var(--clr-chart-1)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <!-- Green line (secondary circuit) -->
+        <path d="M40 130 L73 125 L106 128 L140 120 L173 115 L206 110 L240 112 L273 108 L306 105 L340 100 L373 98 L406 95 L440 90 L473 94 L506 97 L540 92 L573 90 L606 92 L640 95 L673 98 L690 100 L690 180 L40 180 Z" fill="url(#gradGreen)"/>
+        <polyline points="40,130 73,125 106,128 140,120 173,115 206,110 240,112 273,108 306,105 340,100 373,98 406,95 440,90 473,94 506,97 540,92 573,90 606,92 640,95 673,98 690,100" fill="none" stroke="var(--clr-chart-2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="6 4" opacity="0.7"/>
+        <!-- Peak annotation -->
+        <line x1="373" y1="35" x2="373" y2="20" stroke="var(--clr-accent-warn)" stroke-width="1" stroke-dasharray="3 3"/>
+        <rect x="345" y="4" width="56" height="14" rx="2" fill="var(--clr-accent-warn)" fill-opacity="0.15"/>
+        <text x="373" y="14" text-anchor="middle" fill="var(--clr-accent-warn)" font-size="8" font-weight="600">PEAK</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- SECTION 4 & 5: Tabbed Table + Bar Chart -->
+  <div class="section-grid" style="grid-template-columns: 2fr 1fr;">
+    <section class="panel tabs-widget" aria-label="Site registry with tabbed views">
+      <div class="panel-header">
+        <span class="panel-title">Site Registry — Comms Equipment Inventory</span>
+        <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);">147 total</span>
+      </div>
+      <div class="tab-bar" role="tablist" aria-label="Site status filter">
+        <button class="tab-btn" role="tab" aria-selected="true" aria-controls="tab-all" id="tab-all-btn" onclick="switchTab('all')">All Sites</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-critical" id="tab-critical-btn" onclick="switchTab('critical')">⚠ Critical</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-warning" id="tab-warning-btn" onclick="switchTab('warning')">⚡ Warning</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-nominal" id="tab-nominal-btn" onclick="switchTab('nominal')">✓ Nominal</button>
+      </div>
+      <div class="panel-body" style="padding:0;overflow-x:auto;">
+        <table class="data-table" role="table">
+          <thead>
+            <tr>
+              <th scope="col">Site ID</th>
+              <th scope="col">Location</th>
+              <th scope="col">Region</th>
+              <th scope="col">Status</th>
+              <th scope="col">PABX</th>
+              <th scope="col">Data (Mbps)</th>
+              <th scope="col">SIP Trunk</th>
+              <th scope="col">Last Audit</th>
+            </tr>
+          </thead>
+          <tbody id="siteTableBody">
+            <tr>
+              <td class="mono">NSW-0014</td><td>Newark Logistics Hub A</td><td>NE</td>
+              <td><span class="status-dot yellow"></span>Warning</td><td>Online</td><td class="mono">842 / 1000</td><td>12/16 channels</td><td>Dec 10</td>
+            </tr>
+            <tr>
+              <td class="mono">NWZ-0087</td><td>Portland Annex D3</td><td>NW</td>
+              <td><span class="status-dot green"></span>Healthy</td><td>Online</td><td class="mono">512 / 500</td><td>8/8 channels</td><td>Dec 8</td>
+            </tr>
+            <tr>
+              <td class="mono">CEN-0203</td><td>Chicago Cross-Connect</td><td>Central</td>
+              <td><span class="status-dot green"></span>Healthy</td><td>Online</td><td class="mono">1240 / 2000</td><td>24/24 channels</td><td>Dec 12</td>
+            </tr>
+            <tr>
+              <td class="mono">SEA-0412</td><td>Richmond DC Wing B</td><td>SE</td>
+              <td><span class="status-dot red"></span>Critical</td><td>Offline</td><td class="mono" style="color:var(--clr-accent-danger);">45 / 1000</td><td>2/16 channels</td><td>Nov 28</td>
+            </tr>
+            <tr>
+              <td class="mono">NSW-0092</td><td>Trenton Staging Bay</td><td>NE</td>
+              <td><span class="status-dot green"></span>Healthy</td><td>Online</td><td class="mono">320 / 500</td><td>4/4 channels</td><td>Dec 11</td>
+            </tr>
+            <tr>
+              <td class="mono">SEA-0156</td><td>Baltimore Warehouse 7</td><td>SE</td>
+              <td><span class="status-dot green"></span>Healthy</td><td>Online</td><td class="mono">680 / 1000</td><td>8/8 channels</td><td>Dec 9</td>
+            </tr>
+            <tr>
+              <td class="mono">NWZ-0201</td><td>Spokane Transit Relay</td><td>NW</td>
+              <td><span class="status-dot yellow"></span>Warning</td><td>Degraded</td><td class="mono">185 / 500</td><td>4/16 channels</td><td>Dec 3</td>
+            </tr>
+            <tr>
+              <td class="mono">CEN-0078</td><td>Indianapolis Node F</td><td>Central</td>
+              <td><span class="status-dot green"></span>Healthy</td><td>Online</td><td class="mono">445 / 1000</td><td>6/8 channels</td><td>Dec 7</td>
+            </tr>
+            <tr>
+              <td class="mono">SEA-0301</td><td>Alexandria Server Farm</td><td>SE</td>
+              <td><span class="status-dot green"></span>Healthy</td><td>Online</td><td class="mono">1890 / 2000</td><td>32/32 channels</td><td>Dec 13</td>
+            </tr>
+            <tr>
+              <td class="mono">NSW-0145</td><td>Hackensack Comms Tower</td><td>NE</td>
+              <td><span class="status-dot green"></span>Healthy</td><td>Online</td><td class="mono">720 / 1000</td><td>10/12 channels</td><td>Dec 6</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Outage causes breakdown">
+      <div class="panel-header">
+        <span class="panel-title">Top Outage Causes (Dec)</span>
+      </div>
+      <div class="panel-body">
+        <div class="h-bar-list">
+          <div class="h-bar-row">
+            <span class="h-bar-label">Power Fail</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:85%;background:var(--clr-chart-5);"></div></div>
+            <span class="h-bar-val">23</span>
+          </div>
+          <div class="h-bar-row">
+            <span class="h-bar-label">Fiber Cut</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:63%;background:var(--clr-chart-1);"></div></div>
+            <span class="h-bar-val">17</span>
+          </div>
+          <div class="h-bar-row">
+            <span class="h-bar-label">Config Err</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:52%;background:var(--clr-chart-3);"></div></div>
+            <span class="h-bar-val">14</span>
+          </div>
+          <div class="h-bar-row">
+            <span class="h-bar-label">HW Fault</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:41%;background:var(--clr-chart-4);"></div></div>
+            <span class="h-bar-val">11</span>
+          </div>
+          <div class="h-bar-row">
+            <span class="h-bar-label">ISP Upstream</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:33%;background:var(--clr-chart-6);"></div></div>
+            <span class="h-bar-val">9</span>
+          </div>
+          <div class="h-bar-row">
+            <span class="h-bar-label">DDoS Mit</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:22%;background:var(--clr-chart-2);"></div></div>
+            <span class="h-bar-val">6</span>
+          </div>
+          <div class="h-bar-row">
+            <span class="h-bar-label">Weather</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:15%;background:var(--clr-chart-3);opacity:0.7;"></div></div>
+            <span class="h-bar-val">4</span>
+          </div>
+          <div class="h-bar-row">
+            <span class="h-bar-label">Vendor SLA</span>
+            <div class="h-bar-track"><div class="h-bar-fill" style="width:11%;background:var(--clr-chart-4);opacity:0.7;"></div></div>
+            <span class="h-bar-val">3</span>
+          </div>
+        </div>
+        <div style="margin-top:var(--size-xl);padding-top:var(--size-md);border-top:1px solid var(--clr-border-subtle);">
+          <div class="flex-between">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;">Total Incidents</span>
+            <span class="mono" style="font-size:calc(var(--unit)*0.875);font-weight:700;">87 events</span>
+          </div>
+          <div class="flex-between" style="margin-top:var(--size-xs);">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;">MTTR (Mean Time to Resolve)</span>
+            <span class="mono text-yellow" style="font-size:calc(var(--unit)*0.75);">4h 23m</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SECTION 6: RECENT INCIDENTS TIMELINE -->
+  <section class="panel mb-lg" aria-label="Recent incidents timeline">
+    <div class="panel-header">
+      <span class="panel-title">Active Incident Feed</span>
+      <span class="badge badge-red" style="cursor:pointer;" onclick="toggleDialog()">3 Active</span>
+    </div>
+    <div class="panel-body">
+      <div class="incident-item">
+        <div class="inc-icon critical">!</div>
+        <div class="inc-details">
+          <div class="inc-title">SEA-0412 Richmond DC — Complete comms blackout, PABX and SIP down</div>
+          <div class="inc-meta">Opened Dec 13, 22:41 EST · Sev P1 · Assigned: M. Castellano · Duration: 6h 06m</div>
+        </div>
+        <span class="badge badge-red">Open</span>
+      </div>
+      <div class="incident-item">
+        <div class="inc-icon warning">△</div>
+        <div class="inc-details">
+          <div class="inc-title">NSW-0014 Newark Hub — Intermittent packet loss on fiber uplink to Hub-Alpha</div>
+          <div class="inc-meta">Opened Dec 14, 06:15 EST · Sev P2 · Assigned: R. Okonkwo · Duration: 2h 32m</div>
+        </div>
+        <span class="badge badge-yellow">Investigating</span>
+      </div>
+      <div class="incident-item">
+        <div class="inc-icon warning">△</div>
+        <div class="inc-details">
+          <div class="inc-title">NWZ-0201 Spokane Relay — Bandwidth throttling detected during peak hours</div>
+          <div class="inc-meta">Opened Dec 14, 08:02 EST · Sev P3 · Assigned: L. Petrov · Duration: 0h 45m</div>
+        </div>
+        <span class="badge badge-yellow">Monitoring</span>
+      </div>
+      <div class="incident-item">
+        <div class="inc-icon info">i</div>
+        <div class="inc-details">
+          <div class="inc-title">CEN-0078 Indianapolis — Scheduled firmware upgrade window starting Dec 16</div>
+          <div class="inc-meta">Planned · Change CHG-20241215-089 · Approver: S. Kimura · Impact: 15-min voice disruption</div>
+        </div>
+        <span class="badge badge-blue">Scheduled</span>
+      </div>
+      <div class="incident-item">
+        <div class="inc-icon info">i</div>
+        <div class="inc-details">
+          <div class="inc-title">NSW-0145 Hackensack Tower — SNAT table exhaustion near capacity</div>
+          <div class="inc-meta">Opened Dec 12, 14:20 EST · Sev P3 · Resolution: Added NAT pool block, MTTR 47m</div>
+        </div>
+        <span class="badge badge-green">Resolved</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7: BANDWIDTH ALLOCATION TABLE + SPARKLINES -->
+  <div class="section-grid" style="grid-template-columns: 1fr 1fr;">
+    <section class="panel" aria-label="Circuit utilization summary">
+      <div class="panel-header">
+        <span class="panel-title">Circuit Utilization Summary</span>
+        <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);">All leased circuits</span>
+      </div>
+      <div class="panel-body" style="padding:0;overflow-x:auto;">
+        <table class="data-table" role="table">
+          <thead>
+            <tr>
+              <th scope="col">Circuit ID</th>
+              <th scope="col">Provider</th>
+              <th scope="col">Plan</th>
+              <th scope="col">Used</th>
+              <th scope="col">Util.</th>
+              <th scope="col">Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">LC-FT-4421</td><td>Verizon Fiber</td><td>1 Gbps</td>
+              <td class="mono">842 Mbps</td>
+              <td><span class="text-yellow" style="font-weight:600;">84%</span></td>
+              <td><svg class="sparkline-area" viewBox="0 0 64 20"><polyline points="0,15 8,14 16,12 24,10 32,11 40,8 48,6 56,5 64,4" fill="none" stroke="var(--clr-accent-warn)" stroke-width="2"/></svg></td>
+            </tr>
+            <tr>
+              <td class="mono">LC-FT-4422</td><td>Verizon Fiber</td><td>1 Gbps</td>
+              <td class="mono">512 Mbps</td>
+              <td><span class="text-green" style="font-weight:600;">51%</span></td>
+              <td><svg class="sparkline-area" viewBox="0 0 64 20"><polyline points="0,12 8,11 16,13 24,10 32,9 40,10 48,8 56,9 64,8" fill="none" stroke="var(--clr-accent-secondary)" stroke-width="2"/></svg></td>
+            </tr>
+            <tr>
+              <td class="mono">LC-MW-1103</td><td>Mills Microwave</td><td>500 Mbps</td>
+              <td class="mono">445 Mbps</td>
+              <td><span class="text-yellow" style="font-weight:600;">89%</span></td>
+              <td><svg class="sparkline-area" viewBox="0 0 64 20"><polyline points="0,16 8,15 16,13 24,11 32,10 40,9 48,8 56,7 64,5" fill="none" stroke="var(--clr-accent-warn)" stroke-width="2"/></svg></td>
+            </tr>
+            <tr>
+              <td class="mono">LC-FT-3301</td><td>AT&T Metro</td><td>2 Gbps</td>
+              <td class="mono">1240 Mbps</td>
+              <td><span class="text-green" style="font-weight:600;">62%</span></td>
+              <td><svg class="sparkline-area" viewBox="0 0 64 20"><polyline points="0,10 8,10 16,9 24,11 32,10 40,12 48,11 56,10 64,11" fill="none" stroke="var(--clr-accent-secondary)" stroke-width="2"/></svg></td>
+            </tr>
+            <tr>
+              <td class="mono">LC-LTE-0088</td><td>Copart Wireless</td><td>100 Mbps</td>
+              <td class="mono">92 Mbps</td>
+              <td><span class="text-red" style="font-weight:600;">92%</span></td>
+              <td><svg class="sparkline-area" viewBox="0 0 64 20"><polyline points="0,8 8,7 16,6 24,5 32,4 40,4 48,5 56,5 64,6" fill="none" stroke="var(--clr-accent-danger)" stroke-width="2"/></svg></td>
+            </tr>
+            <tr>
+              <td class="mono">LC-FT-5510</td><td>Lumen Technologies</td><td>5 Gbps</td>
+              <td class="mono">2100 Mbps</td>
+              <td><span class="text-green" style="font-weight:600;">42%</span></td>
+              <td><svg class="sparkline-area" viewBox="0 0 64 20"><polyline points="0,14 8,13 16,12 24,13 32,12 40,11 48,12 56,11 64,10" fill="none" stroke="var(--clr-accent-secondary)" stroke-width="2"/></svg></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Weekly voicemail and call volume statistics">
+      <div class="panel-header">
+        <span class="panel-title">VoIP Call Volume — Weekly Breakdown</span>
+      </div>
+      <div class="panel-body">
+        <div class="bar-chart" style="height:calc(var(--unit)*12);">
+          <div class="bar-item">
+            <div class="bar-fill" style="height:65%;background:var(--clr-chart-1);"></div>
+            <span class="bar-label">Mon</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" style="height:82%;background:var(--clr-chart-1);"></div>
+            <span class="bar-label">Tue</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" style="height:90%;background:var(--clr-chart-1);"></div>
+            <span class="bar-label">Wed</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" style="height:78%;background:var(--clr-chart-1);"></div>
+            <span class="bar-label">Thu</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" style="height:72%;background:var(--clr-chart-1);"></div>
+            <span class="bar-label">Fri</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" style="height:35%;background:var(--clr-chart-3);opacity:0.5;"></div>
+            <span class="bar-label">Sat</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" style="height:22%;background:var(--clr-chart-3);opacity:0.5;"></div>
+            <span class="bar-label">Sun</span>
+          </div>
+          <div class="bar-item">
+            <div class="bar-fill" style="height:95%;background:var(--clr-chart-2);"></div>
+            <span class="bar-label">Total</span>
+          </div>
+        </div>
+        <div style="margin-top:var(--size-xl);">
+          <div class="flex-between mb-sm">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);text-transform:uppercase;">Week-over-week change</span>
+            <span class="text-green" style="font-size:calc(var(--unit)*0.8125);font-weight:600;">+12.4%</span>
+          </div>
+          <div class="flex-between mb-sm">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);text-transform:uppercase;">Total calls this week</span>
+            <span class="mono" style="font-size:calc(var(--unit)*0.875);font-weight:600;">18,742</span>
+          </div>
+          <div class="flex-between mb-sm">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);text-transform:uppercase;">Abandoned rate</span>
+            <span class="mono text-yellow" style="font-size:calc(var(--unit)*0.875);">3.8%</span>
+          </div>
+          <div class="flex-between mb-sm">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);text-transform:uppercase;">Avg wait time</span>
+            <span class="mono" style="font-size:calc(var(--unit)*0.875);">2m 14s</span>
+          </div>
+          <div class="flex-between">
+            <span class="text-muted" style="font-size:calc(var(--unit)*0.6875);text-transform:uppercase;">Peak hour</span>
+            <span class="mono" style="font-size:calc(var(--unit)*0.875);">10:00–11:00 EST</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SECTION 8: MAINTENANCE SCHEDULE -->
+  <section class="panel mb-lg" aria-label="Upcoming maintenance schedule">
+    <div class="panel-header">
+      <span class="panel-title">Maintenance Calendar — Next 14 Days</span>
+      <button class="filter-btn" style="font-size:calc(var(--unit)*0.6875);padding:var(--size-xs) var(--size-md);">Export ICS</button>
+    </div>
+    <div class="panel-body">
+      <table class="data-table" role="table">
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Change ID</th>
+            <th scope="col">Affected Sites</th>
+            <th scope="col">Scope</th>
+            <th scope="col">Window</th>
+            <th scope="col">Requester</th>
+            <th scope="col">Impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">Dec 16</td><td class="mono">CHG-4421</td>
+            <td>CEN-0078 Indianapolis</td><td>Firmware upgrade — Avaya CMS v7.1</td>
+            <td>02:00–03:00 EST</td>
+            <td>S. Kimura</td>
+            <td><span class="badge badge-yellow" style="font-size:calc(var(--unit)*0.5);padding:calc(var(--unit)*0.15) calc(var(--unit)*0.35);">15-min disruption</span></td>
+          </tr>
+          <tr>
+            <td class="mono">Dec 17</td><td class="mono">CHG-4428</td>
+            <td>SEA-0412 Richmond, SEA-0156 Baltimore</td><td>UPS battery replacement — UPS Rack A3</td>
+            <td>01:00–05:00 EST</td>
+            <td>D. Reeves</td>
+            <td><span class="badge badge-red" style="font-size:calc(var(--unit)*0.5);padding:calc(var(--unit)*0.15) calc(var(--unit)*0.35);">Full outage window</span></td>
+          </tr>
+          <tr>
+            <td class="mono">Dec 18</td><td class="mono">CHG-4430</td>
+            <td>NWZ-0087 Portland</td><td>SFP module swap — transceiver port 7</td>
+            <td>06:00–06:30 PST</td>
+            <td>R. Okonkwo</td>
+            <td><span class="badge badge-green" style="font-size:calc(var(--unit)*0.5);padding:calc(var(--unit)*0.15) calc(var(--unit)*0.35);">No impact</span></td>
+          </tr>
+          <tr>
+            <td class="mono">Dec 19</td><td class="mono">CHG-4435</td>
+            <td>NSW-0014 Newark, NSW-0145 Hackensack</td><td>VLAN restructure — migrate Voice VLAN 44 → 45</td>
+            <td>00:00–04:00 EST</td>
+            <td>A. Desai</td>
+            <td><span class="badge badge-red" style="font-size:calc(var(--unit)*0.5);padding:calc(var(--unit)*0.15) calc(var(--unit)*0.35);">Voice service down</span></td>
+          </tr>
+          <tr>
+            <td class="mono">Dec 20</td><td class="mono">CHG-4440</td>
+            <td>CEN-0203 Chicago</td><td>Firewall rule update — ACL #112 refresh</td>
+            <td>03:00–03:45 CST</td>
+            <td>T. Nakamura</td>
+            <td><span class="badge badge-yellow" style="font-size:calc(var(--unit)*0.5);padding:calc(var(--unit)*0.15) calc(var(--unit)*0.35);">Partial data interruption</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FOOTER META -->
+  <footer style="display:flex;justify-content:space-between;align-items:center;padding:var(--size-lg) 0;border-top:1px solid var(--clr-border-subtle);color:var(--clr-text-muted);font-size:calc(var(--unit)*0.625);">
+    <span>FacComms Investigation Workspace v4.2.1 · Data refreshes every 120 seconds</span>
+    <span>Auth: j.mirabella@northdist.faccomms · Session expires in 4h 12m</span>
+  </footer>
+
+</div>
+
+<!-- DIALOG OVERLAY -->
+<div class="dialog-overlay" id="drillDialog" role="dialog" aria-modal="true" aria-labelledby="drillDialogTitle" onclick="if(event.target===this)toggleDialog()">
+  <div class="dialog-box">
+    <div class="dialog-header">
+      <h3 id="drillDialogTitle">Drill Analysis — Root Cause Deep-Dive</h3>
+      <button class="dialog-close" onclick="toggleDialog()" aria-label="Close dialog">×</button>
+    </div>
+    <div class="dialog-body">
+      <p style="color:var(--clr-text-secondary);font-size:calc(var(--unit)*0.8125);margin-bottom:var(--size-lg);">
+        This analysis cross-references incident logs, bandwidth telemetry, and hardware inventory for the past 30 days to surface correlated failure patterns.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--size-lg);margin-bottom:var(--size-lg);">
+        <div style="padding:var(--size-md);background:var(--clr-surface-elevated);border-radius:var(--radius-md);border:1px solid var(--clr-border-subtle);">
+          <div class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;margin-bottom:var(--size-xs);">Correlation Confidence</div>
+          <div style="font-size:calc(var(--unit)*1.5);font-weight:800;font-family:var(--font-mono);color:var(--clr-accent-warn);">87.3%</div>
+          <div class="text-muted" style="font-size:calc(var(--unit)*0.625);margin-top:var(--size-xs);">Power failures correlate with PABX outages (r² = 0.84)</div>
+        </div>
+        <div style="padding:var(--size-md);background:var(--clr-surface-elevated);border-radius:var(--radius-md);border:1px solid var(--clr-border-subtle);">
+          <div class="text-muted" style="font-size:calc(var(--unit)*0.625);text-transform:uppercase;">Most Affected Circuit Class</div>
+          <div style="font-size:calc(var(--unit)*1.5);font-weight:800;font-family:var(--font-mono);color:var(--clr-accent-primary);">100 Mbps LE</div>
+          <div class="text-muted" style="font-size:calc(var(--unit)*0.625);margin-top:var(--size-xs);">LE = Long-Eye microwave links, avg 92% saturation</div>
+        </div>
+      </div>
+      <h4 style="font-size:calc(var(--unit)*0.9375);font-weight:700;margin-bottom:var(--size-md);">Recommended Actions</h4>
+      <ol style="color:var(--clr-text-secondary);font-size:calc(var(--unit)*0.75);padding-left:var(--size-lg);display:flex;flex-direction:column;gap:var(--size-sm);">
+        <li>Replace failing UPS battery strings at SEA-0412 before Dec 17 maintenance window — immediate risk to failover path.</li>
+        <li>Procure additional 1 Gbps circuit for NSW-0014 Newark Hub — current utilization trending above 85% threshold for 3 consecutive weeks.</li>
+        <li>Schedule SFP module replacement batch for NW region (5 modules approaching EOL — see asset tag list FT-SFP-8812 through FT-SFP-8816).</li>
+        <li>Evaluate Copart Wireless LTE backup circuit LC-LTE-0088 for decommission — consider bonded fiber fallback per vendor negotiation results from Nov 22 procurement cycle.</li>
+        <li>Update VLAN 44-to-45 migration runbook — previous attempt on Oct 8 caused SIP registration storm affecting 34 endpoints for 11 minutes.</li>
+      </ol>
+      <div style="margin-top:var(--size-xl);display:flex;gap:var(--size-md);justify-content:flex-end;">
+        <button class="filter-btn" style="background:transparent;border:1px solid var(--clr-border-subtle);color:var(--clr-text-secondary);" onclick="toggleDialog()">Close</button>
+        <button class="filter-btn" onclick="alert('Report exported to j.mirabella@northdist.faccomms');toggleDialog();">Export Report PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.setAttribute('aria-selected', 'false'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+  const selectedBtn = document.getElementById('tab-' + tabId + '-btn');
+  if (selectedBtn) selectedBtn.setAttribute('aria-selected', 'true');
+
+  // In a real app, this would filter/switch the table content
+  const tableBody = document.getElementById('siteTableBody');
+  if (!tableBody) return;
+  
+  const rows = tableBody.querySelectorAll('tr');
+  rows.forEach(row => {
+    const statusCell = row.querySelector('td:nth-child(4)');
+    if (!statusCell) return;
+    const statusText = statusCell.textContent.trim().toLowerCase();
+    
+    if (tabId === 'all') {
+      row.style.display = '';
+    } else if (tabId === 'critical' && statusText.includes('critical')) {
+      row.style.display = '';
+    } else if (tabId === 'warning' && statusText.includes('warning')) {
+      row.style.display = '';
+    } else if (tabId === 'nominal' && statusText.includes('healthy')) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+function toggleDialog() {
+  const dialog = document.getElementById('drillDialog');
+  dialog.classList.toggle('open');
+  if (dialog.classList.contains('open')) {
+    dialog.querySelector('.dialog-close').focus();
+  }
+}
+
+function applyFilters() {
+  // Placeholder for filter logic — demonstrates interactive behavior
+  const region = document.getElementById('filterRegion').value;
+  const dateRange = document.getElementById('filterDate').value;
+  const severity = document.getElementById('filterSeverity').value;
+  console.log(`Filters applied: region=${region}, dateRange=${dateRange}, severity=${severity}`);
+}
+
+function resetFilters() {
+  document.getElementById('filterRegion').value = 'all';
+  document.getElementById('filterDate').selectedIndex = 1;
+  document.getElementById('filterSeverity').value = 'all';
+  // Reset visibility
+  document.querySelectorAll('#siteTableBody tr').forEach(row => row.style.display = '');
+  switchTab('all');
+}
+
+// Close dialog on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const dialog = document.getElementById('drillDialog');
+    if (dialog.classList.contains('open')) {
+      toggleDialog();
+    }
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenue Attestation Engine | Global Health Equity Initiative</title>
+    <style>
+        :root {
+            /* Colors - Design System: Rose-Mauve & Grungy/Dark */
+            --color-bg-canvas: #0c0c0e;
+            --color-panel-bg: #16161a;
+            --color-panel-header: #1f1f24;
+            --color-panel-border: #2a2a31;
+            --color-accent-primary: #9d5c63; /* Rose-Mauve */
+            --color-accent-hover: #b8737a;
+            --color-text-primary: #e2e2e7;
+            --color-text-secondary: #8e8e99;
+            --color-text-muted: #5e5e69;
+            --color-status-success: #3c7a5d;
+            --color-status-warning: #b58900;
+            --color-status-danger: #c04a4a;
+            --color-overlay-bg: rgba(0, 0, 0, 0.85);
+            
+            /* Spacing */
+            --space-unit: 4px;
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 12px;
+            --space-lg: 16px;
+            --space-xl: 24px;
+            
+            /* Typography */
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-size-xs: 10px;
+            --font-size-sm: 12px;
+            --font-size-base: 13px;
+            --font-size-lg: 15px;
+            --font-weight-reg: 400;
+            --font-weight-bold: 600;
+            --line-height-tight: 1.2;
+            --line-height-base: 1.5;
+            
+            /* Borders / Shadows */
+            --border-radius-sm: 2px;
+            --border-radius-md: 4px;
+            --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.6);
+            --border-width-thin: 1px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--color-bg-canvas);
+            color: var(--color-text-primary);
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-base);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Layout Structure */
+        .workspace {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: 100%;
+            gap: var(--space-md);
+            padding: var(--space-md);
+            height: 100vh;
+            position: relative;
+        }
+
+        .panel {
+            background-color: var(--color-panel-bg);
+            border: var(--border-width-thin) solid var(--color-panel-border);
+            border-radius: var(--border-radius-md);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow-float);
+        }
+
+        .panel-header {
+            background-color: var(--color-panel-header);
+            padding: var(--space-sm) var(--space-md);
+            border-bottom: var(--border-width-thin) solid var(--color-panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-bold);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-secondary);
+        }
+
+        .panel-content {
+            padding: var(--space-md);
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        /* Top App Bar */
+        .app-bar {
+            grid-column: 1 / -1;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--color-panel-bg);
+            border-bottom: var(--border-width-thin) solid var(--color-panel-border);
+            padding: 0 var(--space-lg);
+        }
+
+        .app-bar-brand {
+            font-weight: var(--font-weight-bold);
+            color: var(--color-accent-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        /* Specific Components */
+        .artifact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .artifact-card {
+            background-color: var(--color-panel-header);
+            border: var(--border-width-thin) solid var(--color-panel-border);
+            border-radius: var(--border-radius-sm);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .artifact-card:hover {
+            border-color: var(--color-accent-primary);
+        }
+
+        .artifact-media {
+            aspect-ratio: 16/9;
+            background-color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .artifact-media svg {
+            width: 48px;
+            height: 48px;
+            opacity: 0.3;
+            color: var(--color-text-secondary);
+        }
+
+        .artifact-caption {
+            padding: var(--space-sm);
+            font-size: var(--font-size-xs);
+        }
+
+        .artifact-title {
+            color: var(--color-text-primary);
+            font-weight: var(--font-weight-bold);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: var(--space-xs);
+        }
+
+        .artifact-meta {
+            color: var(--color-text-secondary);
+            font-family: monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Tab System */
+        .tabs {
+            display: flex;
+            gap: var(--space-unit);
+            border-bottom: var(--border-width-thin) solid var(--color-panel-border);
+            margin-bottom: var(--space-md);
+        }
+
+        .tab {
+            background: transparent;
+            border: none;
+            color: var(--color-text-secondary);
+            padding: var(--space-sm) var(--space-md);
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab[aria-selected="true"] {
+            color: var(--color-accent-primary);
+            border-bottom-color: var(--color-accent-primary);
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-xs);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: var(--space-sm);
+            color: var(--color-text-secondary);
+            border-bottom: var(--border-width-thin) solid var(--color-panel-border);
+            font-weight: var(--font-weight-reg);
+            text-transform: uppercase;
+        }
+
+        .data-table td {
+            padding: var(--space-sm);
+            border-bottom: var(--border-width-thin) solid var(--color-panel-border);
+            color: var(--color-text-primary);
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: var(--font-weight-bold);
+        }
+
+        .status-pill.success { background: var(--color-status-success); color: #fff; }
+        .status-pill.warning { background: var(--color-status-warning); color: #000; }
+
+        /* Buttons */
+        .btn {
+            background: var(--color-panel-header);
+            border: var(--border-width-thin) solid var(--color-panel-border);
+            color: var(--color-text-primary);
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            font-size: var(--font-size-xs);
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--color-panel-border);
+        }
+
+        .btn-danger {
+            color: var(--color-status-danger);
+            border-color: var(--color-status-danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--color-status-danger);
+            color: #fff;
+        }
+
+        /* Overlay/Dialog */
+        .dialog-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--color-overlay-bg);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .dialog {
+            background: var(--color-panel-bg);
+            border: var(--border-width-thin) solid var(--color-status-danger);
+            border-radius: var(--border-radius-md);
+            width: 400px;
+            box-shadow: var(--shadow-float);
+        }
+
+        .dialog-header {
+            padding: var(--space-md);
+            border-bottom: var(--border-width-thin) solid var(--color-panel-border);
+            color: var(--color-status-danger);
+            font-weight: var(--font-weight-bold);
+        }
+
+        .dialog-body {
+            padding: var(--space-md);
+            font-size: var(--font-size-sm);
+        }
+
+        .dialog-footer {
+            padding: var(--space-md);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space-sm);
+            border-top: var(--border-width-thin) solid var(--color-panel-border);
+        }
+
+        /* Utilities */
+        .m-t-md { margin-top: var(--space-md); }
+        .m-b-sm { margin-bottom: var(--space-sm); }
+        .text-rose { color: var(--color-accent-primary); }
+    </style>
+</head>
+<body>
+
+    <header class="app-bar">
+        <div class="app-bar-brand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+            <span>REVENUE ANALYZER | v4.2.1</span>
+        </div>
+        <div class="app-bar-actions">
+            <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-right: var(--space-lg);">Operator: A. VANCE (SR-AUDITOR)</span>
+            <button class="btn" style="border-color: var(--color-accent-primary); color: var(--color-accent-primary);">SYNC WORKSPACE</button>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <!-- LEFT PANEL: NAVIGATION & METADATA -->
+        <aside class="panel" role="region" aria-label="Batch Metadata">
+            <div class="panel-header">
+                <h2>Batch Attributes</h2>
+            </div>
+            <div class="panel-content">
+                <div style="margin-bottom: var(--space-xl);">
+                    <label style="display: block; font-size: 10px; color: var(--color-text-muted); text-transform: uppercase;">Batch Identity</label>
+                    <div style="font-size: var(--font-size-lg); font-weight: bold; margin-bottom: var(--space-xs);">GHEI-2023-REV-909</div>
+                    <div class="status-pill warning">Pending Attestation</div>
+                </div>
+
+                <div class="m-b-sm">
+                    <label style="display: block; font-size: 10px; color: var(--color-text-muted);">PRIMARY SOURCE</label>
+                    <div style="font-size: var(--font-size-sm);">Bill & Melinda Gates Foundation</div>
+                </div>
+
+                <div class="m-b-sm">
+                    <label style="display: block; font-size: 10px; color: var(--color-text-muted);">REPORTED REVENUE</label>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-accent-primary); font-weight: bold;">$4,250,000.00 USD</div>
+                </div>
+
+                <div class="m-b-sm">
+                    <label style="display: block; font-size: 10px; color: var(--color-text-muted);">FISCAL YEAR</label>
+                    <div style="font-size: var(--font-size-sm);">2023 / Q4 CLOSING</div>
+                </div>
+
+                <div class="m-t-md" style="border-top: var(--border-width-thin) solid var(--color-panel-border); padding-top: var(--space-md);">
+                    <h3 style="font-size: 10px; color: var(--color-text-secondary); margin-bottom: var(--space-sm);">BATCH ACTIONS</h3>
+                    <button class="btn" style="width: 100%; margin-bottom: var(--space-sm);">Export Ledger</button>
+                    <button class="btn" style="width: 100%; margin-bottom: var(--space-sm);">Assign for Review</button>
+                    <button class="btn btn-danger" style="width: 100%;" onclick="openPurgeDialog()">Void Batch Records</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER PANEL: ARTIFACT GRID (MAIN) -->
+        <main class="panel" style="grid-column: 2 / 3;">
+            <div class="panel-header">
+                <div role="tablist" class="tabs" style="margin-bottom: 0; border: none;">
+                    <button role="tab" aria-selected="true" class="tab" aria-controls="grid-view">Artifact Evidence (42)</button>
+                    <button role="tab" aria-selected="false" class="tab" aria-controls="audit-view">Audit Chain</button>
+                    <button role="tab" aria-selected="false" class="tab">Discrepancy Log</button>
+                </div>
+                <div style="display: flex; gap: var(--space-sm);">
+                    <button class="btn">Filter</button>
+                    <button class="btn">Sort: Date</button>
+                </div>
+            </div>
+            <div class="panel-content" id="grid-view" role="tabpanel">
+                <div class="artifact-grid">
+                    <!-- Evidence Item 1 -->
+                    <div class="artifact-card">
+                        <div class="artifact-media">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        </div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Wire_Conf_8821.jpg</div>
+                            <div class="artifact-meta">
+                                <span>12/10/2023</span>
+                                <span class="text-rose">$450,000.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Evidence Item 2 -->
+                    <div class="artifact-card">
+                        <div class="artifact-media">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Grant_Agreement_Final.pdf</div>
+                            <div class="artifact-meta">
+                                <span>11/28/2023</span>
+                                <span>1.2 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Evidence Item 3 -->
+                    <div class="artifact-card">
+                        <div class="artifact-media">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                        </div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Donor_Verification_Statement.mp4</div>
+                            <div class="artifact-meta">
+                                <span>12/01/2023</span>
+                                <span>04:12</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Repeat many for density -->
+                    <div class="artifact-card">
+                        <div class="artifact-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Check_Scan_00122.png</div>
+                            <div class="artifact-meta"><span>12/12/2023</span><span class="text-rose">$50,000.00</span></div>
+                        </div>
+                    </div>
+                    <div class="artifact-card">
+                        <div class="artifact-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Check_Scan_00123.png</div>
+                            <div class="artifact-meta"><span>12/12/2023</span><span class="text-rose">$25,000.00</span></div>
+                        </div>
+                    </div>
+                    <div class="artifact-card">
+                        <div class="artifact-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Check_Scan_00124.png</div>
+                            <div class="artifact-meta"><span>12/12/2023</span><span class="text-rose">$100,000.00</span></div>
+                        </div>
+                    </div>
+                    <div class="artifact-card">
+                        <div class="artifact-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Email_Chain_Approvals.msg</div>
+                            <div class="artifact-meta"><span>12/14/2023</span><span>0.4 MB</span></div>
+                        </div>
+                    </div>
+                    <div class="artifact-card">
+                        <div class="artifact-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">ACH_Receipt_Ref_901.jpg</div>
+                            <div class="artifact-meta"><span>12/15/2023</span><span class="text-rose">$1,200,000.00</span></div>
+                        </div>
+                    </div>
+                    <div class="artifact-card">
+                        <div class="artifact-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>
+                        <div class="artifact-caption">
+                            <div class="artifact-title">Ledger_Extract_Source.png</div>
+                            <div class="artifact-meta"><span>12/15/2023</span><span>880 KB</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT PANEL: ATTRIBUTION TABLE -->
+        <aside class="panel" style="grid-column: 3 / 4;">
+            <div class="panel-header">
+                <h2>Allocation Table</h2>
+            </div>
+            <div class="panel-content">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Program</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Infectious Disease Control</td>
+                            <td>$1,500,000</td>
+                            <td><span class="status-pill success">Verified</span></td>
+                        </tr>
+                        <tr>
+                            <td>Clean Water Initiative</td>
+                            <td>$750,000</td>
+                            <td><span class="status-pill warning">Pending</span></td>
+                        </tr>
+                        <tr>
+                            <td>Maternal Health Fund</td>
+                            <td>$1,000,000</td>
+                            <td><span class="status-pill success">Verified</span></td>
+                        </tr>
+                        <tr>
+                            <td>Education Equity Grant</td>
+                            <td>$500,000</td>
+                            <td><span class="status-pill success">Verified</span></td>
+                        </tr>
+                        <tr>
+                            <td>Sustainability Reserve</td>
+                            <td>$500,000</td>
+                            <td><span class="status-pill warning">Pending</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="m-t-md">
+                    <h3 style="font-size: 10px; color: var(--color-text-secondary); margin-bottom: var(--space-sm);">NOTES & ATTESTATIONS</h3>
+                    <div style="background: var(--color-panel-header); padding: var(--space-sm); border-radius: var(--border-radius-sm); font-size: var(--font-size-xs); color: var(--color-text-secondary); border-left: 2px solid var(--color-accent-primary);">
+                        Revenue matches Grant Proposal v3.4. All wire receipts confirmed by Treasury on 12/16. Waiting for one physical signature on the donor agreement.
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- CONFIRMATION DIALOG -->
+    <div class="dialog-backdrop" id="dialogBackdrop" role="presentation">
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+            <div class="dialog-header" id="dialogTitle">
+                DESTRUCTIVE ACTION: VOID BATCH
+            </div>
+            <div class="dialog-body">
+                <p>You are about to permanently void Batch <strong>GHEI-2023-REV-909</strong>. This will:</p>
+                <ul style="margin: var(--space-md) var(--space-lg); color: var(--color-text-secondary);">
+                    <li>Remove all 42 evidence artifacts from the audit ledger.</li>
+                    <li>Invalidate the current revenue attestation state.</li>
+                    <li>Notify the Lead Auditor of data purging.</li>
+                </ul>
+                <p>This action cannot be undone. Please confirm audit override password.</p>
+                <input type="password" style="width: 100%; background: #000; border: 1px solid var(--color-panel-border); color: #fff; padding: var(--space-sm); margin-top: var(--space-md);" placeholder="Enter Override Code">
+            </div>
+            <div class="dialog-footer">
+                <button class="btn" onclick="closePurgeDialog()">Cancel</button>
+                <button class="btn btn-danger" onclick="executePurge()">Confirm Void</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openPurgeDialog() {
+            const dialog = document.getElementById('dialogBackdrop');
+            dialog.style.display = 'flex';
+        }
+
+        function closePurgeDialog() {
+            const dialog = document.getElementById('dialogBackdrop');
+            dialog.style.display = 'none';
+        }
+
+        function executePurge() {
+            alert('Batch GHEI-2023-REV-909 has been purged from the system.');
+            closePurgeDialog();
+        }
+
+        // Tab Switching Logic
+        const tabs = document.querySelectorAll('[role="tab"]');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.setAttribute('aria-selected', 'false'));
+                tab.setAttribute('aria-selected', 'true');
+            });
+        });
+    </script>
+</body>
+</html>
+

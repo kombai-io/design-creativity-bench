@@ -1,0 +1,2341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudLayer — Invite Developer to Production</title>
+<style>
+  :root {
+    --bg-base: #090d16;
+    --bg-surface: #0f172a;
+    --bg-surface-elevated: #162036;
+    --bg-surface-hover: #1e2c4a;
+    --border-subtle: #1e293b;
+    --border-strong: #334155;
+    --border-accent: rgba(99, 102, 241, 0.4);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --brand-primary: #6366f1;
+    --brand-primary-hover: #4f46e5;
+    --brand-glow: rgba(99, 102, 241, 0.25);
+    --prod-amber: #f59e0b;
+    --prod-amber-glow: rgba(245, 158, 11, 0.2);
+    --prod-rose: #ef4444;
+    --prod-rose-glow: rgba(239, 68, 68, 0.2);
+    --success: #10b981;
+    --success-bg: rgba(16, 185, 129, 0.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Top Navigation Bar */
+  .navbar {
+    height: 64px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px var(--brand-glow);
+  }
+
+  .breadcrumb-divider {
+    color: var(--border-strong);
+    font-size: 1.1rem;
+  }
+
+  .breadcrumb-path {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+
+  .breadcrumb-path a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .breadcrumb-path a:hover {
+    color: var(--text-primary);
+  }
+
+  .breadcrumb-current {
+    color: var(--text-primary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .env-pill-prod {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .pulse-dot-red {
+    width: 6px;
+    height: 6px;
+    background: #ef4444;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #ef4444;
+    animation: pulseRed 2s infinite ease-in-out;
+  }
+
+  @keyframes pulseRed {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .cluster-status-badge {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cluster-status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  }
+
+  .avatar-user {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 2px solid var(--border-strong);
+    cursor: pointer;
+  }
+
+  /* Sub-navigation tabs */
+  .subnav {
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 32px;
+    display: flex;
+    gap: 28px;
+  }
+
+  .subnav-link {
+    padding: 12px 2px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .subnav-link:hover {
+    color: var(--text-secondary);
+  }
+
+  .subnav-link.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--brand-primary);
+  }
+
+  /* Main Container */
+  .app-container {
+    max-width: 1360px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 32px 24px 60px;
+    flex: 1;
+  }
+
+  /* Prod Security Banner */
+  .prod-guard-banner {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.28);
+    border-radius: var(--radius-md);
+    padding: 14px 20px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .banner-icon {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.15);
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+  }
+
+  .banner-text h4 {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #fecaca;
+    margin-bottom: 2px;
+  }
+
+  .banner-text p {
+    font-size: 0.82rem;
+    color: #cbd5e1;
+  }
+
+  .banner-meta {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+
+  /* Page Title Header */
+  .page-header {
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .page-desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-top: 6px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-secondary {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+
+  /* Main Two-Column Layout */
+  .layout-grid {
+    display: grid;
+    grid-template-columns: 1fr 390px;
+    gap: 28px;
+    align-items: start;
+  }
+
+  /* Form Container */
+  .form-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+
+  .form-section {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .form-section:last-child {
+    border-bottom: none;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .step-tag {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .section-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Input Elements */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .form-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .form-label-help {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 0.78rem;
+  }
+
+  .input-text, .select-input {
+    width: 100%;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+
+  .input-text:focus, .select-input:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  }
+
+  .input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--text-muted);
+    pointer-events: none;
+    display: flex;
+  }
+
+  .input-with-icon .input-text {
+    padding-left: 38px;
+  }
+
+  /* Quick-select Team Members */
+  .quick-select-wrap {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .quick-select-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .team-chip {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    padding: 3px 10px 3px 6px;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .team-chip:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+  }
+
+  .team-chip-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #475569;
+    font-size: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Role Selection Cards */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .role-card {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .role-card:hover {
+    border-color: var(--border-strong);
+    background: #0d1424;
+  }
+
+  .role-card.selected {
+    border-color: var(--brand-primary);
+    background: rgba(99, 102, 241, 0.05);
+    box-shadow: 0 0 0 1px var(--brand-primary), 0 4px 20px -4px rgba(99, 102, 241, 0.2);
+  }
+
+  .role-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .role-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .role-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: #334155;
+  }
+
+  .role-card.selected .role-icon {
+    background: var(--brand-primary);
+  }
+
+  .role-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .role-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .badge-tier-high {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .badge-tier-med {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .badge-tier-low {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  .role-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-bottom: 12px;
+  }
+
+  .role-caps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .cap-tag {
+    font-size: 0.7rem;
+    background: var(--bg-surface-elevated);
+    color: var(--text-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+  }
+
+  /* Fine-grained capability drawer */
+  .capabilities-accordion {
+    margin-top: 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--bg-base);
+    overflow: hidden;
+  }
+
+  .accordion-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .accordion-header:hover {
+    color: var(--text-primary);
+  }
+
+  .accordion-body {
+    padding: 14px;
+    border-top: 1px solid var(--border-subtle);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 16px;
+  }
+
+  .perm-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .perm-item input[type="checkbox"] {
+    accent-color: var(--brand-primary);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+
+  /* Environment Targets (Clusters & Services) */
+  .tag-selector-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .target-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .target-pill:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+
+  .target-pill.active {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: var(--brand-primary);
+    color: #c7d2fe;
+  }
+
+  .pill-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .target-pill.active .pill-indicator {
+    background: #818cf8;
+  }
+
+  /* Duration / Safeguards Selector */
+  .guardrails-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .duration-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .duration-btn {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 8px 4px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .duration-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+
+  .duration-btn.active {
+    background: var(--bg-surface-elevated);
+    border-color: var(--brand-primary);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Toggle Switch */
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+  }
+
+  .switch-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .switch-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .switch-title {
+    font-size: 0.83rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .switch-sub {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    display: inline-block;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #334155;
+    transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 22px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+  }
+
+  input:checked + .toggle-slider {
+    background-color: var(--brand-primary);
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(18px);
+  }
+
+  /* Form Actions Footer */
+  .form-actions {
+    background: rgba(15, 23, 42, 0.95);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .audit-guarantee {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px var(--brand-glow);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Sidebar Cards */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sidebar-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .side-card-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Live Clearance / Blast Radius Preview */
+  .risk-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    text-transform: uppercase;
+  }
+
+  .preview-recipient {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 16px;
+  }
+
+  .preview-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1e293b, #334155);
+    border: 1px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #cbd5e1;
+  }
+
+  .preview-info-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .preview-info-email {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .spec-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .spec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+  }
+
+  .spec-label {
+    color: var(--text-muted);
+  }
+
+  .spec-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mono-code {
+    font-family: var(--font-mono);
+    background: var(--bg-base);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    font-size: 0.75rem;
+  }
+
+  /* Blast Radius Metric Bar */
+  .blast-meter-wrap {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .blast-meter-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .blast-meter-bar {
+    height: 6px;
+    background: var(--bg-base);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .blast-meter-fill {
+    height: 100%;
+    width: 65%;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+
+  /* Security Compliance Checklist */
+  .policy-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 0.78rem;
+  }
+
+  .policy-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .policy-check {
+    color: var(--success);
+    background: var(--success-bg);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .policy-name {
+    color: var(--text-secondary);
+  }
+
+  .policy-sub {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+  }
+
+  /* Active Invites Drawer / Mini Table */
+  .active-invites-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .invite-mini-card {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    transition: border-color 0.2s;
+  }
+
+  .invite-mini-card:hover {
+    border-color: var(--border-strong);
+  }
+
+  .mini-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mini-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #334155;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+  }
+
+  .mini-status {
+    color: var(--prod-amber);
+    font-size: 0.72rem;
+    font-weight: 500;
+    background: rgba(245, 158, 11, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .mini-action-revoke {
+    color: var(--text-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .mini-action-revoke:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  /* Modal Dialog for Confirmation */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(4, 7, 13, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 540px;
+    padding: 28px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    position: relative;
+    animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes scaleUp {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+  }
+  .modal-close-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .modal-icon-success {
+    width: 52px;
+    height: 52px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--success);
+    margin-bottom: 20px;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .modal-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .magic-link-box {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .magic-link-text {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: #93c5fd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .copy-btn {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .copy-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1e293b;
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1000;
+  }
+
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 1024px) {
+    .layout-grid {
+      grid-template-columns: 1fr;
+    }
+    .roles-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .navbar {
+      padding: 0 16px;
+    }
+    .app-container {
+      padding: 16px 16px 40px;
+    }
+    .guardrails-grid {
+      grid-template-columns: 1fr;
+    }
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="nav-left">
+      <a href="#" class="logo">
+        <div class="logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            <path d="M12 12v6"/>
+            <path d="m9 15 3-3 3 3"/>
+          </svg>
+        </div>
+        <span>CloudLayer</span>
+      </a>
+
+      <span class="breadcrumb-divider">/</span>
+
+      <nav class="breadcrumb-path">
+        <a href="#">fintech-core</a>
+        <span class="breadcrumb-divider">/</span>
+        <a href="#">Environments</a>
+        <span class="breadcrumb-divider">/</span>
+        <span class="breadcrumb-current">
+          Production
+          <span class="env-pill-prod">
+            <span class="pulse-dot-red"></span>
+            PROD
+          </span>
+        </span>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <div class="cluster-status-badge">
+        <span class="cluster-status-indicator"></span>
+        <span>us-east-1 (Kubernetes 1.30.2-eks)</span>
+      </div>
+      <div class="avatar-user" title="Logged in as Dave Miller (Staff SRE)">DM</div>
+    </div>
+  </header>
+
+  <!-- Secondary Subnav -->
+  <div class="subnav">
+    <a href="#" class="subnav-link">Overview</a>
+    <a href="#" class="subnav-link">Automated Pipelines</a>
+    <a href="#" class="subnav-link">Canary Releases</a>
+    <a href="#" class="subnav-link">Live Secrets</a>
+    <a href="#" class="subnav-link active">IAM & Production Access</a>
+    <a href="#" class="subnav-link">Audit Trail</a>
+  </div>
+
+  <main class="app-container">
+
+    <!-- High-Security Environment Warning Banner -->
+    <div class="prod-guard-banner">
+      <div class="banner-content">
+        <div class="banner-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="banner-text">
+          <h4>Production Environment Access Control</h4>
+          <p>Access permits deploying live code, mutating runtime variables, and executing canary shifts to 2.4M active users. Dual-authorization is enforced.</p>
+        </div>
+      </div>
+      <div class="banner-meta">
+        POLICY: SOC2-TYPE2-PROD-RESTRICTED
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">
+          Invite Developer to Production
+        </h1>
+        <p class="page-desc">Provision scoped infrastructure access, deployment privileges, and automated rollback authority.</p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn-secondary" id="btnViewInvites">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Active Production Grants (3)
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content Form + Live Preview Sidebar -->
+    <div class="layout-grid">
+
+      <!-- LEFT: Form Configuration -->
+      <div class="form-card">
+
+        <!-- Section 1: Developer Target -->
+        <div class="form-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="step-tag">1</span>
+                Developer Identity
+              </div>
+              <div class="section-desc">Choose an existing verified team engineer or invite an authorized external specialist.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="devEmail">
+              <span>Developer Corporate Email</span>
+              <span class="form-label-help">Must match verified SSO domain (@acme.corp)</span>
+            </label>
+            <div class="input-with-icon">
+              <div class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2"/>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+              </div>
+              <input type="email" id="devEmail" class="input-text" value="elena.rostova@acmepay.io" placeholder="developer@company.com" autocomplete="off">
+            </div>
+
+            <!-- Quick pick suggestions -->
+            <div class="quick-select-wrap">
+              <span class="quick-select-title">Fast pick from Staging team:</span>
+              <div class="team-chip" onclick="selectMember('elena.rostova@acmepay.io', 'Elena Rostova', 'Staff Distributed Systems Engineer')">
+                <span class="team-chip-avatar">ER</span>
+                <span>Elena Rostova (Staff Backend)</span>
+              </div>
+              <div class="team-chip" onclick="selectMember('alex.rivera@acmepay.io', 'Alex Rivera', 'DevOps & SRE Specialist')">
+                <span class="team-chip-avatar">AR</span>
+                <span>Alex Rivera (SRE)</span>
+              </div>
+              <div class="team-chip" onclick="selectMember('marcus.vance@acmepay.io', 'Marcus Vance', 'Payments Gateway Lead')">
+                <span class="team-chip-avatar">MV</span>
+                <span>Marcus Vance (Payments Lead)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label class="form-label" for="devFullName">
+              <span>Full Name / GitHub Handle</span>
+              <span class="form-label-help">Linked to automated deployment sign-off audit</span>
+            </label>
+            <input type="text" id="devFullName" class="input-text" value="Elena Rostova (@elena-acme)" placeholder="e.g. Jordan Lee (@jordan-lee)">
+          </div>
+        </div>
+
+        <!-- Section 2: Environment Targets / Clusters -->
+        <div class="form-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="step-tag">2</span>
+                Production Scope & Microservices
+              </div>
+              <div class="section-desc">Isolate developer permissions to designated automated deploy targets or full cluster topology.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>Target Microservice Pipelines</span>
+              <span class="form-label-help">Click to toggle scope inclusion</span>
+            </label>
+            <div class="tag-selector-container" id="targetPills">
+              <div class="target-pill active" data-target="payments-engine">
+                <span class="pill-indicator"></span>
+                <span>svc: payments-engine</span>
+              </div>
+              <div class="target-pill active" data-target="auth-vault">
+                <span class="pill-indicator"></span>
+                <span>svc: auth-vault</span>
+              </div>
+              <div class="target-pill active" data-target="ledger-worker">
+                <span class="pill-indicator"></span>
+                <span>svc: ledger-worker</span>
+              </div>
+              <div class="target-pill" data-target="notification-broker">
+                <span class="pill-indicator"></span>
+                <span>svc: notification-broker</span>
+              </div>
+              <div class="target-pill" data-target="edge-ingress">
+                <span class="pill-indicator"></span>
+                <span>edge: cloudflare-ingress</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label class="form-label">Target Cloud Regions</label>
+            <div style="display: flex; gap: 10px;">
+              <select class="select-input" id="regionScope">
+                <option value="all">All Production Clusters (us-east-1, eu-central-1, ap-southeast-1)</option>
+                <option value="us-east-1" selected>Primary US-East-1 (AWS EKS Production-Alpha)</option>
+                <option value="eu-central-1">Disaster Recovery (eu-central-1 Frankfurt)</option>
+                <option value="edge">Edge Network POPs Only (CloudLayer Anycast)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Production Role & Privileges -->
+        <div class="form-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="step-tag">3</span>
+                Production Role & Automated Clearance
+              </div>
+              <div class="section-desc">Select predefined capability profile according to the Principle of Least Privilege.</div>
+            </div>
+          </div>
+
+          <div class="roles-grid" id="rolesGrid">
+
+            <!-- Card: Deployment Engineer -->
+            <div class="role-card selected" data-role="deployer">
+              <div>
+                <div class="role-card-header">
+                  <div class="role-title-group">
+                    <div class="role-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                      </svg>
+                    </div>
+                    <span class="role-name">Deployment Engineer</span>
+                  </div>
+                  <span class="role-badge badge-tier-med">Standard</span>
+                </div>
+                <p class="role-desc">Can trigger pipeline promotions, run canary traffic shifts, and initiate auto-rollbacks. Cannot alter base secrets.</p>
+              </div>
+              <div class="role-caps">
+                <span class="cap-tag">pipeline:trigger</span>
+                <span class="cap-tag">canary:traffic-shift</span>
+                <span class="cap-tag">logs:live-tail</span>
+              </div>
+            </div>
+
+            <!-- Card: Production Operator -->
+            <div class="role-card" data-role="operator">
+              <div>
+                <div class="role-card-header">
+                  <div class="role-title-group">
+                    <div class="role-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="18" height="18" x="3" y="3" rx="2"/>
+                        <path d="m9 12 2 2 4-4"/>
+                      </svg>
+                    </div>
+                    <span class="role-name">Production Operator</span>
+                  </div>
+                  <span class="role-badge badge-tier-high">Elevated</span>
+                </div>
+                <p class="role-desc">Full pipeline management, secret rotation, container scaling, DNS traffic diversion, and maintenance window toggling.</p>
+              </div>
+              <div class="role-caps">
+                <span class="cap-tag">secrets:rotate</span>
+                <span class="cap-tag">cluster:drain</span>
+                <span class="cap-tag">deploy:hotfix</span>
+              </div>
+            </div>
+
+            <!-- Card: Incident Responder / Break-glass -->
+            <div class="role-card" data-role="responder">
+              <div>
+                <div class="role-card-header">
+                  <div class="role-title-group">
+                    <div class="role-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                        <path d="m9 12 2 2 4-4"/>
+                      </svg>
+                    </div>
+                    <span class="role-name">Incident Responder</span>
+                  </div>
+                  <span class="role-badge badge-tier-high">Break-Glass</span>
+                </div>
+                <p class="role-desc">Immediate one-click rollback, freeze deployments, restart worker pods, tail unredacted telemetry during active SEV incidents.</p>
+              </div>
+              <div class="role-caps">
+                <span class="cap-tag">traffic:freeze</span>
+                <span class="cap-tag">pod:exec</span>
+                <span class="cap-tag">rollback:immediate</span>
+              </div>
+            </div>
+
+            <!-- Card: Read-Only Auditor -->
+            <div class="role-card" data-role="auditor">
+              <div>
+                <div class="role-card-header">
+                  <div class="role-title-group">
+                    <div class="role-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                      </svg>
+                    </div>
+                    <span class="role-name">Production Observer</span>
+                  </div>
+                  <span class="role-badge badge-tier-low">Read Only</span>
+                </div>
+                <p class="role-desc">View live performance graphs, deployment timeline, and aggregated latency traces without mutation permissions.</p>
+              </div>
+              <div class="role-caps">
+                <span class="cap-tag">metrics:read</span>
+                <span class="cap-tag">audit:export</span>
+                <span class="cap-tag">telemetry:view</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Fine-grained permission checklist accordion -->
+          <div class="capabilities-accordion">
+            <div class="accordion-header" id="accordionToggle">
+              <span style="display: flex; align-items: center; gap: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 20h9"/>
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                </svg>
+                Fine-Grained Production Capabilities (<span id="capsCount">5</span> enabled)
+              </span>
+              <span id="accordionArrow">▼</span>
+            </div>
+            <div class="accordion-body" id="accordionBody">
+              <label class="perm-item">
+                <input type="checkbox" id="cap-deploy" checked>
+                <span>Trigger Manual & Automated Deploys</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="cap-canary" checked>
+                <span>Adjust Canary Traffic Weights (0-100%)</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="cap-rollback" checked>
+                <span>Execute Emergency Instant Rollbacks</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="cap-tail" checked>
+                <span>Tail Production Stream Logs (Stdout)</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="cap-secrets">
+                <span>View Plaintext Production Secrets</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="cap-exec">
+                <span>Remote Pod Shell Terminal (cloudlayer exec)</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="cap-maintenance">
+                <span>Toggle Cluster Maintenance Mode</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="cap-dns" checked>
+                <span>Manage Traffic Ingress Routing</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Access Duration & Guardrails -->
+        <div class="form-section">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="step-tag">4</span>
+                Guardrails & Ephemeral Validity
+              </div>
+              <div class="section-desc">Time-box production grants to minimize surface area and enforce regulatory zero-trust rules.</div>
+            </div>
+          </div>
+
+          <div class="guardrails-grid">
+            <div class="form-group">
+              <label class="form-label">
+                <span>Access Lifespan</span>
+                <span class="form-label-help">Auto-revoked when timer expires</span>
+              </label>
+              <div class="duration-options">
+                <div class="duration-btn" data-dur="4h">4 Hours</div>
+                <div class="duration-btn" data-dur="24h">24 Hours</div>
+                <div class="duration-btn active" data-dur="7d">7 Days</div>
+                <div class="duration-btn" data-dur="perm">Permanent</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="ticketRef">
+                <span>Change Reference / Incident Ticket</span>
+                <span class="form-label-help">Required for Production IAM</span>
+              </label>
+              <input type="text" id="ticketRef" class="input-text" value="CHG-8924: Q3-Payment-Gateway-Revamp" placeholder="e.g. INC-4021 or JIRA-771">
+            </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <div class="switch-row">
+              <div class="switch-info">
+                <span class="switch-title">Enforce Hardware Security Key (FIDO2 / WebAuthn)</span>
+                <span class="switch-sub">Requires physical YubiKey or TouchID tap for every production push</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleHardware" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="switch-row">
+              <div class="switch-info">
+                <span class="switch-title">Dual-Operator Peer Verification</span>
+                <span class="switch-sub">Deploys to production require simultaneous Slack approval from another SRE</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleDualAuth" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Action Bar -->
+        <div class="form-actions">
+          <div class="audit-guarantee">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+            </svg>
+            Audit event CLOUD-IAM-PROD will be dispatched to Splunk & CloudTrail.
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn-secondary" id="btnDraft">Save Staging Draft</button>
+            <button class="btn-primary" id="btnSubmitInvite">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span>Dispatch Production Invitation</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Live Context / Blast Radius Preview & Compliance -->
+      <aside class="sidebar">
+
+        <!-- Live Impact Preview Card -->
+        <div class="sidebar-card">
+          <div class="side-card-title">
+            <span>Production Clearance Preview</span>
+            <span class="risk-badge" id="riskBadge">Level 2: High</span>
+          </div>
+
+          <div class="preview-recipient">
+            <div class="preview-avatar" id="prevAvatar">ER</div>
+            <div>
+              <div class="preview-info-name" id="prevName">Elena Rostova</div>
+              <div class="preview-info-email" id="prevEmail">elena.rostova@acmepay.io</div>
+            </div>
+          </div>
+
+          <div class="spec-list">
+            <div class="spec-item">
+              <span class="spec-label">Assigned Role:</span>
+              <span class="spec-value" id="prevRole">Deployment Engineer</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Environment:</span>
+              <span class="spec-value">
+                <span class="env-pill-prod" style="font-size: 0.68rem; padding: 1px 6px;">PROD (Live)</span>
+              </span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Microservices Scope:</span>
+              <span class="spec-value" id="prevScopeCount">3 services</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Session Duration:</span>
+              <span class="spec-value" id="prevDuration">7 Days (Auto-expire)</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Peer Sign-Off:</span>
+              <span class="spec-value" id="prevDualSign">Enforced</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Ticket ID:</span>
+              <span class="spec-value">
+                <span class="mono-code" id="prevTicket">CHG-8924</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Dynamic Blast Radius Meter -->
+          <div class="blast-meter-wrap">
+            <div class="blast-meter-label">
+              <span>Estimated Blast Radius</span>
+              <span id="blastPercent" style="font-weight: 600; color: #f59e0b;">58% of cluster</span>
+            </div>
+            <div class="blast-meter-bar">
+              <div class="blast-meter-fill" id="blastFill" style="width: 58%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security & Compliance Checklist -->
+        <div class="sidebar-card">
+          <div class="side-card-title">
+            <span>Automated Safeguards</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--success);">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+            </svg>
+          </div>
+
+          <div class="policy-item">
+            <div class="policy-check">✓</div>
+            <div>
+              <div class="policy-name">Okta Corporate SSO Verified</div>
+              <div class="policy-sub">Identity matched against active HR roster</div>
+            </div>
+          </div>
+
+          <div class="policy-item">
+            <div class="policy-check">✓</div>
+            <div>
+              <div class="policy-name">Hardware Security Key Enforced</div>
+              <div class="policy-sub">FIDO2 WebAuthn token verified at each deployment</div>
+            </div>
+          </div>
+
+          <div class="policy-item">
+            <div class="policy-check">✓</div>
+            <div>
+              <div class="policy-name">Automated Rollback Safeguard</div>
+              <div class="policy-sub">Canary will halt if error budget drops &gt;0.05%</div>
+            </div>
+          </div>
+
+          <div class="policy-item">
+            <div class="policy-check">✓</div>
+            <div>
+              <div class="policy-name">Ephemeral Credential Vault</div>
+              <div class="policy-sub">Tokens rotate every 60 minutes via HashiCorp Vault</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Currently Pending / Recent Production Grants -->
+        <div class="sidebar-card">
+          <div class="side-card-title">
+            <span>Pending Production Invites</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">2 PENDING</span>
+          </div>
+
+          <div class="active-invites-list" id="activeInvitesContainer">
+            <div class="invite-mini-card" id="invite-card-1">
+              <div class="mini-user">
+                <div class="mini-avatar">SW</div>
+                <div>
+                  <div style="font-weight: 600; color: #f1f5f9;">Samira Wu</div>
+                  <div style="color: var(--text-muted); font-size: 0.72rem;">SRE Operator • 18h left</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="mini-status">Awaiting 2FA</span>
+                <button class="mini-action-revoke" onclick="revokeInvite('invite-card-1', 'Samira Wu')">Revoke</button>
+              </div>
+            </div>
+
+            <div class="invite-mini-card" id="invite-card-2">
+              <div class="mini-user">
+                <div class="mini-avatar">TK</div>
+                <div>
+                  <div style="font-weight: 600; color: #f1f5f9;">Tom Kincaid</div>
+                  <div style="color: var(--text-muted); font-size: 0.72rem;">Deployer • 6d left</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="mini-status">Pending Dual Sign</span>
+                <button class="mini-action-revoke" onclick="revokeInvite('invite-card-2', 'Tom Kincaid')">Revoke</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- Success Confirmation Modal -->
+  <div class="modal-overlay" id="inviteSuccessModal">
+    <div class="modal-box">
+      <button class="modal-close-btn" id="modalCloseBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="modal-icon-success">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+
+      <h3 class="modal-title">Production Invitation Dispatched!</h3>
+      <p class="modal-desc" id="modalDescription">
+        An encrypted invitation and dual-authorization prompt have been transmitted to <strong id="modalDevTarget" style="color: #fff;">elena.rostova@acmepay.io</strong>. Access will activate as soon as the security hardware key challenge is completed.
+      </p>
+
+      <div style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px;">
+        Signed Ephemeral Claim Link (Expires in 30 minutes)
+      </div>
+      <div class="magic-link-box">
+        <span class="magic-link-text" id="magicLinkText">https://cloudlayer.io/claim/prod-auth?token=eyJhbGciOiJFUzI1NiIsImtpZCI6InByb2QtY2hpbGQifQ...</span>
+        <button class="copy-btn" id="copyLinkBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+          </svg>
+          <span id="copyBtnLabel">Copy</span>
+        </button>
+      </div>
+
+      <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 20px; font-size: 0.8rem; color: #cbd5e1; display: flex; align-items: center; gap: 10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>Slack bot <strong>#sec-ops-prod</strong> notified Dave Miller and team leads for secondary sign-off.</span>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button class="btn-primary" id="modalDismissBtn" style="width: 100%; justify-content: center;">
+          Done & Return to IAM Console
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Element -->
+  <div class="toast" id="appToast">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" id="toastIcon">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+    <span id="toastMsg">Action completed successfully</span>
+  </div>
+
+  <script>
+    // State management
+    const state = {
+      email: 'elena.rostova@acmepay.io',
+      name: 'Elena Rostova (@elena-acme)',
+      role: 'deployer',
+      targets: ['payments-engine', 'auth-vault', 'ledger-worker'],
+      duration: '7d',
+      ticket: 'CHG-8924: Q3-Payment-Gateway-Revamp',
+      dualAuth: true,
+      hardwareKey: true
+    };
+
+    // Role preset capability maps
+    const roleCaps = {
+      deployer: {
+        title: 'Deployment Engineer',
+        risk: 'Level 2: High',
+        riskBadgeClass: 'badge-tier-med',
+        blast: 58,
+        caps: {
+          'cap-deploy': true,
+          'cap-canary': true,
+          'cap-rollback': true,
+          'cap-tail': true,
+          'cap-secrets': false,
+          'cap-exec': false,
+          'cap-maintenance': false,
+          'cap-dns': true
+        }
+      },
+      operator: {
+        title: 'Production Operator',
+        risk: 'Level 3: Critical',
+        riskBadgeClass: 'badge-tier-high',
+        blast: 92,
+        caps: {
+          'cap-deploy': true,
+          'cap-canary': true,
+          'cap-rollback': true,
+          'cap-tail': true,
+          'cap-secrets': true,
+          'cap-exec': true,
+          'cap-maintenance': true,
+          'cap-dns': true
+        }
+      },
+      responder: {
+        title: 'Incident Responder',
+        risk: 'Level 3: Critical',
+        riskBadgeClass: 'badge-tier-high',
+        blast: 76,
+        caps: {
+          'cap-deploy': true,
+          'cap-canary': true,
+          'cap-rollback': true,
+          'cap-tail': true,
+          'cap-secrets': false,
+          'cap-exec': true,
+          'cap-maintenance': true,
+          'cap-dns': false
+        }
+      },
+      auditor: {
+        title: 'Production Observer',
+        risk: 'Level 1: Minimal',
+        riskBadgeClass: 'badge-tier-low',
+        blast: 12,
+        caps: {
+          'cap-deploy': false,
+          'cap-canary': false,
+          'cap-rollback': false,
+          'cap-tail': true,
+          'cap-secrets': false,
+          'cap-exec': false,
+          'cap-maintenance': false,
+          'cap-dns': false
+        }
+      }
+    };
+
+    // Elements
+    const emailInput = document.getElementById('devEmail');
+    const nameInput = document.getElementById('devFullName');
+    const ticketInput = document.getElementById('ticketRef');
+    const roleCards = document.querySelectorAll('.role-card');
+    const targetPills = document.querySelectorAll('.target-pill');
+    const durationBtns = document.querySelectorAll('.duration-btn');
+    const toggleDualAuth = document.getElementById('toggleDualAuth');
+    const toggleHardware = document.getElementById('toggleHardware');
+    const accordionToggle = document.getElementById('accordionToggle');
+    const accordionBody = document.getElementById('accordionBody');
+    const accordionArrow = document.getElementById('accordionArrow');
+    const capsCount = document.getElementById('capsCount');
+
+    // Preview DOM Elements
+    const prevAvatar = document.getElementById('prevAvatar');
+    const prevName = document.getElementById('prevName');
+    const prevEmail = document.getElementById('prevEmail');
+    const prevRole = document.getElementById('prevRole');
+    const prevScopeCount = document.getElementById('prevScopeCount');
+    const prevDuration = document.getElementById('prevDuration');
+    const prevDualSign = document.getElementById('prevDualSign');
+    const prevTicket = document.getElementById('prevTicket');
+    const riskBadge = document.getElementById('riskBadge');
+    const blastPercent = document.getElementById('blastPercent');
+    const blastFill = document.getElementById('blastFill');
+
+    // Sync UI from State
+    function updatePreview() {
+      // Name & Email
+      const email = emailInput.value.trim() || 'developer@company.com';
+      const name = nameInput.value.trim() || 'New Engineer';
+      state.email = email;
+      state.name = name;
+
+      prevEmail.textContent = email;
+      prevName.textContent = name;
+      
+      // Initials for avatar
+      const parts = name.replace(/@\S+/g, '').trim().split(' ');
+      let initials = 'DEV';
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+      } else if (parts[0]) {
+        initials = parts[0].slice(0, 2).toUpperCase();
+      }
+      prevAvatar.textContent = initials;
+
+      // Role & Blast Radius
+      const roleMeta = roleCaps[state.role];
+      prevRole.textContent = roleMeta.title;
+      riskBadge.textContent = roleMeta.risk;
+      riskBadge.className = 'risk-badge ' + roleMeta.riskBadgeClass;
+
+      // Calculate blast multiplier by active microservices
+      const activeTargets = document.querySelectorAll('.target-pill.active').length;
+      let calculatedBlast = Math.min(100, Math.round(roleMeta.blast * (0.5 + (activeTargets * 0.12))));
+      if (state.role === 'auditor') calculatedBlast = 10;
+
+      blastPercent.textContent = `${calculatedBlast}% of cluster`;
+      blastFill.style.width = `${calculatedBlast}%`;
+
+      if (calculatedBlast > 75) {
+        blastFill.style.background = 'linear-gradient(90deg, #f59e0b, #ef4444)';
+        blastPercent.style.color = '#ef4444';
+      } else if (calculatedBlast > 30) {
+        blastFill.style.background = 'linear-gradient(90deg, #3b82f6, #f59e0b)';
+        blastPercent.style.color = '#f59e0b';
+      } else {
+        blastFill.style.background = 'linear-gradient(90deg, #10b981, #3b82f6)';
+        blastPercent.style.color = '#10b981';
+      }
+
+      // Scope Count
+      prevScopeCount.textContent = `${activeTargets} microservice${activeTargets === 1 ? '' : 's'}`;
+
+      // Duration
+      const durLabels = {
+        '4h': '4 Hours (Incident mode)',
+        '24h': '24 Hours (On-call shift)',
+        '7d': '7 Days (Sprint cycle)',
+        'perm': 'Permanent (Requires VP Sign-off)'
+      };
+      prevDuration.textContent = durLabels[state.duration] || '7 Days';
+
+      // Dual Sign
+      prevDualSign.textContent = toggleDualAuth.checked ? 'Enforced (Slack SRE)' : 'Optional';
+      prevDualSign.style.color = toggleDualAuth.checked ? '#10b981' : '#f59e0b';
+
+      // Ticket
+      const ticketVal = ticketInput.value.trim().split(':')[0] || 'CHG-PENDING';
+      prevTicket.textContent = ticketVal;
+
+      // Update caps count
+      let activeCount = 0;
+      document.querySelectorAll('#accordionBody input[type="checkbox"]').forEach(cb => {
+        if (cb.checked) activeCount++;
+      });
+      capsCount.textContent = activeCount;
+    }
+
+    // Role selection click handler
+    roleCards.forEach(card => {
+      card.addEventListener('click', () => {
+        roleCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        const role = card.getAttribute('data-role');
+        state.role = role;
+
+        // Apply checkbox presets
+        const caps = roleCaps[role].caps;
+        for (const [id, val] of Object.entries(caps)) {
+          const el = document.getElementById(id);
+          if (el) el.checked = val;
+        }
+
+        updatePreview();
+        showToast(`Loaded ${roleCaps[role].title} permission preset`);
+      });
+    });
+
+    // Target pill selection toggle
+    targetPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        pill.classList.toggle('active');
+        updatePreview();
+      });
+    });
+
+    // Duration buttons toggle
+    durationBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        durationBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.duration = btn.getAttribute('data-dur');
+        updatePreview();
+      });
+    });
+
+    // Input listeners
+    emailInput.addEventListener('input', updatePreview);
+    nameInput.addEventListener('input', updatePreview);
+    ticketInput.addEventListener('input', updatePreview);
+    toggleDualAuth.addEventListener('change', updatePreview);
+    toggleHardware.addEventListener('change', updatePreview);
+
+    document.querySelectorAll('#accordionBody input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', updatePreview);
+    });
+
+    // Capabilities Accordion Toggle
+    let accordionOpen = false;
+    accordionToggle.addEventListener('click', () => {
+      accordionOpen = !accordionOpen;
+      accordionBody.style.display = accordionOpen ? 'grid' : 'none';
+      accordionArrow.textContent = accordionOpen ? '▲' : '▼';
+    });
+    // Default open
+    accordionBody.style.display = 'grid';
+
+    // Fast-pick selection helper
+    window.selectMember = function(email, name, roleDesc) {
+      emailInput.value = email;
+      nameInput.value = `${name} (@${email.split('@')[0]})`;
+      updatePreview();
+      showToast(`Selected team member: ${name}`);
+    };
+
+    // Toast notification trigger
+    let toastTimeout;
+    function showToast(message, isWarning = false) {
+      const toast = document.getElementById('appToast');
+      const msg = document.getElementById('toastMsg');
+      msg.textContent = message;
+
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+
+    // Modal logic
+    const modal = document.getElementById('inviteSuccessModal');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalDismissBtn = document.getElementById('modalDismissBtn');
+    const btnSubmitInvite = document.getElementById('btnSubmitInvite');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const copyBtnLabel = document.getElementById('copyBtnLabel');
+    const modalDevTarget = document.getElementById('modalDevTarget');
+
+    btnSubmitInvite.addEventListener('click', () => {
+      const email = emailInput.value.trim();
+      if (!email || !email.includes('@')) {
+        showToast('Please specify a valid corporate email address.', true);
+        emailInput.focus();
+        return;
+      }
+
+      // Simulate sending with loading visual state
+      btnSubmitInvite.disabled = true;
+      btnSubmitInvite.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/>
+        </svg>
+        <span>Authorizing with Cloud KMS...</span>
+      `;
+
+      setTimeout(() => {
+        btnSubmitInvite.disabled = false;
+        btnSubmitInvite.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          <span>Dispatch Production Invitation</span>
+        `;
+
+        modalDevTarget.textContent = `${state.name} (${state.email})`;
+        modal.classList.add('active');
+
+        // Add to the pending list dynamically
+        addNewPendingInvite(state.name, state.role, state.duration);
+      }, 700);
+    });
+
+    modalCloseBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    modalDismissBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+      showToast('Invitation dispatched & logged in production audit trail');
+    });
+
+    // Copy Claim Link
+    copyLinkBtn.addEventListener('click', () => {
+      const text = document.getElementById('magicLinkText').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtnLabel.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtnLabel.textContent = 'Copy';
+        }, 2000);
+        showToast('Ephemeral production link copied to clipboard');
+      }).catch(() => {
+        showToast('Link copied to clipboard');
+      });
+    });
+
+    // Save Draft
+    document.getElementById('btnDraft').addEventListener('click', () => {
+      showToast('Configuration saved to IAM Staging Drafts');
+    });
+
+    // Active grants button scroll/feedback
+    document.getElementById('btnViewInvites').addEventListener('click', () => {
+      const list = document.querySelector('.active-invites-list');
+      list.scrollIntoView({ behavior: 'smooth' });
+      list.style.outline = '2px solid var(--brand-primary)';
+      setTimeout(() => {
+        list.style.outline = 'none';
+      }, 1500);
+    });
+
+    // Revoke helper
+    window.revokeInvite = function(cardId, name) {
+      const card = document.getElementById(cardId);
+      if (card) {
+        card.style.opacity = '0.4';
+        card.style.pointerEvents = 'none';
+        setTimeout(() => {
+          card.remove();
+          showToast(`Revoked production access for ${name}`);
+        }, 300);
+      }
+    };
+
+    function addNewPendingInvite(name, roleKey, duration) {
+      const container = document.getElementById('activeInvitesContainer');
+      const initials = name.slice(0, 2).toUpperCase();
+      const cardId = 'invite-' + Date.now();
+      const roleName = roleCaps[roleKey].title.split(' ')[0];
+
+      const div = document.createElement('div');
+      div.className = 'invite-mini-card';
+      div.id = cardId;
+      div.innerHTML = `
+        <div class="mini-user">
+          <div class="mini-avatar" style="background: #4f46e5;">${initials}</div>
+          <div>
+            <div style="font-weight: 600; color: #f1f5f9;">${name.split(' ')[0]}</div>
+            <div style="color: var(--text-muted); font-size: 0.72rem;">${roleName} • Just now</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="mini-status" style="color: #60a5fa; background: rgba(59, 130, 246, 0.1);">Sent</span>
+          <button class="mini-action-revoke" onclick="revokeInvite('${cardId}', '${name}')">Revoke</button>
+        </div>
+      `;
+      container.prepend(div);
+    }
+
+    // Initialize display
+    updatePreview();
+  </script>
+
+  <style>
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+
+</body>
+</html>

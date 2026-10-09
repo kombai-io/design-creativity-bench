@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lending Insight Scheduler | Collision Matrix</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-base: #0f172a;
+            --bg-surface-1: #1e293b;
+            --bg-surface-2: #334155;
+            --bg-error: #450a0a;
+            --bg-error-tint: #7f1d1d;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-error: #fecaca;
+            --accent-violet: #8b5cf6;
+            --accent-violet-dark: #6d28d9;
+            --status-green: #22c55e;
+            --status-amber: #f59e0b;
+            --status-red: #ef4444;
+            --border-dim: #334155;
+            --border-highlight: #475569;
+            --border-error: #991b1b;
+            
+            /* Typography */
+            --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --size-xs: 0.7rem;
+            --size-sm: 0.8rem;
+            --size-md: 0.95rem;
+            --size-lg: 1.1rem;
+            --size-xl: 1.5rem;
+            --size-huge: 3.5rem;
+            --weight-normal: 400;
+            --weight-bold: 700;
+            --weight-black: 900;
+
+            /* Spacing */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-12: 3rem;
+
+            /* Radii & Shadows */
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --shadow-glow: 0 0 15px rgba(139, 92, 246, 0.3);
+            --shadow-error: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-stack);
+            font-size: var(--size-md);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header & Summary --- */
+        .top-bar {
+            background-color: var(--bg-surface-1);
+            padding: var(--space-4) var(--space-6);
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .exec-conclusion {
+            display: flex;
+            align-items: center;
+            gap: var(--space-8);
+        }
+
+        .conclusion-text {
+            max-width: 400px;
+        }
+
+        .conclusion-text h2 {
+            font-size: var(--size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-1);
+        }
+
+        .conclusion-text p {
+            font-size: var(--size-md);
+            font-weight: var(--weight-bold);
+            color: var(--accent-violet);
+        }
+
+        .hero-metric {
+            text-align: right;
+        }
+
+        .hero-metric .label {
+            font-size: var(--size-xs);
+            color: var(--text-secondary);
+            display: block;
+        }
+
+        .hero-metric .value {
+            font-size: var(--size-huge);
+            font-weight: var(--weight-black);
+            line-height: 1;
+            color: var(--text-primary);
+            text-shadow: var(--shadow-glow);
+        }
+
+        /* --- Live Status Indicator --- */
+        .live-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--size-xs);
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--status-green);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.pulse {
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* --- Error Overlay --- */
+        .error-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 100;
+            background-color: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-12);
+        }
+
+        .error-card {
+            background-color: var(--bg-error);
+            border: 1px solid var(--border-error);
+            border-radius: var(--radius-md);
+            max-width: 600px;
+            padding: var(--space-8);
+            box-shadow: var(--shadow-error);
+            role: alert;
+        }
+
+        .error-card h3 {
+            font-size: var(--size-xl);
+            margin-bottom: var(--space-4);
+            color: var(--text-error);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .error-card p {
+            margin-bottom: var(--space-6);
+            line-height: 1.6;
+            color: var(--text-error);
+        }
+
+        .error-actions {
+            display: flex;
+            gap: var(--space-4);
+        }
+
+        .btn {
+            padding: var(--space-3) var(--space-6);
+            border-radius: var(--radius-sm);
+            font-weight: var(--weight-bold);
+            cursor: pointer;
+            border: none;
+            font-size: var(--size-sm);
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--text-error);
+            color: var(--bg-error);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--text-primary);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--text-error);
+            color: var(--text-error);
+        }
+
+        /* --- Grid Container --- */
+        .grid-container {
+            flex-grow: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: var(--size-sm);
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--bg-surface-2);
+        }
+
+        th {
+            text-align: left;
+            padding: var(--space-3) var(--space-4);
+            border-bottom: 2px solid var(--border-highlight);
+            color: var(--text-secondary);
+            font-weight: var(--weight-bold);
+            text-transform: uppercase;
+            font-size: var(--size-xs);
+        }
+
+        td {
+            padding: var(--space-2) var(--space-4);
+            border-bottom: 1px solid var(--border-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        tr:hover {
+            background-color: var(--bg-surface-1);
+        }
+
+        /* --- Specific Column Widths --- */
+        .col-id { width: 80px; }
+        .col-stream { width: 220px; }
+        .col-owner { width: 150px; }
+        .col-type { width: 140px; }
+        .col-date { width: 110px; }
+        .col-collision { width: 180px; }
+        .col-status { width: 120px; }
+        .col-exposure { width: 120px; text-align: right; }
+
+        /* --- Component Helpers --- */
+        .risk-badge {
+            display: inline-block;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: var(--size-xs);
+            font-weight: var(--weight-bold);
+        }
+
+        .risk-high { background-color: var(--status-red); color: white; }
+        .risk-med { background-color: var(--status-amber); color: black; }
+        .risk-low { background-color: var(--status-green); color: white; }
+
+        .collision-viz {
+            height: 6px;
+            width: 100%;
+            background-color: var(--bg-surface-2);
+            border-radius: var(--radius-sm);
+            position: relative;
+            margin-top: var(--space-1);
+        }
+
+        .collision-bar {
+            position: absolute;
+            height: 100%;
+            background-color: var(--accent-violet);
+            border-radius: var(--radius-sm);
+        }
+
+        .stale-indicator {
+            color: var(--status-amber);
+            font-size: var(--size-xs);
+            font-style: italic;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="top-bar">
+        <div class="exec-conclusion">
+            <div class="conclusion-text">
+                <h2>Executive Summary</h2>
+                <p>Strategic bottleneck detected in Q4 Commercial Real Estate Portfolio due to concurrent underwriting cycles.</p>
+            </div>
+            <div class="hero-metric">
+                <span class="label">Collision Exposure</span>
+                <span class="value">$4.27B</span>
+            </div>
+        </div>
+
+        <div class="live-status" role="status" aria-live="polite">
+            <span class="status-dot pulse"></span>
+            <span>Live Feed: Connected</span>
+            <span class="stale-indicator" id="sync-timer">Synced 2s ago</span>
+        </div>
+    </header>
+
+    <main class="grid-container" id="main-content">
+        <!-- Error State Overlay -->
+        <div class="error-overlay" id="error-state" role="dialog" aria-labelledby="error-title">
+            <div class="error-card">
+                <h3 id="error-title">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    Collision Sync Moratorium
+                </h3>
+                <p>
+                    <strong>Error Code 503: Metadata Lock Conflict.</strong> 
+                    The underlying data provider <em>Brigandine Alpha</em> has entered a read-only state. 
+                    Real-time collision detection is currently calculated using cached heuristics from the previous session (14:02 UTC). 
+                    The $4.27B exposure value may be understated.
+                </p>
+                <div class="error-actions">
+                    <button class="btn btn-primary" onclick="dismissError()">Bypass Lock & Refresh</button>
+                    <button class="btn btn-outline" onclick="window.location.reload()">System Diagnostic</button>
+                </div>
+            </div>
+        </div>
+
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th class="col-id">ID</th>
+                    <th class="col-stream">Work Stream</th>
+                    <th class="col-owner">Lead Underwriter</th>
+                    <th class="col-type">Asset Class</th>
+                    <th class="col-date">Scheduled</th>
+                    <th class="col-collision">Overlap Intensity</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-exposure">Exposure</th>
+                </tr>
+            </thead>
+            <tbody id="grid-body">
+                <!-- Rows would be generated/populated here -->
+                <tr>
+                    <td>LN-9022</td>
+                    <td>Project Brigandine II</td>
+                    <td>Sarah Glaser</td>
+                    <td>Mezzanine Debt</td>
+                    <td>2023-10-14</td>
+                    <td>
+                        <div class="collision-viz" aria-label="High overlap intensity">
+                            <div class="collision-bar" style="width: 85%; background-color: var(--status-red);"></div>
+                        </div>
+                    </td>
+                    <td><span class="risk-badge risk-high">Critical</span></td>
+                    <td>$1,240.0M</td>
+                </tr>
+                <tr>
+                    <td>LN-9045</td>
+                    <td>Zambia Copper Ops</td>
+                    <td>Marcus Admiral</td>
+                    <td>Project Finance</td>
+                    <td>2023-10-15</td>
+                    <td>
+                        <div class="collision-viz" aria-label="Medium overlap intensity">
+                            <div class="collision-bar" style="width: 45%; background-color: var(--status-amber);"></div>
+                        </div>
+                    </td>
+                    <td><span class="risk-badge risk-med">Warning</span></td>
+                    <td>$640.2M</td>
+                </tr>
+                <tr>
+                    <td>LN-8812</td>
+                    <td>Hecate Logistics</td>
+                    <td>Elena Vane</td>
+                    <td>SME Revolver</td>
+                    <td>2023-10-18</td>
+                    <td>
+                        <div class="collision-viz" aria-label="Low overlap intensity">
+                            <div class="collision-bar" style="width: 15%; background-color: var(--status-green);"></div>
+                        </div>
+                    </td>
+                    <td><span class="risk-badge risk-low">Healthy</span></td>
+                    <td>$112.5M</td>
+                </tr>
+                <!-- Dense content filling -->
+                <tr><td>LN-7721</td><td>Glaser Holdings</td><td>David Webb</td><td>Commercial</td><td>2023-10-20</td><td><div class="collision-viz"><div class="collision-bar" style="width: 70%;"></div></div></td><td><span class="risk-badge risk-high">Conflict</span></td><td>$890.0M</td></tr>
+                <tr><td>LN-7722</td><td>Pashtu Refinance</td><td>Sarah Glaser</td><td>Residential</td><td>2023-10-21</td><td><div class="collision-viz"><div class="collision-bar" style="width: 20%;"></div></div></td><td><span class="risk-badge risk-low">Active</span></td><td>$45.0M</td></tr>
+                <tr><td>LN-7723</td><td>Convolvulus Trust</td><td>Marcus Admiral</td><td>Equity Bridge</td><td>2023-10-22</td><td><div class="collision-viz"><div class="collision-bar" style="width: 55%;"></div></div></td><td><span class="risk-badge risk-med">Watch</span></td><td>$310.5M</td></tr>
+                <tr><td>LN-7724</td><td>Milestone Urban</td><td>Elena Vane</td><td>Construction</td><td>2023-10-23</td><td><div class="collision-viz"><div class="collision-bar" style="width: 90%;"></div></div></td><td><span class="risk-badge risk-high">Critical</span></td><td>$1,120.0M</td></tr>
+                <tr><td>LN-7725</td><td>Juke Energy</td><td>David Webb</td><td>Renewables</td><td>2023-10-24</td><td><div class="collision-viz"><div class="collision-bar" style="width: 10%;"></div></div></td><td><span class="risk-badge risk-low">Active</span></td><td>$14.2M</td></tr>
+                <tr><td>LN-7726</td><td>North Sea Wind</td><td>Sarah Glaser</td><td>Project Finance</td><td>2023-10-25</td><td><div class="collision-viz"><div class="collision-bar" style="width: 35%;"></div></div></td><td><span class="risk-badge risk-med">Watch</span></td><td>$225.0M</td></tr>
+                <tr><td>LN-7727</td><td>Global Logistics</td><td>Elena Vane</td><td>Supply Chain</td><td>2023-10-26</td><td><div class="collision-viz"><div class="collision-bar" style="width: 65%;"></div></div></td><td><span class="risk-badge risk-high">Conflict</span></td><td>$540.0M</td></tr>
+                <tr><td>LN-7728</td><td>Vanguard CRE</td><td>David Webb</td><td>Retail</td><td>2023-10-27</td><td><div class="collision-viz"><div class="collision-bar" style="width: 15%;"></div></div></td><td><span class="risk-badge risk-low">Active</span></td><td>$89.0M</td></tr>
+                <tr><td>LN-7729</td><td>Titan Metals</td><td>Marcus Admiral</td><td>Commodities</td><td>2023-10-28</td><td><div class="collision-viz"><div class="collision-bar" style="width: 45%;"></div></div></td><td><span class="risk-badge risk-med">Watch</span></td><td>$310.0M</td></tr>
+                <tr><td>LN-7730</td><td>Skyline Dev</td><td>Sarah Glaser</td><td>Residential</td><td>2023-10-29</td><td><div class="collision-viz"><div class="collision-bar" style="width: 80%;"></div></div></td><td><span class="risk-badge risk-high">Critical</span></td><td>$950.0M</td></tr>
+                <tr><td>LN-7731</td><td>Apex Partners</td><td>Elena Vane</td><td>LBO</td><td>2023-10-30</td><td><div class="collision-viz"><div class="collision-bar" style="width: 30%;"></div></div></td><td><span class="risk-badge risk-low">Active</span></td><td>$210.0M</td></tr>
+                <tr><td>LN-7732</td><td>Venture South</td><td>David Webb</td><td>Seed Loan</td><td>2023-10-31</td><td><div class="collision-viz"><div class="collision-bar" style="width: 5%;"></div></div></td><td><span class="risk-badge risk-low">Active</span></td><td>$5.5M</td></tr>
+                <tr><td>LN-7733</td><td>Horizon Bio</td><td>Marcus Admiral</td><td>IP Loan</td><td>2023-11-01</td><td><div class="collision-viz"><div class="collision-bar" style="width: 50%;"></div></div></td><td><span class="risk-badge risk-med">Watch</span></td><td>$420.0M</td></tr>
+                <tr><td>LN-7734</td><td>Emerald Estates</td><td>Sarah Glaser</td><td>Hospitality</td><td>2023-11-02</td><td><div class="collision-viz"><div class="collision-bar" style="width: 75%;"></div></div></td><td><span class="risk-badge risk-high">Conflict</span></td><td>$670.0M</td></tr>
+                <tr><td>LN-7735</td><td>River Delta</td><td>Elena Vane</td><td>Agri-Finance</td><td>2023-11-03</td><td><div class="collision-viz"><div class="collision-bar" style="width: 25%;"></div></div></td><td><span class="risk-badge risk-low">Active</span></td><td>$115.0M</td></tr>
+                <tr><td>LN-7736</td><td>Pacific Hub</td><td>David Webb</td><td>Intermodal</td><td>2023-11-04</td><td><div class="collision-viz"><div class="collision-bar" style="width: 40%;"></div></div></td><td><span class="risk-badge risk-med">Watch</span></td><td>$330.0M</td></tr>
+                <tr><td>LN-7737</td><td>Polaris Tech</td><td>Marcus Admiral</td><td>SaaS Debt</td><td>2023-11-05</td><td><div class="collision-viz"><div class="collision-bar" style="width: 95%;"></div></div></td><td><span class="risk-badge risk-high">Critical</span></td><td>$1,400.0M</td></tr>
+                <tr><td>LN-7738</td><td>Summit Peaks</td><td>Sarah Glaser</td><td>Leisure</td><td>2023-11-06</td><td><div class="collision-viz"><div class="collision-bar" style="width: 12%;"></div></div></td><td><span class="risk-badge risk-low">Active</span></td><td>$68.0M</td></tr>
+                <tr><td>LN-7739</td><td>Blue Horizon</td><td>Elena Vane</td><td>Maritime</td><td>2023-11-07</td><td><div class="collision-viz"><div class="collision-bar" style="width: 58%;"></div></div></td><td><span class="risk-badge risk-med">Watch</span></td><td>$495.0M</td></tr>
+                <tr><td>LN-7740</td><td>Oasis Retail</td><td>David Webb</td><td>Commercial</td><td>2023-11-08</td><td><div class="collision-viz"><div class="collision-bar" style="width: 82%;"></div></div></td><td><span class="risk-badge risk-high">Conflict</span></td><td>$710.0M</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <script>
+        function dismissError() {
+            const errorOverlay = document.getElementById('error-state');
+            errorOverlay.style.display = 'none';
+            
+            // Log for simulated activity
+            console.log("Forcing data refresh...");
+            
+            // Update the connection indicator
+            const statusDot = document.querySelector('.status-dot');
+            statusDot.style.backgroundColor = 'var(--status-green)';
+            
+            const syncTimer = document.getElementById('sync-timer');
+            syncTimer.textContent = 'Synced just now';
+            syncTimer.style.color = 'var(--status-green)';
+        }
+
+        // Live updating simulation for "freshness"
+        let seconds = 2;
+        setInterval(() => {
+            seconds++;
+            const timer = document.getElementById('sync-timer');
+            if (timer && seconds < 60) {
+                timer.textContent = `Synced ${seconds}s ago`;
+            } else if (timer) {
+                timer.textContent = `Synced ${Math.floor(seconds/60)}m ago`;
+                timer.style.color = 'var(--status-amber)';
+            }
+        }, 1000);
+
+        // Simple ARIA focus management for the "modal"
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dismissError();
+            }
+        });
+    </script>
+</body>
+</html>

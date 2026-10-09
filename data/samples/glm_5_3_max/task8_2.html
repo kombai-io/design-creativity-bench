@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patchbay Cloud — Test webhooks before they touch production</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-soft: #0f1620;
+    --panel: #121b27;
+    --panel-2: #16212f;
+    --line: #1e2a3a;
+    --text: #e7eef6;
+    --muted: #94a5b8;
+    --dim: #6b7d92;
+    --accent: #4fd1a5;
+    --accent-2: #5aa9ff;
+    --amber: #f2c14e;
+    --red: #f2766b;
+    --mono: "SF Mono", "Cascadia Code", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::selection { background: rgba(79,209,165,.3); }
+
+  a { color: inherit; text-decoration: none; }
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(11,15,20,.82);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.2px; }
+  .logo-mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    display: grid; place-items: center;
+    box-shadow: 0 0 20px rgba(79,209,165,.35);
+  }
+  .logo-mark svg { width: 16px; height: 16px; }
+  .nav-links { display: flex; gap: 28px; font-size: 14.5px; color: var(--muted); }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    font-size: 14px; font-weight: 600;
+    padding: 9px 18px; border-radius: 8px;
+    background: var(--accent); color: #08281e;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(79,209,165,.35); }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* ---------- Hero ---------- */
+  .hero { position: relative; padding: 96px 0 72px; text-align: center; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40% -20% auto;
+    height: 130%;
+    background:
+      radial-gradient(600px 320px at 30% 30%, rgba(79,209,165,.14), transparent 70%),
+      radial-gradient(600px 320px at 70% 40%, rgba(90,169,255,.12), transparent 70%);
+    pointer-events: none;
+  }
+  .hero > * { position: relative; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent);
+    border: 1px solid rgba(79,209,165,.35);
+    background: rgba(79,209,165,.07);
+    padding: 6px 14px; border-radius: 999px;
+    margin-bottom: 26px;
+  }
+  .badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(79,209,165,.5); }
+    50% { opacity: .6; box-shadow: 0 0 0 6px rgba(79,209,165,0); }
+  }
+  h1 {
+    font-size: clamp(34px, 5.4vw, 58px);
+    line-height: 1.1; font-weight: 800; letter-spacing: -1.5px;
+    max-width: 820px; margin: 0 auto 22px;
+  }
+  h1 .grad {
+    background: linear-gradient(90deg, var(--accent) 10%, var(--accent-2) 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .sub {
+    font-size: clamp(16px, 2vw, 19px); color: var(--muted);
+    max-width: 640px; margin: 0 auto 36px;
+  }
+  .sub code {
+    font-family: var(--mono); font-size: .88em; color: var(--accent-2);
+    background: rgba(90,169,255,.1); padding: 2px 6px; border-radius: 5px;
+  }
+
+  /* ---------- Waitlist form ---------- */
+  .waitlist {
+    max-width: 520px; margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px; padding: 8px;
+    display: flex; gap: 8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  }
+  .waitlist input {
+    flex: 1; min-width: 0;
+    background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 15px; font-family: var(--sans);
+    padding: 12px 14px;
+  }
+  .waitlist input::placeholder { color: var(--dim); }
+  .waitlist button {
+    border: none; cursor: pointer;
+    background: var(--accent); color: #08281e;
+    font-weight: 700; font-size: 15px;
+    padding: 12px 24px; border-radius: 9px;
+    font-family: var(--sans);
+    transition: transform .15s ease, box-shadow .15s ease;
+    white-space: nowrap;
+  }
+  .waitlist button:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(79,209,165,.35); }
+  .waitlist button:disabled { opacity: .65; cursor: default; transform: none; box-shadow: none; }
+  .form-msg {
+    margin-top: 14px; font-size: 14px; min-height: 22px;
+    font-family: var(--mono);
+  }
+  .form-msg.ok { color: var(--accent); }
+  .form-msg.err { color: var(--red); }
+  .form-note { font-size: 13px; color: var(--dim); margin-top: 6px; }
+
+  /* ---------- Terminal mock ---------- */
+  .terminal-wrap { position: relative; max-width: 860px; margin: 64px auto 0; }
+  .terminal {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+    text-align: left;
+  }
+  .term-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 16px; background: var(--panel-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .term-bar .t { width: 11px; height: 11px; border-radius: 50%; }
+  .term-bar .r { background: var(--red); } .term-bar .y { background: var(--amber); } .term-bar .g { background: var(--accent); }
+  .term-url {
+    margin-left: 12px; font-family: var(--mono); font-size: 12px;
+    color: var(--muted); background: var(--bg);
+    padding: 4px 12px; border-radius: 6px;
+    border: 1px solid var(--line);
+  }
+  .term-body {
+    padding: 20px 22px; font-family: var(--mono);
+    font-size: 13px; line-height: 1.85; overflow-x: auto;
+  }
+  .c-dim { color: var(--dim); } .c-ok { color: var(--accent); }
+  .c-b { color: var(--accent-2); } .c-y { color: var(--amber); }
+  .c-r { color: var(--red); } .c-w { color: var(--text); }
+  .cursor {
+    display: inline-block; width: 8px; height: 15px;
+    background: var(--accent); vertical-align: -2px;
+    animation: blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- Sections ---------- */
+  section { padding: 88px 0; }
+  .sec-label {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .sec-title {
+    font-size: clamp(26px, 3.4vw, 36px); font-weight: 800;
+    letter-spacing: -.8px; margin-bottom: 14px;
+  }
+  .sec-sub { color: var(--muted); max-width: 600px; font-size: 16.5px; }
+  .sec-head { margin-bottom: 48px; }
+
+  /* ---------- Features grid ---------- */
+  .grid {
+    display: grid; gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px; padding: 26px;
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .card:hover { border-color: rgba(79,209,165,.45); transform: translateY(-3px); }
+  .card .ico {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center; margin-bottom: 16px;
+    background: rgba(79,209,165,.1);
+    border: 1px solid rgba(79,209,165,.25);
+  }
+  .card .ico svg { width: 20px; height: 20px; stroke: var(--accent); }
+  .card h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.2px; }
+  .card p { font-size: 14.5px; color: var(--muted); }
+
+  /* ---------- How it works ---------- */
+  .steps { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); counter-reset: step; }
+  .step {
+    position: relative; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; padding: 26px;
+  }
+  .step::before {
+    counter-increment: step; content: "0" counter(step);
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    color: var(--accent);
+    background: rgba(79,209,165,.08); border: 1px solid rgba(79,209,165,.25);
+    padding: 4px 10px; border-radius: 6px;
+    display: inline-block; margin-bottom: 14px;
+  }
+  .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .step p { font-size: 14.5px; color: var(--muted); }
+
+  /* ---------- Replay / event inspector ---------- */
+  .split {
+    display: grid; grid-template-columns: 1fr 1.15fr;
+    gap: 48px; align-items: center;
+  }
+  @media (max-width: 880px) { .split { grid-template-columns: 1fr; } }
+  .checklist { list-style: none; margin-top: 24px; }
+  .checklist li {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 11px 0; font-size: 15px; color: var(--muted);
+    border-bottom: 1px dashed var(--line);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist .chk {
+    flex: 0 0 20px; width: 20px; height: 20px; margin-top: 2px;
+    border-radius: 6px; display: grid; place-items: center;
+    background: rgba(79,209,165,.12); border: 1px solid rgba(79,209,165,.35);
+  }
+  .checklist .chk svg { width: 11px; height: 11px; stroke: var(--accent); }
+  .checklist b { color: var(--text); font-weight: 600; }
+
+  .inspector {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.4);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .insp-tabs { display: flex; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+  .insp-tabs span {
+    padding: 11px 18px; font-size: 12px; color: var(--dim);
+    border-right: 1px solid var(--line); cursor: default;
+  }
+  .insp-tabs span.active {
+    color: var(--accent);
+    background: var(--panel);
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: -1px;
+  }
+  .insp-body { padding: 18px 20px; overflow-x: auto; }
+  .insp-actions {
+    display: flex; gap: 10px; padding: 12px 18px;
+    border-top: 1px solid var(--line); background: var(--panel-2);
+  }
+  .btn-sm {
+    font-family: var(--mono); font-size: 12px; cursor: pointer;
+    padding: 7px 14px; border-radius: 7px;
+    background: transparent; border: 1px solid var(--line);
+    color: var(--muted); transition: all .15s ease;
+  }
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.primary { background: rgba(79,209,165,.12); border-color: rgba(79,209,165,.4); color: var(--accent); }
+
+  /* ---------- Snippet section ---------- */
+  .snippets { display: flex; flex-direction: column; gap: 16px; }
+  .snippet {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden; font-family: var(--mono);
+  }
+  .snippet-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; background: var(--panel-2);
+    border-bottom: 1px solid var(--line);
+    font-size: 12px; color: var(--muted);
+  }
+  .snippet-bar .tag { color: var(--accent); }
+  .snippet pre {
+    padding: 16px 18px; font-size: 12.5px; line-height: 1.75;
+    overflow-x: auto; color: var(--muted);
+  }
+  .snippet pre b { color: var(--accent-2); font-weight: 400; }
+  .snippet pre i { color: var(--accent); font-style: normal; }
+  .snippet pre em { color: var(--dim); font-style: normal; }
+
+  /* ---------- Collaboration ---------- */
+  .collab {
+    background: var(--bg-soft);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .share-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 40px; }
+  .share-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px; font-size: 14px; color: var(--muted);
+  }
+  .share-card .who {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 700; color: #0b0f14;
+  }
+  .share-card .who .nm { color: var(--text); font-weight: 600; font-size: 14px; }
+  .share-card .who .rl { font-size: 12px; color: var(--dim); display: block; }
+
+  /* ---------- Beta scope / FAQ ---------- */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+  @media (max-width: 880px) { .two-col { grid-template-columns: 1fr; } }
+  .scope-list { list-style: none; }
+  .scope-list li {
+    display: flex; gap: 12px; padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 15px; color: var(--muted);
+  }
+  .scope-list li:last-child { border-bottom: none; }
+  .pill {
+    flex: 0 0 auto; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px; margin-top: 3px;
+    letter-spacing: .5px;
+  }
+  .pill.in { background: rgba(79,209,165,.12); color: var(--accent); border: 1px solid rgba(79,209,165,.35); }
+  .pill.later { background: rgba(90,169,255,.1); color: var(--accent-2); border: 1px solid rgba(90,169,255,.3); }
+
+  details {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 0; margin-bottom: 12px;
+  }
+  details summary {
+    cursor: pointer; list-style: none;
+    padding: 16px 20px; font-weight: 600; font-size: 15px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after {
+    content: "+"; font-family: var(--mono); color: var(--accent);
+    font-size: 18px; transition: transform .2s ease;
+  }
+  details[open] summary::after { transform: rotate(45deg); }
+  details .ans { padding: 0 20px 18px; font-size: 14.5px; color: var(--muted); }
+
+  /* ---------- Final CTA ---------- */
+  .final {
+    text-align: center; padding: 100px 24px;
+    position: relative;
+  }
+  .final::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(500px 260px at 50% 60%, rgba(79,209,165,.1), transparent 70%);
+    pointer-events: none;
+  }
+  .final > * { position: relative; }
+  .final .waitlist { margin-bottom: 10px; }
+  .final .form-msg { margin-top: 0; margin-bottom: 8px; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 36px 0; font-size: 13.5px; color: var(--dim);
+  }
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .foot .links { display: flex; gap: 20px; }
+  .foot .links a:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    section { padding: 64px 0; }
+    .hero { padding: 64px 0 48px; }
+    .waitlist { flex-direction: column; padding: 12px; }
+    .waitlist button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container nav">
+    <a class="logo" href="#top">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#08281e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12h4l3-7 3 14 3-7h3"/>
+        </svg>
+      </span>
+      Patchbay Cloud
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#collab">Teams</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="nav-cta" href="#join">Join the beta</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="container">
+      <span class="badge"><span class="dot"></span>Private beta — now forming the waitlist</span>
+      <h1>Ship webhook integrations with <span class="grad">confidence</span> — before production ever sees them.</h1>
+      <p class="sub">
+        Patchbay Cloud spins up temporary endpoints that receive and inspect webhook events,
+        so your team can test, replay, and break integrations safely — then export the code to handle them.
+      </p>
+
+      <form class="waitlist" id="waitlist-top" novalidate>
+        <input type="email" name="email" placeholder="you@company.com" aria-label="Work email" autocomplete="email" required>
+        <button type="submit">Request access</button>
+      </form>
+      <p class="form-msg" id="msg-top" role="status"></p>
+      <p class="form-note">No credit card. Beta invites go out in batches.</p>
+
+      <!-- Terminal mock -->
+      <div class="terminal-wrap">
+        <div class="terminal">
+          <div class="term-bar">
+            <span class="t r"></span><span class="t y"></span><span class="t g"></span>
+            <span class="term-url">https://e9f2.pbay.dev/hooks/stripe-payments</span>
+          </div>
+          <div class="term-body">
+<div><span class="c-dim">▸</span> <span class="c-ok">200 OK</span> <span class="c-dim">POST /hooks/stripe-payments</span> <span class="c-dim">·</span> <span class="c-b">payment_intent.succeeded</span> <span class="c-dim">·</span> <span class="c-dim">247ms</span></div>
+<div><span class="c-dim">  ✓ signature verified</span> <span class="c-dim">(hmac-sha256, v1)</span></div>
+<div><span class="c-dim">▸</span> <span class="c-y">409 Conflict</span> <span class="c-dim">POST /hooks/stripe-payments</span> <span class="c-dim">·</span> <span class="c-b">charge.dispute.created</span></div>
+<div><span class="c-dim">  ✗ idempotency_key already processed</span></div>
+<div><span class="c-dim">▸</span> <span class="c-ok">replayed</span> <span class="c-dim">evt_1Nq…9f2 → payload.modified</span> <span class="c-dim">·</span> <span class="c-ok">202 Accepted</span></div>
+<div><span class="c-dim">▸</span> <span class="c-dim">snippets generated:</span> <span class="c-b">express</span><span class="c-dim">,</span> <span class="c-b">fastapi</span><span class="c-dim">,</span> <span class="c-b">lambda</span></div>
+<div><span class="c-dim">▸</span> <span class="c-ok">session shared</span> <span class="c-dim">with @support-team (read-only)</span> <span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="container">
+      <div class="sec-head">
+        <div class="sec-label">Capabilities</div>
+        <h2 class="sec-title">Everything you need between “provider sends it” and “production handles it”</h2>
+        <p class="sec-sub">Webhook failures are silent. Patchbay Cloud makes them loud, inspectable, and repeatable.</p>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+          </div>
+          <h3>Temporary endpoints</h3>
+          <p>Spin up disposable URLs in seconds. Point any provider at them, capture every event, then tear them down — no servers, no DNS, no fuss.</p>
+        </div>
+        <div class="card">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.5 9A9 9 0 005.6 5.6L1 10m22 4l-4.6 4.4A9 9 0 013.5 15"/></svg>
+          </div>
+          <h3>Replay &amp; modify</h3>
+          <p>Re-fire any captured event against your handler as many times as you need. Tweak payloads mid-flight to test edge cases your provider never sends.</p>
+        </div>
+        <div class="card">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+          </div>
+          <h3>Failure scenarios</h3>
+          <p>Simulate timeouts, 500s, malformed bodies, invalid signatures, and duplicate deliveries — so your retry logic is tested before it matters.</p>
+        </div>
+        <div class="card">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+          </div>
+          <h3>Generated snippets</h3>
+          <p>Turn any captured event into ready-to-use handling code for your stack — parsing, signature verification, and idempotency included.</p>
+        </div>
+        <div class="card">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <h3>Shared histories</h3>
+          <p>Event logs and debugging sessions are shareable across engineering and support. One link tells the whole story — no screenshots required.</p>
+        </div>
+        <div class="card">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Signature-aware</h3>
+          <p>The beta verifies common webhook signing schemes out of the box, so you can confirm your validation logic matches the provider’s spec.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" style="padding-top:0;">
+    <div class="container">
+      <div class="sec-head">
+        <div class="sec-label">Workflow</div>
+        <h2 class="sec-title">From zero to a verified handler in four steps</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <h3>Create an endpoint</h3>
+          <p>Generate a temporary URL per provider or per feature branch. Name it, tag it, and drop it into the provider’s dashboard.</p>
+        </div>
+        <div class="step">
+          <h3>Capture real events</h3>
+          <p>Trigger webhooks from the provider — test mode, sandbox, or staging — and watch every header, payload, and signature arrive in real time.</p>
+        </div>
+        <div class="step">
+          <h3>Replay &amp; break things</h3>
+          <p>Re-fire events against your local or staging handler. Mutate payloads, inject failures, replay duplicates — on demand, not by accident.</p>
+        </div>
+        <div class="step">
+          <h3>Ship the handler</h3>
+          <p>Export a generated code snippet for your framework, share the session with your team, and promote your integration to production.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Inspector split -->
+  <section style="padding-top:0;">
+    <div class="container split">
+      <div>
+        <div class="sec-label">Event inspector</div>
+        <h2 class="sec-title">See exactly what your provider sent</h2>
+        <p class="sec-sub" style="margin-bottom:0;">Full request bodies, headers, signature headers, and timing — captured verbatim, nothing normalized or summarized away.</p>
+        <ul class="checklist">
+          <li><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><b>Replay on demand</b> — resend any event with its original or an edited payload.</span></li>
+          <li><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><b>Fault injection</b> — force timeouts, 5xx responses, and duplicate deliveries.</span></li>
+          <li><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><b>Diff view</b> — compare two deliveries or an original vs. modified payload.</span></li>
+          <li><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><b>Searchable history</b> — filter by event type, status, and time across sessions.</span></li>
+        </ul>
+      </div>
+
+      <div class="inspector">
+        <div class="insp-tabs">
+          <span class="active">Headers</span><span>Body</span><span>Timing</span><span>Diff</span>
+        </div>
+        <div class="insp-body">
+<div><span class="c-b">"stripe-signature"</span><span class="c-dim">:</span> <span class="c-ok">"t=1718,v1=7f2c…"</span></div>
+<div><span class="c-b">"content-type"</span><span class="c-dim">:</span> <span class="c-ok">"application/json"</span></div>
+<div><span class="c-b">"user-agent"</span><span class="c-dim">:</span> <span class="c-ok">"Stripe/1.0 (+https://…)"</span></div>
+<div>&nbsp;</div>
+<div><span class="c-dim">{</span></div>
+<div>&nbsp;&nbsp;<span class="c-b">"type"</span><span class="c-dim">:</span> <span class="c-y">"payment_intent.succeeded"</span><span class="c-dim">,</span></div>
+<div>&nbsp;&nbsp;<span class="c-b">"data"</span><span class="c-dim">: {</span> <span class="c-b">"object"</span><span class="c-dim">: {</span> <span class="c-b">"amount"</span><span class="c-dim">:</span> <span class="c-y">4900</span><span class="c-dim">,</span> <span class="c-b">"currency"</span><span class="c-dim">:</span> <span class="c-y">"usd"</span> <span class="c-dim">} },</span></div>
+<div>&nbsp;&nbsp;<span class="c-b">"id"</span><span class="c-dim">:</span> <span class="c-y">"evt_1NqLk2PB…"</span></div>
+<div><span class="c-dim">}</span></div>
+        </div>
+        <div class="insp-actions">
+          <button class="btn-sm primary" type="button">↻ Replay</button>
+          <button class="btn-sm" type="button">✎ Modify payload</button>
+          <button class="btn-sm" type="button">⏱ Inject timeout</button>
+          <button class="btn-sm" type="button">⧉ Duplicate</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Snippets -->
+  <section style="padding-top:0;">
+    <div class="container">
+      <div class="sec-head">
+        <div class="sec-label">Code generation</div>
+        <h2 class="sec-title">Captured events become handling code</h2>
+        <p class="sec-sub">Pick a captured event, pick your stack, get a verified snippet — parsing, signature checks, and idempotency included.</p>
+      </div>
+      <div class="snippets">
+        <div class="snippet">
+          <div class="snippet-bar">
+            <span><span class="tag">●</span> express.js — handler for <span class="tag">payment_intent.succeeded</span></span>
+            <span>Node 20</span>
+          </div>
+<pre><em>// generated by Patchbay Cloud from evt_1NqLk2PB…</em>
+<b>const</b> crypto = <b>require</b>(<i>"crypto"</i>);
+<b>export default async function</b> handler(req, res) {
+  <b>const</b> sig = req.headers[<i>"stripe-signature"</i>];
+  <b>if</b> (!verifySignature(req.rawBody, sig)) <i>// hmac-sha256, v1</i>
+    <b>return</b> res.status(<i>400</i>).json({ error: <i>"invalid signature"</i> });
+  <b>const</b> event = JSON.parse(req.rawBody);
+  <b>if</b> (<b>await</b> seen(event.id)) <b>return</b> res.status(<i>202</i>).end(); <em>// idempotent replay</em>
+  <b>await</b> processPayment(event.data.object);
+  res.status(<i>200</i>).end();
+}</pre>
+        </div>
+        <div class="snippet">
+          <div class="snippet-bar">
+            <span><span class="tag">●</span> fastapi — handler for <span class="tag">charge.dispute.created</span></span>
+            <span>Python 3.12</span>
+          </div>
+<pre><em># generated by Patchbay Cloud from evt_1Rt4xWQA…</em>
+<b>async def</b> webhook(request: Request):
+    body = <b>await</b> request.body()
+    <b>if not</b> verify_signature(body, request.headers[<i>"webhook-signature"</i>]):
+        <b>raise</b> HTTPException(<i>400</i>, <i>"invalid signature"</i>)
+    event = json.loads(body)
+    <b>if</b> <b>await</b> already_processed(event[<i>"id"</i>]):
+        <b>return</b> Response(status_code=<i>202</i>)  <em># duplicate delivery</em>
+    <b>await</b> handle_dispute(event[<i>"data"</i>][<i>"object"</i>])
+    <b>return</b> Response(status_code=<i>200</i>)</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Collaboration -->
+  <section id="collab" class="collab">
+    <div class="container">
+      <div class="sec-head">
+        <div class="sec-label">Team debugging</div>
+        <h2 class="sec-title">One shared history — for engineers and support alike</h2>
+        <p class="sec-sub">“What did the provider actually send?” shouldn’t require a ticket, a hop, and a screenshot. Share event histories and live debugging sessions with granular permissions.</p>
+      </div>
+      <div class="share-cards">
+        <div class="share-card">
+          <div class="who">
+            <span class="avatar" style="background:var(--accent)">AK</span>
+            <span><span class="nm">Aya</span><span class="rl">Backend engineer</span></span>
+          </div>
+          Replays a failed <code style="font-family:var(--mono);font-size:12px;color:var(--accent-2)">payment_intent.succeeded</code> event and annotates the signature mismatch.
+        </div>
+        <div class="share-card">
+          <div class="who">
+            <span class="avatar" style="background:var(--accent-2)">JR</span>
+            <span><span class="nm">Jonas</span><span class="rl">Support engineer</span></span>
+          </div>
+          Opens the shared session, sees the exact payload for a customer’s missing delivery — no engineering time needed.
+        </div>
+        <div class="share-card">
+          <div class="who">
+            <span class="avatar" style="background:var(--amber)">ML</span>
+            <span><span class="nm">Mei</span><span class="rl">Integration lead</span></span>
+          </div>
+          Reviews the session diff before sign-off and exports the verified handler snippet for the production rollout.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Beta scope + FAQ -->
+  <section id="faq">
+    <div class="container two-col">
+      <div>
+        <div class="sec-label">Beta scope</div>
+        <h2 class="sec-title">What the private beta includes</h2>
+        <ul class="scope-list">
+          <li><span class="pill in">BETA</span><span><b style="color:var(--text)">HTTP-based webhooks</b> — any provider delivering over HTTP POST.</span></li>
+          <li><span class="pill in">BETA</span><span><b style="color:var(--text)">Common signing methods</b> — HMAC-based signature schemes used by major providers.</span></li>
+          <li><span class="pill in">BETA</span><span><b style="color:var(--text)">Temporary endpoints</b> with full event capture and inspection.</span></li>
+          <li><span class="pill in">BETA</span><span><b style="color:var(--text)">Replay, payload modification, and failure injection.</b></span></li>
+          <li><span class="pill in">BETA</span><span><b style="color:var(--text)">Shared histories &amp; debugging sessions.</b></span></li>
+          <li><span class="pill later">NEXT</span><span>Additional transports and provider-specific tooling, based on beta feedback.</span></li>
+        </ul>
+      </div>
+      <div>
+        <div class="sec-label">FAQ</div>
+        <h2 class="sec-title" style="font-size:28px;">Questions, answered</h2>
+        <details>
+          <summary>Who is the private beta for?</summary>
+          <div class="ans">Software teams actively building or maintaining webhook integrations — payments, communications, CI, SaaS platform events. If your handlers receive events from another system, you’re the target audience.</div>
+        </details>
+        <details>
+          <summary>Does Patchbay Cloud ever touch my production traffic?</summary>
+          <div class="ans">No. Patchbay endpoints are temporary and isolated for testing and debugging. You point providers at them during development, and promote your own verified handler to production when you’re done.</div>
+        </details>
+        <details>
+          <summary>Which signing methods are supported at launch?</summary>
+          <div class="ans">The beta supports common HTTP webhook signing methods — notably HMAC-based schemes with timestamped signatures used by major providers. Coverage will expand based on beta feedback.</div>
+        </details>
+        <details>
+          <summary>Can I test failure scenarios like retries and duplicates?</summary>
+          <div class="ans">Yes. You can replay any captured event, modify payloads before replay, and inject failures such as timeouts, server errors, invalid signatures, and duplicate deliveries — so your retry and idempotency logic gets exercised deliberately.</div>
+        </details>
+        <details>
+          <summary>How do I get in?</summary>
+          <div class="ans">Join the waitlist with your work email below. Invites go out in batches, prioritized by team size and the integrations you’re working on.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <div class="final" id="join">
+    <div class="container">
+      <h2 class="sec-title" style="margin-bottom:10px;">Stop debugging webhooks in production.</h2>
+      <p class="sec-sub" style="margin:0 auto 32px;">Join the Patchbay Cloud private beta and be first in line when the next batch of invites goes out.</p>
+      <form class="waitlist" id="waitlist-bottom" novalidate>
+        <input type="email" name="email" placeholder="you@company.com" aria-label="Work email" autocomplete="email" required>
+        <button type="submit">Join the waitlist</button>
+      </form>
+      <p class="form-msg" id="msg-bottom" role="status"></p>
+      <p class="form-note">Private beta · HTTP webhooks + common signing methods · Invites in batches</p>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="container foot">
+    <span>© 2025 Patchbay Cloud — test webhooks before they touch production.</span>
+    <nav class="links">
+      <a href="#features">Features</a>
+      <a href="#how">Workflow</a>
+      <a href="#faq">FAQ</a>
+      <a href="#join">Beta</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var forms = [
+    { form: document.getElementById("waitlist-top"), msg: document.getElementById("msg-top") },
+    { form: document.getElementById("waitlist-bottom"), msg: document.getElementById("msg-bottom") }
+  ];
+
+  forms.forEach(function (pair) {
+    pair.form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var input = pair.form.querySelector("input[type=email]");
+      var value = input.value.trim();
+      var ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+
+      if (!ok) {
+        pair.msg.textContent = "✗ Please enter a valid work email address.";
+        pair.msg.className = "form-msg err";
+        input.focus();
+        return;
+      }
+
+      var button = pair.form.querySelector("button");
+      button.disabled = true;
+      button.textContent = "Requesting…";
+
+      setTimeout(function () {
+        pair.msg.textContent = "✓ You're on the list — we'll email " + value + " when your beta batch opens.";
+        pair.msg.className = "form-msg ok";
+        pair.form.reset();
+        button.disabled = false;
+        button.textContent = pair.form.id === "waitlist-top" ? "Request access" : "Join the waitlist";
+      }, 700);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

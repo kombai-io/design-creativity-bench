@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneLilt — How it works · One master cut, every market</title>
+<meta name="description" content="SceneLilt turns one master video into localized campaign versions for every market — transcript, dub, on-screen text, review and delivery in one studio.">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --ink:#0b0d10;
+    --ink2:#101216;
+    --panel:#13161c;
+    --panel2:#0e1116;
+    --line:rgba(236,231,220,.14);
+    --line-soft:rgba(236,231,220,.08);
+    --paper:#ece7dc;
+    --muted:#98a0ac;
+    --accent:#f2c744;        /* subtitle yellow */
+    --accent-ink:#15130a;
+    --dub:#6fd6c3;           /* dubbing teal */
+    --rec:#ff5a4e;
+    --ok:#7fce8f;
+    --serif:"Palatino Linotype",Palatino,"Iowan Old Style","Book Antiqua",Georgia,serif;
+    --sans:"Avenir Next",Avenir,"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --rad:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{color-scheme:dark}
+  @media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+  section[id],article[id]{scroll-margin-top:96px}
+  img,svg{display:block}
+  .wrap{max-width:1200px;margin-inline:auto;padding-inline:clamp(20px,4vw,48px)}
+  .skip{position:absolute;left:-999px;top:0;background:var(--accent);color:var(--accent-ink);padding:.6rem 1rem;z-index:200;font-family:var(--mono)}
+  .skip:focus{left:12px;top:12px}
+
+  /* film grain */
+  .grain{position:fixed;inset:-40px;z-index:90;pointer-events:none;opacity:.055;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.6'/></svg>");
+    animation:grain 1.2s steps(3) infinite;
+  }
+  @keyframes grain{0%{transform:translate(0,0)}33%{transform:translate(-14px,8px)}66%{transform:translate(10px,-10px)}100%{transform:translate(0,0)}}
+
+  /* ============ TYPE HELPERS ============ */
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+  .eyebrow .dot{color:var(--rec)}
+  .lede{color:var(--muted);font-size:1.06rem;max-width:34em}
+  .mask{display:block;overflow:hidden}
+  .mask>span{display:block;transform:translateY(0)}
+  .js .mask>span{transform:translateY(115%);transition:transform 1s cubic-bezier(.19,1,.22,1);transition-delay:calc(var(--i,0)*.09s)}
+  .js.go .mask>span{transform:translateY(0)}
+
+  /* reveal on scroll */
+  .js [data-reveal]{opacity:0;transform:translateY(22px);transition:opacity .8s ease,transform .9s cubic-bezier(.19,1,.22,1);transition-delay:var(--d,0s)}
+  .js [data-reveal].in{opacity:1;transform:none}
+
+  /* ============ BUTTONS ============ */
+  .btn{display:inline-flex;align-items:center;gap:.6rem;font-family:var(--mono);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;padding:.85rem 1.35rem;border-radius:6px;transition:transform .18s ease,box-shadow .18s ease,background .18s ease,color .18s ease}
+  .btn-solid{background:var(--accent);color:var(--accent-ink);font-weight:700}
+  .btn-solid:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(242,199,68,.28)}
+  .btn-solid:active{transform:translateY(0)}
+  .btn-ghost{border:1px solid var(--line);color:var(--paper)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+
+  /* ============ HEADER ============ */
+  .site-head{position:sticky;top:0;z-index:100;background:rgba(11,13,16,.94);border-bottom:1px solid var(--line-soft)}
+  .head-in{display:flex;align-items:center;gap:2rem;height:64px}
+  .brand{display:flex;align-items:center;gap:.6rem;font-family:var(--serif);font-weight:700;font-size:1.22rem;letter-spacing:.01em}
+  .brand small{font-family:var(--mono);font-size:.58rem;letter-spacing:.3em;color:var(--muted);display:block;line-height:1;margin-top:2px}
+  .nav{display:flex;gap:1.8rem;margin-left:auto}
+  .nav a{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);position:relative;padding:.4rem 0}
+  .nav a::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s ease}
+  .nav a:hover{color:var(--paper)}
+  .nav a:hover::after{transform:scaleX(1)}
+  .nav a[aria-current="true"]{color:var(--accent)}
+  .nav a[aria-current="true"]::after{transform:scaleX(1)}
+  .head-cta{display:flex;gap:.8rem;align-items:center}
+  .head-cta .signin{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .head-cta .signin:hover{color:var(--paper)}
+  @media(max-width:900px){.nav{display:none}.head-cta .signin{display:none}}
+
+  /* ============ OPENER ============ */
+  .opener{display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(32px,5vw,64px);align-items:center;padding-block:clamp(48px,7vw,88px) clamp(40px,5vw,64px)}
+  .slate{display:inline-block;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--ink2);margin-bottom:1.6rem;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  .slate-top{height:14px;background:repeating-linear-gradient(135deg,var(--accent) 0 12px,#14161a 12px 24px)}
+  .slate-body{display:flex;gap:1.4rem;padding:.55rem 1rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:var(--muted)}
+  .slate-body b{color:var(--paper);font-weight:600}
+  h1{font-family:var(--serif);font-weight:700;font-size:clamp(2.5rem,5.6vw,4.3rem);line-height:1.04;letter-spacing:-.015em}
+  h1 em{font-style:italic;color:var(--accent);font-weight:600}
+  .opener .lede{margin-top:1.4rem}
+  .opener-cta{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2rem}
+  /* subtitle strip */
+  .substrip{margin-top:2.2rem;display:flex;align-items:center;gap:1rem;background:#000;border:1px solid var(--line-soft);border-radius:8px;padding:.85rem 1.1rem;max-width:520px}
+  .scode{font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;color:var(--accent);border:1px solid rgba(242,199,68,.5);padding:.25rem .5rem;border-radius:4px;flex:0 0 auto;transition:transform .25s ease}
+  .scode.pop{transform:scale(1.12)}
+  .substrip p{font-family:var(--serif);font-style:italic;font-size:1.06rem;color:#f4f1e8;min-height:1.6em}
+  .substrip p::before{content:"“ "}.substrip p::after{content:" ”"}
+  .caret{display:inline-block;width:2px;height:1em;background:var(--accent);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .trust{margin-top:2.4rem;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.6rem}
+  .trust span:first-child{font-family:var(--mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .trust b{font-family:var(--serif);font-style:italic;font-weight:600;font-size:1rem;color:rgba(236,231,220,.55)}
+
+  /* player mock */
+  .player{position:relative}
+  .frame{position:relative;border:1px solid var(--line);border-radius:var(--rad);overflow:hidden;background:var(--ink2);box-shadow:0 30px 80px rgba(0,0,0,.55);aspect-ratio:16/10}
+  .scene{position:absolute;inset:0;background:linear-gradient(180deg,#141d33 0%,#31305a 30%,#7c4150 52%,#c76a3d 68%,#e8a13c 78%,#101216 78.4%)}
+  .scene::before{content:"";position:absolute;left:58%;bottom:22%;width:88px;height:88px;border-radius:50%;background:radial-gradient(circle,#ffdf9e 0%,#f5b642 55%,rgba(245,182,66,0) 72%);filter:blur(1px)}
+  .scene::after{content:"";position:absolute;inset:auto 0 21% 0;height:34%;background:#0c0e12;clip-path:polygon(0 78%,12% 42%,22% 66%,34% 24%,47% 70%,58% 38%,70% 74%,82% 30%,93% 62%,100% 48%,100% 100%,0 100%)}
+  .lb{position:absolute;left:0;right:0;height:10.5%;background:#000;z-index:3}
+  .lb.t{top:0}.lb.b{bottom:0}
+  .hud{position:absolute;z-index:4;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;color:#e9e4d6;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+  .hud.rec{top:calc(10.5% + 12px);left:16px;display:flex;gap:.5rem;align-items:center}
+  .hud.rec i{width:8px;height:8px;border-radius:50%;background:var(--rec);animation:blink 1.6s steps(2) infinite}
+  .hud.tc{top:calc(10.5% + 12px);right:16px;color:var(--accent)}
+  .hud.cam{bottom:calc(10.5% + 46px);left:16px;color:rgba(233,228,214,.6)}
+  .psub{position:absolute;z-index:4;left:50%;bottom:calc(10.5% + 10px);transform:translateX(-50%);background:rgba(0,0,0,.75);padding:.3rem .7rem;border-radius:4px;font-family:var(--serif);font-style:italic;font-size:.95rem;white-space:nowrap;max-width:86%;overflow:hidden;text-overflow:ellipsis}
+  .wave{position:absolute;z-index:4;right:16px;bottom:calc(10.5% + 14px);display:flex;align-items:flex-end;gap:2px;height:26px}
+  .wave i{width:3px;border-radius:2px;background:var(--dub);opacity:.9;height:calc(var(--h)*1%);animation:eq 1.25s var(--dl) ease-in-out infinite alternate}
+  @keyframes eq{to{height:calc((96 - var(--h))*1%)}}
+  .langs{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+  .langs li{list-style:none;font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;border:1px solid var(--line);border-radius:999px;padding:.32rem .7rem;color:var(--muted);display:flex;gap:.45rem;align-items:center}
+  .langs .ok{color:var(--ok)}
+  .langs .run{color:var(--dub)}
+  .langs .run i{width:7px;height:7px;border-radius:50%;background:var(--dub);animation:blink 1.1s steps(2) infinite}
+
+  /* ============ TICKER ============ */
+  .ticker{border-block:1px solid var(--line-soft);background:var(--ink2);overflow:hidden}
+  .ticker-in{display:flex;width:max-content;animation:tick 48s linear infinite}
+  .ticker:hover .ticker-in{animation-play-state:paused}
+  .tset{display:flex;align-items:center;gap:2.6rem;padding:.7rem 1.3rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;color:var(--muted);white-space:nowrap}
+  .tset b{color:var(--paper);font-weight:600}
+  .tset .sep{color:var(--accent)}
+  @keyframes tick{to{transform:translateX(-50%)}}
+
+  /* film strip divider */
+  .filmstrip{height:30px;background-color:#14171d;background-image:radial-gradient(circle,var(--ink) 4px,transparent 4.6px);background-size:26px 30px;background-position:center;border-block:1px solid var(--line-soft)}
+
+  /* ============ WORKFLOW ============ */
+  .flowsec{padding-block:clamp(64px,8vw,110px)}
+  .flow{display:grid;grid-template-columns:340px 1fr;gap:clamp(40px,5vw,72px);align-items:start}
+  .rail{position:sticky;top:96px}
+  .rail h2{font-family:var(--serif);font-size:clamp(1.7rem,2.6vw,2.3rem);line-height:1.12;margin:.9rem 0 .8rem}
+  .rail h2 em{color:var(--accent);font-style:italic}
+  .rail p{color:var(--muted);font-size:.94rem}
+  .rail-tc{margin-top:1.6rem;font-family:var(--mono);color:var(--accent);font-size:1.5rem;letter-spacing:.12em;border:1px solid rgba(242,199,68,.35);display:inline-block;padding:.45rem .8rem;border-radius:8px;background:rgba(242,199,68,.05)}
+  .railnav{position:relative;margin-top:1.8rem;padding-left:26px}
+  .track{position:absolute;left:8px;top:10px;bottom:10px;width:2px;background:var(--line-soft);border-radius:2px}
+  .track i{position:absolute;top:0;left:0;width:100%;height:0%;background:var(--accent);transition:height .5s cubic-bezier(.19,1,.22,1)}
+  .railnav ol{list-style:none;display:grid;gap:.35rem}
+  .railnav a{display:flex;gap:.8rem;align-items:baseline;padding:.45rem .5rem;border-radius:6px;color:var(--muted);font-size:.92rem;transition:color .25s ease,transform .25s ease,background .25s ease}
+  .railnav a b{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;color:rgba(236,231,220,.4)}
+  .railnav a:hover{color:var(--paper);background:rgba(236,231,220,.04)}
+  .railnav a[aria-current="true"]{color:var(--accent);transform:translateX(6px)}
+  .railnav a[aria-current="true"] b{color:var(--accent)}
+  .rail-note{margin-top:1.6rem;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--muted);border-left:2px solid var(--accent);padding-left:.8rem;line-height:1.8}
+
+  .takes{display:grid;gap:clamp(40px,4vw,56px)}
+  .step{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--rad);padding:clamp(1.4rem,3vw,2.2rem);overflow:hidden}
+  .step::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(var(--accent),rgba(242,199,68,.15))}
+  .ghost-num{position:absolute;top:-18px;right:6px;font-family:var(--serif);font-weight:700;font-size:7rem;line-height:1;color:rgba(242,199,68,.06);pointer-events:none;user-select:none}
+  .step-tag{display:flex;flex-wrap:wrap;gap:.9rem;align-items:center;font-family:var(--mono);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem}
+  .step-tag .n{background:var(--accent);color:var(--accent-ink);padding:.28rem .55rem;border-radius:4px;font-weight:700}
+  .step-tag .role{color:var(--muted)}
+  .step-tag .tc{margin-left:auto;color:var(--dub)}
+  .step h3{font-family:var(--serif);font-size:clamp(1.45rem,2.4vw,1.9rem);line-height:1.15;margin-bottom:.7rem}
+  .step h3 em{color:var(--accent);font-style:italic}
+  .step>p{color:var(--muted);max-width:44em}
+  .details{display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;margin-top:1.3rem;padding-top:1.1rem;border-top:1px dashed var(--line)}
+  .details li{list-style:none;font-size:.82rem;color:var(--muted)}
+  .details li::before{content:"+";color:var(--accent);font-family:var(--mono);margin-right:.45rem}
+  .mock{margin-top:1.5rem;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:clamp(1rem,2vw,1.4rem)}
+  .mock-h{display:flex;justify-content:space-between;align-items:center;gap:1rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+  .mock-h .live{color:var(--dub)}
+
+  /* step 1 mock */
+  .drop{border:1px dashed rgba(242,199,68,.45);border-radius:8px;padding:1rem 1.2rem;display:flex;flex-wrap:wrap;align-items:center;gap:.9rem;background:rgba(242,199,68,.04)}
+  .drop .fname{font-family:var(--mono);font-size:.8rem}
+  .drop .fmeta{font-family:var(--mono);font-size:.66rem;color:var(--muted);letter-spacing:.1em}
+  .pbar{flex:1 1 140px;height:4px;background:var(--line-soft);border-radius:4px;overflow:hidden}
+  .pbar i{display:block;height:100%;width:0;background:var(--accent);transition:width 1.4s cubic-bezier(.19,1,.22,1)}
+  .in .pbar i{width:100%}
+  .mkt-label{margin:1.3rem 0 .7rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .mkts{display:flex;flex-wrap:wrap;gap:.55rem}
+  .chip{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;border:1px solid var(--line);border-radius:999px;padding:.45rem .85rem;color:var(--muted);transition:all .2s ease;user-select:none}
+  .chip:hover{border-color:var(--accent);color:var(--paper);transform:translateY(-1px)}
+  .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+  .sum{margin-top:1.2rem;font-family:var(--mono);font-size:.76rem;letter-spacing:.08em;color:var(--dub)}
+  .sum.flash{animation:flash .6s ease}
+  @keyframes flash{0%{color:var(--accent);transform:translateY(-2px)}100%{transform:none}}
+
+  /* step 2 mock */
+  .t2{display:grid;grid-template-columns:1fr 220px;gap:1.4rem}
+  .cues{display:grid;gap:.6rem}
+  .cue{display:flex;flex-wrap:wrap;gap:.4rem .9rem;align-items:baseline;border:1px solid var(--line-soft);border-radius:8px;padding:.65rem .85rem;transition:border-color .25s ease,transform .25s ease;background:rgba(255,255,255,.015)}
+  .cue:hover{border-color:rgba(242,199,68,.4);transform:translateX(4px)}
+  .cue .t{font-family:var(--mono);font-size:.68rem;color:var(--accent)}
+  .cue .sp{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em}
+  .cue .tx{font-size:.9rem}
+  .cue .tag{margin-left:auto;font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;padding:.15rem .45rem;border-radius:4px}
+  .tag.ost{border:1px solid rgba(111,214,195,.5);color:var(--dub)}
+  .tag.gloss{border:1px solid rgba(242,199,68,.5);color:var(--accent)}
+  .t2-side{display:flex;flex-direction:column;gap:.6rem}
+  .stat-pill{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line-soft);border-radius:6px;padding:.5rem .7rem}
+  .stat-pill b{color:var(--paper)}
+
+  /* step 3 mock */
+  .ltabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.1rem}
+  .ltab{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;border:1px solid var(--line);border-radius:6px;padding:.4rem .8rem;color:var(--muted);transition:all .2s ease}
+  .ltab:hover{color:var(--paper);border-color:var(--accent)}
+  .ltab.on{background:var(--dub);border-color:var(--dub);color:#08201c;font-weight:700}
+  .t3{display:grid;grid-template-columns:1.2fr 1fr;gap:1.2rem;transition:opacity .15s ease,filter .15s ease}
+  .t3.dim{opacity:.25;filter:blur(3px)}
+  .pair{border:1px solid var(--line-soft);border-radius:8px;padding:.9rem 1rem;margin-bottom:.7rem}
+  .pair .pl{font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;color:var(--muted);display:block;margin-bottom:.3rem}
+  .pair .pt{font-family:var(--serif);font-size:1.05rem;font-style:italic}
+  .pair.tgt{border-color:rgba(111,214,195,.35);background:rgba(111,214,195,.05)}
+  .pair.tgt .pl{color:var(--dub)}
+  .voice-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+  .voice-row .wave{position:static;height:22px;flex:0 0 auto}
+  .voice-row b{color:var(--paper)}
+  .ost-card{border:1px solid var(--line-soft);border-radius:8px;overflow:hidden}
+  .ost-frame{position:relative;aspect-ratio:16/7;background:linear-gradient(180deg,#1b2438,#4a3556 70%,#101216);display:flex;align-items:center;justify-content:center}
+  .ost-frame strong{font-family:var(--sans);font-weight:800;letter-spacing:.06em;font-size:clamp(.9rem,1.8vw,1.25rem);color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);border:1px dashed rgba(242,199,68,.55);padding:.4rem .8rem}
+  .ost-meta{padding:.7rem .9rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;color:var(--muted);display:flex;justify-content:space-between;gap:1rem;border-top:1px solid var(--line-soft)}
+  .ost-meta b{color:var(--ok)}
+
+  /* step 4 mock */
+  .ab{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .aframe{position:relative;border:1px solid var(--line-soft);border-radius:8px;overflow:hidden}
+  .aframe .scene{aspect-ratio:16/8;position:relative;inset:auto}
+  .aframe .cap{position:absolute;top:8px;left:10px;z-index:2;font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;background:rgba(0,0,0,.65);padding:.2rem .5rem;border-radius:4px}
+  .aframe .ostl{position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:2;font-weight:800;font-size:.8rem;letter-spacing:.05em;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.7);white-space:nowrap}
+  .aframe .subl{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:2;font-family:var(--serif);font-style:italic;font-size:.8rem;background:rgba(0,0,0,.75);padding:.15rem .5rem;border-radius:3px;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+  .ph{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:3;left:30%;box-shadow:0 0 12px rgba(242,199,68,.8);transition:left .05s linear}
+  .ph::after{content:"";position:absolute;top:0;left:-4px;border:5px solid transparent;border-top-color:var(--accent)}
+  .scrub-row{display:flex;align-items:center;gap:1rem;margin-top:1rem}
+  .scrub-row input[type=range]{flex:1;appearance:none;-webkit-appearance:none;height:3px;background:var(--line);border-radius:3px;cursor:pointer}
+  .scrub-row input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid var(--ink);box-shadow:0 0 0 1px var(--accent)}
+  .scrub-row input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);border:3px solid var(--ink);box-shadow:0 0 0 1px var(--accent)}
+  .scrub-tc{font-family:var(--mono);font-size:.78rem;color:var(--accent);min-width:8.5ch;text-align:right}
+  .fixes{display:flex;flex-wrap:wrap;gap:.55rem;margin-top:1rem}
+  .fix{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;border:1px solid var(--line);border-radius:6px;padding:.45rem .7rem;color:var(--muted);transition:all .2s ease}
+  .fix:hover{border-color:var(--dub);color:var(--dub);transform:translateY(-2px)}
+  .fix b{color:var(--paper);text-decoration:line-through;text-decoration-color:rgba(255,90,78,.7);margin-right:.4rem}
+  .fix s{text-decoration:none;color:var(--dub)}
+
+  /* step 5 mock */
+  .rev-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  #aprCount{color:var(--accent)}
+  .rev{display:grid;gap:.5rem}
+  .rrow{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:.7rem 1rem;border:1px solid var(--line-soft);border-radius:8px;padding:.75rem .95rem;background:rgba(255,255,255,.015);transition:border-color .3s ease}
+  .rrow .m{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;color:var(--accent);min-width:5ch}
+  .rrow .f{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .pill{margin-left:auto;font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;padding:.25rem .6rem;border-radius:999px;border:1px solid var(--line)}
+  .pill.ap{color:var(--ok);border-color:rgba(127,206,143,.5)}
+  .pill.ir{color:var(--dub);border-color:rgba(111,214,195,.4)}
+  .pill.cm{color:var(--accent);border-color:rgba(242,199,68,.45)}
+  .approve{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--accent);color:var(--accent);padding:.4rem .8rem;border-radius:6px;transition:all .2s ease}
+  .approve:hover{background:var(--accent);color:var(--accent-ink);transform:translateY(-1px)}
+  .approve[disabled]{border-color:var(--ok);color:var(--ok);cursor:default;background:none}
+  .stamp{position:absolute;right:14px;top:50%;font-family:var(--mono);font-weight:700;font-size:.8rem;letter-spacing:.3em;color:var(--ok);border:2px solid var(--ok);padding:.2rem .6rem;border-radius:4px;transform:translateY(-50%) rotate(-8deg) scale(2.1);opacity:0;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .3s ease;pointer-events:none;background:rgba(11,13,16,.7)}
+  .rrow.approved .stamp{opacity:.95;transform:translateY(-50%) rotate(-8deg) scale(1)}
+  .rrow.approved{border-color:rgba(127,206,143,.4)}
+  .rrow.approved .pill.cm,.rrow.approved .pill.ir{color:var(--ok);border-color:rgba(127,206,143,.5)}
+  .comment{border-left:2px solid var(--accent);margin:.1rem 0 .1rem 1rem;padding:.6rem .9rem;background:rgba(242,199,68,.04);border-radius:0 8px 8px 0;display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center;transition:opacity .4s ease}
+  .comment .ct{font-family:var(--mono);font-size:.66rem;color:var(--accent)}
+  .comment p{font-size:.85rem;color:var(--paper);flex:1 1 200px}
+  .comment .who{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em}
+  .resolve{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dub);border:1px solid rgba(111,214,195,.5);border-radius:5px;padding:.3rem .6rem;transition:all .2s ease}
+  .resolve:hover{background:var(--dub);color:#08201c}
+  .comment.resolved{opacity:.4}
+  .comment.resolved p{text-decoration:line-through}
+
+  /* step 6 mock */
+  .xrow{display:grid;grid-template-columns:92px 1fr 130px auto;gap:1rem;align-items:center;padding:.7rem .2rem;border-bottom:1px solid var(--line-soft)}
+  .xrow:last-of-type{border-bottom:0}
+  .xrow .m{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.1em}
+  .xrow .d{font-size:.84rem;color:var(--paper)}
+  .xrow .d small{display:block;font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.08em}
+  .xbar{height:4px;background:var(--line-soft);border-radius:4px;overflow:hidden}
+  .xbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--dub),var(--accent));transition:width 1.6s cubic-bezier(.19,1,.22,1);transition-delay:var(--xd,0s)}
+  .go-x .xbar i{width:100%}
+  .xstat{font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;color:var(--muted);min-width:9ch;text-align:right}
+  .xstat.done{color:var(--ok)}
+  .xfoot{display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;align-items:center;margin-top:1.1rem;padding-top:1rem;border-top:1px dashed var(--line);font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;color:var(--muted)}
+  .xfoot b{color:var(--dub)}
+
+  /* ============ STATS ============ */
+  .stats{border-block:1px solid var(--line-soft);background:var(--ink2)}
+  .stats-in{display:grid;grid-template-columns:repeat(4,1fr)}
+  .stat{padding:2.4rem 1.6rem;border-left:1px solid var(--line-soft)}
+  .stat:first-child{border-left:0}
+  .stat .num{font-family:var(--serif);font-weight:700;font-size:clamp(2.2rem,4.4vw,3.4rem);color:var(--accent);line-height:1}
+  .stat .num sup{font-size:.45em;top:-.6em}
+  .stat p{margin-top:.6rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+
+  /* ============ COMPARE ============ */
+  .compare{padding-block:clamp(64px,8vw,104px)}
+  .compare h2{font-family:var(--serif);font-size:clamp(1.8rem,3.2vw,2.6rem);margin:.9rem 0 .6rem}
+  .compare h2 em{color:var(--accent);font-style:italic}
+  .compare>.wrap>p{color:var(--muted);max-width:46em}
+  .ledger{margin-top:2.6rem;border:1px solid var(--line);border-radius:var(--rad);overflow:hidden}
+  .lrow{display:grid;grid-template-columns:150px 1fr 1fr;border-bottom:1px solid var(--line-soft)}
+  .lrow:last-child{border-bottom:0}
+  .lrow.head div{font-family:var(--mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;padding:1rem 1.3rem;background:var(--ink2)}
+  .lrow.head .bad{color:var(--rec)}
+  .lrow.head .good{color:var(--ok)}
+  .lrow div{padding:1.15rem 1.3rem;font-size:.92rem}
+  .lrow .phase{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);background:rgba(242,199,68,.04);display:flex;align-items:center}
+  .lrow .bad{color:var(--muted);border-inline:1px solid var(--line-soft)}
+  .lrow .bad::before{content:"✕";color:var(--rec);font-family:var(--mono);margin-right:.6rem}
+  .lrow .good{color:var(--paper)}
+  .lrow .good::before{content:"✓";color:var(--ok);font-family:var(--mono);margin-right:.6rem}
+  .lrow:not(.head):hover div{background:rgba(236,231,220,.025)}
+
+  /* ============ FAQ ============ */
+  .faqsec{padding-block:clamp(64px,8vw,104px);background:var(--ink2);border-block:1px solid var(--line-soft)}
+  .faq-grid{display:grid;grid-template-columns:.9fr 1.4fr;gap:clamp(32px,5vw,72px)}
+  .faq-grid h2{font-family:var(--serif);font-size:clamp(1.8rem,3vw,2.5rem);margin-top:.9rem}
+  .faq-grid h2 em{color:var(--accent);font-style:italic}
+  .faq-grid .side-note{margin-top:1.2rem;color:var(--muted);font-size:.92rem;max-width:24em}
+  .faq{border-top:1px solid var(--line)}
+  .faq-item{border-bottom:1px solid var(--line)}
+  .faq-q{width:100%;display:flex;align-items:center;gap:1rem;text-align:left;padding:1.25rem .2rem;transition:color .2s ease}
+  .faq-q:hover{color:var(--accent)}
+  .faq-q .qn{font-family:var(--mono);font-size:.66rem;color:var(--muted);letter-spacing:.1em}
+  .faq-q .qt{font-family:var(--serif);font-size:1.12rem;font-weight:600;flex:1}
+  .faq-q .pm{font-family:var(--mono);color:var(--accent);font-size:1.1rem;transition:transform .35s cubic-bezier(.19,1,.22,1)}
+  .faq-item.open .pm{transform:rotate(45deg)}
+  .faq-a{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s cubic-bezier(.19,1,.22,1)}
+  .faq-item.open .faq-a{grid-template-rows:1fr}
+  .faq-a>div{overflow:hidden}
+  .faq-a p{padding:0 .2rem 1.3rem 3rem;color:var(--muted);font-size:.94rem;max-width:40em}
+
+  /* ============ CTA ============ */
+  .cta{padding-block:clamp(72px,9vw,120px);position:relative;overflow:hidden}
+  .cta-in{display:grid;grid-template-columns:1.4fr .8fr;gap:clamp(32px,5vw,80px);align-items:center}
+  .cta h2{font-family:var(--serif);font-size:clamp(2.2rem,4.6vw,3.6rem);line-height:1.06;margin-top:1rem}
+  .cta h2 em{color:var(--accent);font-style:italic}
+  .cta p{margin-top:1.2rem;color:var(--muted);max-width:36em}
+  .cta-btns{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2.2rem}
+  .cta small{display:block;margin-top:1.4rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .clap{justify-self:center;width:min(300px,80%);cursor:pointer}
+  .clap-top{height:34px;border-radius:6px 6px 0 0;background:repeating-linear-gradient(135deg,var(--accent) 0 18px,#14161a 18px 36px);transform-origin:left bottom;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+  .clap:hover .clap-top{transform:rotate(-16deg)}
+  .clap-body{background:var(--panel);border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:1.1rem 1.2rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;color:var(--muted);display:grid;gap:.45rem}
+  .clap-body b{color:var(--paper)}
+  .clap-body .y{color:var(--accent)}
+
+  /* ============ FOOTER ============ */
+  footer{border-top:1px solid var(--line-soft);background:var(--ink2)}
+  .foot-in{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:2.5rem;padding-block:3.5rem}
+  .foot-brand p{color:var(--muted);font-size:.88rem;margin-top:.9rem;max-width:22em}
+  .foot h4{font-family:var(--mono);font-size:.64rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+  .foot ul{list-style:none;display:grid;gap:.55rem}
+  .foot a{font-size:.9rem;color:rgba(236,231,220,.75);transition:color .2s ease}
+  .foot a:hover{color:var(--accent)}
+  .foot-base{display:flex;flex-wrap:wrap;gap:1rem 2rem;justify-content:space-between;border-top:1px solid var(--line-soft);padding-block:1.4rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;color:var(--muted)}
+  .foot-base .langs-mini{display:flex;gap:1rem}
+  .foot-base .langs-mini span:hover{color:var(--accent);cursor:pointer}
+
+  /* ============ RESPONSIVE ============ */
+  @media(max-width:1080px){
+    .flow{grid-template-columns:1fr}
+    .rail{position:static}
+    .railnav{padding-left:0}
+    .track{display:none}
+    .railnav ol{display:flex;overflow-x:auto;gap:.4rem;padding-bottom:.5rem}
+    .railnav a{white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:.45rem .9rem}
+    .railnav a[aria-current="true"]{border-color:var(--accent)}
+  }
+  @media(max-width:920px){
+    .opener{grid-template-columns:1fr}
+    .t2{grid-template-columns:1fr}
+    .t3{grid-template-columns:1fr}
+    .stats-in{grid-template-columns:1fr 1fr}
+    .stat{border-left:0;border-top:1px solid var(--line-soft)}
+    .stat:nth-child(-n+2){border-top:0}
+    .stat:nth-child(even){border-left:1px solid var(--line-soft)}
+    .lrow{grid-template-columns:1fr}
+    .lrow .phase{background:rgba(242,199,68,.06)}
+    .lrow.head{display:none}
+    .lrow .bad{border-inline:0;border-top:1px solid var(--line-soft)}
+    .faq-grid{grid-template-columns:1fr}
+    .cta-in{grid-template-columns:1fr}
+    .clap{justify-self:start}
+    .foot-in{grid-template-columns:1fr 1fr}
+    .xrow{grid-template-columns:70px 1fr;grid-template-rows:auto auto}
+    .xrow .xbar{grid-column:1 / -1}
+    .xrow .xstat{grid-column:1 / -1;text-align:left}
+  }
+  @media(max-width:600px){
+    .ab{grid-template-columns:1fr}
+    .foot-in{grid-template-columns:1fr}
+    .slate-body{gap:.8rem;flex-wrap:wrap}
+  }
+
+  /* ============ REDUCED MOTION ============ */
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
+    .ticker-in{animation:none;transform:none}
+    .grain{animation:none}
+    .caret{animation:none}
+    .js [data-reveal]{opacity:1;transform:none}
+    .js .mask>span{transform:none}
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#workflow">Skip to the workflow</a>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ================= HEADER ================= -->
+<header class="site-head">
+  <div class="wrap head-in">
+    <a class="brand" href="#top" aria-label="SceneLilt home">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2.4" y="10.5" width="21.2" height="12.5" rx="2" fill="#f2c744"/><g fill="#0b0d10"><rect x="5" y="13" width="3.2" height="2.2" rx=".5"/><rect x="11.4" y="13" width="3.2" height="2.2" rx=".5"/><rect x="17.8" y="13" width="3.2" height="2.2" rx=".5"/></g><path d="M2.6 9.2 23.3 3.6l1.1 4.1L3.7 13.3z" fill="#f2c744"/><path d="m6.4 8.1 1.8 2.8 2.9-.8-1.9-2.7zm5.5-1.5 1.9 2.8 2.9-.8-1.9-2.8zm5.5-1.5 1.9 2.8 2.3-.6-1.3-2.8z" fill="#0b0d10"/></svg>
+      <span>SceneLilt<small>LOCALIZE THE CUT</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#top">Platform</a>
+      <a href="#workflow" aria-current="true">How it works</a>
+      <a href="#compare">Workflow fit</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="head-cta">
+      <a class="signin" href="#cta">Sign in</a>
+      <a class="btn btn-solid" href="#cta">Start a project</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= OPENER ================= -->
+  <section class="opener wrap" aria-labelledby="opener-h">
+    <div>
+      <div class="slate" data-reveal>
+        <div class="slate-top" aria-hidden="true"></div>
+        <div class="slate-body">
+          <span>PROD <b>SCENELILT</b></span>
+          <span>SCENE <b>06 · HOW IT WORKS</b></span>
+          <span>TAKE <b>01</b></span>
+          <span>ROLL <b>A</b></span>
+        </div>
+      </div>
+
+      <h1 id="opener-h">
+        <span class="mask" style="--i:0"><span>One master cut.</span></span>
+        <span class="mask" style="--i:1"><span>Every market,</span></span>
+        <span class="mask" style="--i:2"><span><em>natively told.</em></span></span>
+      </h1>
+
+      <p class="lede" data-reveal style="--d:.25s">SceneLilt turns your hero video into language-perfect versions for every market on your media plan — transcription, translation, dubbing, on-screen text, review and delivery, in one studio your whole team can direct.</p>
+
+      <div class="opener-cta" data-reveal style="--d:.35s">
+        <a class="btn btn-solid" href="#cta">Start a project</a>
+        <a class="btn btn-ghost" href="#workflow">Walk the workflow ↓</a>
+      </div>
+
+      <div class="substrip" data-reveal style="--d:.45s" aria-live="polite">
+        <span class="scode" id="code1">EN</span>
+        <p><span id="sub1">This changes everything.</span><span class="caret" aria-hidden="true"></span></p>
+      </div>
+
+      <div class="trust" data-reveal style="--d:.55s">
+        <span>In the rotation at</span>
+        <b>Northwind Studio</b><b>Kelp &amp; Co.</b><b>Atlas Fizz</b><b>Marrow</b><b>Onda Media</b>
+      </div>
+    </div>
+
+    <figure class="player" data-reveal style="--d:.3s" aria-label="Preview of a SceneLilt player showing a localized subtitle">
+      <div class="frame">
+        <div class="scene" aria-hidden="true"></div>
+        <div class="lb t" aria-hidden="true"></div><div class="lb b" aria-hidden="true"></div>
+        <div class="hud rec" aria-hidden="true"><i></i>REC · MASTER</div>
+        <div class="hud tc" id="ptc" aria-hidden="true">00:00:07:12</div>
+        <div class="hud cam" aria-hidden="true">A-CAM · 24FPS · 4K</div>
+        <div class="wave" data-bars="22" aria-hidden="true"></div>
+        <div class="psub" id="sub2">This changes everything.</div>
+      </div>
+      <ul class="langs" aria-label="Market versions">
+        <li class="ok">ES-MX ✓</li>
+        <li class="ok">FR ✓</li>
+        <li class="run"><i></i>DE · DUBBING</li>
+        <li>JA · QUEUED</li>
+        <li>PT-BR · QUEUED</li>
+      </ul>
+    </figure>
+  </section>
+
+  <!-- ================= LANGUAGE TICKER ================= -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-in">
+      <div class="tset">
+        <span><b>ES-MX</b> ESPAÑOL</span><span class="sep">◆</span><span><b>FR</b> FRANÇAIS</span><span class="sep">◆</span><span><b>DE</b> DEUTSCH</span><span class="sep">◆</span><span><b>JA</b> 日本語</span><span class="sep">◆</span><span><b>PT-BR</b> PORTUGUÊS</span><span class="sep">◆</span><span><b>IT</b> ITALIANO</span><span class="sep">◆</span><span><b>KO</b> 한국어</span><span class="sep">◆</span><span><b>PL</b> POLSKI</span><span class="sep">◆</span><span><b>AR</b> العربية</span><span class="sep">◆</span><span><b>HI</b> हिन्दी</span><span class="sep">◆</span><span><b>NL</b> NEDERLANDS</span><span class="sep">◆</span><span><b>SV</b> SVENSKA</span><span class="sep">◆</span>
+      </div>
+      <div class="tset">
+        <span><b>ES-MX</b> ESPAÑOL</span><span class="sep">◆</span><span><b>FR</b> FRANÇAIS</span><span class="sep">◆</span><span><b>DE</b> DEUTSCH</span><span class="sep">◆</span><span><b>JA</b> 日本語</span><span class="sep">◆</span><span><b>PT-BR</b> PORTUGUÊS</span><span class="sep">◆</span><span><b>IT</b> ITALIANO</span><span class="sep">◆</span><span><b>KO</b> 한국어</span><span class="sep">◆</span><span><b>PL</b> POLSKI</span><span class="sep">◆</span><span><b>AR</b> العربية</span><span class="sep">◆</span><span><b>HI</b> हिन्दी</span><span class="sep">◆</span><span><b>NL</b> NEDERLANDS</span><span class="sep">◆</span><span><b>SV</b> SVENSKA</span><span class="sep">◆</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= WORKFLOW ================= -->
+  <section id="workflow" class="flowsec" aria-labelledby="flow-h">
+    <div class="wrap flow">
+
+      <!-- sticky rail -->
+      <aside class="rail">
+        <p class="eyebrow" data-reveal><span class="dot">●</span> THE WORKFLOW</p>
+        <h2 id="flow-h" data-reveal style="--d:.1s">Six takes from <em>master</em> to <em>market.</em></h2>
+        <p data-reveal style="--d:.2s">The same six moves every time — whether you ship to two markets or twenty. Scroll through each take, or jump straight to one.</p>
+        <div class="rail-tc" data-reveal style="--d:.3s" aria-hidden="true"><span id="railTC">00:00:00:00</span></div>
+        <nav class="railnav" aria-label="Workflow steps" data-reveal style="--d:.4s">
+          <div class="track" aria-hidden="true"><i id="railFill"></i></div>
+          <ol>
+            <li><a href="#take-1" data-step="0"><b>01</b> Upload &amp; target</a></li>
+            <li><a href="#take-2" data-step="1"><b>02</b> Transcribe &amp; detect</a></li>
+            <li><a href="#take-3" data-step="2"><b>03</b> Translate &amp; dub</a></li>
+            <li><a href="#take-4" data-step="3"><b>04</b> Compare &amp; refine</a></li>
+            <li><a href="#take-5" data-step="4"><b>05</b> Review &amp; approve</a></li>
+            <li><a href="#take-6" data-step="5"><b>06</b> Export &amp; publish</a></li>
+          </ol>
+        </nav>
+        <p class="rail-note" data-reveal style="--d:.5s">AVG. PILOT<br>30s hero → 6 markets<br>in 3 working days</p>
+      </aside>
+
+      <!-- takes -->
+      <div class="takes">
+
+        <!-- TAKE 1 -->
+        <article class="step" id="take-1" data-tc="00:00:07:12" data-reveal>
+          <span class="ghost-num" aria-hidden="true">01</span>
+          <div class="step-tag"><span class="n">Take 01</span><span class="role">Ingest · Producer</span><span class="tc">TC 00:00:07:12</span></div>
+          <h3>Upload the master, <em>pick your markets.</em></h3>
+          <p>Drop in the hero cut and tell SceneLilt where it's going. Markets, languages and channels are set up front — every downstream step, from dubbing to delivery formats, is planned from that one brief.</p>
+          <div class="mock">
+            <div class="mock-h"><span>PROJECT BRIEF</span><span class="live">◉ LIVE</span></div>
+            <div class="drop">
+              <span class="fname">campaign_hero_v3.mov</span>
+              <span class="fmeta">4K PRORES 422 · 02:47 · 4.1 GB</span>
+              <span class="pbar" aria-hidden="true"><i></i></span>
+              <span class="fmeta" style="color:var(--ok)">100%</span>
+            </div>
+            <p class="mkt-label" id="mktLabel">Markets &amp; languages — tap to toggle</p>
+            <div class="mkts" role="group" aria-labelledby="mktLabel">
+              <button type="button" class="chip" aria-pressed="true">ES-MX · Español</button>
+              <button type="button" class="chip" aria-pressed="true">FR · Français</button>
+              <button type="button" class="chip" aria-pressed="false">DE · Deutsch</button>
+              <button type="button" class="chip" aria-pressed="true">JA · 日本語</button>
+              <button type="button" class="chip" aria-pressed="false">PT-BR · Português</button>
+              <button type="button" class="chip" aria-pressed="false">IT · Italiano</button>
+              <button type="button" class="chip" aria-pressed="false">KO · 한국어</button>
+              <button type="button" class="chip" aria-pressed="false">PL · Polski</button>
+            </div>
+            <p class="sum" id="sumOut" aria-live="polite"></p>
+          </div>
+          <ul class="details">
+            <li>Accepts ProRes, H.264 &amp; DNx up to 8K</li>
+            <li>Market presets carry legal + format rules</li>
+            <li>One project, unlimited versions</li>
+          </ul>
+        </article>
+
+        <!-- TAKE 2 -->
+        <article class="step" id="take-2" data-tc="00:00:21:04" data-reveal>
+          <span class="ghost-num" aria-hidden="true">02</span>
+          <div class="step-tag"><span class="n">Take 02</span><span class="role">Transcribe · Analyst</span><span class="tc">TC 00:00:21:04</span></div>
+          <h3>Every word — and every frame — <em>accounted for.</em></h3>
+          <p>SceneLilt watches the cut like an editor: it transcribes every spoken line with word-level timecode, and flags on-screen text, supers and brand terms — so nothing sneaks past localization.</p>
+          <div class="mock">
+            <div class="mock-h"><span>TRANSCRIPT · EN MASTER</span><span class="live">AUTO-SYNCED</span></div>
+            <div class="t2">
+              <div class="cues">
+                <div class="cue"><span class="t">00:00:02.08</span><span class="sp">SPK 1</span><span class="tx">“Morning — ready when you are.”</span></div>
+                <div class="cue"><span class="t">00:00:05.16</span><span class="sp">OST</span><span class="tx">INTRODUCING SCENELILT</span><span class="tag ost">ON-SCREEN · 2.4s</span></div>
+                <div class="cue"><span class="t">00:00:09.02</span><span class="sp">SPK 1</span><span class="tx">“One take is all it takes.”</span><span class="tag gloss">GLOSSARY: KEEP “SCENELILT”</span></div>
+                <div class="cue"><span class="t">00:00:12.18</span><span class="sp">OST</span><span class="tx">SAVE 30% TODAY</span><span class="tag ost">ON-SCREEN · CTA</span></div>
+              </div>
+              <div class="t2-side">
+                <div class="stat-pill"><b>1</b> SPEAKER DETECTED</div>
+                <div class="stat-pill"><b>14</b> SPOKEN CUES</div>
+                <div class="stat-pill"><b>3</b> ON-SCREEN TEXTS</div>
+                <div class="stat-pill"><b>2</b> BRAND TERMS LOCKED</div>
+                <div class="wave" data-bars="30" aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
+          <ul class="details">
+            <li>Word-level timecodes at 24 fps</li>
+            <li>Detects supers, captions burned-in &amp; graphics callouts</li>
+            <li>Glossary terms auto-protected across markets</li>
+          </ul>
+        </article>
+
+        <!-- TAKE 3 -->
+        <article class="step" id="take-3" data-tc="00:01:03:19" data-reveal>
+          <span class="ghost-num" aria-hidden="true">03</span>
+          <div class="step-tag"><span class="n">Take 03</span><span class="role">Translate &amp; dub · Studio</span><span class="tc">TC 00:01:03:19</span></div>
+          <h3>Translation, voices and on-screen text — <em>one coordinated pass.</em></h3>
+          <p>Lines are translated with your glossary in mind, dubbed in a voice matched to the original, and on-screen text re-typesets itself inside each market's safe area. Switch the target below to see it move.</p>
+          <div class="mock">
+            <div class="mock-h"><span>LOCALIZATION PASS</span><span class="live">SELECT TARGET ↓</span></div>
+            <div class="ltabs" role="group" aria-label="Choose target language">
+              <button type="button" class="ltab on" data-l="ES">ES-MX</button>
+              <button type="button" class="ltab" data-l="FR">FR</button>
+              <button type="button" class="ltab" data-l="DE">DE</button>
+              <button type="button" class="ltab" data-l="JA">JA</button>
+            </div>
+            <div class="t3" id="t3panel">
+              <div>
+                <div class="pair"><span class="pl">EN · SOURCE · 00:00:09.02</span><span class="pt">“One take is all it takes.”</span></div>
+                <div class="pair tgt"><span class="pl"><span id="targCode">ES-MX</span> · DUBBED · CUE-MATCHED</span><span class="pt" id="dubLine">“Una sola toma lo hace todo.”</span></div>
+                <div class="voice-row">
+                  <span class="wave" data-bars="16" aria-hidden="true"></span>
+                  <span>VOICE <b id="dubVoice">Mateo — warm baritone</b></span>
+                  <span>·</span>
+                  <span>TONE <b id="dubTone">confident, friendly</b></span>
+                </div>
+              </div>
+              <div class="ost-card">
+                <div class="ost-frame"><strong id="ostText">AHORRA 30% HOY</strong></div>
+                <div class="ost-meta"><span>ON-SCREEN TEXT · REFITTED</span><b id="ostFit">18 CHARS · SAFE ✓</b></div>
+              </div>
+            </div>
+          </div>
+          <ul class="details">
+            <li>Neural dubbing with reference-voice match</li>
+            <li>Tone dials: warmth, pace, emphasis per line</li>
+            <li>OST re-set inside each market's safe zone</li>
+          </ul>
+        </article>
+
+        <!-- TAKE 4 -->
+        <article class="step" id="take-4" data-tc="00:01:58:07" data-reveal>
+          <span class="ghost-num" aria-hidden="true">04</span>
+          <div class="step-tag"><span class="n">Take 04</span><span class="role">Refine · Director</span><span class="tc">TC 00:01:58:07</span></div>
+          <h3>Direct the details: <em>timing, tone, pronunciation.</em></h3>
+          <p>Put any market version beside the master and run it like a dub session. Nudge a cue, correct a syllable, warm up a read — changes ripple through the cut instantly. Scrub the timeline to feel the sync.</p>
+          <div class="mock">
+            <div class="mock-h"><span>A/B COMPARE</span><span class="live">FRAME-LOCKED</span></div>
+            <div class="ab">
+              <div class="aframe">
+                <div class="scene" aria-hidden="true"></div>
+                <span class="cap">MASTER · EN</span>
+                <span class="ostl">SAVE 30% TODAY</span>
+                <span class="subl">“This changes everything.”</span>
+                <div class="ph" style="left:30%" aria-hidden="true"></div>
+              </div>
+              <div class="aframe">
+                <div class="scene" aria-hidden="true" style="filter:hue-rotate(-14deg) saturate(1.1)"></div>
+                <span class="cap" style="color:var(--dub)">VERSION · ES-MX</span>
+                <span class="ostl">AHORRA 30% HOY</span>
+                <span class="subl">“Esto lo cambia todo.”</span>
+                <div class="ph" style="left:30%" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="scrub-row">
+              <span class="scrub-tc" style="text-align:left">SYNC</span>
+              <input type="range" id="scrub" min="0" max="100" value="30" aria-label="Scrub both versions">
+              <span class="scrub-tc" id="scrubTC">00:00:04:19</span>
+            </div>
+            <div class="fixes">
+              <span class="fix"><b>00:12 +0.00s</b><s>cue 12 · shifted −0.20s ✓</s></span>
+              <span class="fix"><b>Lilt /laɪlt/</b><s>pronunciation → /lɪlt/ ✓</s></span>
+              <span class="fix"><b>read: flat</b><s>tone +5% warmer ✓</s></span>
+            </div>
+          </div>
+          <ul class="details">
+            <li>Frame-accurate A/B with the original</li>
+            <li>Phonetic notes on any single word</li>
+            <li>Re-dub a line without touching the rest</li>
+          </ul>
+        </article>
+
+        <!-- TAKE 5 -->
+        <article class="step" id="take-5" data-tc="00:02:34:11" data-reveal>
+          <span class="ghost-num" aria-hidden="true">05</span>
+          <div class="step-tag"><span class="n">Take 05</span><span class="role">Review · Approvers</span><span class="tc">TC 00:02:34:11</span></div>
+          <h3>Approval for every market, <em>on the record.</em></h3>
+          <p>Each market gets its own review track. Reviewers comment on the exact frame, request fixes, and sign off — with an audit trail that stays attached to the version. Try approving one below.</p>
+          <div class="mock">
+            <div class="rev-head"><span>MARKET REVIEW BOARD</span><span id="aprCount">APPROVED 1 / 5</span></div>
+            <div class="rev">
+              <div class="rrow approved">
+                <span class="m">ES-MX</span><span class="f">hero_30s_es-MX.mp4</span>
+                <span class="pill ap">APPROVED</span>
+                <button type="button" class="approve" disabled>Approved ✓</button>
+                <span class="stamp" aria-hidden="true">APPROVED</span>
+              </div>
+              <div class="rrow">
+                <span class="m">FR</span><span class="f">hero_30s_fr.mp4</span>
+                <span class="pill cm">2 COMMENTS</span>
+                <button type="button" class="approve" data-market="FR">Approve</button>
+                <span class="stamp" aria-hidden="true">APPROVED</span>
+              </div>
+              <div class="comment" id="frComment">
+                <span class="ct">⏱ 00:14</span>
+                <p>Use the « vous » form in the CTA line — brand voice is formal-warm in FR.</p>
+                <span class="who">@claire · FR REVIEWER</span>
+                <button type="button" class="resolve" id="resolveFr">Resolve</button>
+              </div>
+              <div class="rrow">
+                <span class="m">DE</span><span class="f">hero_30s_de.mp4</span>
+                <span class="pill ir">IN REVIEW</span>
+                <button type="button" class="approve" data-market="DE">Approve</button>
+                <span class="stamp" aria-hidden="true">APPROVED</span>
+              </div>
+              <div class="rrow">
+                <span class="m">JA</span><span class="f">hero_30s_ja.mp4</span>
+                <span class="pill ir">IN REVIEW</span>
+                <button type="button" class="approve" data-market="JA">Approve</button>
+                <span class="stamp" aria-hidden="true">APPROVED</span>
+              </div>
+              <div class="rrow">
+                <span class="m">PT-BR</span><span class="f">hero_30s_pt-BR.mp4</span>
+                <span class="pill cm">1 COMMENT</span>
+                <button type="button" class="approve" data-market="PT-BR">Approve</button>
+                <span class="stamp" aria-hidden="true">APPROVED</span>
+              </div>
+            </div>
+          </div>
+          <ul class="details">
+            <li>Comments pinned to the exact frame</li>
+            <li>Per-market approvers with roles</li>
+            <li>One-click re-cut after a fix request</li>
+          </ul>
+        </article>
+
+        <!-- TAKE 6 -->
+        <article class="step" id="take-6" data-tc="00:02:59:23" data-reveal>
+          <span class="ghost-num" aria-hidden="true">06</span>
+          <div class="step-tag"><span class="n">Take 06</span><span class="role">Deliver · Ops</span><span class="tc">TC 00:02:59:23</span></div>
+          <h3>Export in every format <em>your channels demand.</em></h3>
+          <p>Approved versions render into whatever the media plan needs — aspect ratios, codecs, caption sidecars — with a manifest your DAM actually understands. Watch the queue run.</p>
+          <div class="mock" id="expWrap">
+            <div class="mock-h"><span>DELIVERY QUEUE</span><span class="live">6 VERSIONS → 14 DELIVERABLES</span></div>
+            <div class="xrow"><span class="m">ES-MX</span><span class="d">MP4 H.264 · 1080p<small>+ hero_es-MX.srt</small></span><span class="xbar"><i style="--xd:0s"></i></span><span class="xstat">RENDERING…</span></div>
+            <div class="xrow"><span class="m">FR</span><span class="d">MP4 H.264 · 1080p<small>+ hero_fr.vtt</small></span><span class="xbar"><i style="--xd:.15s"></i></span><span class="xstat">RENDERING…</span></div>
+            <div class="xrow"><span class="m">DE</span><span class="d">ProRes 422 HQ · broadcast master<small>+ hero_de.scc</small></span><span class="xbar"><i style="--xd:.3s"></i></span><span class="xstat">RENDERING…</span></div>
+            <div class="xrow"><span class="m">JA</span><span class="d">MP4 H.264 · 4K<small>+ hero_ja.ass</small></span><span class="xbar"><i style="--xd:.45s"></i></span><span class="xstat">RENDERING…</span></div>
+            <div class="xrow"><span class="m">ALL MKTS</span><span class="d">9:16 vertical cutdown · Reels / TikTok / Shorts<small>auto-reframed from safe zones</small></span><span class="xbar"><i style="--xd:.6s"></i></span><span class="xstat">RENDERING…</span></div>
+            <div class="xfoot">
+              <span><b>PRESETS</b> YOUTUBE · META · TIKTOK · CTV</span>
+              <span><b>MANIFEST</b> checksums + version history</span>
+              <button type="button" class="btn btn-ghost" style="margin-left:auto;padding:.55rem .9rem" id="dlAll">Download all ↓</button>
+            </div>
+          </div>
+          <ul class="details">
+            <li>Channel presets with correct safe areas</li>
+            <li>Captions as SRT · VTT · SCC · ASS</li>
+            <li>Bulk export with checksums for your DAM</li>
+          </ul>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="filmstrip" aria-hidden="true"></div>
+
+  <!-- ================= STATS ================= -->
+  <section class="stats" aria-label="SceneLilt in numbers">
+    <div class="wrap stats-in">
+      <div class="stat" data-reveal><div class="num"><span data-count="3" data-suffix="">0</span><sup> days</sup></div><p>Avg. master → 12 markets</p></div>
+      <div class="stat" data-reveal style="--d:.1s"><div class="num"><span data-count="38">0</span></div><p>Languages at launch</p></div>
+      <div class="stat" data-reveal style="--d:.2s"><div class="num"><span data-count="6">0</span>×</div><p>Faster than agency round-trips</p></div>
+      <div class="stat" data-reveal style="--d:.3s"><div class="num"><span data-count="100">0</span>%</div><p>Of versions audit-trailed</p></div>
+    </div>
+  </section>
+
+  <!-- ================= COMPARE ================= -->
+  <section id="compare" class="compare" aria-labelledby="cmp-h">
+    <div class="wrap">
+      <p class="eyebrow" data-reveal><span class="dot">●</span> WORKFLOW FIT</p>
+      <h2 id="cmp-h" data-reveal style="--d:.1s">Where the old round-trip <em>breaks.</em></h2>
+      <p data-reveal style="--d:.2s">SceneLilt slots between your edit and your media plan. Same team, same taste — minus the email chains, zip files and lost timestamps.</p>
+      <div class="ledger" data-reveal style="--d:.3s">
+        <div class="lrow head"><div>PHASE</div><div class="bad">THE OLD ROUND-TRIP</div><div class="good">INSIDE SCENELILT</div></div>
+        <div class="lrow"><div class="phase">Kickoff</div><div class="bad">Master on a drive, brief in an email thread</div><div class="good">One upload, markets &amp; channels preselected</div></div>
+        <div class="lrow"><div class="phase">Translation</div><div class="bad">Agency ping-pong, week-long rounds</div><div class="good">Translate + dub + OST in one coordinated pass</div></div>
+        <div class="lrow"><div class="phase">Review</div><div class="bad">Notes in a PDF, timestamps guessed</div><div class="good">Comments pinned to the exact frame</div></div>
+        <div class="lrow"><div class="phase">Delivery</div><div class="bad">Re-renders per channel, done by hand</div><div class="good">Presets for every channel, one-click queue</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FAQ ================= -->
+  <section id="faq" class="faqsec" aria-labelledby="faq-h">
+    <div class="wrap faq-grid">
+      <div>
+        <p class="eyebrow" data-reveal><span class="dot">●</span> BEFORE YOU ASK</p>
+        <h2 id="faq-h" data-reveal style="--d:.1s">Questions teams ask <em>on day one.</em></h2>
+        <p class="side-note" data-reveal style="--d:.2s">Everything below is covered in depth in the walkthrough — but these five come up on every first call.</p>
+      </div>
+      <div class="faq" data-reveal style="--d:.25s">
+        <div class="faq-item">
+          <button type="button" class="faq-q" aria-expanded="false"><span class="qn">Q1</span><span class="qt">Do dubbed voices have to sound synthetic?</span><span class="pm" aria-hidden="true">+</span></button>
+          <div class="faq-a"><div><p>No. SceneLilt can match a reference voice from your master, or you can upload takes from your own voice talent and sync them to the cue sheet. Generated or recorded, timing and lip-flow are tuned the same way.</p></div></div>
+        </div>
+        <div class="faq-item">
+          <button type="button" class="faq-q" aria-expanded="false"><span class="qn">Q2</span><span class="qt">How do we protect brand terminology?</span><span class="pm" aria-hidden="true">+</span></button>
+          <div class="faq-a"><div><p>Each workspace carries glossaries and translation memories per market. Locked terms — product names, claims, legal lines — are flagged in the transcript and can't drift between versions.</p></div></div>
+        </div>
+        <div class="faq-item">
+          <button type="button" class="faq-q" aria-expanded="false"><span class="qn">Q3</span><span class="qt">What about on-screen graphics and legal supers?</span><span class="pm" aria-hidden="true">+</span></button>
+          <div class="faq-a"><div><p>SceneLilt detects on-screen text during transcription and re-typesets it inside each market's safe area — character limits, right-to-left scripts and number formats included. You can override any line by hand.</p></div></div>
+        </div>
+        <div class="faq-item">
+          <button type="button" class="faq-q" aria-expanded="false"><span class="qn">Q4</span><span class="qt">Who can approve a market version?</span><span class="pm" aria-hidden="true">+</span></button>
+          <div class="faq-a"><div><p>You assign approvers per market — in-country managers, brand leads, legal. Each sign-off is stamped to the version with a full comment history, so everyone knows what shipped and who signed it.</p></div></div>
+        </div>
+        <div class="faq-item">
+          <button type="button" class="faq-q" aria-expanded="false"><span class="qn">Q5</span><span class="qt">Does this replace our editors or agencies?</span><span class="pm" aria-hidden="true">+</span></button>
+          <div class="faq-a"><div><p>It sits between them. Your team keeps creative control of the master; SceneLilt removes the mechanical round-trips. Exports include caption sidecars and project XML so post work can continue in your usual tools.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CTA ================= -->
+  <section id="cta" class="cta" aria-labelledby="cta-h">
+    <div class="wrap cta-in">
+      <div>
+        <p class="eyebrow" data-reveal><span class="dot">●</span> FINAL TAKE</p>
+        <h2 id="cta-h" data-reveal style="--d:.1s">Roll sound on <em>every market.</em></h2>
+        <p data-reveal style="--d:.2s">Bring one campaign to SceneLilt and watch it come back speaking every language on your media plan — reviewed, approved and render-ready.</p>
+        <div class="cta-btns" data-reveal style="--d:.3s">
+          <a class="btn btn-solid" href="#top">Start a project</a>
+          <a class="btn btn-ghost" href="#workflow">Book a walkthrough</a>
+        </div>
+        <small data-reveal style="--d:.4s">FREE PILOT FOR YOUR FIRST MARKET · NO RE-EDITING REQUIRED</small>
+      </div>
+      <div class="clap" data-reveal style="--d:.25s" role="img" aria-label="A film clapperboard for your next campaign">
+        <div class="clap-top"></div>
+        <div class="clap-body">
+          <span>PROD <b>YOUR NEXT CAMPAIGN</b></span>
+          <span>SCENE <b class="y">EVERY MARKET</b> · TAKE <b>01</b></span>
+          <span>DIRECTOR <b>YOUR TEAM</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap foot-in">
+    <div class="foot-brand">
+      <a class="brand" href="#top" aria-label="SceneLilt home">
+        <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2.4" y="10.5" width="21.2" height="12.5" rx="2" fill="#f2c744"/><g fill="#0b0d10"><rect x="5" y="13" width="3.2" height="2.2" rx=".5"/><rect x="11.4" y="13" width="3.2" height="2.2" rx=".5"/><rect x="17.8" y="13" width="3.2" height="2.2" rx=".5"/></g><path d="M2.6 9.2 23.3 3.6l1.1 4.1L3.7 13.3z" fill="#f2c744"/><path d="m6.4 8.1 1.8 2.8 2.9-.8-1.9-2.7zm5.5-1.5 1.9 2.8 2.9-.8-1.9-2.8zm5.5-1.5 1.9 2.8 2.3-.6-1.3-2.8z" fill="#0b0d10"/></svg>
+        <span>SceneLilt<small>LOCALIZE THE CUT</small></span>
+      </a>
+      <p>The creative-production studio for marketing teams localizing video — transcript to delivery, in one place.</p>
+    </div>
+    <div class="foot">
+      <h4>Product</h4>
+      <ul><li><a href="#workflow">How it works</a></li><li><a href="#take-3">Languages</a></li><li><a href="#compare">Workflow fit</a></li><li><a href="#cta">Pricing</a></li></ul>
+    </div>
+    <div class="foot">
+      <h4>Resources</h4>
+      <ul><li><a href="#faq">FAQ</a></li><li><a href="#cta">Guides</a></li><li><a href="#cta">Help center</a></li><li><a href="#cta">Status</a></li></ul>
+    </div>
+    <div class="foot">
+      <h4>Company</h4>
+      <ul><li><a href="#cta">About</a></li><li><a href="#cta">Careers</a></li><li><a href="#cta">Press</a></li><li><a href="#cta">Contact</a></li></ul>
+    </div>
+  </div>
+  <div class="wrap foot-base">
+    <span>© 2025 SCENELILT · PRIVACY · TERMS</span>
+    <span class="langs-mini" aria-label="Site languages"><span>EN</span><span>ES</span><span>FR</span><span>DE</span><span>JA</span></span>
+    <span>CUT FOR EVERY MARKET</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  document.documentElement.classList.add('js');
+  var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* headline mask reveal */
+  requestAnimationFrame(function(){ setTimeout(function(){ document.body.classList.add('go'); }, 80); });
+
+  /* scroll reveals */
+  var revealEls = document.querySelectorAll('[data-reveal]');
+  if('IntersectionObserver' in window){
+    var ro = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); ro.unobserve(e.target); } });
+    },{threshold:.12});
+    revealEls.forEach(function(el){ ro.observe(el); });
+  } else { revealEls.forEach(function(el){ el.classList.add('in'); }); }
+
+  /* waveforms */
+  document.querySelectorAll('.wave').forEach(function(w){
+    var n = parseInt(w.dataset.bars || '24', 10);
+    for(var i=0;i<n;i++){
+      var b = document.createElement('i');
+      b.style.setProperty('--h', (18 + Math.random()*70).toFixed(0));
+      b.style.setProperty('--dl', (Math.random()*1.2).toFixed(2) + 's');
+      w.appendChild(b);
+    }
+  });
+
+  /* ---- subtitle cycler (typewriter) ---- */
+  var LINES = [
+    ["This changes everything.", "EN"],
+    ["Esto lo cambia todo.", "ES-MX"],
+    ["Ça change tout.", "FR"],
+    ["Das ändert alles.", "DE"],
+    ["すべてが変わる。", "JA"]
+  ];
+  var sub1 = document.getElementById('sub1'),
+      sub2 = document.getElementById('sub2'),
+      code1 = document.getElementById('code1');
+  if(!RM && sub1){
+    var li = 0, ci = 0, dir = 1, hold = 0;
+    setInterval(function(){
+      var txt = LINES[li][0];
+      if(dir === 1){
+        ci++;
+        if(ci >= txt.length){ dir = 0; hold = 34; }
+      } else if(dir === 0){
+        if(--hold <= 0){ dir = -1; }
+      } else {
+        ci -= 3;
+        if(ci <= 0){ ci = 0; dir = 1; li = (li+1) % LINES.length;
+          if(code1){ code1.textContent = LINES[li][1]; code1.classList.remove('pop'); void code1.offsetWidth; code1.classList.add('pop'); }
+        }
+      }
+      var out = txt.slice(0, Math.max(0, ci));
+      sub1.textContent = out;
+      if(sub2) sub2.textContent = out || '…';
+    }, 34);
+  }
+
+  /* ---- player timecode ---- */
+  var ptc = document.getElementById('ptc');
+  if(ptc && !RM){
+    var frames = 7*24 + 12;
+    setInterval(function(){
+      frames++;
+      var f = frames % 24, s = Math.floor(frames/24) % 60, m = Math.floor(frames/(24*60)) % 60;
+      ptc.textContent = '00:' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + ':' + String(f).padStart(2,'0');
+    }, 42);
+  }
+
+  /* ---- rail active step ---- */
+  var steps = Array.prototype.slice.call(document.querySelectorAll('.step')),
+      railLinks = Array.prototype.slice.call(document.querySelectorAll('.railnav a')),
+      railTC = document.getElementById('railTC'),
+      railFill = document.getElementById('railFill');
+
+  function scramble(el, target){
+    if(!el) return;
+    if(RM){ el.textContent = target; return; }
+    if(el._t) clearInterval(el._t);
+    var f = 0;
+    el._t = setInterval(function(){
+      f++;
+      el.textContent = target.split('').map(function(c, i){
+        if(c === ':') return ':';
+        return (f > i * 1.4) ? c : String(Math.floor(Math.random()*10));
+      }).join('');
+      if(f > 14){ clearInterval(el._t); el.textContent = target; }
+    }, 28);
+  }
+
+  function activate(idx){
+    railLinks.forEach(function(a, i){
+      if(i === idx){ a.setAttribute('aria-current','true'); } else { a.removeAttribute('aria-current'); }
+    });
+    if(railFill) railFill.style.height = (steps.length > 1 ? (idx/(steps.length-1))*100 : 0) + '%';
+    var tc = steps[idx].dataset.tc || '00:00:00:00';
+    if(railTC && railTC.textContent !== tc) scramble(railTC, tc);
+  }
+
+  if('IntersectionObserver' in window && steps.length){
+    var so = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ activate(steps.indexOf(e.target)); }
+      });
+    },{rootMargin:'-42% 0px -42% 0px'});
+    steps.forEach(function(s){ so.observe(s); });
+    activate(0);
+  }
+
+  /* ---- step 1: market chips ---- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.mkts .chip')),
+      sumOut = document.getElementById('sumOut');
+  function updateSum(){
+    var n = chips.filter(function(c){ return c.getAttribute('aria-pressed') === 'true'; }).length;
+    var msg;
+    if(n === 0){ msg = 'PICK AT LEAST ONE MARKET TO BEGIN'; }
+    else {
+      var days = Math.max(2, Math.round(1 + n * 0.4));
+      msg = n + ' MARKET' + (n>1?'S':'') + ' · ' + n + ' LANGUAGE' + (n>1?'S':'') + ' · EST. ' + days + '-DAY TURNAROUND';
+    }
+    if(sumOut){
+      sumOut.textContent = msg;
+      sumOut.classList.remove('flash'); void sumOut.offsetWidth; sumOut.classList.add('flash');
+    }
+  }
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){
+      c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+      updateSum();
+    });
+  });
+  updateSum();
+
+  /* ---- step 3: language tabs ---- */
+  var DUBS = {
+    ES:{code:'ES-MX', line:'“Una sola toma lo hace todo.”', voice:'Mateo — warm baritone', tone:'confident, friendly', ost:'AHORRA 30% HOY', fit:'18 CHARS · SAFE ✓'},
+    FR:{code:'FR', line:'“Une seule prise suffit.”', voice:'Camille — bright mezzo', tone:'playful, precise', ost:'ÉCONOMISEZ 30 %', fit:'17 CHARS · SAFE ✓'},
+    DE:{code:'DE', line:'“Eine Aufnahme genügt.”', voice:'Jonas — calm tenor', tone:'assured, clear', ost:'SPAREN SIE 30 %', fit:'17 CHARS · SAFE ✓'},
+    JA:{code:'JA', line:'「ワンテイクで、すべて届く。」', voice:'Haru — soft alto', tone:'warm, intimate', ost:'本日30%オフ', fit:'8 CHARS · SAFE ✓'}
+  };
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.ltab')),
+      t3 = document.getElementById('t3panel'),
+      swapTimer = null;
+  function setLang(key){
+    var d = DUBS[key]; if(!d) return;
+    if(t3) t3.classList.add('dim');
+    clearTimeout(swapTimer);
+    swapTimer = setTimeout(function(){
+      var map = {targCode:d.code, dubLine:d.line, dubVoice:d.voice, dubTone:d.tone, ostText:d.ost, ostFit:d.fit};
+      Object.keys(map).forEach(function(id){ var el = document.getElementById(id); if(el) el.textContent = map[id]; });
+      if(t3) t3.classList.remove('dim');
+    }, RM ? 0 : 150);
+  }
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.classList.remove('on'); });
+      t.classList.add('on');
+      setLang(t.dataset.l);
+    });
+  });
+
+  /* ---- step 4: scrubber ---- */
+  var scrub = document.getElementById('scrub'),
+      scrubTC = document.getElementById('scrubTC'),
+      phs = document.querySelectorAll('.ph');
+  function applyScrub(v){
+    phs.forEach(function(p){ p.style.left = v + '%'; });
+    if(scrubTC){
+      var total = 16 * 24, f = Math.round(v/100 * total);
+      var ff = f % 24, ss = Math.floor(f/24);
+      scrubTC.textContent = '00:00:' + String(ss).padStart(2,'0') + ':' + String(ff).padStart(2,'0');
+    }
+  }
+  if(scrub){ scrub.addEventListener('input', function(){ applyScrub(parseFloat(scrub.value)); }); applyScrub(30); }
+
+  /* ---- step 5: approvals ---- */
+  var aprCount = document.getElementById('aprCount');
+  function refreshCount(){
+    var n = document.querySelectorAll('.rrow.approved').length;
+    if(aprCount) aprCount.textContent = 'APPROVED ' + n + ' / ' + document.querySelectorAll('.rrow').length;
+  }
+  document.querySelectorAll('.approve:not([disabled])').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var row = btn.closest('.rrow');
+      if(row.classList.contains('approved')) return;
+      row.classList.add('approved');
+      btn.textContent = 'Approved ✓';
+      btn.disabled = true;
+      var pill = row.querySelector('.pill');
+      if(pill){ pill.className = 'pill ap'; pill.textContent = 'APPROVED'; }
+      refreshCount();
+    });
+  });
+  refreshCount();
+  var resolveFr = document.getElementById('resolveFr');
+  if(resolveFr){
+    resolveFr.addEventListener('click', function(){
+      var c = document.getElementById('frComment');
+      if(c){ c.classList.add('resolved'); }
+      resolveFr.textContent = 'Resolved ✓';
+      resolveFr.disabled = true;
+      resolveFr.style.opacity = '.5';
+    });
+  }
+
+  /* ---- step 6: export queue ---- */
+  var expWrap = document.getElementById('expWrap');
+  if(expWrap && 'IntersectionObserver' in window){
+    var xo = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(!e.isIntersecting) return;
+        expWrap.classList.add('go-x');
+        var stats = expWrap.querySelectorAll('.xstat');
+        stats.forEach(function(s, i){
+          setTimeout(function(){ s.textContent = 'READY ✓'; s.classList.add('done'); }, RM ? 0 : 900 + i*350);
+        });
+        xo.unobserve(expWrap);
+      });
+    },{threshold:.35});
+    xo.observe(expWrap);
+  } else if(expWrap){ expWrap.classList.add('go-x'); }
+  var dlAll = document.getElementById('dlAll');
+  if(dlAll){ dlAll.addEventListener('click', function(){ dlAll.textContent = 'Preparing bundle…'; setTimeout(function(){ dlAll.textContent = 'Bundle ready ✓'; }, RM ? 0 : 1200); }); }
+
+  /* ---- stats count-up ---- */
+  var counters = document.querySelectorAll('[data-count]');
+  function countUp(el){
+    var target = parseInt(el.dataset.count, 10) || 0;
+    if(RM){ el.textContent = target; return; }
+    var start = null, dur = 1000;
+    function tick(ts){
+      if(!start) start = ts;
+      var p = Math.min(1, (ts - start)/dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * e);
+      if(p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  if('IntersectionObserver' in window){
+    var co = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ countUp(e.target); co.unobserve(e.target); } });
+    },{threshold:.6});
+    counters.forEach(function(c){ co.observe(c); });
+  } else { counters.forEach(countUp); }
+
+  /* ---- FAQ accordion ---- */
+  var items = Array.prototype.slice.call(document.querySelectorAll('.faq-item'));
+  items.forEach(function(item){
+    var q = item.querySelector('.faq-q');
+    q.addEventListener('click', function(){
+      var open = item.classList.contains('open');
+      items.forEach(function(i){ i.classList.remove('open'); i.querySelector('.faq-q').setAttribute('aria-expanded','false'); });
+      if(!open){ item.classList.add('open'); q.setAttribute('aria-expanded','true'); }
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

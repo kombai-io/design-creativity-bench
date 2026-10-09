@@ -1,0 +1,3080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fieldline HVAC | Dispatch Operations Center</title>
+  <style>
+    /* Reset & Core Design Tokens */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-darkest: #090d16;
+      --bg-darker: #0f172a;
+      --bg-panel: #141f36;
+      --bg-surface: #1a2744;
+      --bg-surface-hover: #22345a;
+      --bg-surface-active: #2a4170;
+      
+      --border-subtle: #1e2e4f;
+      --border-light: #2c426f;
+      --border-highlight: #3b5791;
+
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --p1-emergency: #ef4444;
+      --p1-emergency-bg: rgba(239, 68, 68, 0.15);
+      --p1-emergency-border: #f87171;
+
+      --overrun-amber: #f59e0b;
+      --overrun-amber-bg: rgba(245, 158, 11, 0.15);
+      --overrun-border: #fbbf24;
+
+      --p2-high: #38bdf8;
+      --p2-high-bg: rgba(56, 189, 248, 0.15);
+      --p2-border: #0284c7;
+
+      --p3-pm: #10b981;
+      --p3-pm-bg: rgba(16, 185, 129, 0.15);
+      --p3-border: #059669;
+
+      --multi-tech: #a855f7;
+      --multi-tech-bg: rgba(168, 85, 247, 0.15);
+      --multi-tech-border: #9333ea;
+
+      --travel-gray: #475569;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+
+      --timeline-hour-width: 140px;
+      --tech-col-width: 280px;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-darkest);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-darker);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #283958;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #384e77;
+    }
+
+    /* Header Nav */
+    header.dispatch-header {
+      background: var(--bg-darker);
+      border-bottom: 1px solid var(--border-subtle);
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 50;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+      border-radius: 8px;
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-tag {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      background: #0369a1;
+      color: #bae6fd;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .date-navigator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-panel);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .date-nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .date-nav-btn:hover {
+      background: var(--bg-surface);
+      color: #fff;
+    }
+
+    .date-display {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .date-display .live-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .header-center-stats {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      background: var(--bg-panel);
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .stat-pill:hover {
+      border-color: var(--border-light);
+      background: var(--bg-surface);
+    }
+
+    .stat-pill.p1 {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+    }
+    .stat-pill.overrun {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.1);
+      color: #fde68a;
+    }
+    .stat-pill.multitech {
+      border-color: rgba(168, 85, 247, 0.4);
+      background: rgba(168, 85, 247, 0.1);
+      color: #e9d5ff;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .view-toggle {
+      display: flex;
+      background: var(--bg-panel);
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      padding: 2px;
+    }
+
+    .view-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .view-btn.active {
+      background: #0284c7;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-action {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+      transition: background 0.15s;
+    }
+    .btn-action:hover {
+      background: #0369a1;
+    }
+
+    /* Subheader & Conflict Alert Strip */
+    .conflict-alert-bar {
+      background: linear-gradient(90deg, #381515 0%, #291a0c 50%, #171f33 100%);
+      border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      z-index: 40;
+      flex-shrink: 0;
+    }
+
+    .conflict-items {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .conflict-tag {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .conflict-tag:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .conflict-tag.critical {
+      color: #fca5a5;
+    }
+    .conflict-tag.warning {
+      color: #fde68a;
+    }
+    .conflict-tag.restriction {
+      color: #93c5fd;
+    }
+
+    .conflict-badge-num {
+      padding: 1px 5px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 10px;
+    }
+    .conflict-tag.critical .conflict-badge-num {
+      background: #dc2626;
+      color: #fff;
+    }
+    .conflict-tag.warning .conflict-badge-num {
+      background: #d97706;
+      color: #fff;
+    }
+    .conflict-tag.restriction .conflict-badge-num {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .filter-bar {
+      background: var(--bg-darker);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+    }
+
+    .filter-select {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    .filter-select:hover, .filter-select:focus {
+      border-color: var(--border-light);
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      width: 240px;
+    }
+    .search-input-wrapper input {
+      width: 100%;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 5px;
+      padding: 4px 8px 4px 28px;
+      font-size: 12px;
+      color: var(--text-main);
+      outline: none;
+    }
+    .search-input-wrapper input:focus {
+      border-color: #0284c7;
+    }
+    .search-input-wrapper svg {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* Main Content Area: Left Queue + Schedule Gantt + Inspector Drawer */
+    .dispatch-workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Left Drawer: Unassigned & Staging Queue */
+    .unassigned-panel {
+      width: 320px;
+      background: var(--bg-darker);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: width 0.25s ease;
+      z-index: 25;
+    }
+
+    .unassigned-panel.collapsed {
+      width: 44px;
+    }
+
+    .unassigned-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-panel);
+    }
+
+    .unassigned-title {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-count {
+      background: #dc2626;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    .panel-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    .unassigned-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Unassigned Work Order Cards */
+    .work-order-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .work-order-card:hover {
+      border-color: var(--border-light);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+
+    .work-order-card.p1-card {
+      border-left: 4px solid var(--p1-emergency);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, var(--bg-panel) 60%);
+    }
+    .work-order-card.p2-card {
+      border-left: 4px solid var(--p2-high);
+    }
+    .work-order-card.p3-card {
+      border-left: 4px solid var(--p3-pm);
+    }
+
+    .wo-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .wo-badge {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.4px;
+    }
+    .badge-emergency {
+      background: #7f1d1d;
+      color: #fecaca;
+      border: 1px solid #ef4444;
+      animation: emergencyFlash 1.5s infinite alternate;
+    }
+    @keyframes emergencyFlash {
+      0% { box-shadow: 0 0 2px #ef4444; }
+      100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.7); }
+    }
+    .badge-pm {
+      background: #064e3b;
+      color: #a7f3d0;
+      border: 1px solid #059669;
+    }
+    .badge-multitech {
+      background: #581c87;
+      color: #e9d5ff;
+      border: 1px solid #a855f7;
+    }
+
+    .wo-customer {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .wo-address {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .wo-equipment-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--bg-surface);
+      color: #38bdf8;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    .wo-problem {
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .wo-specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+    .wo-spec-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .wo-spec-item span.highlight {
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    .wo-constraint-pill {
+      margin-top: 8px;
+      padding: 4px 6px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 4px;
+      font-size: 10px;
+      color: #fde68a;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .card-quick-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 6px;
+    }
+    .btn-quick-assign {
+      flex: 1;
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: background 0.15s;
+    }
+    .btn-quick-assign:hover {
+      background: #0369a1;
+    }
+    .btn-quick-assign.urgent {
+      background: #dc2626;
+    }
+    .btn-quick-assign.urgent:hover {
+      background: #b91c1c;
+    }
+
+    /* Center Schedule Timeline View */
+    .schedule-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-darkest);
+      position: relative;
+    }
+
+    .timeline-viewport {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Timeline Time Header */
+    .timeline-header-row {
+      display: flex;
+      height: 40px;
+      background: var(--bg-darker);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .technician-header-cell {
+      width: var(--tech-col-width);
+      min-width: var(--tech-col-width);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-dim);
+      border-right: 1px solid var(--border-subtle);
+      background: var(--bg-darker);
+      position: sticky;
+      left: 0;
+      z-index: 22;
+    }
+
+    .timeline-hours-track {
+      display: flex;
+      position: relative;
+      min-width: calc(var(--timeline-hour-width) * 11); /* 07:00 to 18:00 (11 hours) */
+    }
+
+    .time-hour-slot {
+      width: var(--timeline-hour-width);
+      min-width: var(--timeline-hour-width);
+      border-right: 1px solid rgba(30, 46, 79, 0.7);
+      padding: 10px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      background: var(--bg-darker);
+    }
+    .time-hour-slot span.sub-quarter {
+      font-size: 9px;
+      color: var(--text-dim);
+      font-weight: normal;
+    }
+
+    /* Current Time Scrubber (10:45 AM) */
+    .now-indicator-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #ef4444;
+      z-index: 18;
+      pointer-events: none;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+    }
+    .now-indicator-line::before {
+      content: 'NOW 10:45 AM';
+      position: absolute;
+      top: 4px;
+      left: -40px;
+      background: #ef4444;
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    /* Technician Rows */
+    .technician-row {
+      display: flex;
+      min-height: 108px;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      background: rgba(15, 23, 42, 0.4);
+    }
+    .technician-row:nth-child(even) {
+      background: rgba(20, 31, 54, 0.35);
+    }
+    .technician-row:hover {
+      background: rgba(34, 52, 90, 0.2);
+    }
+
+    /* Tech Info Cell (Sticky Left) */
+    .tech-info-card {
+      width: var(--tech-col-width);
+      min-width: var(--tech-col-width);
+      padding: 12px 16px;
+      border-right: 1px solid var(--border-subtle);
+      background: var(--bg-darker);
+      position: sticky;
+      left: 0;
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .tech-primary-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tech-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      color: #fff;
+      border: 1px solid var(--border-light);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .tech-avatar .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      border: 2px solid var(--bg-darker);
+    }
+    .status-dot.active { background: #10b981; }
+    .status-dot.delayed { background: #f59e0b; }
+    .status-dot.busy { background: #ef4444; }
+
+    .tech-name-box {
+      overflow: hidden;
+    }
+    .tech-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tech-van-id {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+
+    .tech-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tech-badge {
+      font-size: 9.5px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--bg-surface);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      white-space: nowrap;
+    }
+    .tech-badge.cert {
+      background: rgba(6, 182, 212, 0.12);
+      color: #67e8f9;
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+    .tech-badge.territory {
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+    }
+
+    .tech-shift-info {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Timeline Row Track */
+    .tech-schedule-track {
+      flex: 1;
+      position: relative;
+      min-width: calc(var(--timeline-hour-width) * 11);
+      display: flex;
+      align-items: center;
+    }
+
+    /* Out of Shift Hatching */
+    .out-of-shift-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background-image: repeating-linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.35),
+        rgba(0, 0, 0, 0.35) 10px,
+        rgba(15, 23, 42, 0.6) 10px,
+        rgba(15, 23, 42, 0.6) 20px
+      );
+      z-index: 1;
+      border-left: 1px dashed var(--border-subtle);
+      border-right: 1px dashed var(--border-subtle);
+      pointer-events: none;
+    }
+
+    /* Grid vertical guide lines */
+    .hour-guide-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      border-right: 1px dashed rgba(30, 46, 79, 0.45);
+      pointer-events: none;
+    }
+
+    /* Travel Time Connector */
+    .travel-connector {
+      position: absolute;
+      height: 22px;
+      background: rgba(51, 65, 85, 0.7);
+      border: 1px solid #475569;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9.5px;
+      color: #cbd5e1;
+      z-index: 5;
+      padding: 0 6px;
+      gap: 4px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+    }
+    .travel-connector:hover {
+      background: #475569;
+      color: #fff;
+    }
+    .travel-connector.tight-buffer {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.2);
+      color: #fef08a;
+    }
+
+    /* Job / Visit Blocks */
+    .job-block {
+      position: absolute;
+      height: 84px;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      border: 1px solid transparent;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s;
+      overflow: hidden;
+    }
+
+    .job-block:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      z-index: 15;
+    }
+
+    .job-block.selected {
+      border: 2px solid #fff !important;
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.3) !important;
+    }
+
+    /* Job Variations */
+    .job-block.type-repair {
+      background: linear-gradient(135deg, #132f4c 0%, #0d2137 100%);
+      border-color: #0284c7;
+      border-left: 5px solid #0284c7;
+    }
+
+    .job-block.type-pm {
+      background: linear-gradient(135deg, #093729 0%, #06261d 100%);
+      border-color: #059669;
+      border-left: 5px solid #10b981;
+    }
+
+    .job-block.type-multitech {
+      background: linear-gradient(135deg, #381a54 0%, #26113b 100%);
+      border-color: #9333ea;
+      border-left: 5px solid #c084fc;
+    }
+
+    /* RUNNING OVERRUN JOB */
+    .job-block.status-overrun {
+      background: linear-gradient(135deg, #422506 0%, #2e1704 100%);
+      border-color: #d97706;
+      border-left: 5px solid #f59e0b;
+      position: absolute;
+    }
+
+    /* Projected Overrun Extension Ghost Block */
+    .overrun-ghost-extension {
+      position: absolute;
+      height: 84px;
+      border: 2px dashed #f59e0b;
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(245, 158, 11, 0.15),
+        rgba(245, 158, 11, 0.15) 8px,
+        rgba(245, 158, 11, 0.25) 8px,
+        rgba(245, 158, 11, 0.25) 16px
+      );
+      border-radius: 0 6px 6px 0;
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4px 8px;
+      color: #fef08a;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      animation: ghostGlow 2s infinite alternate;
+    }
+    @keyframes ghostGlow {
+      0% { border-color: #f59e0b; }
+      100% { border-color: #ef4444; }
+    }
+
+    .job-top-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .job-cust-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .job-badges-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mini-badge {
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .mb-overrun {
+      background: #ef4444;
+      color: #fff;
+      animation: emergencyFlash 1.5s infinite;
+    }
+    .mb-multi {
+      background: #9333ea;
+      color: #fff;
+    }
+    .mb-pm {
+      background: #059669;
+      color: #fff;
+    }
+    .mb-site-alert {
+      background: #d97706;
+      color: #fff;
+    }
+
+    .job-equip-desc {
+      font-size: 10px;
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .job-bottom-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 9.5px;
+      color: #cbd5e1;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 4px;
+    }
+
+    .job-time-window {
+      font-weight: 600;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .job-parts-pill {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 8.5px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .job-parts-pill.ready {
+      color: #6ee7b7;
+    }
+    .job-parts-pill.waiting {
+      color: #fca5a5;
+    }
+
+    /* Right Inspector / Work Order Drawer */
+    .inspector-panel {
+      width: 380px;
+      background: var(--bg-darker);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 30;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
+      transition: transform 0.25s ease;
+    }
+
+    .inspector-header {
+      padding: 14px 18px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .insp-title-box h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .insp-wo-id {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: monospace;
+      margin-top: 2px;
+    }
+
+    .insp-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .insp-close-btn:hover {
+      background: var(--bg-surface);
+      color: #fff;
+    }
+
+    .inspector-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-darkest);
+    }
+    .insp-tab {
+      flex: 1;
+      padding: 9px 0;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+    .insp-tab.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .inspector-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .detail-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .detail-card-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .prop-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .prop-row:last-child {
+      margin-bottom: 0;
+    }
+    .prop-label {
+      color: var(--text-muted);
+    }
+    .prop-value {
+      color: #fff;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .access-restriction-box {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11.5px;
+      color: #fef08a;
+      line-height: 1.4;
+      display: flex;
+      gap: 8px;
+    }
+
+    .inspector-actions-footer {
+      padding: 14px 18px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-footer-primary {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-footer-primary:hover {
+      background: #0369a1;
+    }
+    .btn-footer-danger {
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      padding: 9px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-footer-danger:hover {
+      background: #b91c1c;
+    }
+    .btn-footer-secondary {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      color: var(--text-main);
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-footer-secondary:hover {
+      background: var(--bg-surface-hover);
+    }
+
+    /* Modal Dialogs */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      width: 580px;
+      max-width: 95vw;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.2s ease;
+    }
+    .modal-backdrop.active .modal-box {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      background: var(--bg-darker);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .candidate-tech-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .candidate-tech-card:hover {
+      border-color: #0284c7;
+      background: var(--bg-surface-hover);
+    }
+    .candidate-tech-card.recommended {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .candidate-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .candidate-score {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #6ee7b7;
+      border: 1px solid #059669;
+    }
+
+    /* Interactive Map Mode View (Split or Full) */
+    .map-split-view {
+      display: none;
+      flex: 1;
+      background: #0d1527;
+      border-left: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+    }
+    .map-split-view.visible {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-svg-container {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #15223e 0%, #0a0f1d 100%);
+    }
+
+    .map-overlay-card {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: rgba(20, 31, 54, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 11px;
+      z-index: 10;
+      color: #cbd5e1;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 200;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--bg-panel);
+      border-left: 4px solid #0284c7;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      border-top: 1px solid var(--border-light);
+      border-right: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 260px;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      pointer-events: auto;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .toast.success { border-left-color: #10b981; }
+    .toast.warning { border-left-color: #f59e0b; }
+    .toast.danger { border-left-color: #ef4444; }
+
+    /* Utilities */
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pulse-badge { animation: pulse 1.5s infinite; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="dispatch-header">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          <circle cx="12" cy="12" r="2" fill="white"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">
+          Fieldline HVAC
+          <span class="brand-tag">Dispatch Ops</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Date Navigator -->
+    <div class="date-navigator">
+      <button class="date-nav-btn" title="Previous Day">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="date-display">
+        <div class="live-pulse"></div>
+        <span>Today: Wednesday, Oct 24, 2024</span>
+      </div>
+      <button class="date-nav-btn" title="Next Day">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Active Dispatch Metrics -->
+    <div class="header-center-stats">
+      <div class="stat-pill p1" onclick="focusEmergency()" title="Click to view unassigned emergency call">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span><strong>1</strong> P1 Emergency</span>
+      </div>
+
+      <div class="stat-pill overrun" onclick="openOverrunResolver()" title="Click to view overrun and conflict details">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span><strong>1</strong> Overrun Risk (+1.75h)</span>
+      </div>
+
+      <div class="stat-pill multitech" title="Multi-technician heavy rigging job">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span><strong>1</strong> Multi-Tech Sync</span>
+      </div>
+    </div>
+
+    <!-- View Modes & Actions -->
+    <div class="header-actions">
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnViewTimeline" onclick="switchView('timeline')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Timeline
+        </button>
+        <button class="view-btn" id="btnViewSplit" onclick="switchView('split')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+          Split Map
+        </button>
+      </div>
+
+      <button class="btn-action" onclick="openNewOrderModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Visit
+      </button>
+    </div>
+  </header>
+
+  <!-- Interactive Conflict & Attention Bar -->
+  <div class="conflict-alert-bar" id="conflictAlertBar">
+    <div class="conflict-items">
+      <div class="conflict-tag critical" onclick="focusEmergency()">
+        <span class="conflict-badge-num">ALERT</span>
+        <strong>CRITICAL UNASSIGNED:</strong> Apex BioTech HQ — Server Room CRAC #3 Locked Out (Temp 82°F)
+      </div>
+
+      <div class="conflict-tag warning" onclick="openOverrunResolver()">
+        <span class="conflict-badge-num">DELAY</span>
+        <strong>ACTIVE OVERRUN:</strong> Marcus Vance at Metro General Hospital (Burnout acid wash +1h 45m). Conflict with West End Plaza 13:30!
+      </div>
+
+      <div class="conflict-tag restriction" onclick="highlightSiteConstraint()">
+        <span class="conflict-badge-num">ACCESS</span>
+        <strong>SITE RESTRICTION:</strong> Oakmont Medical dock closes strictly at 11:30 AM (Mateo Diaz ETA 11:15 AM)
+      </div>
+    </div>
+    <div>
+      <button class="btn-quick-assign urgent" style="padding: 4px 10px; font-size: 11px;" onclick="openEmergencyAssignModal()">
+        Resolve Critical Call
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter and Search Toolbar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">Territory:</span>
+      <select class="filter-select" id="territoryFilter" onchange="applyFilters()">
+        <option value="ALL">All Metro Zones (4)</option>
+        <option value="Downtown">Downtown Central</option>
+        <option value="North">North Tech Corridor</option>
+        <option value="South">South Industrial Belt</option>
+        <option value="East">East Logistics District</option>
+      </select>
+
+      <span class="filter-label" style="margin-left: 10px;">Equipment Type:</span>
+      <select class="filter-select" id="equipmentFilter" onchange="applyFilters()">
+        <option value="ALL">All Commercial Systems</option>
+        <option value="Chiller">Centrifugal / Screw Chillers</option>
+        <option value="CRAC">Precision CRAC / Cleanrooms</option>
+        <option value="RTU">Packaged Rooftop Units (RTU)</option>
+        <option value="Boiler">Commercial Boilers</option>
+        <option value="VRF">VRV / VRF Multi-Splits</option>
+      </select>
+
+      <span class="filter-label" style="margin-left: 10px;">Priority:</span>
+      <select class="filter-select" id="priorityFilter" onchange="applyFilters()">
+        <option value="ALL">All Priorities</option>
+        <option value="P1">Emergency (P1)</option>
+        <option value="P2">High (P2)</option>
+        <option value="P3">Planned Maintenance (P3)</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <div class="search-input-wrapper">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="globalSearch" placeholder="Search customer, site, or tech..." oninput="applyFilters()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Dispatch Workspace -->
+  <div class="dispatch-workspace">
+
+    <!-- LEFT SIDEBAR: Unassigned Work Orders Queue -->
+    <aside class="unassigned-panel" id="unassignedPanel">
+      <div class="unassigned-header">
+        <div class="unassigned-title">
+          <span>Unassigned & Staging</span>
+          <span class="badge-count" id="unassignedCountBadge">3</span>
+        </div>
+        <button class="panel-toggle-btn" title="Toggle Sidebar" onclick="toggleUnassignedPanel()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+      </div>
+
+      <div class="unassigned-list" id="unassignedList">
+        <!-- Card 1: Emergency Call -->
+        <div class="work-order-card p1-card" id="card-wo-901" onclick="selectWorkOrder('WO-901', 'emergency')">
+          <div class="wo-card-header">
+            <span class="wo-badge badge-emergency">P1 EMERGENCY</span>
+            <span style="font-size: 10px; font-weight: 700; color: #f87171;">SLA 48m left</span>
+          </div>
+          <div class="wo-customer">Apex BioTech Systems HQ</div>
+          <div class="wo-address">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            1400 Research Pkwy (North Metro)
+          </div>
+          <div class="wo-equipment-tag">Liebert DSE 80kW CRAC Precision Cooling</div>
+          <div class="wo-problem">
+            CRAC #3 fan inverter fault. Server row hot-aisle at 82°F and climbing. Failover standby offline.
+          </div>
+          <div class="wo-specs-grid">
+            <div class="wo-spec-item">Window: <span class="highlight">Immediate</span></div>
+            <div class="wo-spec-item">Duration: <span class="highlight">2.0 hrs</span></div>
+            <div class="wo-spec-item">Cert Req: <span class="highlight">EPA + CRAC/DDC</span></div>
+            <div class="wo-spec-item">Part: <span class="highlight">Danfoss VFD 25HP</span></div>
+          </div>
+          <div class="wo-constraint-pill">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Requires security clearance badge + Facilities escort (Dave Miller)
+          </div>
+          <div class="card-quick-actions">
+            <button class="btn-quick-assign urgent" onclick="event.stopPropagation(); openEmergencyAssignModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Smart Dispatch Tech
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Planned Maintenance -->
+        <div class="work-order-card p3-card" id="card-wo-904" onclick="selectWorkOrder('WO-904', 'pm')">
+          <div class="wo-card-header">
+            <span class="wo-badge badge-pm">P3 PLANNED PM</span>
+            <span style="font-size: 10px; color: var(--text-dim);">Due today</span>
+          </div>
+          <div class="wo-customer">Horizon Logistics Distribution</div>
+          <div class="wo-address">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            3800 S Western Ave (East Logistics)
+          </div>
+          <div class="wo-equipment-tag">Carrier WeatherMaker RTUs 1-4</div>
+          <div class="wo-problem">
+            Quarterly PM: Belt replacements, coil sanitization, economizer calibration, electrical contactor inspect.
+          </div>
+          <div class="wo-specs-grid">
+            <div class="wo-spec-item">Window: <span class="highlight">13:00 - 16:00</span></div>
+            <div class="wo-spec-item">Duration: <span class="highlight">3.0 hrs</span></div>
+            <div class="wo-spec-item">Tools: <span class="highlight">Manifold & Comb.</span></div>
+            <div class="wo-spec-item">Truck Stock: <span class="highlight">Filters/Belts OK</span></div>
+          </div>
+          <div class="card-quick-actions">
+            <button class="btn-quick-assign" onclick="event.stopPropagation(); assignPMModal('WO-904')">
+              Assign Technician
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 3: Multi-Tech Assist Request -->
+        <div class="work-order-card" style="border-left: 4px solid var(--multi-tech);" id="card-wo-907" onclick="selectWorkOrder('WO-907', 'multitech')">
+          <div class="wo-card-header">
+            <span class="wo-badge badge-multitech">2ND TECH ASSIST</span>
+            <span style="font-size: 10px; color: #d8b4fe;">Heavy Rigging</span>
+          </div>
+          <div class="wo-customer">St. Jude Medical Pavilion</div>
+          <div class="wo-address">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            900 N Michigan Ave (Downtown)
+          </div>
+          <div class="wo-equipment-tag">York YVAA 120T Screw Chiller</div>
+          <div class="wo-problem">
+            Lead Tech Devon Washington requires 2nd certified tech for crane rigging & compressor hoist swap (1,400 lbs).
+          </div>
+          <div class="wo-specs-grid">
+            <div class="wo-spec-item">Window: <span class="highlight">13:00 - 17:00</span></div>
+            <div class="wo-spec-item">Duration: <span class="highlight">4.0 hrs</span></div>
+            <div class="wo-spec-item">Cert Req: <span class="highlight">Rigging + Universal</span></div>
+            <div class="wo-spec-item">Crane Permit: <span class="highlight">Active 13:00-16:00</span></div>
+          </div>
+          <div class="card-quick-actions">
+            <button class="btn-quick-assign" style="background: #9333ea;" onclick="event.stopPropagation(); assignMultiTechAssist()">
+              Match Secondary Tech
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER: Interactive Gantt Schedule -->
+    <main class="schedule-container" id="scheduleContainer">
+      <div class="timeline-viewport" id="timelineViewport">
+        
+        <!-- Header row with hours -->
+        <div class="timeline-header-row">
+          <div class="technician-header-cell">
+            <span>Technicians & Territories</span>
+            <span style="font-size: 10px; color: var(--text-muted);">6 Active</span>
+          </div>
+
+          <div class="timeline-hours-track" id="hoursTrack">
+            <!-- 07:00 to 18:00 (11 hours) -->
+            <div class="time-hour-slot"><span>07:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>08:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>09:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>10:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>11:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>12:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>13:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>14:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>15:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>16:00</span><span class="sub-quarter">:30</span></div>
+            <div class="time-hour-slot"><span>17:00</span><span class="sub-quarter">:30</span></div>
+          </div>
+
+          <!-- Current Time Indicator (10:45 AM)
+               7:00 AM is 0px. Each hour is 140px.
+               10:45 AM is 3 hours + 45 minutes = 3.75 hours * 140px = 525px from column offset.
+               Header cell is 280px. Total left = 280px + 525px = 805px.
+          -->
+          <div class="now-indicator-line" style="left: calc(var(--tech-col-width) + 525px);"></div>
+        </div>
+
+        <!-- TECHNICIAN ROW 1: Marcus Vance (ACTIVE OVERRUN SCENARIO) -->
+        <div class="technician-row" data-tech="mvance" data-territory="Downtown">
+          <div class="tech-info-card">
+            <div class="tech-primary-meta">
+              <div class="tech-avatar" style="background: #1e3a8a;">
+                MV
+                <div class="status-dot delayed" title="Running behind schedule (Overrun)"></div>
+              </div>
+              <div class="tech-name-box">
+                <div class="tech-name">
+                  Marcus Vance
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" title="Overrun Warning"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <div class="tech-van-id">Van #08 • Trane Chiller Spec.</div>
+              </div>
+            </div>
+            <div class="tech-tags">
+              <span class="tech-badge cert">EPA Univ</span>
+              <span class="tech-badge cert">Master HVAC</span>
+              <span class="tech-badge territory">Downtown</span>
+            </div>
+            <div class="tech-shift-info">
+              <span>Shift: 07:00 – 15:30</span>
+              <span style="color: #f59e0b; font-weight: 700;">+1h 45m Delay</span>
+            </div>
+          </div>
+
+          <div class="tech-schedule-track">
+            <!-- Out of shift hatch after 15:30 (8.5h from 7am = 8.5 * 140 = 1190px) -->
+            <div class="out-of-shift-zone" style="left: 1190px; right: 0;"></div>
+
+            <!-- Stop 1: Metro General Hospital (Scheduled 08:00 - 10:30, 2.5 hrs)
+                 Start at 8am (140px). Width: 2.5 * 140 = 350px.
+                 CURRENT OVERRUN: Running into 12:15 PM!
+            -->
+            <div class="job-block type-repair status-overrun" style="left: 140px; width: 350px;" onclick="selectWorkOrder('WO-801', 'overrun')">
+              <div class="job-top-line">
+                <span class="job-cust-title">Metro General Hospital</span>
+                <span class="mini-badge mb-overrun">OVERRUN +1.75H</span>
+              </div>
+              <div class="job-equip-desc">Trane CVHE 500-Ton Centrifugal Chiller</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  08:00 – 10:30 (Actual: ~12:15)
+                </span>
+                <span class="job-parts-pill waiting">Acid Burnout Washout</span>
+              </div>
+            </div>
+
+            <!-- Overrun Ghost Extension: 10:30 to 12:15 (1.75 hours = 245px) -->
+            <div class="overrun-ghost-extension" style="left: 490px; width: 245px;" onclick="openOverrunResolver()">
+              <div style="font-size: 9px; text-transform: uppercase;">Estimated Overrun</div>
+              <div>+1h 45m Stator Cleanup</div>
+              <div style="font-size: 8.5px; opacity: 0.9; text-decoration: underline;">Click to Resolve Conflict</div>
+            </div>
+
+            <!-- Red Conflict Line pushing into next visit -->
+            <div style="position: absolute; left: 735px; top: 38px; width: 105px; height: 2px; background: repeating-linear-gradient(to right, #ef4444 0, #ef4444 4px, transparent 4px, transparent 8px); z-index: 12;"></div>
+
+            <!-- Stop 2: West End Plaza (Originally 13:30 - 15:30)
+                 Start at 13:30 = 6.5 * 140 = 910px. Width: 2.0 * 140 = 280px.
+                 BREACHED BY TRAVEL & OVERRUN!
+            -->
+            <div class="job-block type-repair" id="job-west-end" style="left: 910px; width: 280px; border-color: #ef4444;" onclick="selectWorkOrder('WO-802', 'repair')">
+              <div class="job-top-line">
+                <span class="job-cust-title">West End Plaza RTU</span>
+                <span class="mini-badge mb-overrun" style="background: #991b1b;">WINDOW BREACH</span>
+              </div>
+              <div class="job-equip-desc">Carrier WeatherMaker 48HC (25-Ton)</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">13:30 – 15:30</span>
+                <span class="job-parts-pill ready">Belts On Van</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TECHNICIAN ROW 2: Elena Rostova (CRAC / Precision Specialist - North) -->
+        <div class="technician-row" data-tech="erostova" data-territory="North">
+          <div class="tech-info-card">
+            <div class="tech-primary-meta">
+              <div class="tech-avatar" style="background: #065f46;">
+                ER
+                <div class="status-dot active" title="On schedule"></div>
+              </div>
+              <div class="tech-name-box">
+                <div class="tech-name">Elena Rostova</div>
+                <div class="tech-van-id">Van #12 • Precision Cooling</div>
+              </div>
+            </div>
+            <div class="tech-tags">
+              <span class="tech-badge cert">Liebert Cert</span>
+              <span class="tech-badge cert">DDC/BACnet</span>
+              <span class="tech-badge territory">North Tech</span>
+            </div>
+            <div class="tech-shift-info">
+              <span>Shift: 07:30 – 16:00</span>
+              <span style="color: #6ee7b7;">Available 11:30</span>
+            </div>
+          </div>
+
+          <div class="tech-schedule-track" id="track-erostova">
+            <!-- 07:00 to 07:30 out of shift (35px) -->
+            <div class="out-of-shift-zone" style="left: 0; width: 70px;"></div>
+            <!-- Out of shift after 16:00 (9 hours from 7am = 1260px) -->
+            <div class="out-of-shift-zone" style="left: 1260px; right: 0;"></div>
+
+            <!-- Job 1: Omnicell Cleanroom (08:00 - 10:45)
+                 left: 140px, width: 2.75 * 140 = 385px
+            -->
+            <div class="job-block type-pm" style="left: 140px; width: 385px;" onclick="selectWorkOrder('WO-701', 'pm')">
+              <div class="job-top-line">
+                <span class="job-cust-title">Omnicell Cleanroom 3</span>
+                <span class="mini-badge mb-pm">COMPLETING</span>
+              </div>
+              <div class="job-equip-desc">Stulz CyberAir Precision DX Unit</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">08:00 – 10:45</span>
+                <span class="job-parts-pill ready">HEPA / Sensors OK</span>
+              </div>
+            </div>
+
+            <!-- Travel Buffer Indicator to Next Destination -->
+            <div class="travel-connector" style="left: 535px; width: 85px;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5a2 2 0 0 0-2 2v7h3"/></svg>
+              <span>18 min</span>
+            </div>
+
+            <!-- Slot from 11:15 to 14:00 is OPEN - Ideal candidate for Apex BioTech emergency! -->
+            <div id="elena-open-slot" style="position: absolute; left: 630px; width: 350px; height: 84px; border: 2px dashed rgba(6, 182, 212, 0.4); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(6, 182, 212, 0.04); cursor: pointer;" onclick="openEmergencyAssignModal()">
+              <span style="font-size: 11px; font-weight: 700; color: #38bdf8;">Optimal Slot for Emergency Call</span>
+              <span style="font-size: 9.5px; color: var(--text-muted);">Apex BioTech is 4.2 mi away (15m drive)</span>
+            </div>
+
+            <!-- Job 2: North Tech BioLabs PM (14:30 - 16:00)
+                 Start at 14:30 (7.5 * 140 = 1050px). Width: 1.5 * 140 = 210px
+            -->
+            <div class="job-block type-pm" style="left: 1050px; width: 210px;" onclick="selectWorkOrder('WO-702', 'pm')">
+              <div class="job-top-line">
+                <span class="job-cust-title">BioLabs B4 Laboratory</span>
+                <span class="mini-badge mb-pm">PLANNED PM</span>
+              </div>
+              <div class="job-equip-desc">Greenheck VAV & Exhaust Recovery</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">14:30 – 16:00</span>
+                <span class="job-parts-pill ready">Filters staged</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TECHNICIAN ROW 3: Mateo Diaz (Industrial Boilers & Refrigeration - East) -->
+        <div class="technician-row" data-tech="mdiaz" data-territory="East">
+          <div class="tech-info-card">
+            <div class="tech-primary-meta">
+              <div class="tech-avatar" style="background: #854d0e;">
+                MD
+                <div class="status-dot active" title="On schedule"></div>
+              </div>
+              <div class="tech-name-box">
+                <div class="tech-name">Mateo Diaz</div>
+                <div class="tech-van-id">Van #04 • Boilers & Ammonia</div>
+              </div>
+            </div>
+            <div class="tech-tags">
+              <span class="tech-badge cert">R-717 Ammonia</span>
+              <span class="tech-badge cert">Boiler Class 1</span>
+              <span class="tech-badge territory">East District</span>
+            </div>
+            <div class="tech-shift-info">
+              <span>Shift: 07:00 – 15:30</span>
+              <span style="color: #6ee7b7;">En Route Stop 2</span>
+            </div>
+          </div>
+
+          <div class="tech-schedule-track">
+            <div class="out-of-shift-zone" style="left: 1190px; right: 0;"></div>
+
+            <!-- Stop 1: Tri-State Cold Storage (07:30 - 10:15)
+                 left: 70px (07:30). Width: 2.75 * 140 = 385px
+            -->
+            <div class="job-block type-pm" style="left: 70px; width: 385px;" onclick="selectWorkOrder('WO-601', 'pm')">
+              <div class="job-top-line">
+                <span class="job-cust-title">Tri-State Cold Storage</span>
+                <span class="mini-badge mb-pm">COMPLETED</span>
+              </div>
+              <div class="job-equip-desc">Ammonia Screw Rack & Defrost Cycle</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">07:30 – 10:15</span>
+                <span class="job-parts-pill ready">Oil Separator OK</span>
+              </div>
+            </div>
+
+            <!-- Travel connector to Oakmont Medical (30 min drive with warning) -->
+            <div class="travel-connector tight-buffer" style="left: 460px; width: 120px;" title="Tight access window! Dock closes at 11:30 AM!">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>26m (ETA 11:15)</span>
+            </div>
+
+            <!-- Stop 2: Oakmont Medical Pavilion (11:15 - 13:45)
+                 Constraint: Dock closes strictly at 11:30 AM!
+                 left: 595px (11:15). width: 2.5 * 140 = 350px
+            -->
+            <div class="job-block type-repair" style="left: 595px; width: 350px;" onclick="selectWorkOrder('WO-602', 'access')">
+              <div class="job-top-line">
+                <span class="job-cust-title">Oakmont Medical Pavilion</span>
+                <span class="mini-badge mb-site-alert">DOCK 11:30 ACCESS</span>
+              </div>
+              <div class="job-equip-desc">Daikin VRV IV (16-Ton) Comm Fault U4</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">11:15 – 13:45</span>
+                <span class="job-parts-pill ready">Daikin Checker Rig</span>
+              </div>
+            </div>
+
+            <!-- Stop 3: Meridian Financial (14:15 - 15:30) -->
+            <div class="job-block type-pm" style="left: 980px; width: 175px;" onclick="selectWorkOrder('WO-603', 'pm')">
+              <div class="job-top-line">
+                <span class="job-cust-title">Meridian Financial Tower</span>
+                <span class="mini-badge mb-pm">PM</span>
+              </div>
+              <div class="job-equip-desc">Cleaver-Brooks 400HP Boiler Tuning</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">14:15 – 15:30</span>
+                <span class="job-parts-pill ready">ECOM Analyzer</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TECHNICIAN ROW 4: Devon Washington (Chillers / Heavy Rigging Lead - South) -->
+        <div class="technician-row" data-tech="dwashington" data-territory="South">
+          <div class="tech-info-card">
+            <div class="tech-primary-meta">
+              <div class="tech-avatar" style="background: #4c1d95;">
+                DW
+                <div class="status-dot active" title="On schedule"></div>
+              </div>
+              <div class="tech-name-box">
+                <div class="tech-name">Devon Washington</div>
+                <div class="tech-van-id">Van #15 • Rigging & Chillers</div>
+              </div>
+            </div>
+            <div class="tech-tags">
+              <span class="tech-badge cert">Master Rigger</span>
+              <span class="tech-badge cert">Chiller Master</span>
+              <span class="tech-badge territory">South/Central</span>
+            </div>
+            <div class="tech-shift-info">
+              <span>Shift: 08:30 – 17:00</span>
+              <span style="color: #c084fc;">Lead Multi-Tech</span>
+            </div>
+          </div>
+
+          <div class="tech-schedule-track">
+            <!-- 07:00 to 08:30 out of shift (210px) -->
+            <div class="out-of-shift-zone" style="left: 0; width: 210px;"></div>
+
+            <!-- Morning Job: South Gate Cold Works (09:00 - 11:30)
+                 left: 280px. width: 2.5 * 140 = 350px
+            -->
+            <div class="job-block type-repair" style="left: 280px; width: 350px;" onclick="selectWorkOrder('WO-501', 'repair')">
+              <div class="job-top-line">
+                <span class="job-cust-title">South Gate Cold Logistics</span>
+                <span class="mini-badge" style="background: #0284c7; color: white;">CORRECTIVE</span>
+              </div>
+              <div class="job-equip-desc">York YZ Magnetic Bearing Chiller</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">09:00 – 11:30</span>
+                <span class="job-parts-pill ready">Transducer Kit</span>
+              </div>
+            </div>
+
+            <div class="travel-connector" style="left: 645px; width: 85px;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5a2 2 0 0 0-2 2v7h3"/></svg>
+              <span>22 min</span>
+            </div>
+
+            <!-- Stop 2: St. Jude Medical Pavilion - Multi-Tech Rigging (13:00 - 17:00)
+                 Requires 2 Technicians! (Lead tech slot)
+                 left: 840px (13:00). width: 4.0 * 140 = 560px
+            -->
+            <div class="job-block type-multitech" style="left: 840px; width: 560px;" onclick="selectWorkOrder('WO-502', 'multitech')">
+              <div class="job-top-line">
+                <span class="job-cust-title">St. Jude Pavilion (Crane Rigging)</span>
+                <span class="mini-badge mb-multi">MULTI-TECH (LEAD)</span>
+              </div>
+              <div class="job-equip-desc">York YVAA 120T Compressor Replacement (R-134a)</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">13:00 – 17:00 (4.0 hrs)</span>
+                <span class="job-parts-pill ready">Compressor Onsite</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TECHNICIAN ROW 5: Tyler Brooks (Downtown Commercial & VRF) -->
+        <div class="technician-row" data-tech="tbrooks" data-territory="Downtown">
+          <div class="tech-info-card">
+            <div class="tech-primary-meta">
+              <div class="tech-avatar" style="background: #0369a1;">
+                TB
+                <div class="status-dot active" title="On schedule"></div>
+              </div>
+              <div class="tech-name-box">
+                <div class="tech-name">Tyler Brooks</div>
+                <div class="tech-van-id">Van #03 • Packaged & VRF</div>
+              </div>
+            </div>
+            <div class="tech-tags">
+              <span class="tech-badge cert">NATE Comm</span>
+              <span class="tech-badge cert">VRF Field Spec</span>
+              <span class="tech-badge territory">Downtown</span>
+            </div>
+            <div class="tech-shift-info">
+              <span>Shift: 08:00 – 16:30</span>
+              <span style="color: #6ee7b7;">Free at 12:30</span>
+            </div>
+          </div>
+
+          <div class="tech-schedule-track" id="track-tbrooks">
+            <div class="out-of-shift-zone" style="left: 0; width: 140px;"></div>
+            <!-- Out of shift after 16:30 (9.5h from 7am = 1330px) -->
+            <div class="out-of-shift-zone" style="left: 1330px; right: 0;"></div>
+
+            <!-- Job 1: Aon Center Branch (08:30 - 11:30)
+                 left: 210px. width: 3.0 * 140 = 420px
+            -->
+            <div class="job-block type-pm" style="left: 210px; width: 420px;" onclick="selectWorkOrder('WO-401', 'pm')">
+              <div class="job-top-line">
+                <span class="job-cust-title">Aon Center Branch HVAC</span>
+                <span class="mini-badge mb-pm">PM ROUTINE</span>
+              </div>
+              <div class="job-equip-desc">Mitsubishi City Multi VRF + Lossnay ERV</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">08:30 – 11:30</span>
+                <span class="job-parts-pill ready">Filters / Belts Loaded</span>
+              </div>
+            </div>
+
+            <!-- Lunch / Buffer (11:30 - 12:30) -->
+
+            <!-- Candidate for absorbing West End Plaza OR assisting Devon Washington! -->
+            <div id="tyler-open-slot" style="position: absolute; left: 770px; width: 420px; height: 84px; border: 2px dashed rgba(56, 189, 248, 0.4); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: rgba(56, 189, 248, 0.05); cursor: pointer;" onclick="openOverrunResolver()">
+              <span style="font-size: 11px; font-weight: 700; color: #38bdf8;">Available for West End Plaza Reassignment</span>
+              <span style="font-size: 9.5px; color: var(--text-muted);">Has Carrier B85 belts on truck • 8 min from site</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TECHNICIAN ROW 6: Chloe Simmons (Flex Shift Floater / Diagnostics) -->
+        <div class="technician-row" data-tech="csimmons" data-territory="Floater">
+          <div class="tech-info-card">
+            <div class="tech-primary-meta">
+              <div class="tech-avatar" style="background: #475569;">
+                CS
+                <div class="status-dot active" title="On schedule"></div>
+              </div>
+              <div class="tech-name-box">
+                <div class="tech-name">Chloe Simmons</div>
+                <div class="tech-van-id">Van #19 • Controls / Flex Shift</div>
+              </div>
+            </div>
+            <div class="tech-tags">
+              <span class="tech-badge cert">EPA Univ</span>
+              <span class="tech-badge cert">DDC Apprentice</span>
+              <span class="tech-badge territory">Metro Floater</span>
+            </div>
+            <div class="tech-shift-info">
+              <span>Shift: 09:30 – 18:00</span>
+              <span style="color: #6ee7b7;">On Shift</span>
+            </div>
+          </div>
+
+          <div class="tech-schedule-track">
+            <!-- 07:00 to 09:30 out of shift (350px) -->
+            <div class="out-of-shift-zone" style="left: 0; width: 350px;"></div>
+
+            <!-- Job 1: River North Lofts (10:00 - 13:00)
+                 left: 420px. width: 3.0 * 140 = 420px
+            -->
+            <div class="job-block type-repair" style="left: 420px; width: 420px;" onclick="selectWorkOrder('WO-301', 'repair')">
+              <div class="job-top-line">
+                <span class="job-cust-title">River North Lofts Mechanical</span>
+                <span class="mini-badge" style="background: #0284c7; color: white;">CORRECTIVE</span>
+              </div>
+              <div class="job-equip-desc">Water-Source Heat Pumps (WSHP 1-8)</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">10:00 – 13:00</span>
+                <span class="job-parts-pill ready">Actuators on Board</span>
+              </div>
+            </div>
+
+            <!-- Job 2: Loop Commerce Center (14:00 - 17:30) -->
+            <div class="job-block type-pm" style="left: 980px; width: 490px;" onclick="selectWorkOrder('WO-302', 'pm')">
+              <div class="job-top-line">
+                <span class="job-cust-title">Loop Commerce Center</span>
+                <span class="mini-badge mb-pm">SEMI-ANNUAL PM</span>
+              </div>
+              <div class="job-equip-desc">BAC Cooling Tower Fan VFD & Strainer Clean</div>
+              <div class="job-bottom-meta">
+                <span class="job-time-window">14:00 – 17:30</span>
+                <span class="job-parts-pill ready">V-Belts & Chemical Kit</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- MAP VIEW (Toggled in Split View mode) -->
+    <div class="map-split-view" id="mapSplitView">
+      <div class="map-overlay-card">
+        <div style="font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          Metro Live Territory & GPS
+        </div>
+        <div>6 Techs Active • 1 Emergency Unassigned • 2 Multi-Tech Required</div>
+      </div>
+
+      <div class="map-svg-container" id="mapSvgContainer">
+        <!-- Interactive SVG Stylized Map of Metro Area -->
+        <svg width="100%" height="100%" viewBox="0 0 600 700" style="width: 100%; height: 100%;">
+          <!-- Territory Zones Background -->
+          <path d="M 50,50 L 350,40 L 380,260 L 50,230 Z" fill="rgba(6, 182, 212, 0.04)" stroke="rgba(6, 182, 212, 0.2)" stroke-dasharray="4"/>
+          <text x="70" y="80" fill="#06b6d4" font-size="11" font-weight="700">NORTH TECH CORRIDOR</text>
+
+          <path d="M 120,250 L 550,240 L 520,480 L 100,470 Z" fill="rgba(2, 132, 199, 0.04)" stroke="rgba(2, 132, 199, 0.2)" stroke-dasharray="4"/>
+          <text x="220" y="270" fill="#38bdf8" font-size="11" font-weight="700">DOWNTOWN CENTRAL METRO</text>
+
+          <path d="M 60,490 L 520,500 L 500,660 L 60,650 Z" fill="rgba(168, 85, 247, 0.04)" stroke="rgba(168, 85, 247, 0.2)" stroke-dasharray="4"/>
+          <text x="90" y="520" fill="#c084fc" font-size="11" font-weight="700">SOUTH INDUSTRIAL & LOGISTICS</text>
+
+          <!-- Highways & Road Links -->
+          <line x1="280" y1="40" x2="290" y2="670" stroke="#1e2e4f" stroke-width="5"/>
+          <line x1="60" y1="360" x2="550" y2="350" stroke="#1e2e4f" stroke-width="4"/>
+          <line x1="80" y1="160" x2="480" y2="520" stroke="#1e2e4f" stroke-width="3" stroke-dasharray="6"/>
+
+          <!-- Dispatch Route: Marcus Vance (Overrun at Metro General) -->
+          <polyline points="290,340 340,380" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5"/>
+
+          <!-- Customer Pin 1: Metro General Hospital (Overrun) -->
+          <g transform="translate(290, 340)" class="map-pin-group" onclick="selectWorkOrder('WO-801', 'overrun')">
+            <circle cx="0" cy="0" r="14" fill="rgba(245, 158, 11, 0.3)"/>
+            <circle cx="0" cy="0" r="8" fill="#f59e0b"/>
+            <text x="14" y="4" fill="#fff" font-size="10" font-weight="700">Metro General (Overrun)</text>
+          </g>
+
+          <!-- Customer Pin 2: Apex BioTech (Emergency Unassigned) -->
+          <g transform="translate(220, 110)" class="map-pin-group" onclick="selectWorkOrder('WO-901', 'emergency')">
+            <circle cx="0" cy="0" r="22" fill="rgba(239, 68, 68, 0.25)" class="pulse-badge"/>
+            <circle cx="0" cy="0" r="10" fill="#ef4444"/>
+            <text x="15" y="4" fill="#fca5a5" font-size="11" font-weight="700">🚨 Apex BioTech (UNASSIGNED)</text>
+          </g>
+
+          <!-- Tech Pin: Elena Rostova (Nearby in North corridor) -->
+          <g transform="translate(180, 160)" class="map-pin-group" onclick="selectWorkOrder('WO-701', 'pm')">
+            <rect x="-12" y="-12" width="24" height="24" rx="6" fill="#065f46" stroke="#10b981" stroke-width="2"/>
+            <text x="-7" y="4" fill="#fff" font-size="9" font-weight="700">ER</text>
+            <text x="16" y="4" fill="#a7f3d0" font-size="10">Elena Rostova (4.2 mi)</text>
+          </g>
+
+          <!-- Line from Elena to Apex (15 min travel) -->
+          <line x1="180" y1="160" x2="220" y2="110" stroke="#06b6d4" stroke-width="2" stroke-dasharray="4"/>
+          <text x="205" y="145" fill="#67e8f9" font-size="9" font-weight="bold">15 min drive</text>
+
+          <!-- Customer Pin 3: Oakmont Medical -->
+          <g transform="translate(420, 310)" class="map-pin-group" onclick="selectWorkOrder('WO-602', 'access')">
+            <circle cx="0" cy="0" r="8" fill="#0284c7"/>
+            <text x="12" y="4" fill="#fff" font-size="10">Oakmont Med (Dock: 11:30)</text>
+          </g>
+
+          <!-- Customer Pin 4: St. Jude Pavilion (Multi-Tech) -->
+          <g transform="translate(360, 420)" class="map-pin-group" onclick="selectWorkOrder('WO-502', 'multitech')">
+            <circle cx="0" cy="0" r="9" fill="#9333ea"/>
+            <text x="14" y="4" fill="#e9d5ff" font-size="10" font-weight="700">St. Jude (Dual Tech Rigging)</text>
+          </g>
+
+          <!-- Tech Pin: Devon Washington -->
+          <g transform="translate(290, 560)" class="map-pin-group">
+            <rect x="-12" y="-12" width="24" height="24" rx="6" fill="#4c1d95" stroke="#a855f7" stroke-width="2"/>
+            <text x="-8" y="4" fill="#fff" font-size="9" font-weight="700">DW</text>
+            <text x="16" y="4" fill="#d8b4fe" font-size="10">Devon Washington</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RIGHT INSPECTOR DRAWER -->
+    <aside class="inspector-panel" id="inspectorPanel">
+      <div class="inspector-header">
+        <div class="insp-title-box">
+          <h3 id="inspCustomerName">Apex BioTech Systems HQ</h3>
+          <div class="insp-wo-id" id="inspWoId">WO-901 • Commercial Server Lab</div>
+        </div>
+        <button class="insp-close-btn" title="Close Panel" onclick="closeInspector()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Tab selection inside inspector -->
+      <div class="inspector-tabs">
+        <button class="insp-tab active" id="tabBtnOverview" onclick="switchInspTab('overview')">Overview & Site</button>
+        <button class="insp-tab" id="tabBtnParts" onclick="switchInspTab('parts')">Parts & Equipment</button>
+        <button class="insp-tab" id="tabBtnRoute" onclick="switchInspTab('route')">Travel & Logistics</button>
+      </div>
+
+      <div class="inspector-body" id="inspBodyOverview">
+        <!-- Site Access & Contact Details Card -->
+        <div class="detail-card">
+          <div class="detail-card-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Site Access & Escort Requirements
+          </div>
+          <div class="access-restriction-box" id="inspAccessBox">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div id="inspAccessText">
+              <strong>Strict Escort Protocol:</strong> Security check-in at Gate 3. Facilities Escort Dave Miller must remain with technician. Server room access barred after 14:00 without CTO permit.
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <div class="prop-row">
+              <span class="prop-label">Site Contact:</span>
+              <span class="prop-value" id="inspContactName">Dave Miller (Facilities Dir.)</span>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">Direct Phone:</span>
+              <span class="prop-value" id="inspContactPhone">(312) 555-0192</span>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">Address:</span>
+              <span class="prop-value" id="inspAddress">1400 Research Pkwy, Bldg 4</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- System & Problem Diagnosis Card -->
+        <div class="detail-card">
+          <div class="detail-card-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Equipment & Diagnosis
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Primary Equipment:</span>
+            <span class="prop-value" id="inspEquipment">Liebert DSE 80kW CRAC</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Refrigerant / Circuit:</span>
+            <span class="prop-value" id="inspRefrigerant">R-410A Dual Tandem</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Reported Issue:</span>
+            <span class="prop-value" style="color: #f87171;" id="inspIssue">Inverter Lockout / 82°F</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Priority SLA:</span>
+            <span class="prop-value" style="color: #ef4444; font-weight: 700;" id="inspPriority">P1 Emergency (2h SLA)</span>
+          </div>
+        </div>
+
+        <!-- Assignment & Certification Match -->
+        <div class="detail-card">
+          <div class="detail-card-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+            Technician Requirements
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Assigned Tech:</span>
+            <span class="prop-value" id="inspAssignedTech" style="color: #f87171;">UNASSIGNED</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Required Certs:</span>
+            <span class="prop-value" id="inspRequiredCerts">EPA Univ • CRAC/DDC</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Crew Size:</span>
+            <span class="prop-value" id="inspCrewSize">1 Tech (Solo Diagnostic)</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Window Buffer:</span>
+            <span class="prop-value" id="inspWindowBuffer">Immediate Dispatch</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parts & Equipment Tab (Hidden by default) -->
+      <div class="inspector-body" id="inspBodyParts" style="display: none;">
+        <div class="detail-card">
+          <div class="detail-card-title">Required Replacement Parts</div>
+          <div id="inspPartsList">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-subtle);">
+              <div>
+                <div style="font-weight: 600; font-size: 12px; color: #fff;">Danfoss 25HP VFD Inverter</div>
+                <div style="font-size: 10px; color: var(--text-dim);">P/N: VLT-HVAC-131B</div>
+              </div>
+              <span style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; font-size: 10px; padding: 2px 6px; border-radius: 4px;">In Central Depot</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">
+              <div>
+                <div style="font-weight: 600; font-size: 12px; color: #fff;">Control Board Ribbon Harness</div>
+                <div style="font-size: 10px; color: var(--text-dim);">P/N: LIB-4402-CR</div>
+              </div>
+              <span style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; font-size: 10px; padding: 2px 6px; border-radius: 4px;">On Van #12 (Elena)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-card-title">Special Diagnostic Equipment</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11.5px; color: #cbd5e1;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Fluke 1734 3-Phase Power Logger</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Fieldpiece Digital Micron Vacuum & Recovery Rig</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Liebert DDC Firmware Diagnostic Dongle</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Route & Logistics Tab (Hidden by default) -->
+      <div class="inspector-body" id="inspBodyRoute" style="display: none;">
+        <div class="detail-card">
+          <div class="detail-card-title">Travel Time & Proximity Calculation</div>
+          <div class="prop-row">
+            <span class="prop-label">Origin Location:</span>
+            <span class="prop-value">Omnicell Cleanroom (ER)</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Distance to Site:</span>
+            <span class="prop-value">4.2 miles</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Transit Time (Live):</span>
+            <span class="prop-value" style="color: #6ee7b7; font-weight: 700;">14 - 18 minutes</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Optimal Route:</span>
+            <span class="prop-value">I-94 W to Exit 39B</span>
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-card-title">Site Parking & Loading Info</div>
+          <div style="font-size: 11.5px; color: #cbd5e1; line-height: 1.4;">
+            Commercial van parking bay #4 at Gate 3. Freight elevator cleared for heavy tool carts. Security requires photo ID and EPA card inspection.
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="inspector-actions-footer" id="inspFooter">
+        <button class="btn-footer-danger" id="inspPrimaryActionBtn" onclick="openEmergencyAssignModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Quick Assign Best Match Tech
+        </button>
+        <button class="btn-footer-secondary" onclick="openRescheduleModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Adjust Window / Constraints
+        </button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- MODAL 1: Smart Emergency Dispatch Recommendation -->
+  <div class="modal-backdrop" id="modalEmergencyAssign">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Dispatch Match: Apex BioTech HQ (CRAC Emergency)</span>
+        </div>
+        <button class="insp-close-btn" onclick="closeModal('modalEmergencyAssign')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 12px; color: var(--text-muted);">
+          System evaluated 6 active technicians against <strong>Liebert CRAC Certification</strong>, <strong>EPA Universal</strong>, <strong>live proximity</strong>, and <strong>schedule availability</strong>.
+        </div>
+
+        <!-- Candidate 1: Elena Rostova (Top Match) -->
+        <div class="candidate-tech-card recommended" onclick="executeAssignEmergency('erostova')">
+          <div class="candidate-left">
+            <div class="tech-avatar" style="background: #065f46;">ER</div>
+            <div>
+              <div style="font-weight: 700; font-size: 13px; color: #fff;">
+                Elena Rostova
+                <span style="font-size: 10px; background: #059669; color: #ecfdf5; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">98% MATCH</span>
+              </div>
+              <div style="font-size: 11px; color: #a7f3d0;">Finishing Omnicell Cleanroom (10:45) • 4.2 mi away (15m drive)</div>
+              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                ✓ Liebert Factory Cert &nbsp;|&nbsp; ✓ EPA Universal &nbsp;|&nbsp; ✓ Ribbon harness in Van #12
+              </div>
+            </div>
+          </div>
+          <button class="btn-action" style="font-size: 11px; padding: 6px 12px;">Assign & Notify</button>
+        </div>
+
+        <!-- Candidate 2: Tyler Brooks (Secondary Match) -->
+        <div class="candidate-tech-card" onclick="executeAssignEmergency('tbrooks')">
+          <div class="candidate-left">
+            <div class="tech-avatar" style="background: #0369a1;">TB</div>
+            <div>
+              <div style="font-weight: 700; font-size: 13px; color: #fff;">
+                Tyler Brooks
+                <span style="font-size: 10px; background: #334155; color: #94a3b8; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">74% MATCH</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted);">Downtown • 9.8 mi away (32m drive in traffic)</div>
+              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                ✓ EPA Universal &nbsp;|&nbsp; ⚠️ No Liebert factory cert (General VRF/RTU)
+              </div>
+            </div>
+          </div>
+          <button class="btn-footer-secondary" style="font-size: 11px; padding: 6px 12px;">Select</button>
+        </div>
+
+        <!-- Candidate 3: Marcus Vance (Unavailable due to Overrun) -->
+        <div class="candidate-tech-card" style="opacity: 0.5; pointer-events: none; background: rgba(0,0,0,0.2);">
+          <div class="candidate-left">
+            <div class="tech-avatar" style="background: #1e3a8a;">MV</div>
+            <div>
+              <div style="font-weight: 700; font-size: 13px; color: #94a3b8;">Marcus Vance (In Overrun)</div>
+              <div style="font-size: 11px; color: #f87171;">Currently in active delay at Metro General (+1h 45m)</div>
+            </div>
+          </div>
+          <span style="font-size: 11px; color: #f87171; font-weight: 600;">Unavailable</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Marcus Vance Overrun Resolution / Rebalance -->
+  <div class="modal-backdrop" id="modalOverrunResolver">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>Resolve Schedule Conflict: Marcus Vance Overrun</span>
+        </div>
+        <button class="insp-close-btn" onclick="closeModal('modalOverrunResolver')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 12px; font-size: 12px; color: #fde68a;">
+          <strong>Root Cause:</strong> Marcus discovered heavy acid contamination in Circuit A of Trane Chiller CVHE. System requires triple filter-drier flush and vacuum hold (+105 mins).
+          <br><br>
+          <strong>Impact:</strong> Marcus will not finish until ~12:15 PM, causing him to miss his 13:30 arrival window at <strong>West End Plaza (WO-802)</strong>.
+        </div>
+
+        <div style="font-size: 12px; font-weight: 700; color: #fff; margin-top: 4px;">Recommended Reassignment:</div>
+
+        <div class="candidate-tech-card recommended" onclick="executeResolveOverrun()">
+          <div class="candidate-left">
+            <div class="tech-avatar" style="background: #0369a1;">TB</div>
+            <div>
+              <div style="font-weight: 700; font-size: 13px; color: #fff;">
+                Transfer West End Plaza to Tyler Brooks
+                <span style="font-size: 10px; background: #059669; color: #ecfdf5; padding: 1px 6px; border-radius: 4px; margin-left: 6px;">RECOMMENDED</span>
+              </div>
+              <div style="font-size: 11px; color: #a7f3d0;">
+                Tyler completes Aon Center at 11:30 AM • Located 0.8 miles from West End Plaza
+              </div>
+              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                ✓ Van #03 carries required Gates B85 cogged belts & RTU contactors
+              </div>
+            </div>
+          </div>
+          <button class="btn-action" style="font-size: 11px; padding: 6px 12px;">Transfer WO-802</button>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-footer-secondary" style="flex: 1;" onclick="pushJobWindow()">
+            Push West End Plaza to Tomorrow
+          </button>
+          <button class="btn-footer-secondary" style="flex: 1;" onclick="extendMarcusShift()">
+            Authorize Marcus Overtime (+2h)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: New Work Order Entry -->
+  <div class="modal-backdrop" id="modalNewOrder">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Dispatch New Commercial HVAC Visit</span>
+        </div>
+        <button class="insp-close-btn" onclick="closeModal('modalNewOrder')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Customer / Facility</label>
+            <input type="text" id="newCustName" value="Columbia College Science Annex" style="width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light); color: #fff; padding: 7px; border-radius: 5px; font-size: 12px;">
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Priority Level</label>
+            <select id="newCustPriority" style="width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light); color: #fff; padding: 7px; border-radius: 5px; font-size: 12px;">
+              <option value="P2">P2 - High Corrective</option>
+              <option value="P1">P1 - Emergency Lockout</option>
+              <option value="P3">P3 - Planned Maintenance</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Equipment & System Model</label>
+          <input type="text" id="newCustEquip" value="York YVAA 150-Ton Air-Cooled Screw Chiller" style="width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light); color: #fff; padding: 7px; border-radius: 5px; font-size: 12px;">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Reported Issue & Diagnostics</label>
+          <textarea id="newCustIssue" rows="2" style="width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light); color: #fff; padding: 7px; border-radius: 5px; font-size: 12px;">Circuit 1 low suction pressure trip. Suspected Danfoss electronic expansion valve stepper motor failure.</textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Service Window</label>
+            <input type="text" value="13:30 - 16:30" style="width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light); color: #fff; padding: 7px; border-radius: 5px; font-size: 12px;">
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Required Technician</label>
+            <select style="width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light); color: #fff; padding: 7px; border-radius: 5px; font-size: 12px;">
+              <option>Auto-assign best match</option>
+              <option>Marcus Vance</option>
+              <option>Elena Rostova</option>
+              <option>Tyler Brooks</option>
+              <option>Mateo Diaz</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="inspector-actions-footer">
+        <button class="btn-footer-primary" onclick="submitNewWorkOrder()">Create & Stage Visit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // State management
+    const state = {
+      selectedWO: 'WO-901',
+      emergencyAssigned: false,
+      overrunResolved: false,
+      currentView: 'timeline',
+      unassignedCount: 3,
+      workOrders: {
+        'WO-901': {
+          id: 'WO-901',
+          customer: 'Apex BioTech Systems HQ',
+          subTitle: 'Commercial Server Lab • Clean Zone',
+          address: '1400 Research Pkwy, Bldg 4 (North Tech)',
+          equipment: 'Liebert DSE 80kW CRAC Precision Unit',
+          refrigerant: 'R-410A Dual Tandem Hermetic',
+          issue: 'CRAC #3 fan inverter fault. Server row hot-aisle at 82°F and climbing.',
+          priority: 'P1 Emergency (2h SLA)',
+          priorityClass: 'emergency',
+          duration: '2.0 hrs',
+          assignedTech: 'UNASSIGNED',
+          requiredCerts: 'EPA Univ • Liebert Factory Certified',
+          crewSize: '1 Tech (Solo Diagnostic)',
+          windowBuffer: 'Immediate Dispatch',
+          contactName: 'Dave Miller (Facilities Dir.)',
+          contactPhone: '(312) 555-0192',
+          accessRestricted: true,
+          accessNote: 'Strict Escort Protocol: Security check-in at Gate 3. Facilities Escort Dave Miller must remain with technician. Server room access barred after 14:00 without CTO permit.'
+        },
+        'WO-801': {
+          id: 'WO-801',
+          customer: 'Metro General Hospital',
+          subTitle: 'Central Plant Chiller Penthouse',
+          address: '850 S Wells St (Downtown Central)',
+          equipment: 'Trane CVHE 500-Ton Centrifugal Chiller',
+          refrigerant: 'R-123 Low Pressure Centrifugal',
+          issue: 'High head pressure lockout. Stator burnout found acid contamination in circuit A.',
+          priority: 'High Corrective (Overrun Alert)',
+          priorityClass: 'overrun',
+          duration: '2.5 hrs (Original) -> 4.25 hrs (Current)',
+          assignedTech: 'Marcus Vance (Van #08)',
+          requiredCerts: 'EPA Universal • Master Chiller Rig',
+          crewSize: '1 Tech (Solo Master)',
+          windowBuffer: 'OVERRUN +1h 45m',
+          contactName: 'Frank Gallagher (Chief Engineer)',
+          contactPhone: '(312) 555-4921',
+          accessRestricted: true,
+          accessNote: 'Hospital clean air compliance: All vacuum exhaust must be charcoal scrubbed. Loading bay access permit required.'
+        },
+        'WO-802': {
+          id: 'WO-802',
+          customer: 'West End Plaza RTU',
+          subTitle: 'Commercial Retail Penthouse',
+          address: '220 W Madison St (Downtown Central)',
+          equipment: 'Carrier WeatherMaker 48HC (25-Ton)',
+          refrigerant: 'R-410A Scroll',
+          issue: 'Supply blower belt snapped. Motor tripped on thermal overload.',
+          priority: 'P2 High Corrective',
+          priorityClass: 'repair',
+          duration: '2.0 hrs',
+          assignedTech: 'Marcus Vance (Conflict Pending)',
+          requiredCerts: 'EPA Universal • NATE Commercial',
+          crewSize: '1 Tech',
+          windowBuffer: '13:30 - 15:30 (At Risk)',
+          contactName: 'Sara Lindqvist (Property Mgr)',
+          contactPhone: '(312) 555-8371',
+          accessRestricted: false,
+          accessNote: 'Roof hatch key at security lobby. Ladder access only.'
+        },
+        'WO-701': {
+          id: 'WO-701',
+          customer: 'Omnicell Cleanroom 3',
+          subTitle: 'Bio-Pharmaceutical Packaging',
+          address: '1200 Technology Way (North Tech)',
+          equipment: 'Stulz CyberAir Precision DX Unit',
+          refrigerant: 'R-407C Multi-Stage',
+          issue: 'Planned quarterly calibration & air filter delta-P verification.',
+          priority: 'P3 Planned Maintenance',
+          priorityClass: 'pm',
+          duration: '2.75 hrs',
+          assignedTech: 'Elena Rostova (Van #12)',
+          requiredCerts: 'EPA Univ • Cleanroom Certified',
+          crewSize: '1 Tech',
+          windowBuffer: '08:00 - 10:45 (Ending on schedule)',
+          contactName: 'Brian Chen (Quality Lead)',
+          contactPhone: '(312) 555-3211',
+          accessRestricted: true,
+          accessNote: 'Full cleanroom gowning protocol required prior to air handler entry.'
+        },
+        'WO-602': {
+          id: 'WO-602',
+          customer: 'Oakmont Medical Pavilion',
+          subTitle: 'Outpatient Surgical Suites',
+          address: '625 N Michigan Ave (Downtown/North)',
+          equipment: 'Daikin VRV IV (16-Ton Heat Recovery)',
+          refrigerant: 'R-410A Inverter Multi-Split',
+          issue: 'Communication error loop U4 between branch selector 2 and master outdoor unit.',
+          priority: 'P2 High Corrective',
+          priorityClass: 'access',
+          duration: '2.5 hrs',
+          assignedTech: 'Mateo Diaz (Van #04)',
+          requiredCerts: 'EPA Univ • Daikin Service Checker',
+          crewSize: '1 Tech',
+          windowBuffer: '11:15 - 13:45',
+          contactName: 'Nurse Mgr. Karen Vogel',
+          contactPhone: '(312) 555-9014',
+          accessRestricted: true,
+          accessNote: 'STRICT ACCESS: Loading dock closes at 11:30 AM sharp. Freight elevator locked after 11:30 without prior security escort reservation.'
+        },
+        'WO-502': {
+          id: 'WO-502',
+          customer: 'St. Jude Medical Pavilion',
+          subTitle: 'Main Facility Rooftop Chiller Bank',
+          address: '900 N Michigan Ave (Downtown)',
+          equipment: 'York YVAA 120T Screw Chiller',
+          refrigerant: 'R-134a Semi-Hermetic Screw',
+          issue: 'Compressor #1 replacement & crane rigging hoist swap (1,400 lbs).',
+          priority: 'High (Multi-Tech Sync)',
+          priorityClass: 'multitech',
+          duration: '4.0 hrs',
+          assignedTech: 'Devon Washington (Lead) + Assist Needed',
+          requiredCerts: 'Master Rigger • EPA Universal • OSHA 30',
+          crewSize: '2 Technicians (Mandatory Safety Lift)',
+          windowBuffer: '13:00 - 17:00 (Crane staged)',
+          contactName: 'Greg Foster (Facilities Chief)',
+          contactPhone: '(312) 555-7782',
+          accessRestricted: true,
+          accessNote: 'Street closure permit for 40-ton mobile crane approved 13:00 to 16:30 only. Mandatory dual-technician signoff.'
+        },
+        'WO-904': {
+          id: 'WO-904',
+          customer: 'Horizon Logistics Distribution',
+          subTitle: 'Cold Chain Cross-Dock',
+          address: '3800 S Western Ave (East Logistics)',
+          equipment: 'Carrier WeatherMaker RTUs 1-4',
+          refrigerant: 'R-410A Dual Circuit',
+          issue: 'Quarterly PM: Belt replacements, coil sanitization, economizer calibration.',
+          priority: 'P3 Planned Maintenance',
+          priorityClass: 'pm',
+          duration: '3.0 hrs',
+          assignedTech: 'UNASSIGNED',
+          requiredCerts: 'EPA Universal • NATE Commercial',
+          crewSize: '1 Tech',
+          windowBuffer: '13:00 - 16:00',
+          contactName: 'Arturo Morales (Dock Mgr)',
+          contactPhone: '(312) 555-4089',
+          accessRestricted: false,
+          accessNote: 'Dock bay 12 reserved for HVAC van.'
+        }
+      }
+    };
+
+    // Notification toast helper
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      let icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+      if (type === 'success') {
+        icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+      } else if (type === 'danger') {
+        icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+      }
+
+      toast.innerHTML = `${icon} <span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => toast.classList.add('show'), 20);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Work order selection & inspector update
+    function selectWorkOrder(woId, typeHint) {
+      state.selectedWO = woId;
+      const data = state.workOrders[woId];
+      if (!data) return;
+
+      // Update Inspector Panel UI
+      document.getElementById('inspCustomerName').innerText = data.customer;
+      document.getElementById('inspWoId').innerText = `${data.id} • ${data.subTitle}`;
+      document.getElementById('inspContactName').innerText = data.contactName;
+      document.getElementById('inspContactPhone').innerText = data.contactPhone;
+      document.getElementById('inspAddress').innerText = data.address;
+      document.getElementById('inspEquipment').innerText = data.equipment;
+      document.getElementById('inspRefrigerant').innerText = data.refrigerant;
+      document.getElementById('inspIssue').innerText = data.issue;
+      document.getElementById('inspPriority').innerText = data.priority;
+      document.getElementById('inspAssignedTech').innerText = data.assignedTech;
+      document.getElementById('inspRequiredCerts').innerText = data.requiredCerts;
+      document.getElementById('inspCrewSize').innerText = data.crewSize;
+      document.getElementById('inspWindowBuffer').innerText = data.windowBuffer;
+
+      // Site Access box
+      const accessBox = document.getElementById('inspAccessBox');
+      const accessText = document.getElementById('inspAccessText');
+      if (data.accessRestricted) {
+        accessBox.style.display = 'flex';
+        accessText.innerHTML = `<strong>Site Restriction / Escort:</strong> ${data.accessNote}`;
+      } else {
+        accessBox.style.display = 'none';
+      }
+
+      // Configure primary action button in inspector
+      const primaryBtn = document.getElementById('inspPrimaryActionBtn');
+      if (woId === 'WO-901' && !state.emergencyAssigned) {
+        primaryBtn.style.display = 'flex';
+        primaryBtn.className = 'btn-footer-danger';
+        primaryBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Smart Dispatch Best Match Tech
+        `;
+        primaryBtn.onclick = openEmergencyAssignModal;
+      } else if (woId === 'WO-801' || woId === 'WO-802') {
+        primaryBtn.style.display = 'flex';
+        primaryBtn.className = 'btn-footer-primary';
+        primaryBtn.style.background = '#d97706';
+        primaryBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Resolve Overrun & Reassign
+        `;
+        primaryBtn.onclick = openOverrunResolver;
+      } else {
+        primaryBtn.style.display = 'flex';
+        primaryBtn.className = 'btn-footer-primary';
+        primaryBtn.style.background = '#0284c7';
+        primaryBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Update Visit Status
+        `;
+        primaryBtn.onclick = () => showToast(`Status updated for ${data.customer}`, 'success');
+      }
+
+      // Ensure inspector panel is visible
+      const inspector = document.getElementById('inspectorPanel');
+      inspector.style.display = 'flex';
+
+      // Highlight selected block on timeline
+      document.querySelectorAll('.job-block').forEach(b => b.classList.remove('selected'));
+      // If clicked on timeline, let's keep visual feedback
+    }
+
+    function switchInspTab(tab) {
+      document.querySelectorAll('.insp-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('inspBodyOverview').style.display = 'none';
+      document.getElementById('inspBodyParts').style.display = 'none';
+      document.getElementById('inspBodyRoute').style.display = 'none';
+
+      if (tab === 'overview') {
+        document.getElementById('tabBtnOverview').classList.add('active');
+        document.getElementById('inspBodyOverview').style.display = 'flex';
+      } else if (tab === 'parts') {
+        document.getElementById('tabBtnParts').classList.add('active');
+        document.getElementById('inspBodyParts').style.display = 'flex';
+      } else if (tab === 'route') {
+        document.getElementById('tabBtnRoute').classList.add('active');
+        document.getElementById('inspBodyRoute').style.display = 'flex';
+      }
+    }
+
+    function closeInspector() {
+      document.getElementById('inspectorPanel').style.display = 'none';
+    }
+
+    function toggleUnassignedPanel() {
+      const panel = document.getElementById('unassignedPanel');
+      panel.classList.toggle('collapsed');
+    }
+
+    // Modal helpers
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function openEmergencyAssignModal() {
+      openModal('modalEmergencyAssign');
+    }
+
+    function openOverrunResolver() {
+      openModal('modalOverrunResolver');
+    }
+
+    function openNewOrderModal() {
+      openModal('modalNewOrder');
+    }
+
+    function focusEmergency() {
+      selectWorkOrder('WO-901', 'emergency');
+      const card = document.getElementById('card-wo-901');
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth' });
+        card.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.8)';
+        setTimeout(() => card.style.boxShadow = '', 2000);
+      }
+    }
+
+    function highlightSiteConstraint() {
+      selectWorkOrder('WO-602', 'access');
+      showToast('Oakmont Medical: Dock closing buffer at 11:30 AM requires prompt arrival!', 'warning');
+    }
+
+    // Action execution: Dispatch Emergency to Elena Rostova
+    function executeAssignEmergency(techKey) {
+      closeModal('modalEmergencyAssign');
+      state.emergencyAssigned = true;
+
+      // Update work order state
+      state.workOrders['WO-901'].assignedTech = 'Elena Rostova (Van #12)';
+      state.workOrders['WO-901'].windowBuffer = '11:15 – 13:45';
+
+      // Remove unassigned card from left drawer
+      const card = document.getElementById('card-wo-901');
+      if (card) {
+        card.style.transition = 'all 0.3s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(-50px)';
+        setTimeout(() => {
+          card.remove();
+          state.unassignedCount--;
+          document.getElementById('unassignedCountBadge').innerText = state.unassignedCount;
+        }, 300);
+      }
+
+      // Replace open slot on Elena's track with active emergency job block
+      const openSlot = document.getElementById('elena-open-slot');
+      if (openSlot) {
+        const emergencyBlock = document.createElement('div');
+        emergencyBlock.className = 'job-block type-repair';
+        emergencyBlock.style.left = '630px';
+        emergencyBlock.style.width = '350px';
+        emergencyBlock.style.borderLeft = '5px solid #ef4444';
+        emergencyBlock.style.background = 'linear-gradient(135deg, #381313 0%, #1c0b0b 100%)';
+        emergencyBlock.style.borderColor = '#ef4444';
+        emergencyBlock.onclick = () => selectWorkOrder('WO-901', 'emergency');
+
+        emergencyBlock.innerHTML = `
+          <div class="job-top-line">
+            <span class="job-cust-title">🚨 Apex BioTech HQ (CRAC)</span>
+            <span class="mini-badge mb-overrun" style="background:#dc2626;">DISPATCHED</span>
+          </div>
+          <div class="job-equip-desc">Liebert DSE 80kW CRAC • VFD Inverter Swap</div>
+          <div class="job-bottom-meta">
+            <span class="job-time-window">11:15 – 13:45 (2.5 hrs)</span>
+            <span class="job-parts-pill ready">Parts Dispatched</span>
+          </div>
+        `;
+        openSlot.replaceWith(emergencyBlock);
+      }
+
+      // Update Alert Bar
+      const alertBar = document.getElementById('conflictAlertBar');
+      const critTag = alertBar.querySelector('.conflict-tag.critical');
+      if (critTag) {
+        critTag.innerHTML = `
+          <span class="conflict-badge-num" style="background: #10b981;">RESOLVED</span>
+          <strong>EMERGENCY DISPATCHED:</strong> Elena Rostova assigned to Apex BioTech (ETA 11:15 AM)
+        `;
+        critTag.style.color = '#6ee7b7';
+      }
+
+      showToast('Dispatched Elena Rostova to Apex BioTech HQ! Customer notified.', 'success');
+      selectWorkOrder('WO-901', 'emergency');
+    }
+
+    // Action execution: Resolve Marcus Overrun by reassigning West End Plaza to Tyler Brooks
+    function executeResolveOverrun() {
+      closeModal('modalOverrunResolver');
+      state.overrunResolved = true;
+
+      // Update data
+      state.workOrders['WO-802'].assignedTech = 'Tyler Brooks (Van #03)';
+      state.workOrders['WO-802'].windowBuffer = '13:00 – 15:00';
+
+      // Move block visually from Marcus to Tyler Brooks
+      const westEndJob = document.getElementById('job-west-end');
+      if (westEndJob) {
+        westEndJob.remove();
+      }
+
+      const tylerOpenSlot = document.getElementById('tyler-open-slot');
+      if (tylerOpenSlot) {
+        const reassignedBlock = document.createElement('div');
+        reassignedBlock.className = 'job-block type-repair';
+        reassignedBlock.style.left = '770px';
+        reassignedBlock.style.width = '280px';
+        reassignedBlock.onclick = () => selectWorkOrder('WO-802', 'repair');
+
+        reassignedBlock.innerHTML = `
+          <div class="job-top-line">
+            <span class="job-cust-title">West End Plaza RTU</span>
+            <span class="mini-badge" style="background: #0284c7; color: white;">REASSIGNED OK</span>
+          </div>
+          <div class="job-equip-desc">Carrier WeatherMaker 48HC • Belts on Truck</div>
+          <div class="job-bottom-meta">
+            <span class="job-time-window">13:00 – 15:00</span>
+            <span class="job-parts-pill ready">Tyler En Route</span>
+          </div>
+        `;
+        tylerOpenSlot.replaceWith(reassignedBlock);
+      }
+
+      // Update Alert Bar
+      const alertBar = document.getElementById('conflictAlertBar');
+      const warnTag = alertBar.querySelector('.conflict-tag.warning');
+      if (warnTag) {
+        warnTag.innerHTML = `
+          <span class="conflict-badge-num" style="background: #10b981;">RESOLVED</span>
+          <strong>OVERRUN RESOLVED:</strong> West End Plaza transferred to Tyler Brooks. Marcus Vance protected.
+        `;
+        warnTag.style.color = '#6ee7b7';
+      }
+
+      showToast('West End Plaza transferred to Tyler Brooks. Marcus Vance schedule clear of clash.', 'success');
+      selectWorkOrder('WO-802', 'repair');
+    }
+
+    function pushJobWindow() {
+      closeModal('modalOverrunResolver');
+      showToast('West End Plaza rescheduled for tomorrow 09:00 AM.', 'info');
+    }
+
+    function extendMarcusShift() {
+      closeModal('modalOverrunResolver');
+      showToast('Overtime authorized for Marcus Vance (+2.0h). Customer alerted for late arrival.', 'warning');
+    }
+
+    function assignPMModal(woId) {
+      showToast('Select open technician slot on timeline to assign Horizon Logistics PM.', 'info');
+    }
+
+    function assignMultiTechAssist() {
+      showToast('Tyler Brooks matched as 2nd Rigger with Devon Washington for St. Jude Crane Lift.', 'success');
+    }
+
+    function submitNewWorkOrder() {
+      const cust = document.getElementById('newCustName').value;
+      const equip = document.getElementById('newCustEquip').value;
+      closeModal('modalNewOrder');
+      showToast(`Work order created for ${cust}. Added to staging queue.`, 'success');
+    }
+
+    // View Switching: Timeline vs Split Map
+    function switchView(view) {
+      state.currentView = view;
+      const btnTimeline = document.getElementById('btnViewTimeline');
+      const btnSplit = document.getElementById('btnViewSplit');
+      const mapSplit = document.getElementById('mapSplitView');
+
+      if (view === 'timeline') {
+        btnTimeline.classList.add('active');
+        btnSplit.classList.remove('active');
+        mapSplit.classList.remove('visible');
+      } else {
+        btnSplit.classList.add('active');
+        btnTimeline.classList.remove('active');
+        mapSplit.classList.add('visible');
+      }
+    }
+
+    // Filter application
+    function applyFilters() {
+      const territory = document.getElementById('territoryFilter').value;
+      const search = document.getElementById('globalSearch').value.toLowerCase();
+
+      document.querySelectorAll('.technician-row').forEach(row => {
+        const rowTerritory = row.getAttribute('data-territory');
+        const textContent = row.innerText.toLowerCase();
+
+        const matchesTerritory = (territory === 'ALL' || rowTerritory.includes(territory) || rowTerritory === 'Floater');
+        const matchesSearch = (!search || textContent.includes(search));
+
+        if (matchesTerritory && matchesSearch) {
+          row.style.display = 'flex';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    // Initialize default selection
+    window.addEventListener('DOMContentLoaded', () => {
+      selectWorkOrder('WO-901', 'emergency');
+    });
+  </script>
+</body>
+</html>

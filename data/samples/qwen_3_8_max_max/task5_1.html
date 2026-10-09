@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conduit Lake — Integrations</title>
+<style>
+  :root{
+    --bg:#07131C;
+    --bg2:#0A1B27;
+    --panel:#0C2130;
+    --panel2:#0E2737;
+    --panel3:#112D3F;
+    --line:#1B3A4C;
+    --line-soft:rgba(122,180,199,.12);
+    --text:#E9F4F2;
+    --muted:#8FA9B3;
+    --faint:#5E7883;
+    --cyan:#3EE6C4;
+    --cyan-deep:#0FB89A;
+    --blue:#6EB6FF;
+    --amber:#FFB454;
+    --orchid:#EE9CC6;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:"Helvetica Neue","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --ease:cubic-bezier(.22,.7,.2,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-width:1200px;
+  }
+  ::selection{background:rgba(62,230,196,.28);color:#fff}
+  a{color:var(--cyan);text-decoration:none}
+  button{font-family:inherit;cursor:pointer}
+  :focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:4px}
+
+  /* ---------- section shell & ambient layers ---------- */
+  .section{
+    position:relative;
+    overflow:hidden;
+    background:
+      radial-gradient(900px 480px at 18% -6%, rgba(62,230,196,.075), transparent 62%),
+      radial-gradient(820px 520px at 88% 30%, rgba(110,182,255,.06), transparent 60%),
+      linear-gradient(180deg,var(--bg) 0%,var(--bg2) 46%,var(--bg) 100%);
+  }
+  .bg-grid{
+    position:absolute;inset:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(140,200,215,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(140,200,215,.05) 1px, transparent 1px);
+    background-size:48px 48px;
+    mask-image:linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.35) 40%,rgba(0,0,0,.85));
+    -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.35) 40%,rgba(0,0,0,.85));
+  }
+  .noise{
+    position:absolute;inset:0;pointer-events:none;opacity:.055;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{width:min(1240px,calc(100% - 96px));margin-inline:auto;position:relative;z-index:2}
+
+  /* ---------- status bar ---------- */
+  .statusbar{
+    position:relative;z-index:3;
+    display:flex;justify-content:space-between;align-items:center;
+    height:46px;padding:0 34px;
+    border-bottom:1px solid var(--line-soft);
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+    color:var(--faint);text-transform:uppercase;
+    background:rgba(7,19,28,.72);
+  }
+  .statusbar b{color:var(--muted);font-weight:500}
+  .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cyan);
+    box-shadow:0 0 0 0 rgba(62,230,196,.5);animation:beat 2.2s infinite;margin-right:8px;vertical-align:1px}
+  @keyframes beat{0%{box-shadow:0 0 0 0 rgba(62,230,196,.45)}70%{box-shadow:0 0 0 9px rgba(62,230,196,0)}100%{box-shadow:0 0 0 0 rgba(62,230,196,0)}}
+
+  /* ---------- kicker motif ---------- */
+  .kicker{display:flex;align-items:center;gap:18px;margin-bottom:30px}
+  .kicker .idx{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--cyan)}
+  .kicker .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .kicker .lbl{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase}
+
+  /* ---------- header block ---------- */
+  .head{display:grid;grid-template-columns:7fr 5fr;gap:72px;padding:88px 0 64px;align-items:end}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--cyan);
+    text-transform:uppercase;margin-bottom:26px;display:flex;align-items:center;gap:12px;min-height:16px;
+  }
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--cyan);opacity:.7}
+  .eyebrow .cursor{display:inline-block;width:8px;height:14px;background:var(--cyan);animation:blink 1.05s steps(1) infinite;vertical-align:-2px}
+  @keyframes blink{50%{opacity:0}}
+  h1{
+    font-size:66px;line-height:1.03;font-weight:700;letter-spacing:-.022em;
+  }
+  .hl-line{display:block;overflow:hidden;padding-bottom:.06em;margin-bottom:-.06em}
+  .hl-line>span{display:inline-block;transform:translateY(115%);animation:rise .95s var(--ease) forwards;animation-delay:var(--d,0s)}
+  @keyframes rise{to{transform:translateY(0)}}
+  h1 em{font-family:var(--serif);font-style:italic;font-weight:600;color:var(--cyan);letter-spacing:-.01em}
+  .lede{color:var(--muted);font-size:17px;line-height:1.7;max-width:52ch;margin-bottom:26px}
+  .lede strong{color:var(--text);font-weight:600}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
+  .meta span{
+    font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:7px 13px;background:rgba(12,33,48,.6);
+  }
+  .meta span::before{content:"● ";color:var(--cyan);font-size:8px;vertical-align:2px}
+  .jump{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--cyan)}
+  .jump:hover{color:#8FF3DE}
+
+  /* ---------- map panel ---------- */
+  .map-panel{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(12,33,48,.92),rgba(10,27,39,.94));
+    box-shadow:0 30px 80px rgba(0,0,0,.4), inset 0 1px 0 rgba(180,230,235,.06);
+  }
+  .map-top{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:18px 28px;border-bottom:1px solid var(--line-soft);
+  }
+  .legend{display:flex;gap:22px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:8px;vertical-align:0}
+  .legend .l-src i{background:var(--cyan)} .legend .l-wh i{background:var(--blue)}
+  .legend .l-tr i{background:var(--amber)} .legend .l-an i{background:var(--orchid)}
+  .map-hint{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--faint)}
+  .map-hint b{color:var(--cyan);font-weight:500}
+  .map-body{padding:10px 18px 0}
+  svg#gridmap{display:block;width:100%;height:auto}
+  #gridmap .collabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.28em;fill:var(--faint)}
+  #gridmap .flow{fill:none;stroke-width:1.4;opacity:.42;transition:opacity .35s,stroke-width .35s;stroke-dasharray:none}
+  #gridmap .flow.dashed{stroke-dasharray:2 7;animation:dashmove 1.9s linear infinite}
+  @keyframes dashmove{to{stroke-dashoffset:-9}}
+  #gridmap.focused .flow{opacity:.08}
+  #gridmap.focused .flow.hot{opacity:.95;stroke-width:2.4}
+  #gridmap .node{cursor:pointer;transition:opacity .35s}
+  #gridmap.focused .node{opacity:.32}
+  #gridmap.focused .node.lit{opacity:1}
+  #gridmap .node rect.box{fill:var(--panel3);stroke:var(--line);stroke-width:1.2;transition:stroke .25s}
+  #gridmap .node:hover rect.box,#gridmap .node:focus-visible rect.box{stroke:var(--nc);stroke-width:1.6}
+  #gridmap .node text.nm{fill:var(--text);font-family:var(--sans);font-size:15px;font-weight:600}
+  #gridmap .node text.rl{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;fill:var(--faint)}
+  #gridmap .node text.dir{fill:var(--faint);font-size:12px}
+  #gridmap .node:focus{outline:none}
+  .spin{transform-box:fill-box;transform-origin:center;animation:rot 30s linear infinite}
+  .spin.rev{animation-direction:reverse;animation-duration:44s}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .pulse{transform-box:fill-box;transform-origin:center;animation:pulse 3.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.06);opacity:.9}}
+  .hublabel{font-family:var(--mono);letter-spacing:.3em;font-size:11px;fill:var(--text)}
+  .hubsub{font-family:var(--mono);letter-spacing:.24em;font-size:9px;fill:var(--faint)}
+
+  /* inspector */
+  .inspector{
+    display:grid;grid-template-columns:250px 1fr 300px;gap:28px;align-items:center;
+    border-top:1px solid var(--line-soft);padding:18px 28px;min-height:96px;
+    background:rgba(7,19,28,.5);
+  }
+  .insp-id{display:flex;align-items:center;gap:14px}
+  .insp-dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);flex:none;transition:background .3s;box-shadow:0 0 14px rgba(62,230,196,.6)}
+  .insp-name{font-size:18px;font-weight:700;letter-spacing:-.01em;transition:opacity .2s}
+  .insp-role{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--faint);margin-top:2px;text-transform:uppercase}
+  .insp-desc{color:var(--muted);font-size:14px;line-height:1.6;transition:opacity .2s}
+  .insp-wire{font-family:var(--mono);font-size:11.5px;color:var(--cyan);letter-spacing:.04em;opacity:.85;border-left:1px solid var(--line);padding-left:24px}
+
+  /* console */
+  .console{display:grid;grid-template-columns:1fr 268px;border-top:1px solid var(--line-soft)}
+  .console-log{padding:18px 28px;border-right:1px solid var(--line-soft)}
+  .console-log .cl-label{font-family:var(--mono);font-size:10px;letter-spacing:.26em;color:var(--faint);margin-bottom:12px;text-transform:uppercase}
+  .console-log .cl-label i{color:var(--cyan);font-style:normal}
+  .log{height:134px;overflow:hidden;display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+  .logline{animation:lgin .45s var(--ease);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .logline .lt{color:var(--faint);margin-right:12px}
+  .logline .ok{color:var(--cyan)}
+  @keyframes lgin{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:none}}
+  .console-count{padding:20px 26px;display:flex;flex-direction:column;justify-content:center;background:rgba(62,230,196,.035)}
+  .console-count .cc-num{font-family:var(--mono);font-size:31px;color:var(--cyan);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .console-count .cc-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:var(--faint);margin-top:6px;text-transform:uppercase}
+
+  /* ---------- marquee ---------- */
+  .marquee{overflow:hidden;border-bottom:1px solid var(--line-soft);background:rgba(9,23,33,.55);margin-top:72px;position:relative;z-index:2}
+  .mq-track{display:flex;width:max-content;animation:mq 30s linear infinite;padding:17px 0}
+  .marquee:hover .mq-track{animation-play-state:paused}
+  @keyframes mq{to{transform:translateX(-50%)}}
+  .mq-set{display:flex;align-items:center;font-family:var(--mono);font-size:13px;letter-spacing:.24em;color:var(--faint);text-transform:uppercase}
+  .mq-set b{font-weight:400;color:var(--muted);padding:0 26px 0 0}
+  .mq-set i{font-style:normal;color:var(--cyan);padding-right:26px;font-size:10px;vertical-align:1px}
+  .mq-set em{font-family:var(--serif);font-style:italic;text-transform:none;letter-spacing:.04em;color:var(--amber);font-size:15px;padding-right:26px}
+
+  /* ---------- catalog ---------- */
+  .catalog{padding:84px 0 8px}
+  .cat-head{display:grid;grid-template-columns:1fr 380px;gap:60px;align-items:end;margin-bottom:34px}
+  h2{font-size:34px;font-weight:700;letter-spacing:-.018em;line-height:1.12}
+  h2 em{font-family:var(--serif);font-style:italic;font-weight:600;color:var(--cyan)}
+  .cat-head p{color:var(--muted);font-size:15px;line-height:1.65}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:18px;flex-wrap:wrap}
+  .fchips{display:flex;gap:8px;flex-wrap:wrap}
+  .fchip{
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);
+    background:transparent;border:1px solid var(--line);border-radius:999px;padding:9px 16px;
+    transition:all .25s var(--ease);text-transform:uppercase;
+  }
+  .fchip:hover{border-color:var(--cyan);color:var(--text)}
+  .fchip[aria-pressed="true"]{background:rgba(62,230,196,.1);border-color:var(--cyan);color:var(--cyan)}
+  .fsearch{position:relative}
+  .fsearch input{
+    width:330px;background:rgba(7,19,28,.7);border:1px solid var(--line);border-radius:10px;
+    color:var(--text);font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;
+    padding:12px 16px 12px 40px;transition:border-color .25s;
+  }
+  .fsearch input::placeholder{color:var(--faint)}
+  .fsearch input:focus{outline:none;border-color:var(--cyan)}
+  .fsearch::before{content:"⌕";position:absolute;left:14px;top:50%;transform:translateY(-52%);color:var(--faint);font-size:16px}
+  .fcount{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .tile{
+    position:relative;border:1px solid var(--line);border-radius:14px;padding:22px;
+    background:linear-gradient(180deg,rgba(14,39,55,.75),rgba(12,33,48,.75));
+    display:flex;flex-direction:column;gap:12px;min-height:172px;
+    transition:transform .35s var(--ease),border-color .35s,box-shadow .35s,opacity .3s;
+  }
+  .tile:hover{transform:translateY(-5px);border-color:var(--nc);box-shadow:0 18px 44px rgba(0,0,0,.42)}
+  .tile.hide{display:none}
+  .tile.flash{animation:flash 1.3s var(--ease) 2}
+  @keyframes flash{0%,100%{border-color:var(--line)}40%{border-color:var(--amber);box-shadow:0 0 0 4px rgba(255,180,84,.14)}}
+  .tile.wide{grid-column:span 2}
+  .tile-top{display:flex;justify-content:space-between;align-items:flex-start}
+  .ticon{width:30px;height:30px;color:var(--nc)}
+  .tag{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;padding:6px 10px;border-radius:6px;
+    border:1px solid;text-transform:uppercase;
+  }
+  .t-src{color:#5CEBCB;border-color:rgba(62,230,196,.35);background:rgba(62,230,196,.07)}
+  .t-wh{color:#93C9FF;border-color:rgba(110,182,255,.35);background:rgba(110,182,255,.07)}
+  .t-tr{color:#FFC77E;border-color:rgba(255,180,84,.35);background:rgba(255,180,84,.07)}
+  .t-an{color:#F4B6D6;border-color:rgba(238,156,198,.35);background:rgba(238,156,198,.07)}
+  .t-eco{color:var(--muted);border-color:var(--line);background:rgba(122,180,199,.06)}
+  .tile h3{font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .tile p{color:var(--muted);font-size:13.5px;line-height:1.6;flex:1}
+  .tile-foot{
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--faint);
+    border-top:1px solid var(--line-soft);padding-top:12px;
+  }
+  .tile-foot .go{color:var(--nc);opacity:0;transform:translateX(-6px);transition:all .3s var(--ease)}
+  .tile:hover .tile-foot .go{opacity:1;transform:none}
+  .mini{
+    font-family:var(--mono);font-size:11.5px;line-height:1.6;color:#9ED8CB;
+    background:rgba(4,14,20,.72);border:1px solid var(--line-soft);border-radius:8px;
+    padding:12px 14px;overflow-x:auto;white-space:nowrap;
+  }
+  .mini .k{color:var(--blue)} .mini .s{color:var(--amber)}
+  .tile.eco{
+    border-style:dashed;border-color:rgba(62,230,196,.35);
+    background:repeating-linear-gradient(115deg,transparent 0 34px,rgba(62,230,196,.028) 34px 35px);
+    grid-column:span 3;flex-direction:row;align-items:center;gap:34px;min-height:auto;
+  }
+  .tile.eco h3{font-family:var(--serif);font-style:italic;font-weight:600;font-size:24px;letter-spacing:0}
+  .tile.eco p{flex:1;margin:0}
+  .eco-link{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;color:var(--cyan);white-space:nowrap;border:1px solid rgba(62,230,196,.4);border-radius:999px;padding:11px 18px;transition:all .25s}
+  .eco-link:hover{background:rgba(62,230,196,.1)}
+  .no-match{
+    display:none;border:1px dashed var(--line);border-radius:14px;padding:34px;text-align:center;
+    color:var(--muted);font-size:14.5px;margin-top:14px;
+  }
+  .no-match.show{display:block}
+  .no-match b{color:var(--text);font-family:var(--mono);font-weight:500}
+
+  /* ---------- recipes ---------- */
+  .recipes{padding:90px 0 0}
+  .rec-grid{display:grid;grid-template-columns:430px 1fr;gap:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:rgba(10,27,39,.85)}
+  .rec-list{border-right:1px solid var(--line-soft)}
+  .rec-btn{
+    display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--text);
+    padding:24px 28px;border-bottom:1px solid var(--line-soft);
+    transition:background .3s;position:relative;
+  }
+  .rec-btn:last-child{border-bottom:none}
+  .rec-btn:hover{background:rgba(62,230,196,.04)}
+  .rec-btn[aria-selected="true"]{background:rgba(62,230,196,.07);box-shadow:inset 3px 0 0 var(--cyan)}
+  .rec-num{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--cyan);display:block;margin-bottom:8px}
+  .rec-btn[aria-selected="false"] .rec-num{color:var(--faint)}
+  .rec-title{font-size:16.5px;font-weight:700;letter-spacing:-.01em;display:block;margin-bottom:7px}
+  .rec-route{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--faint);display:block}
+  .rec-detail{padding:36px 40px;min-height:372px}
+  .chain{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:26px}
+  .pill{
+    border:1px solid var(--line);border-radius:999px;padding:9px 17px;font-size:13.5px;font-weight:600;
+    background:var(--panel3);letter-spacing:-.005em;
+  }
+  .pill.core{border-color:rgba(62,230,196,.55);color:var(--cyan);background:rgba(62,230,196,.08)}
+  .chain .arr{font-family:var(--mono);color:var(--faint);font-size:13px}
+  .rec-detail h3{font-size:25px;font-weight:700;letter-spacing:-.015em;margin-bottom:14px}
+  .rec-detail h3 em{font-family:var(--serif);font-style:italic;font-weight:600;color:var(--amber)}
+  .rec-detail>p{color:var(--muted);font-size:15px;line-height:1.7;max-width:56ch;margin-bottom:30px}
+  .specs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;border-top:1px solid var(--line-soft);padding-top:24px;margin-bottom:26px}
+  .specs dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.24em;color:var(--faint);text-transform:uppercase;margin-bottom:7px}
+  .specs dd{font-size:14.5px;font-weight:600;color:var(--text)}
+  .rec-log{font-family:var(--mono);font-size:12px;color:var(--cyan);opacity:.9;background:rgba(4,14,20,.6);border:1px solid var(--line-soft);border-radius:8px;padding:12px 16px;display:inline-block}
+  .anim .chain>*,.anim h3,.anim>p,.anim .specs,.anim .rec-log{animation:recin .55s var(--ease) both}
+  .anim .chain>*:nth-child(1){animation-delay:.02s}.anim .chain>*:nth-child(2){animation-delay:.08s}
+  .anim .chain>*:nth-child(3){animation-delay:.14s}.anim .chain>*:nth-child(4){animation-delay:.2s}
+  .anim .chain>*:nth-child(5){animation-delay:.26s}
+  .anim h3{animation-delay:.18s}.anim>p{animation-delay:.26s}.anim .specs{animation-delay:.34s}.anim .rec-log{animation-delay:.42s}
+  @keyframes recin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  /* ---------- closing CTA ---------- */
+  .cta{padding:96px 0 110px}
+  .cta-band{
+    position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;
+    padding:66px 72px;display:grid;grid-template-columns:1fr 380px;gap:60px;align-items:center;
+    background:
+      repeating-linear-gradient(115deg,transparent 0 52px,rgba(62,230,196,.035) 52px 53px),
+      radial-gradient(640px 340px at 82% 50%,rgba(62,230,196,.1),transparent 65%),
+      linear-gradient(180deg,rgba(14,39,55,.9),rgba(10,27,39,.95));
+  }
+  .cta-band .cta-mark{width:44px;height:44px;color:var(--cyan);margin-bottom:26px}
+  .cta-band h2{font-family:var(--serif);font-style:italic;font-weight:600;font-size:46px;line-height:1.15;letter-spacing:-.01em;color:var(--text)}
+  .cta-band h2 em{color:var(--cyan);font-style:italic}
+  .cta-band .cta-sub{color:var(--muted);font-size:15.5px;line-height:1.65;margin-top:18px;max-width:46ch}
+  .cta-actions{display:flex;flex-direction:column;gap:14px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    font-family:var(--mono);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;
+    padding:17px 26px;border-radius:11px;transition:transform .3s var(--ease),box-shadow .3s,background .3s,border-color .3s;
+    border:1px solid transparent;text-align:center;
+  }
+  .btn-primary{background:var(--cyan);color:#04231D;font-weight:700}
+  .btn-primary:hover{transform:translateY(-3px);box-shadow:0 14px 38px rgba(62,230,196,.3)}
+  .btn-ghost{background:transparent;border-color:var(--line);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--cyan);color:var(--cyan);transform:translateY(-3px)}
+  .cta-note{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;text-align:center}
+
+  /* scroll reveals */
+  .js .reveal{opacity:0;transform:translateY(20px);transition:opacity .8s var(--ease),transform .8s var(--ease);transition-delay:var(--d,0s)}
+  .js .reveal.in{opacity:1;transform:none}
+
+  @media (max-width:1100px){
+    body{min-width:0}
+    .head,.cat-head,.rec-grid,.cta-band{grid-template-columns:1fr}
+    .tiles{grid-template-columns:repeat(2,1fr)}
+    .tile.wide,.tile.eco{grid-column:span 2}
+    .inspector{grid-template-columns:1fr}
+    .insp-wire{border-left:none;padding-left:0}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .hl-line>span{transform:none}
+    .js .reveal{opacity:1;transform:none}
+    .mq-track{animation:none!important;flex-wrap:wrap;width:auto}
+  }
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add('js');</script>
+
+<!-- shared icon symbols -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-postgres" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.6" rx="7" ry="2.9"/><path d="M5 5.6v12.8c0 1.6 3.1 2.9 7 2.9s7-1.3 7-2.9V5.6"/><path d="M5 12c0 1.6 3.1 2.9 7 2.9s7-1.3 7-2.9"/></g></symbol>
+    <symbol id="i-s3" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 4.4h15.6l-2.3 13.9a2.1 2.1 0 0 1-2.1 1.8H8.6a2.1 2.1 0 0 1-2.1-1.8L4.2 4.4z"/><path d="M6.7 9.2h10.6"/><path d="M7.6 14h8.8"/></g></symbol>
+    <symbol id="i-kafka" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="5" cy="12" r="2.4"/><circle cx="12" cy="6.2" r="2.4"/><circle cx="12" cy="17.8" r="2.4"/><circle cx="19" cy="12" r="2.4"/><path d="M7.1 10.7l2.8-3M7.1 13.3l2.8 3M14.1 7.5l2.8 3M14.1 16.5l2.8-3"/></g></symbol>
+    <symbol id="i-snowflake" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2.8v18.4M4 7.4l16 9.2M20 7.4L4 16.6"/><path d="M12 2.8l-2 2m2-2l2 2M12 21.2l-2-2m2 2l2-2"/></g></symbol>
+    <symbol id="i-bigquery" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9l7.9 4.55v9.1L12 21.1l-7.9-4.55v-9.1L12 2.9z"/><circle cx="12" cy="10.2" r="2.7"/><path d="M12 12.9v4.4"/></g></symbol>
+    <symbol id="i-databricks" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 8L12 3.7 19.6 8 12 12.3 4.4 8z"/><path d="M4.4 12.6L12 16.9l7.6-4.3"/><path d="M6.8 16.4L12 19.4l5.2-3"/></g></symbol>
+    <symbol id="i-dbt" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.3" fill="none" stroke="currentColor" stroke-width="1.7"/><text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="700" fill="currentColor" stroke="none" font-family="ui-monospace,Menlo,monospace">dbt</text></symbol>
+    <symbol id="i-looker" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9.3" cy="12" r="5.6"/><circle cx="14.7" cy="12" r="5.6"/></g></symbol>
+    <symbol id="i-conduit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></g></symbol>
+  </defs>
+</svg>
+
+<section class="section" id="integrations" aria-label="Conduit Lake integrations">
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="noise" aria-hidden="true"></div>
+
+  <!-- status bar -->
+  <div class="statusbar" aria-hidden="true">
+    <span><b>conduit-lake</b> / integrations — grid v1.0</span>
+    <span><span class="live-dot"></span>grid live · 8 launch connectors</span>
+  </div>
+
+  <div class="wrap">
+
+    <!-- ============ header + live grid map ============ -->
+    <header class="head">
+      <div>
+        <p class="eyebrow"><span id="scramble">Conduit Lake · Integration Grid</span><span class="cursor" aria-hidden="true"></span></p>
+        <h1>
+          <span class="hl-line"><span style="--d:.05s">Every system you</span></span>
+          <span class="hl-line"><span style="--d:.16s">already run,</span></span>
+          <span class="hl-line"><span style="--d:.27s"><em>one current.</em></span></span>
+        </h1>
+      </div>
+      <div>
+        <p class="lede">Conduit Lake plugs straight into the tools your team already trusts — pulling rows from <strong>PostgreSQL</strong>, objects from <strong>Amazon S3</strong>, and events from <strong>Apache Kafka</strong>, then landing them in <strong>Snowflake</strong>, <strong>Google BigQuery</strong>, and <strong>Databricks</strong> — with <strong>dbt</strong> runs and <strong>Looker</strong> dashboards kept fresh the whole way down.</p>
+        <div class="meta">
+          <span>streaming &amp; CDC native</span>
+          <span>schema-drift auto-heal</span>
+          <span>replayable by default</span>
+        </div>
+        <a class="jump" href="#catalog">jump to the launch eight ↓</a>
+      </div>
+    </header>
+
+    <div class="map-panel reveal" id="mapPanel">
+      <div class="map-top">
+        <div class="legend" aria-hidden="true">
+          <span class="l-src"><i></i>Sources</span>
+          <span class="l-wh"><i></i>Warehouse &amp; lakehouse</span>
+          <span class="l-tr"><i></i>Transform</span>
+          <span class="l-an"><i></i>Analytics</span>
+        </div>
+        <span class="map-hint"><b>hover any node</b> — packets show live movement</span>
+      </div>
+
+      <div class="map-body">
+        <svg id="gridmap" viewBox="0 0 1240 470" role="img" aria-label="Pipeline map: PostgreSQL, Amazon S3 and Apache Kafka flow into Conduit Lake, then into Snowflake, Google BigQuery and Databricks, feeding dbt and Looker.">
+          <!-- column labels -->
+          <text class="collabel" x="62" y="44">SOURCES</text>
+          <text class="collabel" x="692" y="44">WAREHOUSE &amp; LAKEHOUSE</text>
+          <text class="collabel" x="992" y="44">TRANSFORM · ANALYTICS</text>
+
+          <!-- flows -->
+          <g id="flows">
+            <path class="flow" data-a="postgres" data-b="hub" stroke="#3EE6C4" d="M270 113 C 372 113, 378 224, 429 224"/>
+            <path class="flow" data-a="s3" data-b="hub" stroke="#3EE6C4" d="M270 223 C 345 223, 362 226, 429 224"/>
+            <path class="flow" data-a="kafka" data-b="hub" stroke="#3EE6C4" d="M270 333 C 372 333, 378 224, 429 224"/>
+            <path class="flow dashed" data-a="hub" data-b="snowflake" stroke="#6EB6FF" d="M581 224 C 642 224, 628 99, 690 99"/>
+            <path class="flow dashed" data-a="hub" data-b="bigquery" stroke="#6EB6FF" d="M581 224 C 640 224, 632 209, 690 209"/>
+            <path class="flow dashed" data-a="hub" data-b="databricks" stroke="#6EB6FF" d="M581 224 C 642 224, 628 319, 690 319"/>
+            <path class="flow" data-a="snowflake" data-b="dbt" stroke="#FFB454" d="M900 99 C 952 99, 938 144, 990 144"/>
+            <path class="flow" data-a="bigquery" data-b="dbt" stroke="#FFB454" d="M900 209 C 952 209, 938 144, 990 144"/>
+            <path class="flow" data-a="databricks" data-b="dbt" stroke="#FFB454" d="M900 319 C 952 319, 938 144, 990 144"/>
+            <path class="flow" data-a="snowflake" data-b="looker" stroke="#EE9CC6" d="M900 99 C 958 99, 932 284, 990 284"/>
+            <path class="flow" data-a="bigquery" data-b="looker" stroke="#EE9CC6" d="M900 209 C 950 209, 940 284, 990 284"/>
+            <path class="flow" data-a="databricks" data-b="looker" stroke="#EE9CC6" d="M900 319 C 958 319, 932 284, 990 284"/>
+          </g>
+          <g id="packets" aria-hidden="true"></g>
+
+          <!-- hub -->
+          <g id="hubNode" class="node" data-key="hub" style="--nc:#3EE6C4" tabindex="0" role="button" aria-label="Conduit Lake — the grid core">
+            <circle cx="505" cy="224" r="80" fill="none" stroke="rgba(62,230,196,.16)" stroke-width="1"/>
+            <circle class="spin" cx="505" cy="224" r="66" fill="none" stroke="rgba(62,230,196,.4)" stroke-width="1" stroke-dasharray="3 10"/>
+            <circle class="spin rev" cx="505" cy="224" r="52" fill="none" stroke="rgba(110,182,255,.3)" stroke-width="1" stroke-dasharray="14 8"/>
+            <circle class="pulse" cx="505" cy="224" r="40" fill="#0E2737" stroke="#3EE6C4" stroke-width="1.4"/>
+            <circle cx="505" cy="224" r="17" fill="none" stroke="rgba(62,230,196,.65)" stroke-width="1.2"/>
+            <circle cx="505" cy="224" r="5.5" fill="#3EE6C4"/>
+            <text class="hublabel" x="505" y="336" text-anchor="middle">CONDUIT LAKE</text>
+            <text class="hubsub" x="505" y="354" text-anchor="middle">the grid core</text>
+          </g>
+
+          <!-- sources -->
+          <g class="node" data-key="postgres" style="--nc:#3EE6C4" tabindex="0" role="button" aria-label="PostgreSQL, source">
+            <rect class="box" x="60" y="84" width="210" height="58" rx="13"/>
+            <use href="#i-postgres" x="82" y="101" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="118" y="111">PostgreSQL</text>
+            <text class="rl" x="118" y="128">SOURCE · CDC</text>
+          </g>
+          <g class="node" data-key="s3" style="--nc:#3EE6C4" tabindex="0" role="button" aria-label="Amazon S3, source and sink">
+            <rect class="box" x="60" y="194" width="210" height="58" rx="13"/>
+            <use href="#i-s3" x="82" y="211" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="118" y="221">Amazon S3</text>
+            <text class="rl" x="118" y="238">SOURCE · SINK</text>
+          </g>
+          <g class="node" data-key="kafka" style="--nc:#3EE6C4" tabindex="0" role="button" aria-label="Apache Kafka, source">
+            <rect class="box" x="60" y="304" width="210" height="58" rx="13"/>
+            <use href="#i-kafka" x="82" y="321" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="118" y="331">Apache Kafka</text>
+            <text class="rl" x="118" y="348">SOURCE</text>
+          </g>
+
+          <!-- warehouses -->
+          <g class="node" data-key="snowflake" style="--nc:#6EB6FF" tabindex="0" role="button" aria-label="Snowflake, destination">
+            <rect class="box" x="690" y="70" width="210" height="58" rx="13"/>
+            <use href="#i-snowflake" x="712" y="87" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="748" y="97">Snowflake</text>
+            <text class="rl" x="748" y="114">DESTINATION</text>
+          </g>
+          <g class="node" data-key="bigquery" style="--nc:#6EB6FF" tabindex="0" role="button" aria-label="Google BigQuery, destination">
+            <rect class="box" x="690" y="180" width="210" height="58" rx="13"/>
+            <use href="#i-bigquery" x="712" y="197" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="748" y="207">Google BigQuery</text>
+            <text class="rl" x="748" y="224">DESTINATION</text>
+          </g>
+          <g class="node" data-key="databricks" style="--nc:#6EB6FF" tabindex="0" role="button" aria-label="Databricks, destination">
+            <rect class="box" x="690" y="290" width="210" height="58" rx="13"/>
+            <use href="#i-databricks" x="712" y="307" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="748" y="317">Databricks</text>
+            <text class="rl" x="748" y="334">DESTINATION</text>
+          </g>
+
+          <!-- transform / analytics -->
+          <g class="node" data-key="dbt" style="--nc:#FFB454" tabindex="0" role="button" aria-label="dbt, transform">
+            <rect class="box" x="990" y="115" width="190" height="58" rx="13"/>
+            <use href="#i-dbt" x="1010" y="132" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="1044" y="142">dbt</text>
+            <text class="rl" x="1044" y="159">TRANSFORM</text>
+          </g>
+          <g class="node" data-key="looker" style="--nc:#EE9CC6" tabindex="0" role="button" aria-label="Looker, analytics">
+            <rect class="box" x="990" y="255" width="190" height="58" rx="13"/>
+            <use href="#i-looker" x="1010" y="272" width="24" height="24" style="color:var(--nc)"/>
+            <text class="nm" x="1044" y="282">Looker</text>
+            <text class="rl" x="1044" y="299">ANALYTICS</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- inspector readout -->
+      <div class="inspector" aria-live="polite">
+        <div class="insp-id">
+          <span class="insp-dot" id="inspDot"></span>
+          <div>
+            <div class="insp-name" id="inspName">Hover the grid</div>
+            <div class="insp-role" id="inspRole">inspector · idle</div>
+          </div>
+        </div>
+        <p class="insp-desc" id="inspDesc">Move across any node to inspect its lane — the packets trace real movement from source through the grid to warehouse, model, and dashboard.</p>
+        <div class="insp-wire" id="inspWire">grid ▸ awaiting selection …</div>
+      </div>
+
+      <!-- console -->
+      <div class="console" aria-hidden="true">
+        <div class="console-log">
+          <div class="cl-label">grid log — <i>live tail</i></div>
+          <div class="log" id="gridLog"></div>
+        </div>
+        <div class="console-count">
+          <div class="cc-num" id="rowsToday" data-v="4183077">4,183,077</div>
+          <div class="cc-lbl">rows moved today</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- marquee divider -->
+  <div class="marquee" aria-hidden="true">
+    <div class="mq-track">
+      <div class="mq-set">
+        <b>PostgreSQL</b><i>◆</i><b>Amazon S3</b><i>◆</i><b>Apache Kafka</b><i>◆</i><b>Snowflake</b><i>◆</i><b>Google BigQuery</b><i>◆</i><b>Databricks</b><i>◆</i><b>dbt</b><i>◆</i><b>Looker</b><i>◆</i><em>… and the growing catalog</em><i>◆</i>
+      </div>
+      <div class="mq-set" aria-hidden="true">
+        <b>PostgreSQL</b><i>◆</i><b>Amazon S3</b><i>◆</i><b>Apache Kafka</b><i>◆</i><b>Snowflake</b><i>◆</i><b>Google BigQuery</b><i>◆</i><b>Databricks</b><i>◆</i><b>dbt</b><i>◆</i><b>Looker</b><i>◆</i><em>… and the growing catalog</em><i>◆</i>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- ============ catalog ============ -->
+    <div class="catalog" id="catalog">
+      <div class="kicker reveal">
+        <span class="idx">01</span><span class="rule"></span><span class="lbl">The Launch Eight</span>
+      </div>
+      <div class="cat-head">
+        <h2 class="reveal">Eight day-one lanes,<br>built <em>first-class</em> — not bolted on.</h2>
+        <p class="reveal" style="--d:.12s">Each connector ships with streaming, replay, and schema-drift handling out of the box. Filter the grid to find where your stack plugs in — and if it isn't here yet, it's likely already on the bench.</p>
+      </div>
+
+      <div class="toolbar reveal">
+        <div class="fchips" role="group" aria-label="Filter connectors by category">
+          <button class="fchip" data-cat="all" aria-pressed="true">All</button>
+          <button class="fchip" data-cat="source" aria-pressed="false">Sources · 3</button>
+          <button class="fchip" data-cat="warehouse" aria-pressed="false">Warehouse &amp; lakehouse · 3</button>
+          <button class="fchip" data-cat="transform" aria-pressed="false">Transform · 1</button>
+          <button class="fchip" data-cat="analytics" aria-pressed="false">Analytics · 1</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px">
+          <span class="fcount" id="fCount">showing 8 of 8 launch connectors</span>
+          <div class="fsearch">
+            <input type="search" id="fSearch" placeholder="filter connectors — try “kafka”" aria-label="Filter connectors">
+          </div>
+        </div>
+      </div>
+
+      <div class="tiles" id="tiles">
+        <article class="tile wide reveal" style="--nc:#3EE6C4;--d:.02s" data-cat="source" data-search="postgresql postgres source cdc relational change data capture wal bidirectional">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-postgres"/></svg><span class="tag t-src">Source · CDC</span></div>
+          <h3>PostgreSQL</h3>
+          <pre class="mini" aria-hidden="true">{<span class="k">"op"</span>:<span class="s">"update"</span>, <span class="k">"table"</span>:<span class="s">"orders"</span>, <span class="k">"id"</span>:8841, <span class="k">"ts"</span>:<span class="s">"14:02:07.412"</span>}</pre>
+          <p>Change-data capture from any Postgres cluster — every insert, update, and delete streamed the moment it commits. No triggers, no table locks.</p>
+          <div class="tile-foot"><span>wal-tail · exactly-once</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile reveal" style="--nc:#3EE6C4;--d:.08s" data-cat="source" data-search="amazon s3 objects source sink bucket parquet json csv landing zone">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-s3"/></svg><span class="tag t-src">Source · Sink</span></div>
+          <h3>Amazon S3</h3>
+          <p>Stream Parquet, JSON, and CSV in from any bucket — or fan data back out as a landing zone.</p>
+          <div class="tile-foot"><span>multipart · parquet/json/csv</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile reveal" style="--nc:#3EE6C4;--d:.14s" data-cat="source" data-search="apache kafka streaming events topics source backbone replay">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-kafka"/></svg><span class="tag t-src">Source</span></div>
+          <h3>Apache Kafka</h3>
+          <p>Topics become durable, replayable pipelines — without the consumer-group bookkeeping.</p>
+          <div class="tile-foot"><span>avro/json · offset replay</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile reveal" style="--nc:#6EB6FF;--d:.05s" data-cat="warehouse" data-search="snowflake warehouse destination batch streaming managed tables">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-snowflake"/></svg><span class="tag t-wh">Destination</span></div>
+          <h3>Snowflake</h3>
+          <p>Zero-copy loads into managed tables — batch or streaming, merged on arrival.</p>
+          <div class="tile-foot"><span>streaming insert · merge</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile reveal" style="--nc:#6EB6FF;--d:.1s" data-cat="warehouse" data-search="google bigquery warehouse destination streaming inserts serverless">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-bigquery"/></svg><span class="tag t-wh">Destination</span></div>
+          <h3>Google BigQuery</h3>
+          <p>Streaming inserts keep tables fresh to the second; scheduled loads handle the bulk.</p>
+          <div class="tile-foot"><span>streaming api · partitioned</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile reveal" style="--nc:#6EB6FF;--d:.15s" data-cat="warehouse" data-search="databricks lakehouse destination delta tables notebooks spark">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-databricks"/></svg><span class="tag t-wh">Destination</span></div>
+          <h3>Databricks</h3>
+          <p>Live streams written straight to Delta tables with merge-friendly upserts.</p>
+          <div class="tile-foot"><span>delta merge · upserts</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile reveal" style="--nc:#FFB454;--d:.2s" data-cat="transform" data-search="dbt transform models runs trigger warehouse orchestration">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-dbt"/></svg><span class="tag t-tr">Transform</span></div>
+          <h3>dbt</h3>
+          <p>The right dbt run kicks off the instant new data lands — and reports back.</p>
+          <div class="tile-foot"><span>on-land trigger · scoped runs</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile reveal" style="--nc:#EE9CC6;--d:.05s" data-cat="analytics" data-search="looker analytics dashboards bi semantic fresh">
+          <div class="tile-top"><svg class="ticon" aria-hidden="true"><use href="#i-looker"/></svg><span class="tag t-an">Analytics</span></div>
+          <h3>Looker</h3>
+          <p>Upstream tables stay fresh, so dashboards never lag the business.</p>
+          <div class="tile-foot"><span>query-direct · cache refresh</span><span class="go">→</span></div>
+        </article>
+
+        <article class="tile eco reveal" style="--nc:#3EE6C4;--d:.1s" id="ecoTile" data-cat="eco" data-search="ecosystem catalog wider sdk custom request roadmap new connectors">
+          <div>
+            <h3>+ the wider catalog</h3>
+          </div>
+          <p>These eight are launch day. New lanes ship every release, and a connector SDK lets your team wire anything with a wire protocol — request the system you're missing.</p>
+          <a class="eco-link" href="#request-cta">Request a connector →</a>
+        </article>
+      </div>
+
+      <div class="no-match" id="noMatch">No connector matches <b id="nmq"></b> — yet. The catalog ships new lanes every release. <a href="#request-cta">Request yours →</a></div>
+    </div>
+
+    <!-- ============ recipes ============ -->
+    <div class="recipes">
+      <div class="kicker reveal">
+        <span class="idx">02</span><span class="rule"></span><span class="lbl">What Becomes Possible</span>
+      </div>
+      <div class="cat-head" style="margin-bottom:30px">
+        <h2 class="reveal">Once everything is wired,<br>the hard projects become <em>configs.</em></h2>
+        <p class="reveal" style="--d:.12s">Four lanes teams open first. Pick one to see how the data actually moves — and what Conduit Lake guarantees along the way.</p>
+      </div>
+
+      <div class="rec-grid reveal">
+        <div class="rec-list" role="tablist" aria-label="Example pipelines" id="recList"></div>
+        <div class="rec-detail anim" id="recDetail" role="tabpanel"></div>
+      </div>
+    </div>
+
+    <!-- ============ closing CTA ============ -->
+    <div class="cta" id="request-cta">
+      <div class="cta-band reveal">
+        <div>
+          <svg class="cta-mark" aria-hidden="true"><use href="#i-conduit"/></svg>
+          <h2>Every system you run is<br><em>one pipeline</em> away.</h2>
+          <p class="cta-sub">Start with a single lane — a Postgres table, a Kafka topic, one bucket — and watch it land in your warehouse in minutes. The rest of the grid switches on when you're ready.</p>
+        </div>
+        <div class="cta-actions">
+          <a class="btn btn-primary" href="#catalog">Explore the full catalog →</a>
+          <button class="btn btn-ghost" id="requestBtn" type="button">Request a connector</button>
+          <span class="cta-note">8 launch connectors · new lanes every release</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var $  = function(s,c){ return (c||document).querySelector(s); };
+  var $$ = function(s,c){ return Array.prototype.slice.call((c||document).querySelectorAll(s)); };
+
+  /* ---------- node data ---------- */
+  var NODES = {
+    postgres:{name:"PostgreSQL", role:"Source · CDC", color:"#3EE6C4",
+      desc:"Bidirectional relational source. Change-data capture tails the write-ahead log, so every insert, update, and delete streams out the moment it commits — no triggers, no locks.",
+      wire:"wire ▸ wal-tail · exactly-once · schema drift auto-heal"},
+    s3:{name:"Amazon S3", role:"Source · Sink", color:"#3EE6C4",
+      desc:"Object storage in both directions. Parquet, JSON, and CSV stream in from any bucket — or fan back out as a durable landing zone for downstream systems.",
+      wire:"wire ▸ multipart · parquet / json / csv · s3-compatible"},
+    kafka:{name:"Apache Kafka", role:"Source", color:"#3EE6C4",
+      desc:"Streaming backbone. Topics become durable, replayable pipelines — Conduit Lake carries the offset bookkeeping so your consumers don't have to.",
+      wire:"wire ▸ avro / json · offset replay · exactly-once"},
+    hub:{name:"Conduit Lake", role:"The grid core", color:"#3EE6C4",
+      desc:"Every stream that lands here is versioned and fanned out to every downstream wire — replayable from any point, observable end to end.",
+      wire:"core ▸ routing · replay · lineage"},
+    snowflake:{name:"Snowflake", role:"Destination", color:"#6EB6FF",
+      desc:"Warehouse destination. Batch and streaming loads land in managed tables with zero-copy ingest and automatic clustering.",
+      wire:"wire ▸ streaming insert · merge · stage copy"},
+    bigquery:{name:"Google BigQuery", role:"Destination", color:"#6EB6FF",
+      desc:"Destination with two lanes: streaming inserts for sub-second freshness, scheduled loads for the bulk of it. Partitioned writes by default.",
+      wire:"wire ▸ streaming API · partitioned writes"},
+    databricks:{name:"Databricks", role:"Destination", color:"#6EB6FF",
+      desc:"Lakehouse destination. Live streams are written as Delta tables with merge-friendly upserts, ready for notebooks the second they commit.",
+      wire:"wire ▸ delta merge · unity catalog aware"},
+    dbt:{name:"dbt", role:"Transform", color:"#FFB454",
+      desc:"Transform trigger. The instant a warehouse lands new data, Conduit Lake kicks off the right dbt run and reports the result back to the grid log.",
+      wire:"wire ▸ on-land trigger · scoped runs"},
+    looker:{name:"Looker", role:"Analytics", color:"#EE9CC6",
+      desc:"The analytics edge. Upstream tables stay fresh, so dashboards and explores never lag the business they describe.",
+      wire:"wire ▸ query-direct · cache refresh"}
+  };
+
+  /* ---------- scramble-decode eyebrow ---------- */
+  var scEl = $("#scramble");
+  if(scEl && !RM){
+    var finalTxt = scEl.textContent, glyphs = "▚▞◆#/\\|<>·+=—";
+    var frame = 0, total = 34;
+    var tick = setInterval(function(){
+      frame++;
+      var solved = Math.floor((frame/total)*finalTxt.length), out = "";
+      for(var i=0;i<finalTxt.length;i++){
+        out += (i < solved || finalTxt[i]===" " || finalTxt[i]==="·") ? finalTxt[i]
+             : glyphs[Math.floor(Math.random()*glyphs.length)];
+      }
+      scEl.textContent = out;
+      if(frame >= total){ clearInterval(tick); scEl.textContent = finalTxt; }
+    }, 38);
+  }
+
+  /* ---------- scroll reveals ---------- */
+  var reveals = $$(".reveal");
+  if("IntersectionObserver" in window && !RM){
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } });
+    },{threshold:.12});
+    reveals.forEach(function(el){ io.observe(el); });
+  } else { reveals.forEach(function(el){ el.classList.add("in"); }); }
+
+  /* ---------- map: inspector + focus ---------- */
+  var svg = $("#gridmap"), flows = $$("#gridmap .flow"), nodes = $$("#gridmap .node");
+  var inspName = $("#inspName"), inspRole = $("#inspRole"), inspDesc = $("#inspDesc"),
+      inspWire = $("#inspWire"), inspDot = $("#inspDot");
+  var DEF = {name:"Hover the grid", role:"inspector · idle",
+    desc:"Move across any node to inspect its lane — the packets trace real movement from source through the grid to warehouse, model, and dashboard.",
+    wire:"grid ▸ awaiting selection …", color:"#3EE6C4"};
+
+  function setInspector(key){
+    var d = key ? NODES[key] : DEF;
+    inspName.textContent = d.name;
+    inspRole.textContent = d.role;
+    inspDesc.textContent = d.desc;
+    inspWire.textContent = d.wire;
+    inspDot.style.background = d.color;
+    inspDot.style.boxShadow = "0 0 14px " + d.color;
+    if(key){
+      svg.classList.add("focused");
+      var lit = {}; lit[key] = true;
+      flows.forEach(function(p){
+        var on = (p.dataset.a === key || p.dataset.b === key);
+        p.classList.toggle("hot", on);
+        if(on){ lit[p.dataset.a] = true; lit[p.dataset.b] = true; }
+      });
+      nodes.forEach(function(n){ n.classList.toggle("lit", !!lit[n.dataset.key]); });
+    } else {
+      svg.classList.remove("focused");
+      flows.forEach(function(p){ p.classList.remove("hot"); });
+      nodes.forEach(function(n){ n.classList.remove("lit"); });
+    }
+  }
+  nodes.forEach(function(n){
+    ["mouseenter","focus"].forEach(function(ev){ n.addEventListener(ev, function(){ setInspector(n.dataset.key); }); });
+    ["mouseleave","blur"].forEach(function(ev){ n.addEventListener(ev, function(){ setInspector(null); }); });
+    n.addEventListener("keydown", function(e){
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); setInspector(n.dataset.key); }
+    });
+  });
+
+  /* ---------- packets ---------- */
+  var NS = "http://www.w3.org/2000/svg", packetsG = $("#packets"), mapVisible = true;
+  if("IntersectionObserver" in window){
+    new IntersectionObserver(function(es){ es.forEach(function(e){ mapVisible = e.isIntersecting; }); },{threshold:.05})
+      .observe($("#mapPanel"));
+  }
+  function spawnPacket(){
+    if(RM || document.hidden || !mapVisible || packetsG.childElementCount > 26) return;
+    var p = flows[Math.floor(Math.random()*flows.length)];
+    var L = p.getTotalLength(); if(!L) return;
+    var color = p.getAttribute("stroke") || "#3EE6C4";
+    var g = document.createElementNS(NS,"g");
+    var halo = document.createElementNS(NS,"circle");
+    halo.setAttribute("r","6.5"); halo.setAttribute("fill",color); halo.setAttribute("opacity","0.18");
+    var dot = document.createElementNS(NS,"circle");
+    dot.setAttribute("r","2.6"); dot.setAttribute("fill",color);
+    g.appendChild(halo); g.appendChild(dot); packetsG.appendChild(g);
+    var dur = 1700 + Math.random()*1900, t0 = performance.now();
+    (function step(t){
+      var k = Math.min(1,(t - t0)/dur), e = k*k*(3-2*k);
+      var pt = p.getPointAtLength(e*L);
+      g.setAttribute("transform","translate("+pt.x+","+pt.y+")");
+      g.style.opacity = k < .12 ? k/.12 : (k > .88 ? (1-k)/.12 : 1);
+      if(k < 1){ requestAnimationFrame(step); } else { g.remove(); }
+    })(t0);
+  }
+  if(!RM){ setInterval(spawnPacket, 400); for(var i=0;i<6;i++){ setTimeout(spawnPacket, i*260); } }
+
+  /* ---------- grid log + counter ---------- */
+  var log = $("#gridLog"), rowsEl = $("#rowsToday"), rows = parseInt(rowsEl.dataset.v,10);
+  function fmt(n){ return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,","); }
+  function rnd(n){ return Math.floor(Math.random()*n); }
+  function pad(n){ return (n<10?"0":"")+n; }
+  function stamp(){ var d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds()); }
+  function logLine(){
+    var pool = [
+      'postgres:orders ▸ snowflake.raw_orders · '+fmt(900+rnd(4200))+' rows · '+(0.6+rnd(14)/10).toFixed(1)+'s <span class="ok">✓</span>',
+      'kafka:payments ▸ bigquery.payments_v2 · '+fmt(4000+rnd(30000))+' msg · 0.'+(2+rnd(6))+'s <span class="ok">✓</span>',
+      's3://events/*.parquet ▸ databricks.events · '+(8+rnd(92))+' files · '+(2+rnd(60)/10).toFixed(1)+'s <span class="ok">✓</span>',
+      'dbt ▸ run triggered · mart_revenue · '+(8+rnd(9))+' models <span class="ok">✓</span>',
+      'looker ▸ refresh · exec-kpi · cache warm',
+      'postgres:users ▸ bigquery.users · schema drift auto-healed <span class="ok">✓</span>',
+      'kafka:clickstream ▸ snowflake.raw_events · offset replay from 04:00 <span class="ok">✓</span>'
+    ];
+    var div = document.createElement("div");
+    div.className = "logline";
+    div.innerHTML = '<span class="lt">'+stamp()+'</span>'+pool[rnd(pool.length)];
+    log.insertBefore(div, log.firstChild);
+    while(log.children.length > 6){ log.removeChild(log.lastChild); }
+    rows += 900 + rnd(3400);
+    rowsEl.textContent = fmt(rows);
+  }
+  for(var j=0;j<6;j++){ logLine(); }
+  if(!RM){ setInterval(logLine, 1700); } else { rowsEl.textContent = fmt(rows); }
+
+  /* ---------- catalog filter ---------- */
+  var tiles = $$("#tiles .tile"), chips = $$(".fchip"), search = $("#fSearch"),
+      countEl = $("#fCount"), noMatch = $("#noMatch"), nmq = $("#nmq");
+  var cat = "all";
+  tiles.forEach(function(t){ t.dataset.search = t.dataset.search.toLowerCase(); });
+  function applyFilter(){
+    var q = search.value.trim().toLowerCase(), shown = 0, named = 0;
+    tiles.forEach(function(t){
+      var okCat = (cat === "all") ? true : (t.dataset.cat === cat);
+      if(cat !== "all" && t.dataset.cat === "eco"){ okCat = false; }
+      var okQ = (q === "" || t.dataset.search.indexOf(q) !== -1);
+      var ok = okCat && okQ;
+      if(cat !== "all" && t.dataset.cat === "eco" && q !== "" && t.dataset.search.indexOf(q) !== -1){ ok = true; }
+      t.classList.toggle("hide", !ok);
+      if(ok){ shown++; if(t.dataset.cat !== "eco"){ named++; } }
+    });
+    countEl.textContent = "showing " + shown + " of 8 launch connectors";
+    var anyNamed = tiles.some(function(t){ return t.dataset.cat !== "eco" && !t.classList.contains("hide"); });
+    noMatch.classList.toggle("show", !anyNamed);
+    nmq.textContent = q;
+  }
+  chips.forEach(function(c){
+    c.addEventListener("click", function(){
+      chips.forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+      c.setAttribute("aria-pressed","true");
+      cat = c.dataset.cat;
+      applyFilter();
+    });
+  });
+  search.addEventListener("input", applyFilter);
+
+  /* request connector → flash ecosystem tile */
+  $("#requestBtn").addEventListener("click", function(){
+    var eco = $("#ecoTile");
+    eco.scrollIntoView({behavior: RM ? "auto" : "smooth", block:"center"});
+    eco.classList.remove("flash"); void eco.offsetWidth; eco.classList.add("flash");
+    eco.focus({preventScroll:true});
+  });
+
+  /* ---------- recipes ---------- */
+  var RECIPES = [
+    {num:"01", title:"Stream events to the warehouse", route:["Apache Kafka","Conduit Lake","Snowflake"],
+     body:"Point Conduit Lake at a Kafka topic and pick Snowflake. Events land as structured tables within seconds — exactly-once, replayable from any offset, and merged on arrival.",
+     specs:[["Mode","streaming"],["Latency","sub-second"],["Guarantee","exactly-once"]],
+     logline:"kafka:payments ▸ snowflake.raw · 18,240 msg · 0.4s ✓"},
+    {num:"02", title:"Ship Postgres changes without cron", route:["PostgreSQL","Conduit Lake","Google BigQuery"],
+     body:"CDC tails the write-ahead log, so BigQuery sees every change within seconds. Retire the nightly dump job — and the 4 a.m. page it keeps causing.",
+     specs:[["Mode","change-data-capture"],["Freshness","seconds"],["Schema","auto-heal"]],
+     logline:"postgres:orders ▸ bigquery.orders · 2,431 cdc events ✓"},
+    {num:"03", title:"Objects in, lakehouse out", route:["Amazon S3","Conduit Lake","Databricks"],
+     body:"Drop Parquet, JSON, or CSV into a bucket and it lands as Delta tables in Databricks — partitioned, merged, and ready for notebooks the moment the last file closes.",
+     specs:[["Mode","file streaming"],["Formats","parquet · json · csv"],["Write","delta merge"]],
+     logline:"s3://raw/events ▸ databricks.events · 96 files ✓"},
+    {num:"04", title:"Fresh models, honest dashboards", route:["Snowflake","dbt","Looker"],
+     body:"When the warehouse lands new data, Conduit Lake triggers the right dbt run — and Looker reads the updated tables the instant they commit. No stale numbers in the Monday meeting.",
+     specs:[["Trigger","on-land"],["Runs","scoped dbt"],["Cache","auto-refresh"]],
+     logline:"dbt run ✓ 14 models · looker cache warm"}
+  ];
+  var recList = $("#recList"), recDetail = $("#recDetail");
+  function renderRecipe(i){
+    var r = RECIPES[i];
+    var chain = r.route.map(function(n,ix){
+      var core = (n === "Conduit Lake") ? " core" : "";
+      return '<span class="pill'+core+'">'+n+'</span>' + (ix < r.route.length-1 ? '<span class="arr">▸</span>' : "");
+    }).join("");
+    var specs = r.specs.map(function(s){ return "<div><dt>"+s[0]+"</dt><dd>"+s[1]+"</dd></div>"; }).join("");
+    recDetail.innerHTML = '<div class="chain">'+chain+'</div><h3>'+r.title.replace("Stream","Stream").replace(/(cron|warehouse|lakehouse out|honest dashboards)/,"<em>$1</em>")+'</h3><p>'+r.body+'</p><dl class="specs">'+specs+'</dl><span class="rec-log">'+r.logline+'</span>';
+    recDetail.classList.remove("anim"); void recDetail.offsetWidth; recDetail.classList.add("anim");
+  }
+  RECIPES.forEach(function(r,i){
+    var b = document.createElement("button");
+    b.className = "rec-btn"; b.type = "button";
+    b.setAttribute("role","tab");
+    b.setAttribute("aria-selected", i===0 ? "true":"false");
+    b.innerHTML = '<span class="rec-num">'+r.num+' / LANE</span><span class="rec-title">'+r.title+'</span><span class="rec-route">'+r.route.join("  ▸  ")+'</span>';
+    b.addEventListener("click", function(){
+      $$(".rec-btn", recList).forEach(function(x){ x.setAttribute("aria-selected","false"); });
+      b.setAttribute("aria-selected","true");
+      renderRecipe(i);
+    });
+    recList.appendChild(b);
+  });
+  renderRecipe(0);
+})();
+</script>
+</body>
+</html>

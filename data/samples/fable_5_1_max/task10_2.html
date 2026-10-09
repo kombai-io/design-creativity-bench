@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldline HVAC — Dispatch board · Thu, Mar 14</title>
+<style>
+:root{
+  --bg:#eef1f5;--panel:#fff;--line:#e3e8ef;--line2:#cbd3dd;--text:#111827;--muted:#5b6675;--faint:#8a94a3;
+  --accent:#1e6fd9;
+  --pm:#2f6fd8;--pm-bg:#e4eefc;--pm-ink:#1c4fa3;
+  --rep:#e08a12;--rep-bg:#fdf0da;--rep-ink:#8a4b00;
+  --emg:#d92d20;--emg-bg:#fde8e6;--emg-ink:#9a1d14;
+  --crit:#d92d20;--high:#ec6b1f;--med:#d9a400;--info:#2f80ed;--ok:#1a9e5c;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:var(--bg);display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:1280px}
+button{font:inherit;color:inherit}
+h1,h2,h3{margin:0}
+.ic{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
+.muted{color:var(--muted)}
+.bad{color:#b42318}
+.okt{color:#166534}
+.note{color:var(--muted);font-size:11.5px;margin-top:3px;font-weight:400}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--line2);background:#fff;cursor:pointer;font-weight:500;white-space:nowrap;line-height:1}
+.btn:hover{background:#f6f8fb}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1a5fc0}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.btn.xs{height:22px;padding:0 7px;font-size:11px}
+.btn:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* top bar */
+.topbar{height:52px;background:#0d2237;color:#e6edf5;display:flex;align-items:center;gap:18px;padding:0 16px;flex:none}
+.brand{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:500;letter-spacing:.2px;margin-right:6px;color:#fff}
+.brand b{font-weight:700}
+.brand .logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#2f8be6,#f0862b);display:grid;place-items:center}
+.brand .logo svg{width:18px;height:18px}
+.topnav{display:flex;gap:2px}
+.topnav span{padding:6px 10px;border-radius:6px;color:#b7c4d3;cursor:default}
+.topnav span.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
+.search{flex:1;max-width:420px;margin-left:auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:7px;height:32px;padding:0 10px;color:#c9d5e2}
+.search input{flex:1;background:none;border:0;outline:0;color:#fff;font:inherit;min-width:0}
+.search input::placeholder{color:#93a4b8}
+.top-actions{display:flex;align-items:center;gap:10px}
+.topbar .btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:#fff}
+.topbar .btn:hover{background:rgba(255,255,255,.14)}
+.topbar .btn.primary{background:#2f8be6;border-color:#2f8be6}
+.topbar .btn.primary:hover{background:#3d97ee}
+.topbar .btn:disabled{opacity:.45}
+.pubstatus{font-size:11px;color:#9fb0c3;max-width:220px;line-height:1.3}
+.iconbtn{position:relative;width:32px;height:32px;border-radius:7px;border:0;background:transparent;color:#c9d5e2;cursor:pointer;display:grid;place-items:center}
+.iconbtn:hover{background:rgba(255,255,255,.1)}
+.iconbtn .ic{width:17px;height:17px}
+.iconbtn .dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:#f04438;border:2px solid #0d2237}
+.user{width:30px;height:30px;border-radius:50%;background:#f0862b;color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px}
+
+/* toolbar */
+.toolbar{height:58px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 16px;flex:none}
+.date{display:flex;align-items:center;gap:10px}
+.date .cal{width:36px;height:36px;border-radius:8px;background:#eef4fc;color:var(--accent);display:grid;place-items:center}
+.date .cal .ic{width:18px;height:18px}
+.date b{font-size:15px;display:block;line-height:1.2}
+.date span{color:var(--muted);font-size:12px}
+.wx{display:flex;align-items:center;gap:6px;color:#8a4b00;background:#fff4e5;border:1px solid #fbd9a5;border-radius:999px;padding:4px 10px;font-size:12px}
+.filters{display:flex;align-items:center;gap:14px;margin-left:auto;color:var(--muted);font-size:12px}
+.filters select{height:30px;border:1px solid var(--line2);border-radius:6px;padding:0 8px;background:#fff;font:inherit;color:var(--text)}
+.filters label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.filters input[type=checkbox]{accent-color:var(--accent);margin:0}
+.stats{display:flex;gap:8px}
+.stat{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:#f4f6f9;border:1px solid var(--line);font-size:12px;color:#374151}
+.stat b{font-size:13px}
+.stat.crit{background:#fde8e6;border-color:#f6c1bb;color:#9a1d14}
+.stat.high{background:#fff0e6;border-color:#f9c9aa;color:#8a3d0b}
+.stat.med{background:#fff8dc;border-color:#f3dc8a;color:#7a5a00}
+
+/* layout */
+.layout{flex:1;display:grid;grid-template-columns:288px minmax(0,1fr) 380px;min-height:0}
+.left,.right{background:#fff;overflow:auto;min-height:0}
+.left{border-right:1px solid var(--line)}
+.right{border-left:1px solid var(--line)}
+.panel{padding:12px 14px;border-bottom:1px solid var(--line)}
+.panel h2{margin:0 0 10px;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.count{background:#eef1f5;color:var(--text);border-radius:999px;padding:0 7px;font-size:11px;font-weight:600;line-height:18px}
+.count.crit{background:var(--crit);color:#fff}
+.empty{color:var(--faint);font-size:12px;padding:12px 10px;border:1px dashed var(--line2);border-radius:8px;text-align:center}
+
+/* unassigned cards */
+.ucard{border:1px solid var(--line);border-left:4px solid var(--emg);border-radius:8px;padding:10px 10px 8px;background:#fff;cursor:grab;box-shadow:var(--shadow);margin-bottom:8px;touch-action:none}
+.ucard.pm{border-left-color:var(--pm)}
+.ucard.rep{border-left-color:var(--rep)}
+.ucard:hover{background:#fbfcfe}
+.ucard.selected{box-shadow:0 0 0 2px var(--accent)}
+.uc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.uc-title{font-weight:600;font-size:13px}
+.uc-sub{color:var(--muted);font-size:12px;margin-top:2px}
+.uc-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;font-size:11.5px;color:#374151}
+.uc-meta span{display:inline-flex;align-items:center;gap:4px}
+.uc-hint{margin-top:8px;font-size:11px;color:var(--faint);display:flex;align-items:center;gap:5px}
+.dropzone.over{outline:2px dashed var(--accent);outline-offset:3px;border-radius:8px;background:#f2f7ff}
+
+/* issue cards */
+.sev-critical{--sev:var(--crit)} .sev-high{--sev:var(--high)} .sev-medium{--sev:var(--med)} .sev-info{--sev:var(--info)}
+.icard{position:relative;border:1px solid var(--line);border-radius:8px;padding:8px 10px 8px 13px;margin-bottom:6px;cursor:pointer;background:#fff}
+.icard::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 2px 2px 0;background:var(--sev,#999)}
+.icard:hover{background:#f8fafc}
+.icard.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ic-title{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
+.ic-title .sevdot{width:8px;height:8px;border-radius:50%;background:var(--sev);flex:none}
+.ic-body{font-size:12px;color:#374151;margin-top:2px}
+.ic-detail{font-size:11.5px;color:var(--muted);margin-top:3px}
+.ic-actions{margin-top:7px}
+
+/* board */
+.center{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff}
+.board-scroll{flex:1;overflow:auto;position:relative}
+.board{min-width:1000px}
+.hours{display:grid;grid-template-columns:232px 1fr;position:sticky;top:0;z-index:6;background:#fff;border-bottom:1px solid var(--line);height:40px}
+.hours-corner{position:sticky;left:0;z-index:7;background:#fff;border-right:1px solid var(--line);display:flex;align-items:center;padding:0 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.hour-labels{position:relative}
+.hour-labels span{position:absolute;top:22px;transform:translateX(4px);font-size:11px;color:var(--muted);white-space:nowrap}
+.hour-labels .mk{top:0;bottom:0;transform:none;border-left:2px dashed var(--crit)}
+.hour-labels .mk i{position:absolute;top:3px;left:5px;font-style:normal;font-size:10.5px;color:var(--crit);white-space:nowrap;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.hour-labels .mk i .ic{width:11px;height:11px}
+.lane{display:grid;grid-template-columns:232px 1fr;height:88px;border-bottom:1px solid var(--line)}
+.tech-cell{position:sticky;left:0;z-index:5;background:#fff;border-right:1px solid var(--line);padding:9px 12px 8px;cursor:pointer}
+.tech-cell:hover{background:#f8fafc}
+.tech-cell.selected{background:#eef4fc;box-shadow:inset 3px 0 0 var(--accent)}
+.tech-row{display:flex;align-items:center;gap:8px}
+.avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex:none;letter-spacing:.3px}
+.avatar.sm{width:24px;height:24px;font-size:10px}
+.avatar.lg{width:42px;height:42px;font-size:15px}
+.tech-name{font-weight:600;font-size:13px;line-height:1.2}
+.tech-sub{color:var(--muted);font-size:11px}
+.tech-tags{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.tag{font-size:10.5px;padding:1px 6px;border-radius:4px;background:#f1f4f8;color:#4b5563;border:1px solid var(--line);white-space:nowrap}
+.tag.warn{background:#fff4e5;border-color:#fbd9a5;color:#8a4b00}
+.cap{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10.5px;color:var(--muted);white-space:nowrap}
+.cap-bar{flex:1;height:5px;background:#eef1f5;border-radius:3px;overflow:hidden;min-width:40px}
+.cap-bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.cap-bar i.over{background:var(--crit)}
+.cap-bar i.low{background:#6fbf7a}
+.tl{position:relative;overflow:hidden;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px),linear-gradient(to right,#f1f4f8 1px,transparent 1px);background-size:calc(100%/13) 100%,calc(100%/26) 100%}
+.tl.drop-target{background-color:#eef5ff}
+.off{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,#e9edf2 0 5px,#f5f7f9 5px 10px);z-index:0;font-size:10px;color:#7c8794;padding:5px 7px;overflow:hidden;white-space:nowrap}
+.off.end{border-left:1px solid var(--line2)}
+.off.start{border-right:1px solid var(--line2);text-align:right}
+.mk-line{position:absolute;top:0;bottom:0;border-left:2px dashed rgba(217,45,32,.5);z-index:1;pointer-events:none}
+.trv{position:absolute;top:29px;height:14px;background:repeating-linear-gradient(135deg,#c4ccd7 0 3px,#eef1f5 3px 6px);border-radius:3px;z-index:1;font-size:9.5px;color:#374151;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;font-weight:600}
+.trv.tight{background:repeating-linear-gradient(135deg,#f2a08d 0 3px,#fde8e6 3px 6px);color:#9a1d14}
+.proj{position:absolute;top:10px;height:50px;border:1px dashed var(--high);border-left:0;border-radius:0 6px 6px 0;background:repeating-linear-gradient(135deg,rgba(236,107,31,.2) 0 4px,rgba(236,107,31,.06) 4px 8px);z-index:1;font-size:10.5px;color:#9a4a0e;padding:5px 7px;white-space:nowrap;overflow:hidden;font-weight:600}
+.blk{position:absolute;top:10px;height:50px;border-radius:6px;border:1px solid var(--pm);border-left-width:4px;padding:5px 7px;overflow:hidden;cursor:grab;z-index:2;background:var(--pm-bg);color:var(--pm-ink);box-shadow:var(--shadow);touch-action:none}
+.blk.rep{background:var(--rep-bg);border-color:var(--rep);color:var(--rep-ink)}
+.blk.emg{background:var(--emg-bg);border-color:var(--emg);color:var(--emg-ink)}
+.blk:hover{filter:brightness(.985)}
+.blk .t1{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;padding-right:12px}
+.blk .t2{font-size:11px;opacity:.9;white-space:nowrap;overflow:hidden;display:flex;gap:6px;align-items:center;margin-top:2px}
+.blk .bis{display:inline-flex;gap:3px}
+.blk .bi .ic{width:12px;height:12px}
+.blk .bi.warn{color:#b45309}
+.blk.sev-critical,.blk.sev-high,.blk.sev-medium{box-shadow:0 0 0 2px var(--sev)}
+.blk .badge{position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:var(--sev);color:#fff;display:grid;place-items:center}
+.blk .badge .ic{width:10px;height:10px;stroke-width:2}
+.blk.selected{outline:2px solid var(--accent);outline-offset:2px;z-index:3}
+.blk.dim{opacity:.28}
+.legend{display:flex;gap:16px;align-items:center;padding:7px 16px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);background:#fff;flex:none;flex-wrap:wrap}
+.lg{display:inline-flex;align-items:center;gap:5px}
+.lg i{width:16px;height:10px;border-radius:2px;display:inline-block;border:1px solid transparent}
+.lg .l-pm{background:var(--pm-bg);border-color:var(--pm)}
+.lg .l-rep{background:var(--rep-bg);border-color:var(--rep)}
+.lg .l-emg{background:var(--emg-bg);border-color:var(--emg)}
+.lg .l-trv{background:repeating-linear-gradient(135deg,#c4ccd7 0 3px,#eef1f5 3px 6px)}
+.lg .l-proj{border:1px dashed var(--high);background:repeating-linear-gradient(135deg,rgba(236,107,31,.2) 0 4px,rgba(236,107,31,.06) 4px 8px)}
+.lg .l-off{background:repeating-linear-gradient(135deg,#e9edf2 0 5px,#f5f7f9 5px 10px);border-color:var(--line2)}
+.lg .l-bad{border-radius:50%;width:10px;background:var(--crit)}
+
+/* detail panel */
+.d-head{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.d-chips{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.d-id{margin-left:auto;color:var(--faint);font-size:11px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.d-head h2{font-size:17px;line-height:1.25}
+.d-addr{color:var(--muted);font-size:12px;margin-top:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.d-sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+.d-sec h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:4px 10px;font-size:12.5px;padding:3px 0}
+.kv>span{color:var(--muted)}
+.kv>div{font-weight:500;min-width:0}
+.kv b.warn{color:#9a4a0e}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;border:1px solid transparent;line-height:1.3;white-space:nowrap}
+.chip .ic{width:11px;height:11px}
+.chip.pm{background:var(--pm-bg);color:var(--pm-ink);border-color:#c5d8f7}
+.chip.rep{background:var(--rep-bg);color:var(--rep-ink);border-color:#f5d9a8}
+.chip.emg{background:var(--emg-bg);color:var(--emg-ink);border-color:#f6c1bb}
+.chip.pri-Emergency{background:var(--crit);color:#fff}
+.chip.pri-High{background:#fff0e6;color:#8a3d0b;border-color:#f9c9aa}
+.chip.pri-Medium{background:#fff8dc;color:#7a5a00;border-color:#f3dc8a}
+.chip.pri-Routine{background:#f1f4f8;color:#4b5563;border-color:var(--line)}
+.chip.ok{background:#e6f6ec;color:#166534;border-color:#b7e4c7}
+.chip.neutral{background:#f1f4f8;color:#374151;border-color:var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.d-issues{padding:10px 16px;background:#fbfcfd;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.d-issue{display:flex;gap:8px;align-items:flex-start;font-size:12px;padding:7px 9px;border-radius:7px;border:1px solid var(--line);background:#fff;border-left:3px solid var(--sev)}
+.d-issue>.ic{color:var(--sev);margin-top:1px}
+.d-issue b{display:block;font-size:12px}
+.d-issue span{color:var(--muted);font-size:11.5px}
+.d-issue>div{flex:1;min-width:0}
+.d-issue .btn{flex:none;align-self:center}
+.nudge{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--muted)}
+.nudge b{min-width:56px;text-align:center;color:var(--text);font-size:13px}
+.d-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--muted);margin-top:8px;padding:8px 10px;background:#f6f8fb;border-radius:6px}
+.part{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;border-top:1px dashed var(--line);font-size:12px;font-weight:400}
+.part:first-child{border-top:0;padding-top:0}
+.pstat{font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.pstat.truck{background:#e6f6ec;color:#166534}
+.pstat.warehouse{background:#fff8dc;color:#7a5a00}
+.pstat.ordered{background:#fff0e6;color:#8a3d0b}
+.pstat.tbd{background:#f1f4f8;color:#4b5563}
+.assigned{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.apill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 6px 3px 3px;font-size:12px;font-weight:500;background:#fff}
+.apill button{border:0;background:#eef1f5;border-radius:50%;width:18px;height:18px;display:grid;place-items:center;cursor:pointer;color:var(--muted);padding:0}
+.apill button:hover{background:#fde8e6;color:#9a1d14}
+.apill button .ic{width:10px;height:10px;stroke-width:2}
+.opt-head{font-size:12px;color:var(--muted);margin:4px 0 2px}
+.opt{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.opt:first-of-type{border-top:0}
+.opt-main{display:flex;gap:8px;flex:1;min-width:0;align-items:flex-start}
+.opt-main .avatar{margin-top:1px}
+.opt-name{font-weight:600;font-size:12.5px}
+.opt-role{font-weight:400;color:var(--muted);font-size:11.5px;margin-left:4px}
+.opt-fit{font-size:11.5px;color:#374151;margin-top:1px}
+.opt-fit.ok{color:#166534}
+.opt-bad{font-size:11.5px;color:#9a1d14;margin-top:1px}
+.opt-soft{font-size:11.5px;color:#9a4a0e;margin-top:1px}
+.opt-note{font-size:11.5px;color:var(--faint);margin-top:1px}
+.opt-alt{font-size:11.5px;color:#1a5fc0;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.opt .btn{flex:none}
+.opt.bad .btn:not(.primary){color:#7a2e0e;border-color:#f3c3ad}
+.route{list-style:none;margin:0;padding:0}
+.route li{display:grid;grid-template-columns:52px 1fr;gap:8px;padding:6px 0;border-top:1px dashed var(--line);font-size:12px;cursor:pointer}
+.route li:first-child{border-top:0}
+.route li:hover b{color:var(--accent)}
+.route .rt-time{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:600}
+.route .rt-travel{color:var(--faint);font-size:11px;display:flex;align-items:center;gap:4px}
+.route .rt-travel .ic{width:11px;height:11px}
+
+/* drag ghost & toast */
+.ghost{position:fixed!important;z-index:200;pointer-events:none;opacity:.94;box-shadow:0 10px 26px rgba(0,0,0,.28);cursor:grabbing;overflow:visible!important}
+.ghost .glabel{position:absolute;left:0;top:-26px;font-size:11px;background:#0d2237;color:#fff;padding:3px 8px;border-radius:5px;white-space:nowrap;font-weight:500}
+.ghost.bad .glabel{background:var(--crit)}
+body.dragging{user-select:none;cursor:grabbing}
+body.dragging .blk,body.dragging .ucard{cursor:grabbing}
+#toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,10px);background:#0d2237;color:#fff;padding:9px 14px;border-radius:8px;font-size:12.5px;opacity:0;pointer-events:none;transition:.2s;z-index:100;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:70vw}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2" fill="#fff"/><path d="M12 9.6C12 5 9.4 2.8 5.6 3c.2 4 2.4 6.6 6.4 6.6zM14.4 12c4.6 0 6.8 2.6 6.6 6.4-4-.2-6.6-2.4-6.6-6.4zM12 14.4C12 19 9.4 21.2 5.6 21c.2-4 2.4-6.6 6.4-6.6z" fill="#fff"/></svg></span>Fieldline <b>HVAC</b></div>
+  <nav class="topnav" aria-label="Primary"><span class="active">Dispatch</span><span>Technicians</span><span>Customers</span><span>Parts</span><span>Reports</span></nav>
+  <div class="search"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.4"/><path d="M10.4 10.4 14 14"/></svg><input id="search" type="search" placeholder="Search sites, technicians, visit IDs, problems…" aria-label="Search the schedule"></div>
+  <div class="top-actions">
+    <button class="btn" id="undoBtn" data-action="undo" disabled><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6.2h6.2a3.9 3.9 0 0 1 0 7.8H6.4"/><path d="M5.6 3.6 3 6.2l2.6 2.6"/></svg>Undo</button>
+    <button class="btn primary" id="publishBtn" data-action="publish" disabled><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M14 2 2 7.2l5 1.8 1.8 5z"/><path d="M7 9l7-7"/></svg><span id="publishLabel">Publish</span></button>
+    <span class="pubstatus" id="pubstatus">Last published today 5:12 PM · all 6 techs notified</span>
+    <button class="iconbtn" aria-label="Notifications: 1 new emergency call"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.5 1.6h-11z"/><path d="M6.6 14.2a1.5 1.5 0 0 0 2.8 0"/></svg><span class="dot"></span></button>
+    <div class="user" title="Maya Delgado · Dispatcher">MD</div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="date"><div class="cal"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.6h12M5 1.6v3M11 1.6v3"/></svg></div><div><b>Thursday, March 14</b><span>Tomorrow · day board 6:00 AM – 7:00 PM · Fieldline yard, 220 Industrial Pkwy</span></div></div>
+  <div class="wx" title="Tomorrow's forecast"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.6v1.6M8 12.8v1.6M1.6 8h1.6M12.8 8h1.6M3.5 3.5l1.1 1.1M11.4 11.4l1.1 1.1M3.5 12.5l1.1-1.1M11.4 4.6l1.1-1.1"/></svg>High 91°F · expect extra cooling calls</div>
+  <div class="filters">
+    <label>Territory <select id="territory" aria-label="Filter technicians by territory"></select></label>
+    <label><input type="checkbox" id="showTravel" checked> Drive time</label>
+    <label><input type="checkbox" id="showProj" checked> Projected overruns</label>
+  </div>
+  <div class="stats" id="stats" aria-live="polite"></div>
+</div>
+
+<main class="layout">
+  <aside class="left" aria-label="Work queue">
+    <section class="panel" id="unassignedPanel"><h2>Unassigned <span class="count" id="unassignedCount">0</span></h2><div id="unassignedList" class="dropzone"></div></section>
+    <section class="panel"><h2>Needs attention <span class="count" id="issueCount">0</span></h2><div id="issueList"></div></section>
+    <section class="panel" id="deferredPanel" style="display:none"><h2>Deferred to Fri, Mar 15 <span class="count" id="deferredCount">0</span></h2><div id="deferredList"></div></section>
+  </aside>
+
+  <section class="center" aria-label="Schedule board">
+    <div class="board-scroll"><div class="board" id="board"></div></div>
+    <div class="legend">
+      <span class="lg"><i class="l-pm"></i>Planned maintenance</span>
+      <span class="lg"><i class="l-rep"></i>Repair</span>
+      <span class="lg"><i class="l-emg"></i>Emergency</span>
+      <span class="lg"><i class="l-trv"></i>Drive time</span>
+      <span class="lg"><i class="l-proj"></i>Projected overrun</span>
+      <span class="lg"><i class="l-off"></i>Off shift</span>
+      <span class="lg"><i class="l-bad"></i>Has a problem</span>
+      <span class="lg" style="margin-left:auto">Drag a visit to change technician or start time · snaps to 15 min</span>
+    </div>
+  </section>
+
+  <aside class="right" id="detail" aria-label="Details"></aside>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+/* ------------------------------------------------------------------ data */
+const DAY_START=360,DAY_END=1140,SPAN=DAY_END-DAY_START;
+const YARD={name:'the yard',pos:[0,0]};
+const CERTS={'EPA-U':'EPA 608 Universal','EPA-II':'EPA 608 Type II','NATE':'NATE certified','CHILLER':'Centrifugal chiller (factory trained)','VRF':'VRF / VRV certified','BOILER':'Boiler operator license','REFRIG':'Commercial refrigeration','BACNET':'BACnet controls'};
+const SYS={RTU:'Rooftop units',Chiller:'Chillers',VRF:'VRF systems',Split:'Split systems',Boiler:'Boilers','Walk-in':'Walk-in coolers / freezers',Controls:'Building controls'};
+const PRI={Emergency:0,High:1,Medium:2,Routine:3};
+
+const TECHS=[
+ {id:'t1',name:'Marcus Reed',initials:'MR',role:'Senior Technician',truck:'Van 12',shift:[420,1020],territory:'North Loop',certs:['EPA-U','NATE','CHILLER','VRF'],skills:{RTU:'full',Chiller:'full',VRF:'full',Split:'full'},gear:['Refrigerant analyzer','Daikin Service Checker','Recovery machine'],color:'#1f5fbf',phone:'(555) 010-2231'},
+ {id:'t2',name:'Priya Natarajan',initials:'PN',role:'Technician II',truck:'Van 7',shift:[360,900],territory:'Westside',certs:['EPA-U','BOILER','REFRIG'],skills:{Boiler:'full',RTU:'full','Walk-in':'full',Split:'full'},gear:['Combustion analyzer','Recovery machine'],color:'#7c3aed',phone:'(555) 010-4418'},
+ {id:'t3',name:'Danny Okafor',initials:'DO',role:'Technician II',truck:'Van 9',shift:[480,1020],territory:'South Industrial',certs:['EPA-II','BACNET'],skills:{RTU:'full',Split:'full',Controls:'full'},gear:['BACnet laptop','Recovery machine'],color:'#0e8f7e',phone:'(555) 010-7702'},
+ {id:'t4',name:'Lena Vasquez',initials:'LV',role:'Technician I',truck:'Van 3',shift:[420,990],territory:'North Loop',certs:['EPA-II'],skills:{Split:'full',RTU:'pm'},gear:['PM kit (filters, belts, coil cleaner)'],color:'#c2417a',phone:'(555) 010-3390'},
+ {id:'t5',name:'Tom Brennan',initials:'TB',role:'Senior Technician',truck:'Van 5',shift:[420,780],territory:'Downtown',certs:['EPA-U','CHILLER','BOILER'],skills:{Chiller:'full',Boiler:'full',RTU:'full',Split:'full'},gear:['Refrigerant analyzer','Combustion analyzer'],color:'#b9791b',offNote:'OSHA refresher at the yard from 1:30p',phone:'(555) 010-8850'},
+ {id:'t6',name:'Jae-won Park',initials:'JP',role:'Technician II',truck:'Van 11',shift:[510,1050],territory:'Eastside',certs:['EPA-U','VRF','REFRIG'],skills:{VRF:'full','Walk-in':'full',Split:'full',RTU:'full'},gear:['Daikin Service Checker','Recovery machine'],color:'#4f46e5',phone:'(555) 010-6127'}
+];
+TECHS.forEach(t=>{t.first=t.name.split(' ')[0];});
+
+const VISITS=[
+ {id:'V-1060',site:"St. Anne's Surgical Center",address:'1800 Mercy Way',territory:'North Loop',pos:[3,8],type:'Repair',priority:'Emergency',window:[360,600],respondBy:600,status:'unassigned',techs:[],start:null,dur:120,system:'RTU',level:'repair',certs:['EPA-U'],equipment:'Carrier 50TC rooftop unit serving OR suite 2 — backup CRAC unit cannot keep up',problem:'No cooling to OR suite 2; space at 78°F and rising. First surgical cases scheduled 10:30a. Called in 5:42p today by facilities on-call.',parts:[{name:'Contactor / capacitor kit (Carrier 50TC)',status:'truck'},{name:'Compressor — only if failed, decide onsite',status:'tbd'}],gear:['Refrigerant gauges','Megohmmeter'],access:{note:'Escort required in clinical areas — report to Facilities on-call at the ED entrance'},contact:{name:'Rob Ellison',role:'Facilities on-call (24/7)',phone:'(555) 199-0101',required:true,confirmed:true}},
+ {id:'V-1041',site:'Northgate Medical Plaza',address:'4400 Northgate Dr, Suite B',territory:'North Loop',pos:[2,9],type:'PM',priority:'Routine',window:[420,660],status:'scheduled',techs:['t1'],start:450,dur:120,system:'RTU',level:'pm',certs:['EPA-II'],equipment:'2× Carrier 48TC rooftop units, 10-ton',problem:'Quarterly PM — belts, filters, coil wash, refrigerant and amp checks.',parts:[{name:'Filter set 20×25×2 (8)',status:'truck'}],gear:[],access:{note:'Badge from security desk in Lobby B; roof via Stair 3'},contact:{name:'Dana Whitfield',role:'Facilities coordinator',phone:'(555) 201-4410',required:false,confirmed:true}},
+ {id:'V-1042',site:'Lakeshore Office Park, Bldg C',address:'1 Lakeshore Pkwy, Bldg C',territory:'North Loop',pos:[-1,12],type:'PM',priority:'Routine',window:[480,840],status:'scheduled',techs:['t1'],start:600,dur:180,system:'Chiller',level:'pm',certs:['EPA-U','CHILLER'],equipment:'Trane CVHE centrifugal chiller, 350-ton',problem:'Spring startup PM — oil sample, purge unit check, controls calibration, eddy-current follow-up items.',parts:[],gear:['Refrigerant analyzer'],access:{note:'Mechanical room key held by the property manager, Suite 110'},contact:{name:'Greg Halvorsen',role:'Property manager',phone:'(555) 318-7702',required:true,confirmed:true}},
+ {id:'V-1053',site:'Grandview Hotel',address:'900 Grandview Ave',territory:'North Loop',pos:[1,6],type:'Repair',priority:'Medium',window:[780,1020],status:'scheduled',techs:['t1'],start:810,dur:180,needsTechs:2,helperOk:true,crewNote:'Two technicians: one at the rooftop condensing units, one tracing indoor-unit communications. The 2nd tech does not need a VRF cert.',system:'VRF',level:'repair',certs:['EPA-U','VRF'],equipment:'Daikin VRV IV — 2 outdoor units, 24 indoor units',problem:'Fault U4 (indoor/outdoor communication) on system 2; floors 6–8 without cooling since Tuesday.',parts:[],gear:['Daikin Service Checker'],access:{note:'Engineering office on the lower level; roof via the service elevator'},contact:{name:'Ed Nakamura',role:'Chief engineer',phone:'(555) 455-9090',required:false,confirmed:true}},
+ {id:'V-1044',site:'FreshMart #12',address:'2200 W Grand Ave',territory:'Westside',pos:[-8,2],type:'PM',priority:'Routine',window:[360,600],status:'scheduled',techs:['t2'],start:390,dur:90,system:'Walk-in',level:'pm',certs:['EPA-II','REFRIG'],equipment:'2× walk-in coolers, 1× walk-in freezer (Heatcraft)',problem:'Condenser coil cleaning, door gasket check, defrost timer verification.',parts:[],gear:[],access:{start:360,end:600,note:'Receiving door opens 6:15a; refrigeration work must finish before the store opens at 10:00a'},contact:{name:'Kim Tran',role:'Store manager',phone:'(555) 772-0034',required:true,confirmed:true}},
+ {id:'V-1043',site:'Riverside Elementary',address:'875 Riverside Ave',territory:'Westside',pos:[-10,4],type:'PM',priority:'Routine',window:[420,900],status:'scheduled',techs:['t2'],start:510,dur:120,system:'Boiler',level:'pm',certs:['BOILER'],equipment:'2× Lochinvar Crest condensing boilers',problem:'Annual inspection and combustion analysis; log results for district compliance.',parts:[],gear:['Combustion analyzer'],access:{note:'Check in at the front office; mechanical room only during school hours — no classroom access'},contact:{name:'Al Morales',role:'Head custodian',phone:'(555) 440-1187',required:true,confirmed:true}},
+ {id:'V-1056',site:'Westfield Bank — Grand Ave',address:'1800 W Grand Ave',territory:'Westside',pos:[-7,-1],type:'PM',priority:'Routine',window:[540,960],status:'scheduled',techs:['t2'],start:660,dur:120,system:'RTU',level:'pm',certs:['EPA-II'],equipment:'2× Carrier 48TC rooftop units, 7.5-ton',problem:'Quarterly PM — filters, belts, coil wash, economizer check.',parts:[],gear:[],access:{start:540,end:960,note:'Escort required at all times; no roof access after 4:00p'},contact:{name:'Olivia Grant',role:'Branch manager',phone:'(555) 512-3030',required:true,confirmed:true}},
+ {id:'V-1057',site:'Cedar Park Library',address:'45 Cedar Park Rd',territory:'Westside',pos:[-9,-3],type:'Repair',priority:'Medium',window:[780,1020],status:'scheduled',techs:['t2'],start:810,dur:60,system:'Boiler',level:'repair',certs:['BOILER'],equipment:'Weil-McLain 88 series boiler',problem:'Relief valve weeping — puddle in the mechanical room. Replace valve, check expansion tank charge.',parts:[{name:'Watts 335 ¾" relief valve, 30 psi',status:'warehouse',location:'Warehouse bin C-14'}],gear:[],access:{note:'Staff entrance at the rear; library opens 10:00a'},contact:{name:'June Park',role:'Branch librarian',phone:'(555) 341-8800',required:false,confirmed:true}},
+ {id:'V-1045',site:'Summit Logistics Warehouse',address:'5100 Commerce Way',territory:'South Industrial',pos:[2,-8],type:'PM',priority:'Routine',window:[480,960],status:'scheduled',techs:['t3'],start:510,dur:210,system:'RTU',level:'pm',certs:['EPA-II'],equipment:'4× Lennox Energence rooftop units, 20-ton',problem:'Semi-annual PM — filters, belts, coil wash, economizer and gas heat check.',parts:[{name:'Filter set 24×24×4 (16)',status:'truck'}],gear:['Scissor lift (customer-provided)'],access:{note:'Dock office check-in; hard hat and hi-vis required; customer scissor lift reserved'},contact:{name:'Shift supervisor',role:'Dock office',phone:'(555) 550-2210',required:false,confirmed:true}},
+ {id:'V-1054',site:'Oakridge Corporate Campus',address:'7700 Oakridge Pkwy, Bldg 2',territory:'South Industrial',pos:[5,-6],type:'Repair',priority:'Medium',window:[720,1020],status:'scheduled',techs:['t3'],start:780,dur:120,system:'RTU',level:'repair',certs:['EPA-II','BACNET'],equipment:'Trane Voyager RTU-2 economizer section',problem:'Economizer damper stuck open — BAS alarm; humidity complaints on the 2nd floor.',parts:[{name:'Belimo damper actuator',status:'truck'}],gear:['BACnet laptop'],access:{note:'Badge from Bldg 2 security'},contact:{name:'Facilities desk',role:'Bldg 2',phone:'(555) 700-2100',required:false,confirmed:true}},
+ {id:'V-1055',site:'Southpoint Distribution',address:'9800 Southpoint Dr',territory:'South Industrial',pos:[1,-11],type:'PM',priority:'Routine',window:[900,1020],status:'scheduled',techs:['t3'],start:930,dur:60,system:'Split',level:'pm',certs:['EPA-II'],equipment:'Office split system, 3-ton',problem:'Seasonal PM — filters, coil, refrigerant check.',parts:[],gear:[],access:{note:'Front office check-in'},contact:{name:'Front office',role:'',phone:'(555) 410-6600',required:false,confirmed:true}},
+ {id:'V-1046',site:'Harbor View Apartments',address:'310 Harbor View Ln',territory:'North Loop',pos:[-2,7],type:'PM',priority:'Routine',window:[540,900],status:'scheduled',techs:['t4'],start:600,dur:90,system:'Split',level:'pm',certs:['EPA-II'],equipment:'Mitsubishi mini-splits — leasing office and clubhouse (5 heads)',problem:'Filter and coil cleaning, condensate drain flush.',parts:[],gear:[],access:{start:540,end:1020,note:'Leasing office open 9:00a–5:00p'},contact:{name:'Tasha Green',role:'Leasing agent',phone:'(555) 606-3311',required:false,confirmed:true}},
+ {id:'V-1047',site:'Pinecrest Dental',address:'88 Pinecrest Blvd, Suite 4',territory:'Downtown',pos:[2,4],type:'PM',priority:'Routine',window:[660,900],status:'scheduled',techs:['t4'],start:720,dur:60,system:'Split',level:'pm',certs:['EPA-II'],equipment:'Goodman split system, 5-ton',problem:'Filter change, evaporator coil cleaning, condensate pump check.',parts:[],gear:[],access:{start:660,end:900,note:'Office manager must be present; she leaves at 3:00p'},contact:{name:'Beth Sands',role:'Office manager',phone:'(555) 814-9920',required:true,confirmed:true}},
+ {id:'V-1059',site:'Maple Street Clinic',address:'120 Maple St',territory:'Downtown',pos:[-1,4],type:'PM',priority:'Routine',window:[840,960],status:'scheduled',techs:['t4'],start:840,dur:90,system:'Split',level:'pm',certs:['EPA-II'],equipment:'3× split systems, exam wing',problem:'Seasonal PM — filters, coils, condensate lines.',parts:[],gear:[],access:{start:840,end:1080,note:'Exam rooms occupied until 2:00p; use the after-hours entrance on Maple St'},contact:{name:'Nora Feld',role:'Practice manager',phone:'(555) 268-4477',required:false,confirmed:true}},
+ {id:'V-1048',site:'Metro Transit Depot',address:'1500 Depot St, Gate 2',territory:'Downtown',pos:[1,2],type:'PM',priority:'Routine',window:[420,720],status:'scheduled',techs:['t5'],start:450,dur:120,system:'Boiler',level:'pm',certs:['BOILER'],equipment:'2× Cleaver-Brooks fire-tube boilers',problem:'Annual inspection, low-water cutoff test, burner tune.',parts:[],gear:['Combustion analyzer'],access:{note:'Gate 2 security check-in; safety vest required in the bus yard'},contact:{name:'Depot maintenance desk',role:'',phone:'(555) 233-0400',required:false,confirmed:true}},
+ {id:'V-1058',site:'Ferris & Lowe Law Offices',address:'200 Main St, Suite 1200',territory:'Downtown',pos:[0,3],type:'Repair',priority:'Medium',window:[540,720],status:'scheduled',techs:['t5'],start:600,dur:60,system:'Split',level:'repair',certs:['EPA-II'],equipment:'Carrier split system, 7.5-ton',problem:'Loud rattle from the blower compartment — suspected bearing or loose blower wheel.',parts:[{name:'Blower bearing kit',status:'truck'}],gear:[],access:{note:'Check in at reception, Suite 1200'},contact:{name:'Rachel Kim',role:'Office administrator',phone:'(555) 909-1212',required:true,confirmed:true}},
+ {id:'V-1049',site:'City Center Tower',address:'1 City Center Plaza',territory:'Downtown',pos:[0.5,3.5],type:'PM',priority:'Routine',window:[600,1020],status:'scheduled',techs:['t5'],start:690,dur:180,system:'Chiller',level:'pm',certs:['EPA-U','CHILLER'],equipment:'York YK centrifugal chiller, 500-ton',problem:'Spring startup PM — oil and refrigerant analysis, vane linkage check, controls verification.',parts:[],gear:['Refrigerant analyzer'],access:{note:'Loading dock check-in; freight elevator to the P2 mechanical room'},contact:{name:'Manny Ortega',role:'Chief engineer',phone:'(555) 120-5588',required:true,confirmed:true}},
+ {id:'V-1050',site:'Brightwater Brewing Co.',address:'640 E Canal St',territory:'Eastside',pos:[9,1],type:'Repair',priority:'High',window:[480,720],status:'scheduled',techs:['t6'],start:540,dur:120,projectedDur:240,projectedNote:"Yesterday's diagnostic found low charge and a suspected stuck TXV. Jae-won's note: “if the TXV needs replacing this is a 4-hour job.”",system:'Walk-in',level:'repair',certs:['EPA-U','REFRIG'],equipment:'Glycol chiller, 15-ton (Pro Refrigeration)',problem:'Not holding glycol temperature; compressor short-cycling. Return visit.',parts:[{name:'TXV, R-404A (Sporlan)',status:'truck'},{name:'R-404A refrigerant, 24 lb',status:'truck'}],gear:['Recovery machine'],access:{note:'Brewhouse entry via the side gate; closed-toe shoes'},contact:{name:'Sam Ortiz',role:'Head brewer',phone:'(555) 377-6145',required:true,confirmed:true}},
+ {id:'V-1051',site:'Eastgate Shopping Center',address:'3300 Eastgate Rd, RTU #3',territory:'Eastside',pos:[11,3],type:'Repair',priority:'High',window:[660,900],status:'scheduled',techs:['t6'],start:690,dur:90,system:'RTU',level:'repair',certs:['EPA-II'],equipment:'Carrier 48HC rooftop unit #3, 12.5-ton',problem:'No cooling — tenant (nail salon) complaint. Unit hums, fan not starting; likely capacitor or contactor.',parts:[{name:'Run capacitor 45/5 µF',status:'truck'},{name:'Contactor 2P 40A',status:'truck'}],gear:[],access:{note:'Roof hatch key at the management office, Suite 110'},contact:{name:'Eastgate management',role:'',phone:'(555) 288-4000',required:false,confirmed:true}},
+ {id:'V-1052',site:'Copper Kettle Restaurant',address:'412 E Market St',territory:'Eastside',pos:[8,-2],type:'Repair',priority:'High',window:[840,1020],status:'scheduled',techs:['t6'],start:870,dur:90,system:'Walk-in',level:'repair',certs:['EPA-II','REFRIG'],equipment:'Kolpak walk-in freezer',problem:'Evaporator coil iced over, product at risk — suspect defrost heater or termination switch.',parts:[{name:'Defrost heater element',status:'truck'},{name:'Defrost termination switch',status:'truck'}],gear:[],access:{start:840,end:1020,note:'Kitchen access only 2:00p–5:00p, between lunch and dinner service'},contact:{name:'Luis Herrera',role:'Kitchen manager',phone:'(555) 631-7788',required:true,confirmed:false}}
+];
+
+/* ------------------------------------------------------------------ icons */
+const svg=p=>'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true">'+p+'</svg>';
+const I={
+ warn:svg('<path d="M8 2.2 14.6 13.6H1.4z"/><path d="M8 6.4v3.4M8 12v.2"/>'),
+ crew:svg('<circle cx="5.6" cy="5" r="2.3"/><path d="M1.6 13.6c0-2.6 1.8-4.2 4-4.2s4 1.6 4 4.2"/><circle cx="11.2" cy="5.6" r="1.9"/><path d="M10.6 9.7c2.3 0 3.9 1.5 3.9 3.9"/>'),
+ lock:svg('<rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"/>'),
+ user:svg('<circle cx="8" cy="5" r="2.7"/><path d="M2.6 14c0-3.1 2.5-4.7 5.4-4.7s5.4 1.6 5.4 4.7"/>'),
+ box:svg('<path d="M2 5.2 8 2.4l6 2.8v5.6L8 13.6 2 10.8z"/><path d="M2 5.2 8 8l6-2.8M8 8v5.6"/>'),
+ clock:svg('<circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.5"/>'),
+ truck:svg('<path d="M1.6 4.2h8v6.6h-8zM9.6 6.6h2.9l2 2.4v1.8h-4.9z"/><circle cx="4.6" cy="12.2" r="1.3"/><circle cx="11.9" cy="12.2" r="1.3"/>'),
+ pin:svg('<path d="M8 14.4S3.5 10 3.5 6.4a4.5 4.5 0 0 1 9 0c0 3.6-4.5 8-4.5 8z"/><circle cx="8" cy="6.4" r="1.6"/>'),
+ phone:svg('<path d="M3.2 2.6h3l1.2 3-1.7 1.2a7 7 0 0 0 3.7 3.7l1.2-1.7 3 1.2v3C7.1 13.7 2.4 9 3.2 2.6z"/>'),
+ wrench:svg('<path d="M10.2 2.4a3.4 3.4 0 0 0 3.4 4.6l-6.4 6.4a1.7 1.7 0 0 1-2.4-2.4L11.2 4.6"/>'),
+ check:svg('<path d="M3 8.6 6.4 12 13 4.8"/>'),
+ x:svg('<path d="M4 4l8 8M12 4l-8 8"/>'),
+ cert:svg('<circle cx="8" cy="6" r="3.4"/><path d="M5.7 9 4.6 14.4 8 12.4l3.4 2L10.3 9"/>'),
+ flash:svg('<path style="fill:currentColor" d="M9.2 1.6 3.6 9h4.2l-1 5.4L12.4 7H8.2z"/>'),
+ drag:svg('<g style="fill:currentColor;stroke:none"><circle cx="6" cy="4" r="1"/><circle cx="10" cy="4" r="1"/><circle cx="6" cy="8" r="1"/><circle cx="10" cy="8" r="1"/><circle cx="6" cy="12" r="1"/><circle cx="10" cy="12" r="1"/></g>'),
+ flag:svg('<path d="M3.5 14.5V2.5M3.5 3h8.5l-1.5 3 1.5 3H3.5"/>'),
+ arrow:svg('<path d="M3 8h10M9 4l4 4-4 4"/>')
+};
+
+/* ------------------------------------------------------------------ state & helpers */
+const state={visits:JSON.parse(JSON.stringify(VISITS)),selected:{type:'visit',id:'V-1060'},territory:'All',showTravel:true,showProj:true,q:'',history:[],changes:0,issues:[],byVisit:new Map()};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pct=m=>((m-DAY_START)/SPAN*100).toFixed(3)+'%';
+const wid=m=>(m/SPAN*100).toFixed(3)+'%';
+const snapUp=m=>Math.ceil(m/15)*15;
+function fmtT(m){const h=Math.floor(m/60),mm=m%60;return (((h+11)%12)+1)+':'+String(mm).padStart(2,'0')+(h>=12?'p':'a');}
+const fmtRange=(a,b)=>fmtT(a)+'–'+fmtT(b);
+function fmtDur(m){m=Math.round(m);const h=Math.floor(m/60),mm=m%60;if(!h)return mm+'m';return mm?h+'h '+mm+'m':h+'h';}
+const fmtH=m=>(m/60).toFixed(1).replace(/\.0$/,'')+'h';
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+const travelMin=(a,b)=>Math.round(5+dist(a,b)*2.5);
+const techById=id=>TECHS.find(t=>t.id===id);
+const visitById=id=>state.visits.find(v=>v.id===id);
+const vEnd=v=>v.start+v.dur;
+const typeClass=v=>v.priority==='Emergency'?'emg':(v.type==='PM'?'pm':'rep');
+const typeLabel=v=>v.type==='PM'?'Planned maintenance':'Repair';
+const shortName=s=>s.split(/[,—]/)[0].trim().split(' ').slice(0,2).join(' ');
+function techVisits(tid){return state.visits.filter(v=>v.status==='scheduled'&&v.techs.includes(tid)).sort((a,b)=>a.start-b.start||PRI[a.priority]-PRI[b.priority]);}
+const hasCert=(t,c)=>t.certs.includes(c)||(c==='EPA-II'&&t.certs.includes('EPA-U'));
+function skillCheck(v,t,helper){
+  const r=[];
+  if(helper&&v.helperOk){if(!hasCert(t,'EPA-II'))r.push('Needs EPA 608 certification');return{ok:!r.length,reasons:r};}
+  const lvl=t.skills[v.system];
+  if(!lvl)r.push("Doesn't service "+(SYS[v.system]||v.system).toLowerCase());
+  else if(v.level==='repair'&&lvl!=='full')r.push((SYS[v.system]||v.system)+': PM only, not repairs');
+  v.certs.forEach(c=>{if(!hasCert(t,c))r.push('Missing '+CERTS[c]);});
+  return{ok:!r.length,reasons:r};
+}
+function routeFor(tid){
+  const t=techById(tid);let prev={name:YARD.name,pos:YARD.pos,end:t.shift[0],v:null};
+  return techVisits(tid).map(v=>{const tr=travelMin(prev.pos,v.pos);const s={v,travel:tr,from:prev.name,fromV:prev.v,arrive:prev.end+tr,tight:prev.end+tr>v.start,overlap:!!prev.v&&prev.end>v.start};prev={name:v.site,pos:v.pos,end:vEnd(v),v};return s;});
+}
+
+/* ------------------------------------------------------------------ issue engine */
+const SEV={critical:0,high:1,medium:2,info:3};
+function computeIssues(){
+  const out=[];const add=o=>out.push(o);
+  for(const v of state.visits){
+    if(v.status==='deferred')continue;
+    if(v.status==='unassigned'){
+      add({sev:v.priority==='Emergency'?'critical':v.priority==='High'?'high':'medium',kind:'unassigned',visit:v,title:v.priority==='Emergency'?'Emergency call has no technician':'Unassigned '+typeLabel(v).toLowerCase(),detail:(v.respondBy?'Respond by '+fmtT(v.respondBy)+' · ':'')+fmtDur(v.dur)+' · '+v.territory+' · needs '+v.certs.map(c=>CERTS[c]).join(', '),action:{label:'Find a technician',fn:'select',id:v.id}});
+      continue;
+    }
+    v.techs.forEach((tid,i)=>{
+      const t=techById(tid);const sk=skillCheck(v,t,i>0);
+      if(!sk.ok)add({sev:'critical',kind:'skill',visit:v,tech:t,title:t.first+" isn't qualified for this",detail:sk.reasons.join(' · ')});
+      if(v.start<t.shift[0])add({sev:'high',kind:'shift',visit:v,tech:t,title:'Starts before '+t.first+"'s shift",detail:'Booked '+fmtT(v.start)+'; shift begins '+fmtT(t.shift[0])});
+      if(vEnd(v)>t.shift[1])add({sev:'high',kind:'shift',visit:v,tech:t,title:'Over '+t.first+"'s capacity",detail:'Ends '+fmtT(vEnd(v))+', '+fmtDur(vEnd(v)-t.shift[1])+' after shift end '+fmtT(t.shift[1])+(t.offNote?' — '+t.offNote:''),action:{label:'Defer to Fri',fn:'defer',id:v.id}});
+    });
+    if((v.needsTechs||1)>v.techs.length)add({sev:'medium',kind:'crew',visit:v,title:'Needs '+v.needsTechs+' technicians, '+v.techs.length+' assigned',detail:v.crewNote||'',action:{label:'Choose 2nd tech',fn:'select',id:v.id}});
+    if(v.projectedDur&&v.projectedDur>v.dur){
+      const pe=v.start+v.projectedDur;let det='Projected '+fmtDur(v.projectedDur)+' vs '+fmtDur(v.dur)+' booked';
+      const t=techById(v.techs[0]);
+      const next=techVisits(v.techs[0]).find(o=>o.start>v.start);
+      if(next){const tr=travelMin(v.pos,next.pos);if(pe+tr>next.start)det+=' · would reach '+shortName(next.site)+' about '+fmtDur(pe+tr-next.start)+' late';}
+      if(t&&pe>t.shift[1])det+=' · runs past shift end';
+      if(v.projectedNote)det+=' — '+v.projectedNote;
+      add({sev:'high',kind:'overrun',visit:v,tech:t,title:'Likely to run long: '+shortName(v.site),detail:det,action:next?{label:'Review '+shortName(next.site),fn:'select',id:next.id}:null});
+    }
+    if(v.access&&v.access.start!=null&&(v.start<v.access.start||vEnd(v)>v.access.end))add({sev:'high',kind:'access',visit:v,title:'Outside site access hours',detail:'Site allows '+fmtRange(v.access.start,v.access.end)+' · booked '+fmtRange(v.start,vEnd(v))+' — '+v.access.note});
+    if(v.start<v.window[0]||vEnd(v)>v.window[1])add({sev:'medium',kind:'window',visit:v,title:'Outside the promised service window',detail:'Promised '+fmtRange(v.window[0],v.window[1])+' · booked '+fmtRange(v.start,vEnd(v))});
+    if(v.contact&&v.contact.required&&!v.contact.confirmed)add({sev:'medium',kind:'contact',visit:v,title:'Onsite contact not confirmed',detail:v.contact.name+(v.contact.role?' ('+v.contact.role+')':'')+' must be present · '+v.contact.phone,action:{label:'Mark confirmed',fn:'confirm',id:v.id}});
+    v.parts.forEach(p=>{if(p.status==='warehouse')add({sev:'medium',kind:'parts',visit:v,title:'Part pickup before this visit',detail:p.name+' · '+(p.location||'warehouse')+' — not on the truck'});else if(p.status==='ordered')add({sev:'high',kind:'parts',visit:v,title:'Part still on order',detail:p.name});});
+  }
+  for(const t of TECHS){
+    routeFor(t.id).forEach(s=>{
+      if(s.overlap)add({sev:'critical',kind:'overlap',visit:s.v,tech:t,title:t.first+' is double-booked',detail:shortName(s.fromV.site)+' runs until '+fmtT(vEnd(s.fromV))+' · '+shortName(s.v.site)+' starts '+fmtT(s.v.start),action:{label:'Push to '+fmtT(snapUp(s.arrive)),fn:'fix',id:s.v.id}});
+      else if(s.tight)add({sev:'high',kind:'travel',visit:s.v,tech:t,title:'Not enough drive time for '+t.first,detail:fmtDur(s.travel)+' drive from '+s.from+' · arrives '+fmtT(s.arrive)+', '+fmtDur(s.arrive-s.v.start)+' late',action:{label:'Push to '+fmtT(snapUp(s.arrive)),fn:'fix',id:s.v.id}});
+    });
+  }
+  out.sort((a,b)=>SEV[a.sev]-SEV[b.sev]||(a.visit.start||0)-(b.visit.start||0));
+  state.issues=out;state.byVisit=new Map();
+  out.forEach(i=>{const a=state.byVisit.get(i.visit.id)||[];a.push(i);state.byVisit.set(i.visit.id,a);});
+}
+
+/* ------------------------------------------------------------------ candidates */
+function candidates(v){
+  return TECHS.map(t=>{
+    const helper=v.status==='scheduled'&&v.techs.length>0&&!v.techs.includes(t.id)&&(v.needsTechs||1)>v.techs.length;
+    const sk=skillCheck(v,t,helper);
+    const mine=v.techs.includes(t.id);
+    const vs=techVisits(t.id).filter(o=>o.id!==v.id);
+    const lo=Math.max(v.window[0],t.shift[0],v.access&&v.access.start!=null?v.access.start:0);
+    const hi=Math.min(v.window[1],t.shift[1],v.access&&v.access.end!=null?v.access.end:9999);
+    let slot=null,travel=0,from=YARD.name;
+    let prev={pos:YARD.pos,end:t.shift[0],name:YARD.name};
+    for(let k=0;k<=vs.length;k++){
+      const nx=vs[k]||null;
+      const tr=travelMin(prev.pos,v.pos);
+      const limit=nx?nx.start-travelMin(v.pos,nx.pos):Infinity;
+      if(helper){
+        if(prev.end+tr<=v.start&&v.start>=t.shift[0]&&vEnd(v)<=Math.min(limit,t.shift[1])){slot=v.start;travel=tr;from=prev.name;break;}
+      }else{
+        const s=snapUp(Math.max(prev.end+tr,lo));
+        if(s+v.dur<=Math.min(limit,hi)){slot=s;travel=tr;from=prev.name;break;}
+      }
+      if(nx)prev={pos:nx.pos,end:vEnd(nx),name:nx.site};
+    }
+    const tr0=travelMin(YARD.pos,v.pos);
+    let force=helper?v.start:snapUp(Math.max(lo,t.shift[0]+tr0));
+    if(force+v.dur>t.shift[1]||force<t.shift[0])force=null;
+    const conflicts=vs.filter(o=>o.start<v.window[1]&&vEnd(o)>v.window[0]);
+    return{t,sk,mine,slot,travel,from,conflicts,helper,force,inTerr:t.territory===v.territory};
+  }).filter(c=>!c.mine).sort((a,b)=>(a.sk.ok?0:1)-(b.sk.ok?0:1)||(a.slot==null?1:0)-(b.slot==null?1:0)||(a.slot||0)-(b.slot||0)||(a.inTerr?0:1)-(b.inTerr?0:1));
+}
+
+/* ------------------------------------------------------------------ rendering */
+const PSTAT={truck:'On truck',warehouse:'Warehouse pickup',ordered:'On order',tbd:'Decide onsite'};
+function matches(v){const q=state.q;if(!q)return true;const hay=[v.site,v.address,v.id,v.problem,v.equipment,v.system,v.territory,v.techs.map(id=>techById(id).name).join(' ')].join(' ').toLowerCase();return hay.includes(q);}
+
+function renderStats(){
+  const sched=state.visits.filter(v=>v.status!=='deferred');
+  const c=s=>state.issues.filter(i=>i.sev===s).length;
+  $('#stats').innerHTML='<span class="stat"><b>'+sched.length+'</b> visits</span><span class="stat"><b>'+TECHS.length+'</b> techs</span>'
+    +(c('critical')?'<span class="stat crit">'+I.warn+'<b>'+c('critical')+'</b> critical</span>':'')
+    +(c('high')?'<span class="stat high"><b>'+c('high')+'</b> high</span>':'')
+    +(c('medium')?'<span class="stat med"><b>'+c('medium')+'</b> medium</span>':'')
+    +(!state.issues.length?'<span class="stat okt">'+I.check+' Board is clean</span>':'');
+}
+
+function renderUnassigned(){
+  const list=state.visits.filter(v=>v.status==='unassigned').sort((a,b)=>PRI[a.priority]-PRI[b.priority]);
+  $('#unassignedCount').textContent=list.length;
+  $('#unassignedCount').className='count'+(list.some(v=>v.priority==='Emergency')?' crit':'');
+  $('#unassignedList').innerHTML=list.length?list.map(v=>{
+    const sel=state.selected.type==='visit'&&state.selected.id===v.id;
+    return '<div class="ucard '+typeClass(v)+(sel?' selected':'')+'" data-action="select" data-type="visit" data-id="'+v.id+'" data-drag="visit" tabindex="0"><div class="uc-top"><span class="chip pri-'+v.priority+'">'+(v.priority==='Emergency'?I.flash:'')+v.priority+'</span><span class="d-id">'+v.id+'</span></div><div class="uc-title">'+esc(v.site)+'</div><div class="uc-sub">'+esc(v.problem.split(';')[0].split('.')[0])+'</div><div class="uc-meta"><span>'+I.clock+(v.respondBy?'Respond by '+fmtT(v.respondBy):'Window '+fmtRange(v.window[0],v.window[1]))+'</span><span>'+I.wrench+fmtDur(v.dur)+' · '+esc(SYS[v.system]||v.system)+'</span><span>'+I.pin+esc(v.territory)+'</span><span>'+I.cert+esc(v.certs.map(c=>CERTS[c]).join(', '))+'</span></div><div class="uc-hint">'+I.drag+'Drag onto a technician lane, or open for suggestions</div></div>';
+  }).join(''):'<div class="empty">Every visit has a technician. Drag a visit here to unassign it.</div>';
+}
+
+function renderIssues(){
+  const iss=state.issues;$('#issueCount').textContent=iss.length;
+  $('#issueList').innerHTML=iss.length?iss.map(i=>'<div class="icard sev-'+i.sev+(state.selected.type==='visit'&&state.selected.id===i.visit.id?' selected':'')+'" data-action="select" data-type="visit" data-id="'+i.visit.id+'" tabindex="0"><div class="ic-title"><span class="sevdot"></span>'+esc(i.title)+'</div><div class="ic-body">'+esc(i.visit.site)+(i.visit.status==='scheduled'?' · '+fmtRange(i.visit.start,vEnd(i.visit))+' · '+i.visit.techs.map(id=>techById(id).first).join(' + '):'')+'</div>'+(i.detail?'<div class="ic-detail">'+esc(i.detail)+'</div>':'')+(i.action?'<div class="ic-actions"><button class="btn xs" data-action="'+i.action.fn+'" data-id="'+i.action.id+'">'+esc(i.action.label)+'</button></div>':'')+'</div>').join(''):'<div class="empty">No problems on the board.</div>';
+}
+
+function renderDeferred(){
+  const list=state.visits.filter(v=>v.status==='deferred');
+  $('#deferredPanel').style.display=list.length?'':'none';
+  $('#deferredCount').textContent=list.length;
+  $('#deferredList').innerHTML=list.map(v=>'<div class="icard sev-info'+(state.selected.type==='visit'&&state.selected.id===v.id?' selected':'')+'" data-action="select" data-type="visit" data-id="'+v.id+'" tabindex="0"><div class="ic-title">'+esc(v.site)+'</div><div class="ic-body">'+typeLabel(v)+' · '+fmtDur(v.dur)+' · '+esc(v.territory)+'</div><div class="ic-actions"><button class="btn xs" data-action="restore" data-id="'+v.id+'">Bring back to Thu</button></div></div>').join('');
+}
+
+function blockHTML(v){
+  const iss=state.byVisit.get(v.id)||[];const worst=iss[0];
+  const sel=state.selected.type==='visit'&&state.selected.id===v.id;
+  const dim=state.q&&!matches(v);
+  const icons=[];
+  if(v.needsTechs>1)icons.push('<span class="bi'+(v.techs.length<v.needsTechs?' warn':'')+'" title="Needs '+v.needsTechs+' technicians">'+I.crew+'</span>');
+  if(v.access&&v.access.start!=null)icons.push('<span class="bi" title="Restricted access '+fmtRange(v.access.start,v.access.end)+'">'+I.lock+'</span>');
+  if(v.contact&&v.contact.required)icons.push('<span class="bi'+(v.contact.confirmed?'':' warn')+'" title="Onsite contact required'+(v.contact.confirmed?'':' — not confirmed')+'">'+I.user+'</span>');
+  if(v.parts.some(p=>p.status==='warehouse'||p.status==='ordered'))icons.push('<span class="bi warn" title="Part not on the truck">'+I.box+'</span>');
+  return '<div class="blk '+typeClass(v)+(worst?' sev-'+worst.sev:'')+(sel?' selected':'')+(dim?' dim':'')+'" data-action="select" data-type="visit" data-id="'+v.id+'" data-drag="visit" tabindex="0" style="left:'+pct(v.start)+';width:'+wid(v.dur)+'" title="'+esc(v.site+' · '+fmtRange(v.start,vEnd(v))+(worst?' · '+worst.title:''))+'"><div class="t1">'+(v.priority==='Emergency'?I.flash:'')+esc(v.site)+'</div><div class="t2"><span>'+fmtRange(v.start,vEnd(v))+'</span><span class="bis">'+icons.join('')+'</span></div>'+(worst?'<span class="badge">'+I.warn+'</span>':'')+'</div>';
+}
+
+function laneHTML(t,emg){
+  const vs=techVisits(t.id),route=routeFor(t.id);
+  const booked=vs.reduce((a,v)=>a+v.dur,0),drive=route.reduce((a,s)=>a+s.travel,0);
+  const capMin=t.shift[1]-t.shift[0],load=(booked+drive)/capMin;
+  const over=vs.some(v=>vEnd(v)>t.shift[1]);
+  const sel=state.selected.type==='tech'&&state.selected.id===t.id;
+  let h='<div class="lane"><div class="tech-cell'+(sel?' selected':'')+'" data-action="select" data-type="tech" data-id="'+t.id+'" tabindex="0"><div class="tech-row"><span class="avatar" style="background:'+t.color+'">'+t.initials+'</span><div><div class="tech-name">'+esc(t.name)+'</div><div class="tech-sub">'+esc(t.territory)+' · '+esc(t.truck)+' · '+fmtRange(t.shift[0],t.shift[1])+'</div></div></div>';
+  h+='<div class="tech-tags">'+t.certs.slice(0,3).map(c=>'<span class="tag" title="'+esc(CERTS[c])+'">'+c+'</span>').join('')+(t.certs.length>3?'<span class="tag">+'+(t.certs.length-3)+'</span>':'')+(t.offNote?'<span class="tag warn" title="'+esc(t.offNote)+'">'+I.clock+' leaves '+fmtT(t.shift[1])+'</span>':'')+'</div>';
+  h+='<div class="cap"><span>'+fmtH(booked)+' booked · '+fmtH(drive)+' drive</span><div class="cap-bar"><i class="'+(over||load>1?'over':load<.5?'low':'')+'" style="width:'+Math.min(100,load*100)+'%"></i></div><span>'+Math.round(load*100)+'%</span></div></div>';
+  h+='<div class="tl" data-tech="'+t.id+'">';
+  if(t.shift[0]>DAY_START)h+='<div class="off start" style="left:0;width:'+pct(t.shift[0])+'">Shift starts '+fmtT(t.shift[0])+'</div>';
+  if(t.shift[1]<DAY_END)h+='<div class="off end" style="left:'+pct(t.shift[1])+';right:0">'+esc(t.offNote||'Shift ends '+fmtT(t.shift[1]))+'</div>';
+  if(emg)h+='<div class="mk-line" style="left:'+pct(emg.respondBy)+'"></div>';
+  if(state.showTravel)route.forEach(s=>{if(s.travel<=0)return;const st=Math.max(DAY_START,s.v.start-s.travel);h+='<div class="trv'+(s.tight?' tight':'')+'" style="left:'+pct(st)+';width:'+wid(s.v.start-st)+'" title="'+fmtDur(s.travel)+' drive from '+esc(s.from)+'">'+(s.travel>=15?fmtDur(s.travel):'')+'</div>';});
+  vs.forEach(v=>{
+    if(state.showProj&&v.projectedDur>v.dur)h+='<div class="proj" style="left:'+pct(vEnd(v))+';width:'+wid(v.projectedDur-v.dur)+'" title="Projected to run until '+fmtT(v.start+v.projectedDur)+'">→ likely until '+fmtT(v.start+v.projectedDur)+'</div>';
+    h+=blockHTML(v);
+  });
+  return h+'</div></div>';
+}
+
+function renderBoard(){
+  const techs=TECHS.filter(t=>state.territory==='All'||t.territory===state.territory);
+  const emg=state.visits.find(v=>v.status==='unassigned'&&v.respondBy);
+  let h='<div class="hours"><div class="hours-corner">Technicians · '+techs.length+'</div><div class="hour-labels">';
+  for(let m=DAY_START;m<=DAY_END;m+=60)h+='<span style="left:'+pct(m)+'">'+fmtT(m)+'</span>';
+  if(emg)h+='<span class="mk" style="left:'+pct(emg.respondBy)+'"><i>'+I.flash+'Respond by '+fmtT(emg.respondBy)+' · '+esc(shortName(emg.site))+'</i></span>';
+  h+='</div></div>';
+  techs.forEach(t=>{h+=laneHTML(t,emg);});
+  if(!techs.length)h+='<div class="empty" style="margin:16px">No technicians in this territory.</div>';
+  $('#board').innerHTML=h;
+}
+
+function windowRows(v){return '<span>Promised</span><div>'+fmtRange(v.window[0],v.window[1])+(v.respondBy?' · <b class="bad">respond by '+fmtT(v.respondBy)+'</b>':'')+'</div>';}
+
+function optionsHTML(v){
+  if(v.status==='deferred')return '';
+  const cs=candidates(v);
+  const short=v.status==='scheduled'&&(v.needsTechs||1)>v.techs.length;
+  const title=v.status==='unassigned'?'Who can take this':short?'Add a 2nd technician':'Move to another technician';
+  let h='<div class="d-sec"><h3>'+title+'</h3><div class="opt-head">Ranked by qualification, then earliest fit including drive time.'+(v.status==='unassigned'&&v.respondBy?' Must arrive by '+fmtT(v.respondBy)+'.':'')+'</div>';
+  h+=cs.map(c=>{
+    const t=c.t;let body='',btn='';
+    if(!c.sk.ok){body='<div class="opt-bad">'+esc(c.sk.reasons.join(' · '))+'</div>';}
+    else if(c.slot!=null){
+      const late=v.respondBy&&c.slot>v.respondBy;
+      body='<div class="opt-fit'+(late?'':' ok')+'">'+(c.helper?'Free alongside ':'Fits ')+fmtRange(c.slot,c.slot+v.dur)+' · '+fmtDur(c.travel)+' drive from '+esc(c.from)+(late?' · <b class="bad">after respond-by</b>':'')+'</div>';
+      btn='<button class="btn sm primary" data-action="assign" data-id="'+v.id+'" data-tech="'+t.id+'" data-start="'+c.slot+'">'+(c.helper?'Add':'Assign')+' '+fmtT(c.slot)+'</button>';
+    }else{
+      body='<div class="opt-soft">Qualified, but no free slot in the window'+(c.conflicts.length?' — would overlap '+esc(c.conflicts.map(o=>shortName(o.site)+' ('+fmtRange(o.start,vEnd(o))+')').join(', ')):'')+'</div>';
+      if(c.force!=null)btn='<button class="btn sm" data-action="assign" data-id="'+v.id+'" data-tech="'+t.id+'" data-start="'+c.force+'">'+(c.helper?'Add':'Assign')+' '+fmtT(c.force)+' anyway</button>';
+    }
+    const note='<div class="opt-note">'+esc(t.role)+' · '+esc(t.territory)+(c.inTerr?'':' (out of territory)')+' · '+fmtRange(t.shift[0],t.shift[1])+'</div>';
+    return '<div class="opt'+(c.sk.ok?'':' bad')+'"><div class="opt-main"><span class="avatar sm" style="background:'+t.color+'">'+t.initials+'</span><div style="min-width:0"><div class="opt-name">'+esc(t.name)+'</div>'+body+note+'</div></div>'+btn+'</div>';
+  }).join('');
+  return h+'</div>';
+}
+
+function visitDetail(v){
+  const iss=state.byVisit.get(v.id)||[];const cls=typeClass(v);
+  let h='<div class="d-head"><div class="d-chips"><span class="chip '+cls+'">'+typeLabel(v)+'</span><span class="chip pri-'+v.priority+'">'+(v.priority==='Emergency'?I.flash:'')+v.priority+(v.priority==='Emergency'?'':' priority')+'</span>'+(v.status==='deferred'?'<span class="chip neutral">Deferred to Fri</span>':'')+'<span class="d-id">'+v.id+'</span></div><h2>'+esc(v.site)+'</h2><div class="d-addr">'+I.pin+esc(v.address)+' · '+esc(v.territory)+'</div></div>';
+  if(iss.length)h+='<div class="d-issues">'+iss.map(i=>'<div class="d-issue sev-'+i.sev+'">'+I.warn+'<div><b>'+esc(i.title)+'</b><span>'+esc(i.detail)+'</span></div>'+(i.action&&i.action.fn!=='select'?'<button class="btn xs" data-action="'+i.action.fn+'" data-id="'+i.action.id+'">'+esc(i.action.label)+'</button>':'')+'</div>').join('')+'</div>';
+  h+='<div class="d-sec"><h3>Schedule</h3>';
+  if(v.status==='scheduled'){
+    h+='<div class="assigned">'+v.techs.map((id,i)=>{const t=techById(id);return '<span class="apill"><span class="avatar sm" style="background:'+t.color+'">'+t.initials+'</span>'+esc(t.name)+(i>0?' <span class="muted">(2nd tech)</span>':'')+'<button data-action="removetech" data-id="'+v.id+'" data-tech="'+id+'" aria-label="Remove '+esc(t.name)+'">'+I.x+'</button></span>';}).join('')+'</div>';
+    h+='<div class="kv"><span>Booked</span><div>'+fmtRange(v.start,vEnd(v))+' <span class="muted">('+fmtDur(v.dur)+')</span></div>';
+    if(v.projectedDur>v.dur)h+='<span>Projected</span><div><b class="warn">until '+fmtT(v.start+v.projectedDur)+' ('+fmtDur(v.projectedDur)+')</b><div class="note">'+esc(v.projectedNote)+'</div></div>';
+    h+=windowRows(v)+'</div>';
+    h+='<div class="nudge">Start <button class="btn xs" data-action="nudge" data-id="'+v.id+'" data-delta="-15">−15m</button><b>'+fmtT(v.start)+'</b><button class="btn xs" data-action="nudge" data-id="'+v.id+'" data-delta="15">+15m</button><span class="muted">or drag the block on the board</span></div>';
+    h+='<div class="d-actions"><button class="btn sm" data-action="unassign" data-id="'+v.id+'">Unassign</button><button class="btn sm" data-action="defer" data-id="'+v.id+'">Defer to Fri, Mar 15</button></div>';
+  }else if(v.status==='unassigned'){
+    h+='<div class="kv"><span>Duration</span><div>'+fmtDur(v.dur)+'</div>'+windowRows(v)+'</div><div class="hint">No technician yet. Pick one below, or drag the card from the queue onto a lane.</div><div class="d-actions"><button class="btn sm" data-action="defer" data-id="'+v.id+'">Defer to Fri, Mar 15</button></div>';
+  }else{
+    h+='<div class="hint">Deferred to Friday, March 15. The customer has not been notified yet.</div><div class="d-actions"><button class="btn sm" data-action="restore" data-id="'+v.id+'">Bring back to Thursday</button></div>';
+  }
+  h+='</div>';
+  h+='<div class="d-sec"><h3>Site access &amp; contact</h3><div class="kv">'+(v.access?'<span>Access</span><div>'+(v.access.start!=null?'<b>'+fmtRange(v.access.start,v.access.end)+' only</b> · ':'')+esc(v.access.note)+'</div>':'')+(v.contact?'<span>Contact</span><div>'+esc(v.contact.name)+(v.contact.role?' <span class="muted">· '+esc(v.contact.role)+'</span>':'')+'<div class="note">'+esc(v.contact.phone)+' · '+(v.contact.required?'must be onsite':'not required onsite')+' · '+(v.contact.confirmed?'<span class="okt">confirmed</span>':'<span class="bad">not confirmed</span>')+'</div></div>':'')+'</div></div>';
+  h+='<div class="d-sec"><h3>Job</h3><div class="kv"><span>Equipment</span><div>'+esc(v.equipment)+'</div><span>Reported</span><div style="font-weight:400">'+esc(v.problem)+'</div><span>Requires</span><div><div class="chips">'+v.certs.map(c=>'<span class="chip neutral">'+I.cert+esc(CERTS[c])+'</span>').join('')+(v.needsTechs>1?'<span class="chip neutral">'+I.crew+v.needsTechs+' technicians</span>':'')+v.gear.map(g=>'<span class="chip neutral">'+I.wrench+esc(g)+'</span>').join('')+'</div>'+(v.crewNote?'<div class="note">'+esc(v.crewNote)+'</div>':'')+'</div>';
+  h+='<span>Parts</span><div>'+(v.parts.length?v.parts.map(p=>'<div class="part"><span>'+esc(p.name)+'</span><span class="pstat '+p.status+'">'+PSTAT[p.status]+'</span></div>').join(''):'<span class="muted">None expected</span>')+'</div></div></div>';
+  return h+optionsHTML(v);
+}
+
+function techDetail(t){
+  const vs=techVisits(t.id),route=routeFor(t.id);
+  const booked=vs.reduce((a,v)=>a+v.dur,0),drive=route.reduce((a,s)=>a+s.travel,0),cap=t.shift[1]-t.shift[0];
+  let h='<div class="d-head"><div class="tech-row"><span class="avatar lg" style="background:'+t.color+'">'+t.initials+'</span><div><h2>'+esc(t.name)+'</h2><div class="d-addr">'+esc(t.role)+' · '+esc(t.truck)+' · '+esc(t.phone)+'</div></div></div></div>';
+  h+='<div class="d-sec"><h3>Day</h3><div class="kv"><span>Shift</span><div>'+fmtRange(t.shift[0],t.shift[1])+(t.offNote?'<div class="note">'+esc(t.offNote)+'</div>':'')+'</div><span>Territory</span><div>'+esc(t.territory)+'</div><span>Load</span><div>'+vs.length+' visits · '+fmtH(booked)+' onsite · '+fmtH(drive)+' driving · '+fmtH(Math.max(0,cap-booked-drive))+' open</div></div></div>';
+  h+='<div class="d-sec"><h3>Qualifications</h3><div class="chips">'+t.certs.map(c=>'<span class="chip neutral">'+I.cert+esc(CERTS[c])+'</span>').join('')+'</div><div class="chips" style="margin-top:6px">'+Object.keys(t.skills).map(k=>'<span class="chip '+(t.skills[k]==='full'?'ok':'neutral')+'">'+esc(SYS[k]||k)+(t.skills[k]==='full'?'':' · PM only')+'</span>').join('')+'</div><div class="note" style="margin-top:8px">On truck: '+esc(t.gear.join(', '))+'</div></div>';
+  h+='<div class="d-sec"><h3>Route</h3><ul class="route">'+route.map(s=>'<li data-action="select" data-type="visit" data-id="'+s.v.id+'" tabindex="0"><span class="rt-time">'+fmtT(s.v.start)+'</span><div><b>'+esc(s.v.site)+'</b> <span class="muted">· '+fmtDur(s.v.dur)+' · '+typeLabel(s.v)+'</span><div class="rt-travel'+(s.tight?' bad':'')+'">'+I.truck+fmtDur(s.travel)+' from '+esc(s.from)+(s.tight?' — arrives '+fmtT(s.arrive)+', late':'')+'</div></div></li>').join('')+(vs.length?'':'<li><span></span><span class="muted">Nothing scheduled</span></li>')+'</ul></div>';
+  return h;
+}
+
+function renderDetail(){
+  const s=state.selected;let h='';
+  if(s.type==='tech'){const t=techById(s.id);if(t)h=techDetail(t);}
+  else{const v=visitById(s.id);if(v)h=visitDetail(v);}
+  $('#detail').innerHTML=h||'<div class="d-sec"><div class="empty">Select a visit or technician to see details.</div></div>';
+}
+
+function updateTopbar(){
+  $('#undoBtn').disabled=!state.history.length;
+  $('#publishBtn').disabled=!state.changes;
+  $('#publishLabel').textContent=state.changes?'Publish '+state.changes+' change'+(state.changes===1?'':'s'):'Publish';
+  if(state.changes)$('#pubstatus').textContent=state.changes+' unpublished change'+(state.changes===1?'':'s')+' · techs still see the 5:12 PM version';
+}
+
+function renderAll(){computeIssues();renderStats();renderUnassigned();renderIssues();renderDeferred();renderBoard();renderDetail();updateTopbar();}
+
+/* ------------------------------------------------------------------ actions */
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2800);}
+function snapshot(){state.history.push(JSON.stringify(state.visits));if(state.history.length>50)state.history.shift();state.changes++;}
+function commit(msg){renderAll();if(msg)toast(msg);}
+function assignTo(vid,tid,start){
+  const v=visitById(vid),t=techById(tid);if(!v||!t)return;
+  const helper=v.status==='scheduled'&&v.techs.length>0&&!v.techs.includes(tid)&&(v.needsTechs||1)>v.techs.length;
+  snapshot();
+  if(helper)v.techs.push(tid);
+  else if(v.techs.includes(tid))v.start=start;
+  else{v.techs=[tid].concat(v.techs.slice(1).filter(x=>x!==tid));v.start=start;}
+  v.status='scheduled';state.selected={type:'visit',id:vid};
+  const sk=skillCheck(v,t,helper);
+  commit((helper?t.first+' added as 2nd tech on ':shortName(v.site)+' → '+t.first+' at '+fmtT(v.start)+(helper?'':''))+(helper?shortName(v.site):'')+(sk.ok?'':' — warning: '+sk.reasons[0]));
+}
+const actions={
+  select(el){state.selected={type:el.dataset.type,id:el.dataset.id};renderAll();const b=$('#board .blk.selected');if(b)b.scrollIntoView({block:'nearest',inline:'nearest'});},
+  undo(){if(!state.history.length)return;state.visits=JSON.parse(state.history.pop());state.changes=Math.max(0,state.changes-1);commit('Undid last change');},
+  publish(){if(!state.changes)return;const n=state.changes;state.changes=0;state.history=[];$('#pubstatus').textContent='Published just now · all 6 techs notified';commit('Published '+n+' change'+(n===1?'':'s')+' — technicians notified');},
+  defer(el){const v=visitById(el.dataset.id);if(!v)return;snapshot();v.prev={techs:v.techs.slice(),start:v.start};v.status='deferred';v.techs=[];commit(shortName(v.site)+' deferred to Fri, Mar 15 — customer not yet notified');},
+  restore(el){const v=visitById(el.dataset.id);if(!v)return;snapshot();if(v.prev&&v.prev.techs.length){v.techs=v.prev.techs;v.start=v.prev.start;v.status='scheduled';}else{v.techs=[];v.start=null;v.status='unassigned';}delete v.prev;state.selected={type:'visit',id:v.id};commit(shortName(v.site)+' back on Thursday');},
+  confirm(el){const v=visitById(el.dataset.id);if(!v||!v.contact)return;snapshot();v.contact.confirmed=true;commit(v.contact.name+' marked as confirmed');},
+  fix(el){const v=visitById(el.dataset.id);if(!v||v.status!=='scheduled')return;const s=routeFor(v.techs[0]).find(x=>x.v.id===v.id);if(!s)return;snapshot();v.start=snapUp(s.arrive);state.selected={type:'visit',id:v.id};commit(shortName(v.site)+' pushed to '+fmtT(v.start));},
+  assign(el){assignTo(el.dataset.id,el.dataset.tech,+el.dataset.start);},
+  removetech(el){const v=visitById(el.dataset.id);if(!v)return;snapshot();v.techs=v.techs.filter(x=>x!==el.dataset.tech);if(!v.techs.length){v.status='unassigned';v.start=null;}commit(techById(el.dataset.tech).first+' removed from '+shortName(v.site));},
+  unassign(el){const v=visitById(el.dataset.id);if(!v)return;snapshot();v.techs=[];v.status='unassigned';v.start=null;commit(shortName(v.site)+' moved to the unassigned queue');},
+  nudge(el){const v=visitById(el.dataset.id);if(!v||v.status!=='scheduled')return;snapshot();v.start=Math.max(DAY_START,Math.min(DAY_END-v.dur,v.start+ +el.dataset.delta));commit();}
+};
+
+let suppressClick=false;
+document.addEventListener('click',e=>{
+  if(suppressClick){suppressClick=false;return;}
+  const el=e.target.closest('[data-action]');if(!el)return;
+  const fn=actions[el.dataset.action];if(fn){e.preventDefault();fn(el);}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&drag){cancelDrag();return;}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches('[tabindex][data-action]')&&!e.target.matches('button')){e.preventDefault();actions[e.target.dataset.action](e.target);}
+});
+
+/* ------------------------------------------------------------------ drag & drop */
+let drag=null;
+function clearTargets(){document.querySelectorAll('.drop-target,.dropzone.over').forEach(n=>n.classList.remove('drop-target','over'));}
+function cancelDrag(){if(!drag)return;if(drag.ghost)drag.ghost.remove();if(drag.el)drag.el.style.opacity='';clearTargets();document.body.classList.remove('dragging');drag=null;}
+document.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('[data-drag]');if(!el||e.button!==0||e.target.closest('button'))return;
+  drag={el,id:el.dataset.id,x:e.clientX,y:e.clientY,moved:false,ghost:null,target:null,fromBoard:el.classList.contains('blk')};
+});
+document.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  if(!drag.moved){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<5)return;startDrag(e);}
+  moveDrag(e);
+});
+document.addEventListener('pointerup',e=>{if(!drag)return;if(drag.moved){endDrag(e);suppressClick=true;setTimeout(()=>{suppressClick=false;},0);}drag=null;});
+function startDrag(e){
+  const r=drag.el.getBoundingClientRect();
+  const g=drag.el.cloneNode(true);g.classList.add('ghost');g.classList.remove('selected','dim');g.removeAttribute('data-action');
+  g.style.left=r.left+'px';g.style.top=r.top+'px';g.style.width=r.width+'px';g.style.margin='0';
+  const lab=document.createElement('span');lab.className='glabel';lab.textContent='Drop on a technician lane';g.appendChild(lab);
+  document.body.appendChild(g);drag.ghost=g;drag.label=lab;drag.offX=e.clientX-r.left;drag.offY=e.clientY-r.top;drag.el.style.opacity='.35';
+  document.body.classList.add('dragging');drag.moved=true;
+}
+function moveDrag(e){
+  const v=visitById(drag.id);if(!v)return;
+  drag.ghost.style.left=(e.clientX-drag.offX)+'px';drag.ghost.style.top=(e.clientY-drag.offY)+'px';
+  clearTargets();drag.target=null;drag.ghost.classList.remove('bad');
+  const under=document.elementFromPoint(e.clientX,e.clientY);
+  const tl=under&&under.closest('.tl');const dz=under&&under.closest('#unassignedPanel');
+  if(tl){
+    const tid=tl.dataset.tech,t=techById(tid),rect=tl.getBoundingClientRect();
+    const x=drag.fromBoard?e.clientX-drag.offX:e.clientX;
+    let m=DAY_START+(x-rect.left)/rect.width*SPAN;m=Math.round(m/15)*15;m=Math.max(DAY_START,Math.min(DAY_END-v.dur,m));
+    const helper=v.status==='scheduled'&&!v.techs.includes(tid)&&(v.needsTechs||1)>v.techs.length;
+    const sk=skillCheck(v,t,helper);
+    let txt=t.first+' · '+fmtRange(m,m+v.dur);
+    if(helper)txt=t.first+' joins as 2nd tech · '+fmtRange(v.start,vEnd(v));
+    if(!sk.ok){txt+=' · '+sk.reasons[0];drag.ghost.classList.add('bad');}
+    else if(m<t.shift[0]||m+v.dur>t.shift[1]){txt+=' · outside shift';drag.ghost.classList.add('bad');}
+    drag.label.textContent=txt;tl.classList.add('drop-target');drag.target={tid,start:helper?v.start:m};
+  }else if(dz&&v.status==='scheduled'){
+    $('#unassignedList').classList.add('over');drag.label.textContent='Unassign '+shortName(v.site);drag.target={unassign:true};
+  }else drag.label.textContent='Drop on a technician lane'+(v.status==='scheduled'?' or the unassigned queue':'');
+}
+function endDrag(){
+  const t=drag.target,id=drag.id;cancelDrag();
+  if(!t)return;
+  if(t.unassign){actions.unassign({dataset:{id}});return;}
+  assignTo(id,t.tid,t.start);
+}
+
+/* ------------------------------------------------------------------ filters & init */
+const terrSel=$('#territory');
+['All'].concat([...new Set(TECHS.map(t=>t.territory))]).forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x==='All'?'All territories':x;terrSel.appendChild(o);});
+terrSel.addEventListener('change',()=>{state.territory=terrSel.value;renderBoard();});
+$('#showTravel').addEventListener('change',e=>{state.showTravel=e.target.checked;renderBoard();});
+$('#showProj').addEventListener('change',e=>{state.showProj=e.target.checked;renderBoard();});
+$('#search').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();renderBoard();});
+renderAll();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astraea Platform | Node Infrastructure Audit</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-body: #0f172a;
+            --bg-surface-primary: #1e293b;
+            --bg-surface-secondary: #0f172a;
+            --bg-surface-tertiary: #334155;
+            --bg-header: #1e293b;
+            --bg-pill: #334155;
+            
+            --border-primary: #334155;
+            --border-active: #38bdf8;
+            --border-danger: #7f1d1d;
+            
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+            --text-accent: #38bdf8;
+            --text-success: #4ade80;
+            --text-warning: #fbbf24;
+            --text-danger: #f87171;
+
+            /* Spacing */
+            --sp-05: 2px;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 20px;
+            --sp-6: 24px;
+            --sp-8: 32px;
+
+            /* Typography */
+            --fs-xs: 10px;
+            --fs-sm: 11px;
+            --fs-md: 12px;
+            --fs-lg: 14px;
+            --fs-xl: 18px;
+            --fs-mono: 11px;
+            
+            /* Shapes & Shadows */
+            --br-sm: 2px;
+            --br-md: 4px;
+            --sh-color: rgba(0, 0, 0, 0.4);
+            --sh-standard: 0 4px 6px -1px var(--sh-color);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: var(--fs-md);
+            line-height: 1.4;
+            width: 1280px;
+            margin: 0 auto;
+            overflow-x: hidden;
+        }
+
+        header {
+            background-color: var(--bg-header);
+            padding: var(--sp-4) var(--sp-6);
+            border-bottom: 1px solid var(--border-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .audit-meta {
+            display: flex;
+            gap: var(--sp-6);
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            color: var(--text-dim);
+            font-size: var(--fs-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .meta-value {
+            font-weight: 600;
+            font-size: var(--fs-md);
+        }
+
+        .comparison-layout {
+            display: grid;
+            grid-template-columns: 200px 1fr 1fr;
+            gap: var(--sp-1);
+            background-color: var(--border-primary);
+        }
+
+        .sidebar {
+            background-color: var(--bg-surface-primary);
+            padding: var(--sp-4) 0;
+        }
+
+        .sidebar-nav {
+            position: sticky;
+            top: 100px;
+        }
+
+        .nav-item {
+            padding: var(--sp-2) var(--sp-4);
+            color: var(--text-dim);
+            text-decoration: none;
+            display: block;
+            border-left: var(--sp-1) solid transparent;
+            font-size: var(--fs-sm);
+        }
+
+        .nav-item.active {
+            color: var(--text-accent);
+            border-left-color: var(--border-active);
+            background-color: var(--bg-surface-tertiary);
+        }
+
+        .node-column {
+            background-color: var(--bg-surface-secondary);
+            min-height: 100vh;
+        }
+
+        .node-header {
+            padding: var(--sp-4);
+            background-color: var(--bg-surface-primary);
+            border-bottom: 1px solid var(--border-primary);
+            position: sticky;
+            top: 73px;
+            z-index: 90;
+        }
+
+        .node-id {
+            font-family: monospace;
+            font-size: var(--fs-lg);
+            color: var(--text-accent);
+            margin-bottom: var(--sp-1);
+        }
+
+        .node-status {
+            display: inline-flex;
+            align-items: center;
+            font-size: var(--fs-xs);
+            padding: var(--sp-05) var(--sp-2);
+            background-color: var(--bg-pill);
+            border-radius: var(--br-sm);
+            text-transform: uppercase;
+        }
+
+        /* Section Styling */
+        section {
+            padding: var(--sp-6) var(--sp-4);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .section-title {
+            font-size: var(--fs-sm);
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: var(--sp-4);
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--sp-4);
+        }
+
+        .data-card {
+            background-color: var(--bg-surface-primary);
+            padding: var(--sp-3);
+            border-radius: var(--br-md);
+            border: 1px solid var(--border-primary);
+        }
+
+        .data-label {
+            font-size: var(--fs-xs);
+            color: var(--text-dim);
+            margin-bottom: var(--sp-1);
+        }
+
+        .data-value {
+            font-size: var(--fs-xl);
+            font-weight: 500;
+            font-family: monospace;
+        }
+
+        .unit {
+            font-size: var(--fs-xs);
+            color: var(--text-dim);
+            margin-left: var(--sp-1);
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--fs-sm);
+            margin-top: var(--sp-2);
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-dim);
+            padding: var(--sp-2);
+            border-bottom: 1px solid var(--border-primary);
+            font-weight: 400;
+            font-size: var(--fs-xs);
+        }
+
+        td {
+            padding: var(--sp-2);
+            border-bottom: 1px solid var(--border-primary);
+            font-family: monospace;
+        }
+
+        .trend-up { color: var(--text-danger); }
+        .trend-down { color: var(--text-success); }
+
+        /* Chart Components */
+        .sparkline-container {
+            width: 100%;
+            height: 40px;
+            margin-top: var(--sp-2);
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 60px;
+            margin-top: var(--sp-4);
+        }
+
+        .bar {
+            background-color: var(--text-accent);
+            flex: 1;
+        }
+
+        .bar.warning { background-color: var(--text-warning); }
+        .bar.danger { background-color: var(--text-danger); }
+
+        /* Tabs */
+        [role="tablist"] {
+            display: flex;
+            gap: var(--sp-1);
+            background-color: var(--bg-surface-secondary);
+            padding: var(--sp-1);
+            border-radius: var(--br-md);
+            margin-bottom: var(--sp-4);
+        }
+
+        [role="tab"] {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            padding: var(--sp-1) var(--sp-3);
+            font-size: var(--fs-xs);
+            cursor: pointer;
+            border-radius: var(--br-sm);
+        }
+
+        [role="tab"][aria-selected="true"] {
+            background-color: var(--bg-surface-tertiary);
+            color: var(--text-main);
+        }
+
+        .diff-added { background-color: rgba(74, 222, 128, 0.1); color: var(--text-success); }
+        .diff-removed { background-color: rgba(248, 113, 113, 0.1); color: var(--text-danger); text-decoration: line-through; }
+
+        .anomaly-badge {
+            background-color: var(--border-danger);
+            color: var(--text-danger);
+            border: 1px solid var(--text-danger);
+            font-size: var(--fs-xs);
+            padding: 0 var(--sp-1);
+            border-radius: var(--br-sm);
+            margin-left: var(--sp-2);
+        }
+    </style>
+</head>
+<body>
+
+<header role="banner">
+    <div class="audit-meta">
+        <div class="meta-item">
+            <span class="meta-label">Audit Session</span>
+            <span class="meta-value">#AUD-9921-X-THETA</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Environment</span>
+            <span class="meta-value">PROD-US-EAST-1</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Reviewer</span>
+            <span class="meta-value">S. Vancroft (Level 3)</span>
+        </div>
+    </div>
+    <div class="actions">
+        <button role="button" style="background: var(--bg-surface-tertiary); border: 1px solid var(--border-primary); color: white; padding: var(--sp-2) var(--sp-4); border-radius: var(--br-md); cursor: pointer; font-size: var(--fs-sm);">
+            Approve Configuration
+        </button>
+    </div>
+</header>
+
+<main class="comparison-layout" role="main">
+    <aside class="sidebar">
+        <nav class="sidebar-nav" role="navigation">
+            <a href="#core" class="nav-item active">Core Configuration</a>
+            <a href="#compute" class="nav-item">Compute Profile</a>
+            <a href="#storage" class="nav-item">Storage Topology</a>
+            <a href="#network" class="nav-item">Network Stack</a>
+            <a href="#latency" class="nav-item">Latency Distribution</a>
+            <a href="#incidents" class="nav-item">Incident Logs</a>
+            <a href="#scaling" class="nav-item">Scaling Affinity</a>
+        </nav>
+    </aside>
+
+    <!-- Node 1 -->
+    <div class="node-column">
+        <div class="node-header">
+            <div class="node-id">as-prod-c2-n14</div>
+            <div class="node-status">Status: Healthy</div>
+        </div>
+
+        <!-- Section 1: Core Config -->
+        <section id="core-n14">
+            <h2 class="section-title">01. Core Configuration</h2>
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-label">Kernel Version</div>
+                    <div class="data-value" style="font-size: var(--fs-lg);">5.15.0-1042-aws</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-label">Uptime</div>
+                    <div class="data-value">142<span class="unit">days</span></div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>instance_type</td><td>r6g.4xlarge</td></tr>
+                    <tr><td>virt_type</td><td>hvm</td></tr>
+                    <tr><td>nitro_enclave</td><td>enabled</td></tr>
+                    <tr><td>clock_source</td><td>kvm-clock</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 2: Compute -->
+        <section id="compute-n14">
+            <h2 class="section-title">02. Compute Profile</h2>
+            <div class="data-card">
+                <div class="data-label">CPU Load (15m avg)</div>
+                <div class="data-value">0.42</div>
+                <div class="sparkline-container">
+                    <svg width="100%" height="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
+                        <polyline fill="none" stroke="var(--text-accent)" stroke-width="1.5"
+                            points="0,35 10,32 20,34 30,20 40,25 50,22 60,30 70,28 80,31 90,33 100,32" />
+                    </svg>
+                </div>
+            </div>
+            <div class="bar-chart">
+                <div class="bar" style="height: 40%;"></div>
+                <div class="bar" style="height: 45%;"></div>
+                <div class="bar" style="height: 42%;"></div>
+                <div class="bar" style="height: 38%;"></div>
+                <div class="bar" style="height: 50%;"></div>
+                <div class="bar" style="height: 44%;"></div>
+                <div class="bar" style="height: 41%;"></div>
+                <div class="bar" style="height: 39%;"></div>
+            </div>
+        </section>
+
+        <!-- Section 3: Storage -->
+        <section id="storage-n14">
+            <h2 class="section-title">03. Storage Topology</h2>
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-label">IOPS Read</div>
+                    <div class="data-value">12.4k</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-label">IOPS Write</div>
+                    <div class="data-value">4.1k</div>
+                </div>
+            </div>
+            <table role="table">
+                <thead>
+                    <tr><th>Mount</th><th>Used</th><th>Available</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>/dev/nvme0n1p1</td><td>42%</td><td>580GB</td></tr>
+                    <tr><td>/mnt/data_store</td><td>18%</td><td>2.1TB</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 4: Network -->
+        <section id="network-n14">
+            <h2 class="section-title">04. Network Stack</h2>
+            <div class="data-card">
+                <div class="data-label">TX Throughput</div>
+                <div class="data-value">842<span class="unit">Mbps</span></div>
+            </div>
+            <table role="table">
+                <thead>
+                    <tr><th>Interface</th><th>Errors</th><th>Drops</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>eth0</td><td>0</td><td>0</td></tr>
+                    <tr><td>eth1 (vpc)</td><td>0</td><td>14</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 5: Latency -->
+        <section id="latency-n14">
+            <h2 class="section-title">05. Latency Percentiles (μs)</h2>
+            <table>
+                <tbody>
+                    <tr><td>P50</td><td>112</td></tr>
+                    <tr><td>P90</td><td>145</td></tr>
+                    <tr><td>P99</td><td>210</td></tr>
+                    <tr><td>P99.9</td><td>1,042</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 6: Incidents -->
+        <section id="incidents-n14">
+            <h2 class="section-title">06. Incident Logs (24h)</h2>
+            <div role="tablist" aria-label="Log Filter">
+                <button role="tab" aria-selected="true" id="tab-1-14">Critical</button>
+                <button role="tab" aria-selected="false" id="tab-2-14">Warn</button>
+                <button role="tab" aria-selected="false" id="tab-3-14">Debug</button>
+            </div>
+            <div role="tabpanel" aria-labelledby="tab-1-14">
+                <div style="font-family: monospace; font-size: var(--fs-xs); color: var(--text-dim);">
+                    [2023-11-24 04:12] SIGTERM ignored in worker thread 0x01<br>
+                    [2023-11-24 08:44] Buffer overflow prevented in ssl_handshake
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Scaling -->
+        <section id="scaling-n14">
+            <h2 class="section-title">07. Scaling Affinity</h2>
+            <div class="data-card">
+                <div class="data-label">Cooldown Policy</div>
+                <div class="data-value">300s</div>
+            </div>
+            <p style="font-size: var(--fs-xs); color: var(--text-dim); margin-top: var(--sp-2);">
+                Affinity Group: US-EAST-1-GOLD-CLUSTER. Node assigned to primary availability zone.
+            </p>
+        </section>
+    </div>
+
+    <!-- Node 2 (Comparison) -->
+    <div class="node-column">
+        <div class="node-header">
+            <div class="node-id">as-prod-c2-n15</div>
+            <div class="node-status">Status: <span style="color: var(--text-warning)">Degraded</span></div>
+        </div>
+
+        <!-- Section 1: Core Config -->
+        <section id="core-n15">
+            <h2 class="section-title">01. Core Configuration</h2>
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-label">Kernel Version</div>
+                    <div class="data-value" style="font-size: var(--fs-lg);">5.15.0-1045-aws <span class="anomaly-badge">MISMATCH</span></div>
+                </div>
+                <div class="data-card">
+                    <div class="data-label">Uptime</div>
+                    <div class="data-value">12<span class="unit">days</span></div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>instance_type</td><td>r6g.4xlarge</td></tr>
+                    <tr><td>virt_type</td><td>hvm</td></tr>
+                    <tr><td>nitro_enclave</td><td>enabled</td></tr>
+                    <tr><td>clock_source</td><td>kvm-clock</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 2: Compute -->
+        <section id="compute-n15">
+            <h2 class="section-title">02. Compute Profile</h2>
+            <div class="data-card">
+                <div class="data-label">CPU Load (15m avg)</div>
+                <div class="data-value">0.89 <span class="trend-up">↑ 110%</span></div>
+                <div class="sparkline-container">
+                    <svg width="100%" height="100%" viewBox="0 0 100 40" preserveAspectRatio="none">
+                        <polyline fill="none" stroke="var(--text-danger)" stroke-width="1.5"
+                            points="0,30 10,28 20,25 30,15 40,10 50,8 60,5 70,7 80,10 90,8 100,12" />
+                    </svg>
+                </div>
+            </div>
+            <div class="bar-chart">
+                <div class="bar warning" style="height: 70%;"></div>
+                <div class="bar warning" style="height: 75%;"></div>
+                <div class="bar danger" style="height: 92%;"></div>
+                <div class="bar danger" style="height: 88%;"></div>
+                <div class="bar danger" style="height: 95%;"></div>
+                <div class="bar danger" style="height: 94%;"></div>
+                <div class="bar danger" style="height: 91%;"></div>
+                <div class="bar danger" style="height: 89%;"></div>
+            </div>
+        </section>
+
+        <!-- Section 3: Storage -->
+        <section id="storage-n15">
+            <h2 class="section-title">03. Storage Topology</h2>
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-label">IOPS Read</div>
+                    <div class="data-value">4.2k <span class="trend-down">↓ 66%</span></div>
+                </div>
+                <div class="data-card">
+                    <div class="data-label">IOPS Write</div>
+                    <div class="data-value">0.8k <span class="trend-down">↓ 80%</span></div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Mount</th><th>Used</th><th>Available</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>/dev/nvme0n1p1</td><td class="diff-removed">42%</td><td>95% <span class="trend-up">!</span></td></tr>
+                    <tr><td>/mnt/data_store</td><td>18%</td><td>2.1TB</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 4: Network -->
+        <section id="network-n15">
+            <h2 class="section-title">04. Network Stack</h2>
+            <div class="data-card">
+                <div class="data-label">TX Throughput</div>
+                <div class="data-value">122<span class="unit">Mbps</span></div>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Interface</th><th>Errors</th><th>Drops</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>eth0</td><td>42</td><td>1,092</td></tr>
+                    <tr><td>eth1 (vpc)</td><td>0</td><td>2,411</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 5: Latency -->
+        <section id="latency-n15">
+            <h2 class="section-title">05. Latency Percentiles (μs)</h2>
+            <table>
+                <tbody>
+                    <tr><td>P50</td><td class="trend-up">442</td></tr>
+                    <tr><td>P90</td><td class="trend-up">1,210</td></tr>
+                    <tr><td>P99</td><td class="trend-up">4,500</td></tr>
+                    <tr><td>P99.9</td><td class="trend-up">12,420</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 6: Incidents -->
+        <section id="incidents-n15">
+            <h2 class="section-title">06. Incident Logs (24h)</h2>
+            <div role="tablist" aria-label="Log Filter">
+                <button role="tab" aria-selected="true" id="tab-1-15">Critical (124)</button>
+                <button role="tab" aria-selected="false" id="tab-2-15">Warn</button>
+                <button role="tab" aria-selected="false" id="tab-3-15">Debug</button>
+            </div>
+            <div role="tabpanel" aria-labelledby="tab-1-15">
+                <div style="font-family: monospace; font-size: var(--fs-xs); color: var(--text-danger);">
+                    [2023-11-24 11:01] IO_WAIT timeout on disk /dev/nvme0n1p1<br>
+                    [2023-11-24 11:02] Page allocation failure in slab<br>
+                    [2023-11-24 11:02] Out of memory (OOM) killer invoked
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Scaling -->
+        <section id="scaling-n15">
+            <h2 class="section-title">07. Scaling Affinity</h2>
+            <div class="data-card">
+                <div class="data-label">Cooldown Policy</div>
+                <div class="data-value">300s</div>
+            </div>
+            <p style="font-size: var(--fs-xs); color: var(--text-dim); margin-top: var(--sp-2);">
+                Affinity Group: US-EAST-1-GOLD-CLUSTER. <span class="trend-up">Mismatch detected:</span> Cluster policy indicates this node should have been terminated.
+            </p>
+        </section>
+    </div>
+</main>
+
+<script>
+    // Interaction for tabs
+    document.querySelectorAll('[role="tab"]').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const list = tab.closest('[role="tablist"]');
+            list.querySelectorAll('[role="tab"]').forEach(t => {
+                t.setAttribute('aria-selected', 'false');
+            });
+            tab.setAttribute('aria-selected', 'true');
+        });
+    });
+
+    // Sticky navigation highlight on scroll
+    const sections = document.querySelectorAll('section');
+    const navItems = document.querySelectorAll('.nav-item');
+
+    window.addEventListener('scroll', () => {
+        let current = "";
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.clientHeight;
+            if (pageYOffset >= (sectionTop - 150)) {
+                current = section.getAttribute('id').split('-')[0];
+            }
+        });
+
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            if (item.getAttribute('href') === `#${current}`) {
+                item.classList.add('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+

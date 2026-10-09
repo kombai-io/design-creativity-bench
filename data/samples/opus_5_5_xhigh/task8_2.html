@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patchbay Cloud: test and debug webhooks before production (private beta)</title>
+<meta name="description" content="Patchbay Cloud gives software teams temporary endpoints that capture, inspect, replay and stress-test webhook events. Teams can share debugging sessions and ship handlers generated from real events. Join the private-beta waitlist.">
+<meta name="theme-color" content="#F4F1EA">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314161B'/%3E%3Cpath d='M10 11c0 9 12 1 12 10' stroke='%23F4F1EA' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='10' r='3.6' fill='%23E4561B'/%3E%3Ccircle cx='22' cy='22' r='3.6' fill='%23F4F1EA'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#F4F1EA;--paper-2:#EAE5D9;--card:#FBFAF6;--ink:#14161B;--ink-2:#353943;--muted:#5E626B;
+  --line:#DDD6C7;--line-2:#CBC3B1;
+  --accent:#E4561B;--accent-ink:#A8390B;--accent-soft:#F9DECF;
+  --panel:#101217;--panel-2:#161920;--panel-3:#1D2129;--pline:#272C36;--ptext:#E7E4DC;--pmuted:#949AA6;
+  --ok:#4FD18B;--warn:#F2C14E;--err:#FF7A6B;--info:#79B4FF;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;scroll-padding-top:80px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;line-height:1.12;letter-spacing:-.02em}
+p{margin:0}
+a{color:inherit}
+svg{display:block;max-width:100%}
+code,pre,.mono{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+.skip{position:absolute;left:-9999px;top:8px;background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:8px;z-index:200}
+.skip:focus{left:12px}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:60;background:rgba(244,241,234,.86);-webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;align-items:center;gap:28px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.015em;text-decoration:none}
+.brand .beta{font:600 10.5px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--accent-ink);border:1px solid var(--accent-soft);background:#FCEBE1;padding:2px 7px;border-radius:999px}
+.nav-links{display:flex;gap:24px;margin:0 0 0 auto;padding:0;list-style:none}
+.nav-links a{text-decoration:none;color:var(--ink-2);font-size:14.5px}
+.nav-links a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:10px;border:1px solid transparent;font:600 15px var(--sans);cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s,transform .15s}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--ink);color:var(--paper)}
+.btn-primary:hover{background:#000}
+.btn-sm{height:38px;padding:0 14px;font-size:14px;border-radius:9px}
+.btn-block{width:100%}
+.arrow{font-family:var(--mono)}
+
+/* Hero */
+.hero{position:relative;padding:72px 0 104px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 25%,transparent 75%);mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 25%,transparent 75%);opacity:.6;pointer-events:none}
+.hero-grid{position:relative;display:grid;grid-template-columns:1.45fr 1fr;gap:56px;align-items:end}
+.badge{display:inline-flex;align-items:center;gap:10px;font:500 13px var(--sans);background:var(--card);border:1px solid var(--line-2);padding:6px 12px 6px 8px;border-radius:999px;color:var(--ink-2)}
+.badge .dot{width:20px;height:20px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center}
+.badge .dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+h1{font-size:clamp(42px,6.2vw,76px);line-height:1;letter-spacing:-.04em;margin:22px 0 22px;font-weight:750}
+h1 em{font-style:normal;color:var(--accent-ink);background:linear-gradient(transparent 72%,var(--accent-soft) 72%,var(--accent-soft) 94%,transparent 94%)}
+.lede{font-size:clamp(17px,1.55vw,20px);line-height:1.55;color:var(--ink-2);max-width:36em}
+.hero-form{display:flex;gap:6px;margin-top:30px;max-width:540px;background:var(--card);border:1px solid var(--line-2);border-radius:14px;padding:6px;box-shadow:0 10px 30px -18px rgba(20,22,27,.35)}
+.hero-form:focus-within{border-color:var(--ink)}
+.hero-form input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;padding:0 12px;height:44px;color:var(--ink)}
+.hero-form input:focus{outline:none}
+.form-err{color:#A1300E;font-size:13.5px;margin-top:8px;min-height:1px}
+.hero-ok{margin-top:30px;max-width:540px;background:#E2F2E8;border:1px solid #B9DEC8;color:#0F4F31;border-radius:14px;padding:14px 16px;font-size:15px}
+.hero-ok a{font-weight:600}
+.fine{font-size:13px;color:var(--muted);margin-top:12px}
+.fine b{color:var(--ink-2);font-weight:600}
+
+.pulse{background:var(--card);border:1px solid var(--line-2);border-radius:18px;padding:22px;box-shadow:0 24px 50px -36px rgba(20,22,27,.4)}
+.pulse-head{display:flex;justify-content:space-between;align-items:center}
+.pulse-title{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mini-live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.mini-live::before{content:"";width:7px;height:7px;border-radius:50%;background:#1F9D5B}
+.pulse-num{font-size:48px;font-weight:750;letter-spacing:-.04em;line-height:1;margin-top:14px}
+.pulse-sub{color:var(--ink-2);font-size:14.5px;margin-top:6px}
+.recent{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--line)}
+.recent li{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.rc-av{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;font:700 11.5px var(--sans)}
+.recent b{display:block;font-size:14px;font-weight:600;line-height:1.3}
+.recent span.m{display:block;font-size:12.5px;color:var(--muted);line-height:1.35}
+.recent time{font:12px var(--mono);color:var(--muted)}
+.pulse-foot{display:flex;justify-content:space-between;font-size:13px;margin-top:16px;color:var(--ink-2)}
+.meter{height:8px;border-radius:99px;background:var(--paper-2);margin-top:8px;overflow:hidden}
+.meter span{display:block;height:100%;background:linear-gradient(90deg,var(--ink),#3A3E48);border-radius:99px}
+
+/* Inspector */
+.inspector{position:relative;margin-top:64px;background:var(--panel);color:var(--ptext);border-radius:18px;border:1px solid #07080A;box-shadow:0 60px 110px -50px rgba(20,22,27,.65),0 20px 40px -24px rgba(20,22,27,.4);overflow:hidden;font-size:13px}
+.demo-label{position:relative;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:64px;margin-bottom:-48px;flex-wrap:wrap}
+.demo-label p{font-size:14px;color:var(--ink-2)}
+.demo-label .eyebrow{margin-bottom:6px}
+.insp-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:11px 14px;background:var(--panel-2);border-bottom:1px solid var(--pline)}
+.insp-crumbs{display:flex;align-items:center;gap:12px;color:var(--pmuted);font:12px var(--mono)}
+.insp-crumbs b{color:var(--ptext);font-weight:600}
+.wdots{display:flex;gap:6px}.wdots i{width:10px;height:10px;border-radius:50%;background:#343945}
+.endpoint{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--pline);border-radius:9px;padding:4px 4px 4px 10px;min-width:0;max-width:100%}
+.endpoint code{font-size:12.5px;color:var(--ptext);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep-tag{font:600 10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.ep-copy{background:var(--panel-3);border:1px solid var(--pline);color:var(--ptext);font:500 12px var(--sans);padding:5px 10px;border-radius:6px;cursor:pointer;flex:none}
+.ep-copy:hover{border-color:#3C4250}
+.insp-status{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.live{display:inline-flex;align-items:center;gap:7px;color:var(--ok);font-weight:600;font-size:12px}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);animation:ping 1.8s ease-out infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(79,209,139,.55)}100%{box-shadow:0 0 0 8px rgba(79,209,139,0)}}
+.dim{color:var(--pmuted);font:12px var(--mono)}
+.dim b{color:var(--ptext);font-weight:600}
+.insp-body{display:grid;grid-template-columns:330px minmax(0,1fr)}
+.ev-pane{border-right:1px solid var(--pline);display:flex;flex-direction:column;min-width:0}
+.pane-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--pline);font:600 10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--pmuted)}
+.pane-head span:last-child{text-transform:none;letter-spacing:0;font-weight:500}
+.ev-list{list-style:none;margin:0;padding:0;overflow:auto;max-height:560px}
+.ev{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;width:100%;padding:12px 14px;background:none;border:0;border-bottom:1px solid var(--pline);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.ev:hover{background:rgba(255,255,255,.03)}
+.ev[aria-current="true"]{background:var(--panel-3);box-shadow:inset 3px 0 0 var(--accent)}
+.ev:focus-visible{outline-offset:-2px}
+.ev-l1{display:flex;align-items:center;gap:8px;min-width:0}
+.ev-type{font:12.5px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#F2EFE8}
+.ev-meta{font:11.5px var(--mono);color:var(--pmuted)}
+.ev-sig{font:11px var(--mono);text-align:right}
+.ev-sig.ok{color:var(--ok)}.ev-sig.bad{color:var(--err)}
+.src{font:600 10.5px var(--mono);padding:2px 6px;border-radius:5px;flex:none;letter-spacing:.02em}
+.src-stripe{color:#C3B6FF;background:rgba(135,115,255,.16)}
+.src-github{color:#DAD7CF;background:rgba(255,255,255,.09)}
+.src-shopify{color:#95E6A9;background:rgba(95,200,120,.14)}
+.src-linear{color:#A8B8FF;background:rgba(110,130,255,.16)}
+.src-billing{color:#FFB892;background:rgba(228,86,27,.18)}
+.code{font:600 11.5px var(--mono);padding:2px 7px;border-radius:6px;white-space:nowrap;justify-self:end}
+.s2{color:var(--ok);background:rgba(79,209,139,.12)}
+.s4{color:var(--warn);background:rgba(242,193,78,.13)}
+.s5{color:var(--err);background:rgba(255,107,91,.14)}
+.sp{color:var(--pmuted);background:rgba(255,255,255,.06)}
+.detail{min-width:0;display:flex;flex-direction:column}
+.d-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:16px 18px 14px;border-bottom:1px solid var(--pline)}
+.d-head h3{font:600 18px var(--mono);letter-spacing:-.01em;margin:8px 0 6px;color:#fff;word-break:break-word}
+.d-meta{font:12px var(--mono);color:var(--pmuted);line-height:1.6}
+.edited-tag{display:inline-block;font:600 10.5px var(--mono);color:var(--warn);border:1px solid rgba(242,193,78,.45);border-radius:5px;padding:0 6px;margin-left:8px;vertical-align:1px}
+.sig{display:flex;gap:10px;align-items:flex-start;max-width:310px;padding:10px 12px;border-radius:10px;font-size:12.5px;line-height:1.45;flex:none}
+.sig.ok{background:rgba(79,209,139,.08);border:1px solid rgba(79,209,139,.28)}
+.sig.bad{background:rgba(255,107,91,.08);border:1px solid rgba(255,107,91,.32)}
+.sig strong{display:block;color:#fff;font-weight:600}
+.sig span.sd{color:var(--pmuted)}
+.sig .ico{font-weight:700;font-size:14px;line-height:1.2}
+.sig.ok .ico{color:var(--ok)}.sig.bad .ico{color:var(--err)}
+.d-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--pline);background:rgba(255,255,255,.015)}
+.target{display:flex;align-items:center;gap:8px;margin-right:auto;min-width:0;font-size:12px;color:var(--pmuted)}
+.target code{color:var(--ptext);font-size:12px;background:var(--panel);border:1px solid var(--pline);padding:5px 8px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:330px}
+.sel{background:var(--panel);color:var(--ptext);border:1px solid var(--pline);border-radius:7px;font:500 12.5px var(--sans);padding:0 8px;height:32px}
+.bsm{height:32px;padding:0 12px;border-radius:7px;font:600 12.5px var(--sans);cursor:pointer;border:1px solid var(--pline);background:var(--panel-3);color:var(--ptext)}
+.bsm:hover{border-color:#40465350;border-color:#434956}
+.bsm.accent{background:var(--accent);border-color:var(--accent);color:#14161B}
+.bsm.accent:hover{background:#F2682F}
+.bsm[aria-pressed="true"]{border-color:var(--warn);color:var(--warn)}
+.tabs{display:flex;gap:4px;padding:6px 12px 0;border-bottom:1px solid var(--pline);overflow-x:auto}
+.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--pmuted);font:500 12.5px var(--sans);padding:8px 10px 10px;cursor:pointer;margin-bottom:-1px;white-space:nowrap}
+.tab:hover{color:var(--ptext)}
+.tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--accent)}
+.panel{position:relative;flex:1;min-height:0}
+.panel pre{margin:0;padding:16px 18px;font:12.5px/1.65 var(--mono);color:#D9D6CE;overflow:auto;height:380px;white-space:pre;tab-size:2}
+.editor textarea{display:block;width:100%;height:340px;resize:vertical;background:#0B0D11;color:#E7E4DC;border:0;border-bottom:1px solid var(--pline);padding:16px 18px;font:12.5px/1.65 var(--mono)}
+.editor textarea:focus{outline:1px solid var(--warn);outline-offset:-1px}
+.ed-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 18px;height:40px;font:12px var(--mono)}
+.ed-bar button{background:none;border:0;color:var(--pmuted);font:12px var(--mono);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ed-ok{color:var(--ok)}.ed-bad{color:var(--err)}
+.insp-foot{border-top:1px solid var(--pline);background:var(--panel-2)}
+.log{list-style:none;margin:0;padding:0 0 6px;max-height:200px;overflow:auto}
+.log li{display:grid;grid-template-columns:62px 112px minmax(0,1.1fr) minmax(0,1.5fr) auto 76px;gap:12px;align-items:center;padding:7px 14px;font:12px var(--mono);border-top:1px solid rgba(255,255,255,.04)}
+.log li.fresh{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:rgba(228,86,27,.14)}to{background:transparent}}
+.lg-time,.lg-ms{color:var(--pmuted)}
+.lg-ms{text-align:right}
+.lg-id{color:var(--ptext);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lg-target,.lg-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--pmuted)}
+.lg-mode{color:var(--ptext)}
+.tone-pass{color:var(--ok)}.tone-warn{color:var(--warn)}.tone-fail{color:var(--err)}.tone-ok{color:var(--pmuted)}
+.t-key{color:#9CC8FF}.t-str{color:#A9E4BB}.t-num{color:#F6BC76}.t-lit{color:#CDAEFF}.t-com{color:#7F8694;font-style:italic}.t-kw{color:#FF9F7D}
+.st-2{color:var(--ok);font-weight:600}.st-4{color:var(--warn);font-weight:600}.st-5{color:var(--err);font-weight:600}
+
+/* Strip */
+.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+.strip-inner{display:flex;align-items:center;gap:24px;padding-top:18px;padding-bottom:18px;flex-wrap:wrap}
+.strip-label{font:600 11.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.strip ul{display:flex;flex-wrap:wrap;gap:10px 28px;list-style:none;margin:0;padding:0}
+.strip li{font-weight:650;font-size:16px;color:var(--ink-2);letter-spacing:-.01em}
+.strip li span{font:500 11px var(--mono);color:var(--muted);margin-left:6px}
+
+/* Sections */
+.section{padding:112px 0}
+.section + .section{border-top:1px solid var(--line)}
+.section-head{max-width:800px;margin-bottom:56px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);display:inline-flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:18px;height:2px;background:var(--accent)}
+h2{font-size:clamp(30px,4.1vw,50px);letter-spacing:-.035em;margin-top:16px;font-weight:720}
+.sub{margin-top:18px;font-size:18px;color:var(--ink-2);max-width:40em}
+
+.steps{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line-2);border-radius:18px;overflow:hidden;background:var(--card)}
+.step{padding:28px 24px 30px;border-right:1px solid var(--line)}
+.step:last-child{border-right:0}
+.step .n{font:600 13px var(--mono);color:var(--accent-ink)}
+.step h3{font-size:19px;margin:14px 0 10px;letter-spacing:-.02em}
+.step p{color:var(--ink-2);font-size:15px}
+.step code{font-size:12.5px;background:var(--paper-2);padding:1px 5px;border-radius:5px;word-break:break-all}
+.diagram{margin-top:24px;background:var(--panel);border-radius:18px;padding:26px 26px 20px;color:var(--ptext);overflow-x:auto}
+.diagram svg{min-width:760px;width:100%;height:auto}
+.diagram text{font-family:var(--mono)}
+.cable{fill:none;stroke-width:3;stroke-linecap:round}
+.flow{fill:none;stroke-width:3;stroke-linecap:round;stroke-dasharray:2 14;stroke:#fff;opacity:.55;animation:flow 1.6s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-32}}
+.diagram-cap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--pmuted);font:12px var(--mono);margin-top:14px;min-width:760px}
+
+.feature{display:grid;grid-template-columns:1fr 1.15fr;gap:64px;align-items:center;padding:64px 0;border-top:1px dashed var(--line-2)}
+.feature:first-of-type{border-top:0;padding-top:0}
+.feature.flip .f-copy{order:2}
+.f-copy h3{font-size:clamp(25px,2.7vw,34px);margin:16px 0 16px;letter-spacing:-.03em;font-weight:700}
+.f-copy p{color:var(--ink-2);font-size:17px}
+.ticks{list-style:none;padding:0;margin:24px 0 0;display:grid;gap:11px}
+.ticks li{position:relative;padding-left:30px;font-size:15.5px}
+.ticks li::before{content:"✓";position:absolute;left:0;top:2px;width:19px;height:19px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);font:700 11px/19px var(--sans);text-align:center}
+.ticks code{font-size:13px;background:var(--paper-2);padding:1px 5px;border-radius:4px}
+
+.dcard{background:var(--panel);color:var(--ptext);border-radius:16px;border:1px solid #07080A;box-shadow:0 34px 70px -36px rgba(20,22,27,.6);overflow:hidden;font-size:13px}
+.dcard-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--pline);background:var(--panel-2);font:12px var(--mono);color:var(--pmuted);flex-wrap:wrap}
+.dcard-head b{color:var(--ptext);font-weight:600}
+.diff{padding:12px 0;font:13px/1.7 var(--mono);overflow-x:auto}
+.diff .ln{white-space:pre;padding:0 16px;color:#C9C6BE}
+.diff .del{background:rgba(255,107,91,.12);color:#FFB7AC}
+.diff .add{background:rgba(79,209,139,.12);color:#AEEFCB}
+.replays{list-style:none;margin:0;padding:6px 0;border-top:1px solid var(--pline)}
+.replays li{display:grid;grid-template-columns:30px 1fr auto 74px;gap:12px;align-items:center;padding:9px 16px;font-size:13px}
+.replays .rp-n{font:12px var(--mono);color:var(--pmuted)}
+.replays .rp-ms{font:12px var(--mono);color:var(--pmuted);text-align:right}
+.replays small{display:block;color:var(--pmuted);font:11.5px var(--mono)}
+
+.tcard{background:var(--card);border:1px solid var(--line-2);border-radius:16px;overflow:hidden;box-shadow:0 30px 60px -44px rgba(20,22,27,.45)}
+.tcard-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;padding:14px 18px;border-bottom:1px solid var(--line);font-size:13.5px}
+.tcard-head b{font-weight:650}
+.tcard-head .mono{font-size:12px;color:var(--muted)}
+.score{font:600 12px var(--mono);background:#FCEBE1;color:var(--accent-ink);padding:3px 9px;border-radius:999px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 18px;border-bottom:1px solid var(--line);background:var(--paper)}
+td{padding:12px 18px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td b{font-weight:600}
+td .inj{display:block;font:12.5px/1.5 var(--mono);color:var(--ink-2)}
+.res{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:600;padding:3px 8px;border-radius:6px}
+.res.pass{background:#DDF1E4;color:#14683F}
+.res.fail{background:#FADFD6;color:#9E2E0D}
+td small{display:block;color:var(--muted);font-size:12.5px;margin-top:4px}
+
+.session{background:var(--card);border:1px solid var(--line-2);border-radius:16px;overflow:hidden;box-shadow:0 30px 60px -44px rgba(20,22,27,.45)}
+.s-head{display:flex;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.s-head h4{font-size:17px;margin-top:6px;letter-spacing:-.015em}
+.s-kicker{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pill{font:600 12px var(--mono);padding:4px 10px;border-radius:999px;white-space:nowrap;height:fit-content}
+.pill.ok{background:#DDF1E4;color:#14683F}
+.s-people{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--paper);font-size:13px;color:var(--ink-2)}
+.avatars{display:flex}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 11px var(--sans);color:#fff;border:2px solid var(--card);margin-left:-8px;flex:none}
+.avatars .av:first-child{margin-left:0}
+.perm{font:500 12px var(--mono);color:var(--ink-2);border:1px solid var(--line-2);padding:2px 8px;border-radius:6px;background:var(--card)}
+.tl{list-style:none;margin:0;padding:18px 20px 20px;display:grid;gap:16px}
+.tl li{display:grid;grid-template-columns:30px 1fr;gap:12px}
+.tl .av{margin-left:0;border:0}
+.who{font-size:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.who b{font-weight:650}
+.role{font:500 11px var(--mono);color:var(--muted);border:1px solid var(--line-2);border-radius:4px;padding:0 5px}
+.who time{margin-left:auto;font:12px var(--mono);color:var(--muted)}
+.tl p{font-size:14.5px;color:var(--ink-2);margin-top:3px}
+.tl code{font-size:12px;background:var(--paper-2);padding:1px 5px;border-radius:4px}
+.sysline{font:12.5px var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-top:4px;color:var(--ink-2)}
+.sysline .x{color:#9E2E0D;font-weight:700}.sysline .c{color:#14683F;font-weight:700}
+
+.codecard .ctabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid var(--pline);background:var(--panel-2);overflow-x:auto}
+.ctab{background:transparent;border:0;color:var(--pmuted);font:500 12.5px var(--mono);padding:7px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.ctab:hover{color:var(--ptext)}
+.ctab[aria-selected="true"]{background:var(--panel-3);color:#fff}
+.codecard pre{margin:0;padding:16px 18px;font:12.5px/1.65 var(--mono);overflow:auto;height:430px;color:#D9D6CE;tab-size:4}
+.codecard .dcard-head button{background:var(--panel-3);border:1px solid var(--pline);color:var(--ptext);font:500 12px var(--sans);padding:5px 10px;border-radius:6px;cursor:pointer}
+
+/* Quotes */
+.quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.quote{margin:0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:24px}
+.quote blockquote{margin:0;font-size:18px;line-height:1.5;letter-spacing:-.012em;color:var(--ink)}
+.quote blockquote::before{content:"“";display:block;font:700 44px/0.6 Georgia,serif;color:var(--accent);margin-bottom:14px;padding-top:10px}
+.quote figcaption{display:flex;gap:12px;align-items:center;margin-top:auto;font-size:14px;line-height:1.35}
+.quote figcaption b{display:block;font-weight:650}
+.quote figcaption span{color:var(--muted);font-size:13px}
+.quote .av{border:0;margin:0;width:38px;height:38px;font-size:12.5px}
+.q-tag{font:600 11px var(--mono);color:var(--muted);letter-spacing:.04em}
+
+/* Scope */
+.scope{display:grid;grid-template-columns:1.12fr 1fr .9fr;gap:20px;align-items:start}
+.scard{background:var(--card);border:1px solid var(--line-2);border-radius:18px;padding:26px}
+.scard.in{border:1.5px solid var(--ink);box-shadow:0 26px 50px -40px rgba(20,22,27,.5)}
+.scard h3{font-size:19px;display:flex;align-items:center;gap:10px;letter-spacing:-.02em}
+.scard .h-note{font-size:14px;color:var(--muted);margin-top:6px}
+.slist{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:13px}
+.slist li{display:grid;grid-template-columns:22px 1fr;gap:10px;font-size:15px;line-height:1.45}
+.slist li small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.slist code{font-size:12.5px;background:var(--paper-2);padding:1px 5px;border-radius:4px}
+.ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font:700 12px var(--sans)}
+.ic.y{background:#DDF1E4;color:#14683F}
+.ic.n{background:var(--paper-2);color:var(--muted)}
+.tag{display:inline-block;font:600 10.5px var(--mono);padding:1px 7px;border-radius:5px;background:var(--paper-2);color:var(--ink-2);margin-left:6px;white-space:nowrap;vertical-align:1px}
+.tag.soon{background:#FCEBE1;color:var(--accent-ink)}
+.limits{margin:16px 0 0}
+.limits div{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line-2);font-size:14.5px}
+.limits div:last-child{border-bottom:0}
+.limits dt{color:var(--ink-2)}
+.limits dd{margin:0;font-weight:650;text-align:right}
+
+/* Waitlist */
+.wl{display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:start}
+.timeline{list-style:none;padding:0;margin:30px 0 0}
+.timeline li{display:grid;grid-template-columns:22px 1fr auto;gap:14px;padding:0 0 22px;position:relative}
+.timeline li::before{content:"";position:absolute;left:10px;top:24px;bottom:0;width:2px;background:var(--line-2)}
+.timeline li:last-child::before{display:none}
+.tdot{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-2);background:var(--paper)}
+.timeline .is-live .tdot{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.timeline .is-next .tdot{border-color:var(--ink);background:var(--card)}
+.timeline b{display:block;font-size:16px;font-weight:650}
+.timeline span.d{display:block;font-size:14px;color:var(--ink-2)}
+.tstat{font:600 11px var(--mono);padding:3px 8px;border-radius:999px;height:fit-content;white-space:nowrap}
+.tstat.l{background:#FCEBE1;color:var(--accent-ink)}
+.tstat.x{background:var(--ink);color:var(--paper)}
+.tstat.p{background:var(--paper-2);color:var(--ink-2)}
+.bars{margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.bars h3{font-size:16px;letter-spacing:-.01em}
+.bars .h-note{font-size:13px;color:var(--muted);margin:2px 0 14px}
+.bar{display:grid;grid-template-columns:128px 1fr 42px;gap:12px;align-items:center;font-size:14px;padding:5px 0}
+.bar .track{height:10px;background:var(--paper-2);border-radius:99px;overflow:hidden}
+.bar .fill{display:block;height:100%;background:var(--ink-2);border-radius:99px}
+.bar:first-of-type .fill{background:var(--accent)}
+.bar .pct{font:600 13px var(--mono);text-align:right}
+.fit{margin-top:24px;padding:20px 22px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 14px 14px 0}
+.fit h3{font-size:16px}
+.fit ul{margin:10px 0 0;padding-left:18px;color:var(--ink-2);font-size:15px;display:grid;gap:6px}
+
+.formcard{background:var(--card);border:1px solid var(--line-2);border-radius:20px;padding:32px;box-shadow:0 40px 70px -50px rgba(20,22,27,.45)}
+.fc-head h3{font-size:24px;letter-spacing:-.025em}
+.fc-head p{color:var(--ink-2);font-size:15px;margin:6px 0 24px}
+.field{display:grid;gap:6px;margin:0 0 18px;min-width:0}
+.field label,.field legend{font-weight:600;font-size:14px;padding:0}
+.req,.opt{font:500 11px var(--mono);color:var(--muted);margin-left:6px}
+.req{color:var(--accent-ink)}
+.field input[type=email],.field input[type=text],.field select,.field textarea{font:inherit;font-size:15px;padding:11px 12px;border:1px solid var(--line-2);border-radius:10px;background:#fff;color:var(--ink);width:100%}
+.field textarea{resize:vertical;min-height:84px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.field input[aria-invalid="true"]{border-color:#C0391A;background:#FFF6F3}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+fieldset{border:0;padding:0;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip span{display:inline-flex;align-items:center;padding:7px 13px;border:1px solid var(--line-2);border-radius:999px;font-size:14px;cursor:pointer;background:#fff;user-select:none;transition:background .12s}
+.chip span:hover{border-color:var(--ink-2)}
+.chip input:checked + span{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip input:checked + span::before{content:"✓";margin-right:6px;font-size:12px}
+.chip input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--ink-2);margin:4px 0 22px;cursor:pointer}
+.check input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--ink)}
+.error{color:#A1300E;font-size:13px;min-height:0}
+.done{text-align:left}
+.done-badge{width:48px;height:48px;border-radius:14px;background:#DDF1E4;color:#14683F;display:grid;place-items:center;font-size:24px;font-weight:700}
+.done h3{font-size:26px;margin-top:18px;letter-spacing:-.03em}
+.done .pos{font-size:17px;margin-top:8px;color:var(--ink-2)}
+.done .pos b{color:var(--ink)}
+.next{margin-top:22px;padding:16px 18px;background:var(--paper);border-radius:12px;font-size:14.5px;color:var(--ink-2)}
+.next ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+
+/* FAQ */
+.faq{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px}
+.faq-side p{margin-top:18px;color:var(--ink-2)}
+.faq-side a{font-weight:600}
+details{border-bottom:1px solid var(--line-2);padding:20px 0}
+details:first-child{border-top:1px solid var(--line-2)}
+summary{cursor:pointer;font-weight:650;font-size:17.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;letter-spacing:-.01em}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font:400 24px/1 var(--mono);color:var(--accent-ink);transition:transform .2s;flex:none}
+details[open] summary::after{transform:rotate(45deg)}
+details p{margin-top:12px;color:var(--ink-2);max-width:62ch}
+details code{font-size:13.5px;background:var(--paper-2);padding:1px 5px;border-radius:4px}
+
+/* CTA + Footer */
+.cta{background:var(--ink);color:var(--paper);border-radius:24px;padding:56px;display:grid;grid-template-columns:1.4fr auto;gap:32px;align-items:center;position:relative;overflow:hidden}
+.cta::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;border:40px solid rgba(228,86,27,.18)}
+.cta h2{color:var(--paper);margin-top:0;font-size:clamp(28px,3.4vw,42px)}
+.cta p{color:#C8C4BA;margin-top:12px;font-size:17px}
+.cta .btn{background:var(--accent);color:#14161B;position:relative;z-index:1}
+.cta .btn:hover{background:#F2682F}
+footer{padding:64px 0 40px;border-top:1px solid var(--line);margin-top:96px}
+.foot{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:32px}
+.foot p{color:var(--muted);font-size:14px;margin-top:12px;max-width:34ch}
+.foot h3{font:600 11.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.foot ul{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px;font-size:14.5px}
+.foot a{text-decoration:none;color:var(--ink-2)}
+.foot a:hover{color:var(--ink);text-decoration:underline}
+.legal{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:48px;padding-top:20px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:10px;font-size:14px;box-shadow:0 20px 40px -16px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:100;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:1080px){
+  .hero-grid{grid-template-columns:1fr;gap:40px}
+  .pulse{max-width:560px}
+  .steps{grid-template-columns:1fr 1fr}
+  .step:nth-child(2){border-right:0}
+  .step:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .feature,.feature.flip{grid-template-columns:1fr;gap:36px}
+  .feature.flip .f-copy{order:0}
+  .scope{grid-template-columns:1fr 1fr}
+  .scope .scard.lim{grid-column:1/-1}
+  .wl{grid-template-columns:1fr}
+  .quotes{grid-template-columns:1fr}
+  .faq{grid-template-columns:1fr;gap:24px}
+  .insp-body{grid-template-columns:290px minmax(0,1fr)}
+  .log li{grid-template-columns:62px minmax(0,1fr) minmax(0,1.4fr) auto 70px}
+  .log .lg-target{display:none}
+}
+@media (max-width:820px){
+  .nav-links{display:none}
+  .nav-inner .btn{margin-left:auto}
+  .insp-body{grid-template-columns:1fr}
+  .ev-pane{border-right:0;border-bottom:1px solid var(--pline)}
+  .ev-list{max-height:270px}
+  .d-head{flex-direction:column}
+  .sig{max-width:none;width:100%}
+  .target{width:100%;margin-right:0}
+  .target code{max-width:none;flex:1}
+  .panel pre{height:340px}
+  .log li{grid-template-columns:58px minmax(0,1fr) auto;row-gap:2px}
+  .log .lg-id{display:none}
+  .log .lg-ms{grid-column:3;text-align:right}
+  .log .lg-note{grid-column:2/3}
+  .scope{grid-template-columns:1fr}
+  .cta{grid-template-columns:1fr;padding:40px 28px}
+  .foot{grid-template-columns:1fr 1fr}
+  .foot > div:first-child{grid-column:1/-1}
+}
+@media (max-width:560px){
+  .container{padding:0 18px}
+  .hero{padding:48px 0 72px}
+  .hero-form{flex-direction:column;padding:8px}
+  .hero-form .btn{width:100%}
+  .steps{grid-template-columns:1fr}
+  .step{border-right:0;border-bottom:1px solid var(--line)}
+  .step:last-child{border-bottom:0}
+  .row2{grid-template-columns:1fr;gap:0}
+  .formcard{padding:22px}
+  .section{padding:80px 0}
+  .bar{grid-template-columns:100px 1fr 40px}
+  .replays li{grid-template-columns:26px 1fr auto;}
+  .replays .rp-ms{display:none}
+  .insp-crumbs .mono{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top" aria-label="Patchbay Cloud home">
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#14161B"/><path d="M10 11c0 9 12 1 12 10" stroke="#F4F1EA" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="10" cy="10" r="3.6" fill="#E4561B"/><circle cx="22" cy="22" r="3.6" fill="#F4F1EA"/></svg>
+      Patchbay Cloud <span class="beta">Private beta</span>
+    </a>
+    <nav aria-label="Primary">
+      <ul class="nav-links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#scope">Beta scope</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="#waitlist">Join the waitlist</a>
+  </div>
+</header>
+
+<main id="main">
+<section class="hero" id="top">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <p class="badge"><span class="dot" aria-hidden="true"></span>Private beta · Cohort 2 invites go out June 9, 2025</p>
+      <h1>Catch webhook bugs <em>before</em> production does.</h1>
+      <p class="lede">Patchbay Cloud gives you temporary endpoints that capture every webhook your providers send. Inspect headers and signatures, replay events with edited payloads, and simulate failures. Then share the whole session with support and ship a handler generated from the event you actually received.</p>
+
+      <form class="hero-form" id="hero-form" novalidate>
+        <label for="hero-email" class="sr-only">Work email</label>
+        <input id="hero-email" type="email" name="email" placeholder="you@company.com" autocomplete="email" required aria-describedby="hero-err">
+        <button class="btn btn-primary" type="submit">Request beta access <span class="arrow" aria-hidden="true">→</span></button>
+      </form>
+      <p class="form-err" id="hero-err" role="alert"></p>
+      <div class="hero-ok" id="hero-ok" hidden></div>
+      <p class="fine"><b>Free during the beta</b> · No credit card · HTTP webhooks with HMAC, timestamped and Standard Webhooks signatures</p>
+    </div>
+
+    <aside class="pulse" aria-label="Waitlist activity">
+      <div class="pulse-head"><p class="pulse-title">Waitlist</p><span class="mini-live">Updated 2 min ago</span></div>
+      <p class="pulse-num"><span data-count>2,318</span></p>
+      <p class="pulse-sub">developers from <b>614 teams</b> in <b>38 countries</b></p>
+      <ul class="recent">
+        <li><span class="rc-av" style="background:#6D4AE0" aria-hidden="true">FP</span><div><b>Fernhill Payroll</b><span class="m">Platform team · Stripe, internal services</span></div><time>2m ago</time></li>
+        <li><span class="rc-av" style="background:#0E7C66" aria-hidden="true">NL</span><div><b>Northbeam Logistics</b><span class="m">Support engineering · Shopify, Twilio</span></div><time>9m ago</time></li>
+        <li><span class="rc-av" style="background:#B3470F" aria-hidden="true">QH</span><div><b>Quillstone Health</b><span class="m">Backend · Standard Webhooks</span></div><time>14m ago</time></li>
+        <li><span class="rc-av" style="background:#2F4F9E" aria-hidden="true">TG</span><div><b>Tidewater Games</b><span class="m">QA · GitHub, Slack</span></div><time>31m ago</time></li>
+      </ul>
+      <div class="pulse-foot"><span>Cohort 2 · 120 teams</span><span><b>37</b> spots still open</span></div>
+      <div class="meter" role="img" aria-label="83 of 120 Cohort 2 spots filled"><span style="width:69%"></span></div>
+    </aside>
+  </div>
+
+  <div class="container">
+    <div class="demo-label">
+      <div>
+        <p class="eyebrow">Live demo · try it</p>
+        <p>This is a real debugging session. Click an event, edit its payload, pick a delivery condition and hit <b>Replay</b>.</p>
+      </div>
+    </div>
+    <div class="inspector" id="demo" role="region" aria-label="Interactive Patchbay Cloud event inspector demo">
+      <div class="insp-top">
+        <div class="insp-crumbs"><span class="wdots" aria-hidden="true"><i></i><i></i><i></i></span><span class="mono">acme-pay / sessions / <b>invoice-retry-bug</b></span></div>
+        <div class="endpoint">
+          <span class="ep-tag">Endpoint</span>
+          <code id="ep-url">https://pb.patchbay.cloud/e/7f3k-orchid-91</code>
+          <button type="button" class="ep-copy" id="copy-ep">Copy</button>
+        </div>
+        <div class="insp-status">
+          <span class="live">Listening</span>
+          <span class="dim">Forwarding → <b>staging.acme-pay.dev</b></span>
+          <span class="dim">Expires in <b id="expires">23h 14m 08s</b></span>
+        </div>
+      </div>
+      <div class="insp-body">
+        <div class="ev-pane">
+          <div class="pane-head"><span>Captured events</span><span id="ev-summary">7 events · 45.3 KB</span></div>
+          <ul class="ev-list" id="ev-list" aria-label="Captured events. Status shows your handler's response."></ul>
+        </div>
+        <div class="detail">
+          <div class="d-head">
+            <div>
+              <span class="src" id="d-src">Stripe</span>
+              <h3 id="d-type">invoice.payment_failed</h3>
+              <p class="d-meta" id="d-meta">Loading event…</p>
+            </div>
+            <div class="sig ok" id="d-sig"></div>
+          </div>
+          <div class="d-actions">
+            <div class="target"><span>Replay to</span><code id="d-target">staging.acme-pay.dev/webhooks/stripe</code></div>
+            <label class="sr-only" for="sim">Delivery condition</label>
+            <select class="sel" id="sim">
+              <option value="normal">Normal delivery</option>
+              <option value="dup">Duplicate ×3</option>
+              <option value="tamper">Tampered signature</option>
+              <option value="stale">Stale timestamp (−10 min)</option>
+              <option value="slow">Slow network (+8 s)</option>
+            </select>
+            <button type="button" class="bsm" id="edit-btn" aria-pressed="false">Edit payload</button>
+            <button type="button" class="bsm accent" id="replay-btn">Replay</button>
+            <button type="button" class="bsm" id="share-btn">Share</button>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Event details" id="insp-tabs">
+            <button type="button" role="tab" class="tab" id="tab-payload" data-tab="payload" aria-selected="true" aria-controls="insp-panel">Payload</button>
+            <button type="button" role="tab" class="tab" id="tab-headers" data-tab="headers" aria-selected="false" aria-controls="insp-panel" tabindex="-1">Headers</button>
+            <button type="button" role="tab" class="tab" id="tab-response" data-tab="response" aria-selected="false" aria-controls="insp-panel" tabindex="-1">Handler response</button>
+            <button type="button" role="tab" class="tab" id="tab-snippet" data-tab="snippet" aria-selected="false" aria-controls="insp-panel" tabindex="-1">Code snippet</button>
+          </div>
+          <div class="panel" id="insp-panel" role="tabpanel" aria-labelledby="tab-payload">
+            <pre id="pre" tabindex="0"></pre>
+            <div class="editor" id="editor" hidden>
+              <textarea id="ta" spellcheck="false" aria-label="Edit JSON payload"></textarea>
+              <div class="ed-bar"><span id="ed-status" class="ed-ok">✓ Valid JSON</span><button type="button" id="ed-reset">Reset to original</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="insp-foot">
+        <div class="pane-head"><span>Replay log</span><span id="log-count">3 replays this session</span></div>
+        <ul class="log" id="log" aria-live="polite" aria-label="Replay log"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="container strip-inner">
+    <span class="strip-label">Signature presets in the beta</span>
+    <ul>
+      <li>Stripe</li><li>GitHub</li><li>Shopify</li><li>Slack</li><li>Twilio</li><li>Linear</li><li>Standard Webhooks</li><li>Custom HMAC <span>SHA-256 / SHA-1</span></li>
+    </ul>
+  </div>
+</div>
+
+<section class="section" id="how" aria-labelledby="how-title">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">How it works</p>
+      <h2 id="how-title">Patch any provider into a disposable endpoint. Route it wherever you're debugging.</h2>
+      <p class="sub">No deploys and no log spelunking. You don't have to ask a customer to "send it again". Patchbay stays between the provider and your handler for as long as you need it, then goes away.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="n">01</span><h3>Spin up an endpoint</h3><p>One click or one API call gives you a unique HTTPS URL like <code>pb.patchbay.cloud/e/7f3k-orchid-91</code>. It lives for 24 hours by default, and you can extend it to 7 days.</p></div>
+      <div class="step"><span class="n">02</span><h3>Point your provider at it</h3><p>Paste the URL into Stripe, GitHub, Shopify or your own service. Every request is captured with its headers, body and timing, and gets a signature check.</p></div>
+      <div class="step"><span class="n">03</span><h3>Replay, edit, break</h3><p>Resend any event to staging, a preview deploy or a tunnel. Change fields, or inject duplicates, bad signatures and slow deliveries.</p></div>
+      <div class="step"><span class="n">04</span><h3>Share and ship</h3><p>Give support a session link. Then copy a generated handler that already verifies the signature for that exact event.</p></div>
+    </div>
+
+    <div class="diagram" role="img" aria-label="Diagram: Stripe, GitHub, Shopify and an internal billing service send webhooks into one Patchbay endpoint, which replays them to staging, a preview deploy and a shared support session.">
+      <svg viewBox="0 0 1100 300" aria-hidden="true">
+        <text x="20" y="22" fill="#949AA6" font-size="11" letter-spacing="1.2">PROVIDERS</text>
+        <text x="430" y="72" fill="#949AA6" font-size="11" letter-spacing="1.2">PATCHBAY ENDPOINT</text>
+        <text x="880" y="22" fill="#949AA6" font-size="11" letter-spacing="1.2">REPLAY TARGETS</text>
+        <!-- left cables -->
+        <path class="cable" stroke="#C3B6FF" d="M190 60 C310 60 310 115 430 115"/>
+        <path class="cable" stroke="#E7E4DC" d="M190 120 C310 120 310 138 430 138"/>
+        <path class="cable" stroke="#95E6A9" d="M190 180 C310 180 310 162 430 162"/>
+        <path class="cable" stroke="#FF9F7D" d="M190 240 C310 240 310 185 430 185"/>
+        <path class="flow" d="M190 60 C310 60 310 115 430 115"/>
+        <path class="flow" d="M190 180 C310 180 310 162 430 162"/>
+        <!-- right cables -->
+        <path class="cable" stroke="#79B4FF" d="M670 125 C770 125 770 70 870 70"/>
+        <path class="cable" stroke="#E4561B" d="M670 150 C770 150 770 150 870 150"/>
+        <path class="cable" stroke="#4FD18B" d="M670 175 C770 175 770 230 870 230"/>
+        <path class="flow" d="M670 150 C770 150 770 150 870 150"/>
+        <!-- provider labels -->
+        <g font-size="13" fill="#E7E4DC">
+          <rect x="20" y="42" width="150" height="36" rx="8" fill="#1D2129" stroke="#2F3440"/><text x="36" y="65">Stripe</text>
+          <rect x="20" y="102" width="150" height="36" rx="8" fill="#1D2129" stroke="#2F3440"/><text x="36" y="125">GitHub</text>
+          <rect x="20" y="162" width="150" height="36" rx="8" fill="#1D2129" stroke="#2F3440"/><text x="36" y="185">Shopify</text>
+          <rect x="20" y="222" width="150" height="36" rx="8" fill="#1D2129" stroke="#2F3440"/><text x="36" y="245">billing-svc</text>
+        </g>
+        <g fill="#101217" stroke="#E7E4DC" stroke-width="2">
+          <circle cx="190" cy="60" r="7"/><circle cx="190" cy="120" r="7"/><circle cx="190" cy="180" r="7"/><circle cx="190" cy="240" r="7"/>
+        </g>
+        <!-- endpoint box -->
+        <rect x="430" y="92" width="240" height="116" rx="14" fill="#1D2129" stroke="#E4561B" stroke-width="1.5"/>
+        <text x="452" y="126" font-size="14" fill="#FFFFFF" font-weight="600">pb.patchbay.cloud</text>
+        <text x="452" y="148" font-size="13" fill="#E7E4DC">/e/7f3k-orchid-91</text>
+        <text x="452" y="182" font-size="11.5" fill="#949AA6">capture · verify · store</text>
+        <g fill="#101217" stroke="#E4561B" stroke-width="2">
+          <circle cx="430" cy="115" r="5"/><circle cx="430" cy="138" r="5"/><circle cx="430" cy="162" r="5"/><circle cx="430" cy="185" r="5"/>
+          <circle cx="670" cy="125" r="5"/><circle cx="670" cy="150" r="5"/><circle cx="670" cy="175" r="5"/>
+        </g>
+        <!-- targets -->
+        <g font-size="13" fill="#E7E4DC">
+          <rect x="880" y="52" width="200" height="36" rx="8" fill="#1D2129" stroke="#2F3440"/><text x="896" y="75">staging.acme-pay.dev</text>
+          <rect x="880" y="132" width="200" height="36" rx="8" fill="#1D2129" stroke="#2F3440"/><text x="896" y="155">preview · PR #1842</text>
+          <rect x="880" y="212" width="200" height="36" rx="8" fill="#1D2129" stroke="#2F3440"/><text x="896" y="235">session · support</text>
+        </g>
+        <g fill="#101217" stroke="#E7E4DC" stroke-width="2">
+          <circle cx="870" cy="70" r="7"/><circle cx="870" cy="150" r="7"/><circle cx="870" cy="230" r="7"/>
+        </g>
+      </svg>
+      <div class="diagram-cap"><span>One endpoint, many sources. Every event is captured once and can be replayed any number of times.</span><span>Replays are re-signed with each target's secret.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features" aria-labelledby="features-title">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">What you can do</p>
+      <h2 id="features-title">Everything between "the provider sent it" and "our handler did the right thing".</h2>
+    </div>
+
+    <article class="feature">
+      <div class="f-copy">
+        <p class="eyebrow">01 · Replay &amp; modify</p>
+        <h3>Reproduce the exact request, then change one thing.</h3>
+        <p>You don't need a new test order to trigger another delivery. Replay the captured event byte for byte, or edit a field and see how your handler reacts. Every replay is kept alongside the original, so you can see which change fixed it.</p>
+        <ul class="ticks">
+          <li>Replay to staging, preview deploys or a tunnel to your machine</li>
+          <li>Edit JSON payloads with a live diff against the original</li>
+          <li>Replays are re-signed with the target's secret, so verification still runs</li>
+        </ul>
+      </div>
+      <div class="dcard" aria-label="Example: editing a Shopify orders/create payload and replaying it">
+        <div class="dcard-head"><span><b>orders/create</b> · Shopify order #1047</span><span>edited · 1 field</span></div>
+        <div class="diff" role="img" aria-label="Diff: billing_address changed from null to an address in Portland, Oregon">
+          <div class="ln"> {</div>
+          <div class="ln">   "id": 5712347889827,</div>
+          <div class="ln">   "name": "#1047",</div>
+          <div class="ln">   "financial_status": "paid",</div>
+          <div class="ln del">-  "billing_address": null,</div>
+          <div class="ln add">+  "billing_address": {</div>
+          <div class="ln add">+    "city": "Portland",</div>
+          <div class="ln add">+    "province_code": "OR",</div>
+          <div class="ln add">+    "country_code": "US"</div>
+          <div class="ln add">+  },</div>
+          <div class="ln">   "total_price": "128.40"</div>
+          <div class="ln"> }</div>
+        </div>
+        <ol class="replays">
+          <li><span class="rp-n">#1</span><span>Original delivery from Shopify<small>TypeError: Cannot read properties of null</small></span><span class="code s5">500</span><span class="rp-ms">2,041 ms</span></li>
+          <li><span class="rp-n">#2</span><span>Edited · billing_address set<small>confirms the null field is the cause</small></span><span class="code s2">200</span><span class="rp-ms">121 ms</span></li>
+          <li><span class="rp-n">#3</span><span>Original, after null-guard fix<small>deployed to staging at 14:06</small></span><span class="code s2">200</span><span class="rp-ms">118 ms</span></li>
+        </ol>
+      </div>
+    </article>
+
+    <article class="feature flip">
+      <div class="f-copy">
+        <p class="eyebrow">02 · Failure scenarios</p>
+        <h3>Break it on purpose, before a provider does it for you.</h3>
+        <p>Providers retry, reorder and duplicate deliveries, and they drop connections. Run a captured event through a set of failure scenarios and see which ones your handler survives, before you connect it to production.</p>
+        <ul class="ticks">
+          <li>Duplicates, out-of-order delivery, tampered and stale signatures</li>
+          <li>Provider timeout budgets, e.g. Shopify's 5-second limit</li>
+          <li>Save scenario runs and re-run them after every fix</li>
+        </ul>
+      </div>
+      <div class="tcard">
+        <div class="tcard-head">
+          <span><b>Scenario run #37</b> · orders/create handler → staging</span>
+          <span class="score">4 of 6 passed</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Failure scenario results for the orders/create handler</caption>
+            <thead><tr><th scope="col">Scenario</th><th scope="col">What Patchbay injected</th><th scope="col">Result</th></tr></thead>
+            <tbody>
+              <tr><td><b>Normal delivery</b></td><td><span class="inj">1 × signed POST</span></td><td><span class="res pass">✓ Pass</span><small>200 in 121 ms</small></td></tr>
+              <tr><td><b>Duplicate delivery</b></td><td><span class="inj">Same X-Shopify-Webhook-Id ×3 within 2 s</span></td><td><span class="res fail">✕ Fail</span><small>3 fulfillment records created</small></td></tr>
+              <tr><td><b>Out of order</b></td><td><span class="inj">orders/updated before orders/create</span></td><td><span class="res pass">✓ Pass</span><small>409, then accepted after create</small></td></tr>
+              <tr><td><b>Tampered signature</b></td><td><span class="inj">1 byte flipped in X-Shopify-Hmac-Sha256</span></td><td><span class="res pass">✓ Pass</span><small>401 rejected</small></td></tr>
+              <tr><td><b>Timeout budget</b></td><td><span class="inj">Provider gives up after 5 s</span></td><td><span class="res fail">✕ Fail</span><small>Responded in 6.8 s, so Shopify would retry</small></td></tr>
+              <tr><td><b>Oversized body</b></td><td><span class="inj">250 line items · 412 KB</span></td><td><span class="res pass">✓ Pass</span><small>200 in 640 ms</small></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </article>
+
+    <article class="feature">
+      <div class="f-copy">
+        <p class="eyebrow">03 · Shared sessions</p>
+        <h3>One link for engineering and support.</h3>
+        <p>Pin events, leave notes and replay from the same timeline. Support can see exactly what a customer's integration sent without database access, and engineers can see what support has already tried.</p>
+        <ul class="ticks">
+          <li>View-only links for support, replay access for engineers</li>
+          <li>Redaction rules mask emails, tokens and card fields in shared views</li>
+          <li>Session history is kept for 14 days during the beta</li>
+        </ul>
+      </div>
+      <div class="session">
+        <div class="s-head">
+          <div><span class="s-kicker">Shared session · 3 people</span><h4>INC-2291 · Duplicate refund emails for Northwind Dental</h4></div>
+          <span class="pill ok">Resolved</span>
+        </div>
+        <div class="s-people">
+          <span class="avatars" aria-hidden="true"><span class="av" style="background:#6D4AE0">PR</span><span class="av" style="background:#0E7C66">MO</span><span class="av" style="background:#B3470F">JT</span></span>
+          <span class="perm">Support: view</span><span class="perm">Engineering: replay</span>
+        </div>
+        <ol class="tl">
+          <li><span class="av" style="background:#0E7C66" aria-hidden="true">MO</span><div><div class="who"><b>Marcus Oyelaran</b><span class="role">Support</span><time>09:52</time></div><p>Pinned <code>charge.refunded · evt_1RVx8q…</code>. Customer got two refund emails at 09:41. Ticket #48213.</p></div></li>
+          <li><span class="av" style="background:#6D4AE0" aria-hidden="true">PR</span><div><div class="who"><b>Priya Raman</b><span class="role">Backend</span><time>10:07</time></div><p>Stripe delivered the same event twice, 1.8 s apart, because our first 200 was slow. We dedupe on delivery, not on <code>event.id</code>.</p><p class="sysline">Replay · Duplicate ×3 → staging · <span class="x">✕ 3 emails sent</span></p></div></li>
+          <li><span class="av" style="background:#6D4AE0" aria-hidden="true">PR</span><div><div class="who"><b>Priya Raman</b><span class="role">Backend</span><time>11:34</time></div><p>Fix in PR #1851: the idempotency key is now <code>event.id</code>.</p><p class="sysline">Replay · Duplicate ×3 → staging · <span class="c">✓ 1 email sent, 2 deduped</span></p></div></li>
+          <li><span class="av" style="background:#0E7C66" aria-hidden="true">MO</span><div><div class="who"><b>Marcus Oyelaran</b><span class="role">Support</span><time>11:48</time></div><p>Sent the customer the timeline from this session. Closing the ticket.</p></div></li>
+        </ol>
+      </div>
+    </article>
+
+    <article class="feature flip">
+      <div class="f-copy">
+        <p class="eyebrow">04 · Code snippets</p>
+        <h3>A handler written from the event you actually received.</h3>
+        <p>Pick any captured event and Patchbay writes a handler for it. The handler verifies that provider's signature, parses the payload and notes the real values it saw. Patchbay also saves the event as a test fixture, so your CI keeps checking against it.</p>
+        <ul class="ticks">
+          <li>Node.js, Python and Go in the beta</li>
+          <li>Signature checks that use the provider's official SDK when one exists</li>
+          <li>Generated regression tests that use the captured payload</li>
+        </ul>
+      </div>
+      <div class="dcard codecard">
+        <div class="dcard-head"><span>Generated from <b>evt_1RWk2v…</b> · Stripe · invoice.payment_failed</span><button type="button" id="copy-code">Copy</button></div>
+        <div class="ctabs" role="tablist" aria-label="Snippet language" id="code-tabs">
+          <button type="button" role="tab" class="ctab" id="ct-node" aria-selected="true" aria-controls="cp-node">Node.js · Express</button>
+          <button type="button" role="tab" class="ctab" id="ct-py" aria-selected="false" aria-controls="cp-py" tabindex="-1">Python · FastAPI</button>
+          <button type="button" role="tab" class="ctab" id="ct-go" aria-selected="false" aria-controls="cp-go" tabindex="-1">Go · net/http</button>
+          <button type="button" role="tab" class="ctab" id="ct-test" aria-selected="false" aria-controls="cp-test" tabindex="-1">Regression test</button>
+        </div>
+<pre id="cp-node" role="tabpanel" aria-labelledby="ct-node" data-lang="js" tabindex="0">// Generated by Patchbay from evt_1RWk2v… (Stripe · invoice.payment_failed)
+import express from "express";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const app = express();
+
+app.post("/webhooks/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      req.get("stripe-signature"),
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    return res.status(400).send(`Webhook signature failed: ${err.message}`);
+  }
+
+  if (event.type === "invoice.payment_failed") {
+    const invoice = event.data.object;
+    // Captured: customer "cus_R4mZ8kLq2Xp", amount_due 4900, attempt_count 2
+    await markPastDue(invoice.customer, {
+      invoiceId: invoice.id,
+      attempt: invoice.attempt_count,
+      nextAttemptAt: new Date(invoice.next_payment_attempt * 1000),
+    });
+  }
+
+  res.sendStatus(200);
+});</pre>
+<pre id="cp-py" role="tabpanel" aria-labelledby="ct-py" data-lang="py" tabindex="0" hidden># Generated by Patchbay from evt_1RWk2v… (Stripe · invoice.payment_failed)
+import os
+from datetime import datetime, timezone
+
+import stripe
+from fastapi import FastAPI, HTTPException, Request
+
+app = FastAPI()
+WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
+
+
+@app.post("/webhooks/stripe")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature", "")
+    try:
+        event = stripe.Webhook.construct_event(payload, signature, WEBHOOK_SECRET)
+    except (ValueError, stripe.error.SignatureVerificationError):
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    if event["type"] == "invoice.payment_failed":
+        invoice = event["data"]["object"]
+        # Captured: customer "cus_R4mZ8kLq2Xp", amount_due 4900, attempt_count 2
+        await mark_past_due(
+            invoice["customer"],
+            invoice_id=invoice["id"],
+            attempt=invoice["attempt_count"],
+            next_attempt_at=datetime.fromtimestamp(invoice["next_payment_attempt"], tz=timezone.utc),
+        )
+
+    return {"received": True}</pre>
+<pre id="cp-go" role="tabpanel" aria-labelledby="ct-go" data-lang="go" tabindex="0" hidden>// Generated by Patchbay from evt_1RWk2v… (Stripe · invoice.payment_failed)
+package webhooks
+
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"os"
+
+	"github.com/stripe/stripe-go/v79"
+	"github.com/stripe/stripe-go/v79/webhook"
+)
+
+func StripeHandler(w http.ResponseWriter, r *http.Request) {
+	payload, err := io.ReadAll(io.LimitReader(r.Body, 65536))
+	if err != nil {
+		http.Error(w, "could not read body", http.StatusServiceUnavailable)
+		return
+	}
+
+	event, err := webhook.ConstructEvent(payload, r.Header.Get("Stripe-Signature"), os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	if err != nil {
+		http.Error(w, "invalid signature", http.StatusBadRequest)
+		return
+	}
+
+	if event.Type == "invoice.payment_failed" {
+		var invoice stripe.Invoice
+		if err := json.Unmarshal(event.Data.Raw, &amp;invoice); err != nil {
+			http.Error(w, "malformed invoice", http.StatusBadRequest)
+			return
+		}
+		// Captured: customer "cus_R4mZ8kLq2Xp", amount_due 4900, attempt_count 2
+		markPastDue(r.Context(), invoice.Customer.ID, invoice.ID, invoice.AttemptCount)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}</pre>
+<pre id="cp-test" role="tabpanel" aria-labelledby="ct-test" data-lang="js" tabindex="0" hidden>// Generated by Patchbay from evt_1RWk2v… (fixture saved to test/fixtures/)
+import request from "supertest";
+import Stripe from "stripe";
+import { app } from "../src/app.js";
+import { getSubscription } from "../src/billing.js";
+import fixture from "./fixtures/invoice.payment_failed.evt_1RWk2v.json" with { type: "json" };
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+test("invoice.payment_failed marks the subscription past due", async () => {
+  const payload = JSON.stringify(fixture);
+  const header = stripe.webhooks.generateTestHeaderString({ payload, secret });
+
+  const res = await request(app)
+    .post("/webhooks/stripe")
+    .set("Content-Type", "application/json")
+    .set("Stripe-Signature", header)
+    .send(payload);
+
+  expect(res.status).toBe(200);
+  expect(await getSubscription("sub_1QzY7aLkdIwHu7ixV3bN")).toMatchObject({ status: "past_due" });
+});
+
+test("rejects the captured payload with a tampered signature", async () => {
+  const res = await request(app)
+    .post("/webhooks/stripe")
+    .set("Content-Type", "application/json")
+    .set("Stripe-Signature", "t=1749146531,v1=deadbeef")
+    .send(JSON.stringify(fixture));
+
+  expect(res.status).toBe(400);
+});</pre>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="quotes-title">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">From Cohort 1 design partners</p>
+      <h2 id="quotes-title">25 teams have been using it since May. Here's what they found.</h2>
+    </div>
+    <div class="quotes">
+      <figure class="quote">
+        <blockquote>We used to paste screenshots of Stripe dashboard payloads into Slack. Now support pastes a session link, and I can replay the exact event against staging in one click.</blockquote>
+        <figcaption><span class="av" style="background:#6D4AE0" aria-hidden="true">ML</span><div><b>Maya Lindqvist</b><span>Staff Engineer, Fernhill Payroll</span></div></figcaption>
+      </figure>
+      <figure class="quote">
+        <blockquote>The duplicate-delivery scenario found a double-fulfillment bug in our Shopify handler. It had been in production for eight months.</blockquote>
+        <figcaption><span class="av" style="background:#B3470F" aria-hidden="true">TF</span><div><b>Tomás Ferreira</b><span>Engineering Lead, Loop &amp; Ledger</span></div></figcaption>
+      </figure>
+      <figure class="quote">
+        <blockquote>My team can finally see what a customer's integration actually sent, without asking engineering for database access. Our escalations dropped by about a third.</blockquote>
+        <figcaption><span class="av" style="background:#0E7C66" aria-hidden="true">AK</span><div><b>Aisha Karimi</b><span>Head of Support Engineering, Northbeam Logistics</span></div></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="scope" aria-labelledby="scope-title">
+  <div class="container">
+    <div class="section-head">
+      <p class="eyebrow">Beta scope</p>
+      <h2 id="scope-title">What the private beta covers, and what it doesn't yet.</h2>
+      <p class="sub">The beta starts with HTTP webhooks and the signing methods most providers use. Check the lists before you join so you know whether it fits your stack.</p>
+    </div>
+    <div class="scope">
+      <div class="scard in">
+        <h3><span class="ic y" aria-hidden="true">✓</span>In the private beta</h3>
+        <p class="h-note">Available to every invited team from day one.</p>
+        <ul class="slist">
+          <li><span class="ic y" aria-hidden="true">✓</span><div>HTTP(S) webhooks<small>POST, PUT and PATCH deliveries to temporary endpoints</small></div></li>
+          <li><span class="ic y" aria-hidden="true">✓</span><div>JSON, form-encoded, XML and plain-text bodies<small>Up to 512 KB per request</small></div></li>
+          <li><span class="ic y" aria-hidden="true">✓</span><div>HMAC-SHA256 and HMAC-SHA1 signatures<small>Hex or base64, in any header you configure</small></div></li>
+          <li><span class="ic y" aria-hidden="true">✓</span><div>Timestamped signatures<small>Stripe-style <code>t=…,v1=…</code> with tolerance checks</small></div></li>
+          <li><span class="ic y" aria-hidden="true">✓</span><div>Standard Webhooks spec<small><code>webhook-id</code>, <code>webhook-timestamp</code>, <code>webhook-signature</code></small></div></li>
+          <li><span class="ic y" aria-hidden="true">✓</span><div>Bearer tokens and Basic auth</div></li>
+          <li><span class="ic y" aria-hidden="true">✓</span><div>Code snippets for Node.js, Python and Go</div></li>
+        </ul>
+      </div>
+      <div class="scard">
+        <h3><span class="ic n" aria-hidden="true">–</span>Not in the beta yet</h3>
+        <p class="h-note">On the roadmap, with our current plans.</p>
+        <ul class="slist">
+          <li><span class="ic n" aria-hidden="true">–</span><div>Asymmetric signatures (Ed25519, RSA) <span class="tag soon">Planned for GA</span></div></li>
+          <li><span class="ic n" aria-hidden="true">–</span><div>mTLS client certificates <span class="tag soon">Planned for GA</span></div></li>
+          <li><span class="ic n" aria-hidden="true">–</span><div>SSO / SAML and audit-log export <span class="tag soon">Planned for GA</span></div></li>
+          <li><span class="ic n" aria-hidden="true">–</span><div>Snippets for Ruby, Java and PHP <span class="tag soon">Cohort 3</span></div></li>
+          <li><span class="ic n" aria-hidden="true">–</span><div>Non-HTTP delivery: WebSockets, gRPC, SQS, Pub/Sub, Kafka <span class="tag">Exploring</span></div></li>
+          <li><span class="ic n" aria-hidden="true">–</span><div>Self-hosted or VPC deployment <span class="tag">Not planned for 2025</span></div></li>
+        </ul>
+      </div>
+      <div class="scard lim">
+        <h3>Beta limits</h3>
+        <p class="h-note">Per team, for the whole beta.</p>
+        <dl class="limits">
+          <div><dt>Price</dt><dd>Free</dd></div>
+          <div><dt>Active endpoints</dt><dd>20</dd></div>
+          <div><dt>Endpoint lifetime</dt><dd>24 h, up to 7 days</dd></div>
+          <div><dt>Captured requests</dt><dd>50,000 / month</dd></div>
+          <div><dt>Event history</dt><dd>14 days</dd></div>
+          <div><dt>Seats (incl. support)</dt><dd>15</dd></div>
+          <div><dt>Data region</dt><dd>US-East · EU from Cohort 3</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="waitlist" aria-labelledby="wl-title">
+  <div class="container wl">
+    <div>
+      <p class="eyebrow">Join the waitlist</p>
+      <h2 id="wl-title">We invite teams in cohorts so feedback reaches us quickly.</h2>
+      <p class="sub">Everyone on the list gets an invite before general availability. The answers on the form help us decide which cohort fits your team.</p>
+
+      <ol class="timeline" aria-label="Beta timeline">
+        <li class="is-live"><span class="tdot" aria-hidden="true"></span><div><b>Cohort 1 · 25 design-partner teams</b><span class="d">Invited May 12, 2025</span></div><span class="tstat l">Live</span></li>
+        <li class="is-next"><span class="tdot" aria-hidden="true"></span><div><b>Cohort 2 · 120 teams</b><span class="d">Invites go out June 9, 2025 · 37 spots open</span></div><span class="tstat x">Next</span></li>
+        <li><span class="tdot" aria-hidden="true"></span><div><b>Cohort 3 · about 400 teams</b><span class="d">July 2025 · EU data region, Ruby snippets</span></div><span class="tstat p">Planned</span></li>
+        <li><span class="tdot" aria-hidden="true"></span><div><b>General availability</b><span class="d">Q4 2025 · pricing announced 30 days ahead</span></div><span class="tstat p">Planned</span></li>
+      </ol>
+
+      <div class="bars" role="group" aria-labelledby="bars-title">
+        <h3 id="bars-title">What the waitlist integrates with</h3>
+        <p class="h-note">Share of the 614 teams on the list · teams can pick several</p>
+        <div class="bar"><span>Stripe</span><span class="track"><span class="fill" style="width:61%"></span></span><span class="pct">61%</span></div>
+        <div class="bar"><span>GitHub</span><span class="track"><span class="fill" style="width:48%"></span></span><span class="pct">48%</span></div>
+        <div class="bar"><span>Internal / custom</span><span class="track"><span class="fill" style="width:44%"></span></span><span class="pct">44%</span></div>
+        <div class="bar"><span>Shopify</span><span class="track"><span class="fill" style="width:29%"></span></span><span class="pct">29%</span></div>
+        <div class="bar"><span>Slack</span><span class="track"><span class="fill" style="width:26%"></span></span><span class="pct">26%</span></div>
+        <div class="bar"><span>Twilio</span><span class="track"><span class="fill" style="width:18%"></span></span><span class="pct">18%</span></div>
+        <div class="bar"><span>Linear</span><span class="track"><span class="fill" style="width:12%"></span></span><span class="pct">12%</span></div>
+      </div>
+
+      <div class="fit">
+        <h3>Cohort 2 is a strong fit if your team:</h3>
+        <ul>
+          <li>maintains at least one inbound webhook integration</li>
+          <li>has had a webhook bug reach customers in the last year</li>
+          <li>wants support engineers to see raw events without database access</li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <form class="formcard" id="wl-form" novalidate aria-labelledby="wl-form-title">
+        <div class="fc-head"><h3 id="wl-form-title">Request a beta invite</h3><p>It takes about a minute. Only your email is required.</p></div>
+        <div class="row2">
+          <div class="field"><label for="wl-name">Name</label><input id="wl-name" type="text" autocomplete="name" placeholder="Priya Raman"></div>
+          <div class="field"><label for="wl-company">Company</label><input id="wl-company" type="text" autocomplete="organization" placeholder="Acme Pay"></div>
+        </div>
+        <div class="field"><label for="wl-email">Work email <span class="req">required</span></label><input id="wl-email" type="email" required autocomplete="email" placeholder="you@company.com" aria-describedby="wl-email-err"><span class="error" id="wl-email-err" role="alert"></span></div>
+        <div class="row2">
+          <div class="field"><label for="wl-role">Your role</label>
+            <select id="wl-role">
+              <option>Backend / full-stack engineer</option>
+              <option>Platform / DevOps / SRE</option>
+              <option>Support engineering</option>
+              <option>QA / test engineering</option>
+              <option>Engineering manager</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label for="wl-size">Engineering team size</label>
+            <select id="wl-size">
+              <option>1–10</option>
+              <option selected>11–50</option>
+              <option>51–200</option>
+              <option>201–1,000</option>
+              <option>1,000+</option>
+            </select>
+          </div>
+        </div>
+        <fieldset class="field">
+          <legend>Webhooks you work with</legend>
+          <div class="chips" id="wl-providers">
+            <label class="chip"><input type="checkbox" value="Stripe"><span>Stripe</span></label>
+            <label class="chip"><input type="checkbox" value="GitHub"><span>GitHub</span></label>
+            <label class="chip"><input type="checkbox" value="Shopify"><span>Shopify</span></label>
+            <label class="chip"><input type="checkbox" value="Slack"><span>Slack</span></label>
+            <label class="chip"><input type="checkbox" value="Twilio"><span>Twilio</span></label>
+            <label class="chip"><input type="checkbox" value="Linear"><span>Linear</span></label>
+            <label class="chip"><input type="checkbox" value="Internal / custom"><span>Internal / custom</span></label>
+            <label class="chip"><input type="checkbox" value="Other"><span>Other</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="field">
+          <legend>Who would use Patchbay?</legend>
+          <div class="chips" id="wl-users">
+            <label class="chip"><input type="checkbox" value="Engineering" checked><span>Engineering</span></label>
+            <label class="chip"><input type="checkbox" value="Support"><span>Support</span></label>
+            <label class="chip"><input type="checkbox" value="QA"><span>QA</span></label>
+            <label class="chip"><input type="checkbox" value="Platform / SRE"><span>Platform / SRE</span></label>
+          </div>
+        </fieldset>
+        <div class="field"><label for="wl-pain">What's hardest about webhooks today? <span class="opt">optional</span></label><textarea id="wl-pain" rows="3" placeholder="e.g. Reproducing a customer's failed Shopify order without asking for their data"></textarea></div>
+        <label class="check"><input type="checkbox" id="wl-updates"> <span>Send me the monthly build log, about one email a month</span></label>
+        <button class="btn btn-primary btn-block" type="submit">Join the waitlist <span class="arrow" aria-hidden="true">→</span></button>
+        <p class="fine">We only use your email for beta invites and, if you opt in, the build log. You can unsubscribe at any time.</p>
+      </form>
+
+      <div class="formcard done" id="wl-done" hidden tabindex="-1">
+        <div class="done-badge" aria-hidden="true">✓</div>
+        <h3 id="done-title">You're on the list.</h3>
+        <p class="pos">Position <b>#<span data-count>2,318</span></b> · <span id="done-cohort">Likely Cohort 2 (invites June 9)</span></p>
+        <dl class="limits" id="done-summary"></dl>
+        <div class="next">
+          <b>What happens next</b>
+          <ol>
+            <li>You'll get a confirmation email within a few minutes.</li>
+            <li>When your cohort opens, we'll send an invite link for up to 15 teammates.</li>
+            <li>If you'd like, book a 30-minute onboarding call and we'll set up your first endpoint with you.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="faq" aria-labelledby="faq-title">
+  <div class="container faq">
+    <div class="faq-side">
+      <p class="eyebrow">FAQ</p>
+      <h2 id="faq-title">Questions teams ask before joining.</h2>
+      <p>Something else? Email <a href="mailto:beta@patchbay.cloud">beta@patchbay.cloud</a>. A founder usually replies within a day.</p>
+    </div>
+    <div>
+      <details open>
+        <summary>Is Patchbay Cloud meant to sit in front of production traffic?</summary>
+        <p>No. Patchbay is for testing and debugging integrations before they reach production, and alongside it when something breaks. Point your providers' test-mode or staging webhooks at a temporary endpoint, and promote your handler once it passes. There are no delivery guarantees or production SLAs during the beta.</p>
+      </details>
+      <details>
+        <summary>How long do endpoints and captured events last?</summary>
+        <p>Endpoints expire after 24 hours by default, and you can extend them to 7 days. Captured events and session history are kept for 14 days, then permanently deleted. You can delete an endpoint and all of its events at any time.</p>
+      </details>
+      <details>
+        <summary>What happens to sensitive data in payloads?</summary>
+        <p>Payloads are encrypted in transit (TLS 1.2+) and at rest (AES-256). Redaction rules mask fields such as emails, tokens and card data before events appear in shared views, and share links can be view-only. During the beta, we recommend using your providers' test modes.</p>
+      </details>
+      <details>
+        <summary>Which providers and signing methods work?</summary>
+        <p>Any service that sends webhooks over HTTP(S). Signature presets cover HMAC-SHA256 and HMAC-SHA1 (hex or base64), timestamped schemes such as Stripe's <code>t=…,v1=…</code>, the Standard Webhooks spec, and bearer-token or Basic auth. Asymmetric signatures (Ed25519, RSA) are planned for general availability.</p>
+      </details>
+      <details>
+        <summary>Can I replay events to my laptop?</summary>
+        <p>Replays go to any HTTPS URL that's reachable from the internet. That can be a staging environment, a preview deploy, or a tunnel you already use to expose localhost. Replays are re-signed with the target's secret, so your verification code runs just as it would for the real provider.</p>
+      </details>
+      <details>
+        <summary>What does the beta cost, and what happens after?</summary>
+        <p>The beta is free for every invited team, within the limits above. We'll announce pricing at least 30 days before general availability, and beta teams get 50% off any paid plan for their first 6 months.</p>
+      </details>
+      <details>
+        <summary>How are teams chosen for each cohort?</summary>
+        <p>We look for a mix of providers and stacks. We prioritise teams where both support and engineering want to use Patchbay, and teams willing to join two 30-minute feedback calls. Everyone on the list gets an invite before GA.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="cta">
+    <div>
+      <h2>Your next webhook bug has probably been sent already.</h2>
+      <p>Join <span data-count>2,318</span> developers on the waitlist. Cohort 2 invites go out June 9.</p>
+    </div>
+    <a class="btn" href="#waitlist">Join the waitlist <span class="arrow" aria-hidden="true">→</span></a>
+  </div>
+</div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="foot">
+      <div>
+        <a class="brand" href="#top">
+          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#14161B"/><path d="M10 11c0 9 12 1 12 10" stroke="#F4F1EA" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="10" cy="10" r="3.6" fill="#E4561B"/><circle cx="22" cy="22" r="3.6" fill="#F4F1EA"/></svg>
+          Patchbay Cloud
+        </a>
+        <p>Test and debug webhook integrations before they reach production. In private beta since May 2025.</p>
+      </div>
+      <div>
+        <h3>Product</h3>
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#scope">Beta scope &amp; limits</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <ul>
+          <li><a href="mailto:beta@patchbay.cloud">beta@patchbay.cloud</a></li>
+          <li><a href="mailto:security@patchbay.cloud">security@patchbay.cloud</a></li>
+          <li><a href="#waitlist">Request an invite</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="legal"><span>© 2025 Patchbay Cloud, Inc.</span><span>Beta terms and the privacy policy are sent with your invite.</span></div>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s, r){ return (r || document).querySelector(s); };
+  var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function fmt(n){ return Number(n).toLocaleString("en-US"); }
+
+  /* ---------- Highlighters ---------- */
+  function hlJSON(str){
+    var re = /("(?:[^"\\]|\\.)*")(\s*:)?|\b(true|false|null)\b|(-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)/g;
+    var out = "", last = 0, m;
+    while ((m = re.exec(str))) {
+      out += esc(str.slice(last, m.index));
+      if (m[1]) out += m[2] ? '<span class="t-key">' + esc(m[1]) + '</span>' + esc(m[2]) : '<span class="t-str">' + esc(m[1]) + '</span>';
+      else if (m[3]) out += '<span class="t-lit">' + m[3] + '</span>';
+      else out += '<span class="t-num">' + m[4] + '</span>';
+      last = re.lastIndex;
+    }
+    return out + esc(str.slice(last));
+  }
+  var KW = {
+    js: "import|from|const|let|var|return|if|else|await|async|new|try|catch|function|export|default|throw|of|for|with|true|false|null",
+    py: "import|from|def|async|await|return|if|else|elif|try|except|raise|as|with|for|in|not|and|or|None|True|False",
+    go: "package|import|func|return|if|else|var|nil|for|range|type|struct|defer|err"
+  };
+  function hlCode(code, lang){
+    var comment = lang === "py" ? "#.*$" : "\\/\\/.*$";
+    var src = "(" + comment + ")|(\"(?:[^\"\\\\\\n]|\\\\.)*\"|'(?:[^'\\\\\\n]|\\\\.)*'|`(?:[^`\\\\]|\\\\.)*`)|\\b(" + KW[lang] + ")\\b|\\b(\\d+)\\b";
+    var re = new RegExp(src, "gm");
+    var out = "", last = 0, m;
+    while ((m = re.exec(code))) {
+      if (m[0] === "") { re.lastIndex++; continue; }
+      out += esc(code.slice(last, m.index));
+      if (m[1]) out += '<span class="t-com">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="t-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="t-kw">' + m[3] + '</span>';
+      else out += '<span class="t-num">' + m[4] + '</span>';
+      last = re.lastIndex;
+    }
+    return out + esc(code.slice(last));
+  }
+
+  /* ---------- Toast & clipboard ---------- */
+  var toastEl = $("#toast"), toastT;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastT);
+    toastT = setTimeout(function(){ toastEl.classList.remove("show"); }, 2800);
+  }
+  function copy(text, msg){
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function(){}); } catch (e) {}
+    toast(msg);
+  }
+
+  /* ---------- Mock data ---------- */
+  var EVENTS = [
+    {
+      id:"evt_1RWk2vLkdIwHu7ix0aB3cD9e", src:"stripe", srcLabel:"Stripe", type:"invoice.payment_failed",
+      status:200, ms:142, time:"14:02:11", size:"3.1 KB", ip:"54.187.216.72", hasTs:true,
+      verify:"stripe", route:"/webhooks/stripe", target:"staging.acme-pay.dev/webhooks/stripe",
+      sig:{ok:true, title:"Stripe-Signature verified", detail:"HMAC-SHA256 · t=1749146531 · within 300 s tolerance"},
+      headers:{"Host":"pb.patchbay.cloud","User-Agent":"Stripe/1.0 (+https://stripe.com/docs/webhooks)","Content-Type":"application/json; charset=utf-8","Content-Length":"3174","Accept":"*/*; q=0.5, application/xml","Cache-Control":"no-cache","Stripe-Signature":"t=1749146531,v1=5257a869e7ecebeda32affa62cdca3fa51cad7e77a0e56ff536d0ce8e108d8bd"},
+      payload:{id:"evt_1RWk2vLkdIwHu7ix0aB3cD9e",object:"event",api_version:"2024-06-20",created:1749146531,type:"invoice.payment_failed",livemode:false,pending_webhooks:1,
+        data:{object:{id:"in_1RWk2tLkdIwHu7ixR4mZq8Ns",object:"invoice",customer:"cus_R4mZ8kLq2Xp",customer_email:"ops@northwind-dental.com",subscription:"sub_1QzY7aLkdIwHu7ixV3bN",amount_due:4900,amount_paid:0,currency:"usd",attempt_count:2,next_payment_attempt:1749405731,billing_reason:"subscription_cycle",status:"open"}}},
+      response:{line:"HTTP/1.1 200 OK", headers:{"Content-Type":"application/json","X-Request-Id":"req_8f2a61c0d4"}, body:{received:true}},
+      handler:[
+        '  if (event.type === "invoice.payment_failed") {',
+        '    const invoice = event.data.object;',
+        '    // Captured: customer "cus_R4mZ8kLq2Xp", amount_due 4900, attempt_count 2',
+        '    await markPastDue(invoice.customer, { invoiceId: invoice.id, attempt: invoice.attempt_count });',
+        '  }'
+      ]
+    },
+    {
+      id:"7c1e3f40-423a-11f0-8a4e-0d2f6c1b9a55", src:"github", srcLabel:"GitHub", type:"pull_request.opened",
+      status:200, ms:311, time:"14:01:47", size:"18.4 KB", ip:"140.82.115.24", hasTs:false,
+      verify:"hex", secretEnv:"GITHUB_WEBHOOK_SECRET", sigHeader:"x-hub-signature-256", prefix:"sha256=",
+      route:"/webhooks/github", target:"staging.acme-pay.dev/webhooks/github",
+      staleNote:"accepted: GitHub signatures carry no timestamp, so dedupe on X-GitHub-Delivery",
+      sig:{ok:true, title:"X-Hub-Signature-256 verified", detail:"HMAC-SHA256 · hex · secret ends …4f2e"},
+      headers:{"Host":"pb.patchbay.cloud","User-Agent":"GitHub-Hookshot/8f2a9c1","Content-Type":"application/json","Content-Length":"18842","X-GitHub-Event":"pull_request","X-GitHub-Delivery":"7c1e3f40-423a-11f0-8a4e-0d2f6c1b9a55","X-GitHub-Hook-ID":"481203377","X-GitHub-Hook-Installation-Target-Type":"repository","X-Hub-Signature-256":"sha256=3f1c8e0b9d4a72e615c0b8f7a2d94e61c3b58f0a7e2d19c46b8a3f5e0d71c29b"},
+      payload:{action:"opened",number:1842,
+        pull_request:{id:1920334817,number:1842,state:"open",draft:false,title:"Retry failed invoice webhooks with exponential backoff",user:{login:"priya-r",id:5810247},
+          head:{ref:"fix/webhook-backoff",sha:"e41f7a0c2b9d83f1a6e5c7d4b2a19f0e8c3d6b71"},base:{ref:"main",sha:"9c1d2e7b4a6f58e3d0c1b2a3f4e5d6c7b8a9f0e1"},
+          additions:214,deletions:37,changed_files:9,html_url:"https://github.com/acme-pay/billing-service/pull/1842"},
+        repository:{id:702114583,full_name:"acme-pay/billing-service",private:true,default_branch:"main"},
+        sender:{login:"priya-r",type:"User"}},
+      response:{line:"HTTP/1.1 200 OK", headers:{"Content-Type":"application/json","X-Request-Id":"req_3c9b07e1aa"}, body:{queued:"preview-deploy",pr:1842}},
+      handler:[
+        '  if (req.get("x-github-event") === "pull_request" && event.action === "opened") {',
+        '    const pr = event.pull_request;',
+        '    // Captured: pr.number 1842, pr.head.ref "fix/webhook-backoff"',
+        '    await queuePreviewDeploy(event.repository.full_name, pr.number, pr.head.sha);',
+        '  }'
+      ]
+    },
+    {
+      id:"evt_1RWjzQLkdIwHu7ixKp4TnB2c", src:"stripe", srcLabel:"Stripe", type:"customer.subscription.updated",
+      status:400, ms:38, time:"13:59:02", size:"4.2 KB", ip:"54.187.216.72", hasTs:true,
+      verify:"stripe", route:"/webhooks/stripe", target:"staging.acme-pay.dev/webhooks/stripe",
+      replayNote:"re-signed with current secret whsec_…c2A",
+      sig:{ok:false, title:"Signature mismatch", detail:"No v1 signature matches secret whsec_…c2A. The secret for this endpoint was rotated at 13:41."},
+      headers:{"Host":"pb.patchbay.cloud","User-Agent":"Stripe/1.0 (+https://stripe.com/docs/webhooks)","Content-Type":"application/json; charset=utf-8","Content-Length":"4301","Accept":"*/*; q=0.5, application/xml","Cache-Control":"no-cache","Stripe-Signature":"t=1749146342,v1=a0c7e19d44b2f3860e5b1c9a7d2f48e3b6c05a91d7e2f4c8b3a6d0e9f1c27b58"},
+      payload:{id:"evt_1RWjzQLkdIwHu7ixKp4TnB2c",object:"event",api_version:"2024-06-20",created:1749146342,type:"customer.subscription.updated",livemode:false,
+        data:{object:{id:"sub_1QzY7aLkdIwHu7ixV3bN",object:"subscription",customer:"cus_R4mZ8kLq2Xp",status:"past_due",cancel_at_period_end:false,current_period_end:1751738531,
+          items:{object:"list",data:[{id:"si_R4n0Tq8LmV",price:{id:"price_1PqTeamMonthly",unit_amount:4900,recurring:{interval:"month"}},quantity:1}]}},
+          previous_attributes:{status:"active"}}},
+      response:{line:"HTTP/1.1 400 Bad Request", headers:{"Content-Type":"text/plain; charset=utf-8","X-Request-Id":"req_d41e8a27f0"}, body:{error:"Webhook signature failed: No signatures found matching the expected signature for payload"}},
+      handler:[
+        '  if (event.type === "customer.subscription.updated") {',
+        '    const sub = event.data.object;',
+        '    const prev = event.data.previous_attributes;',
+        '    // Captured: sub.status "past_due", prev.status "active"',
+        '    if (prev.status && prev.status !== sub.status) await syncSubscriptionStatus(sub.id, sub.status);',
+        '  }'
+      ]
+    },
+    {
+      id:"b54557e4-bdd9-4b37-8a5f-bf7d70bcd043", src:"shopify", srcLabel:"Shopify", type:"orders/create",
+      status:500, ms:2041, time:"13:58:30", size:"6.7 KB", ip:"34.66.113.58", hasTs:false,
+      verify:"b64", secretEnv:"SHOPIFY_API_SECRET", sigHeader:"x-shopify-hmac-sha256", prefix:"",
+      route:"/webhooks/shopify", target:"staging.acme-pay.dev/webhooks/shopify",
+      staleNote:"accepted: Shopify HMAC has no timestamp, so dedupe on X-Shopify-Webhook-Id",
+      sig:{ok:true, title:"X-Shopify-Hmac-Sha256 verified", detail:"HMAC-SHA256 · base64 · app secret ends …91bd"},
+      headers:{"Host":"pb.patchbay.cloud","User-Agent":"Shopify-Captain-Hook","Content-Type":"application/json","Content-Length":"6861","X-Shopify-Topic":"orders/create","X-Shopify-Shop-Domain":"northwind-outfitters.myshopify.com","X-Shopify-API-Version":"2024-04","X-Shopify-Webhook-Id":"b54557e4-bdd9-4b37-8a5f-bf7d70bcd043","X-Shopify-Triggered-At":"2025-06-05T17:58:29.803Z","X-Shopify-Hmac-Sha256":"XWmrwMey6OsLMeiZKwP4FppHH3cmAiiJJAweH5Jo4bM="},
+      payload:{id:5712347889827,name:"#1047",email:"dana.whitfield@example.com",created_at:"2025-06-05T13:58:29-04:00",currency:"USD",
+        subtotal_price:"118.00",total_tax:"10.40",total_price:"128.40",financial_status:"paid",fulfillment_status:null,
+        billing_address:null,
+        shipping_address:{first_name:"Dana",last_name:"Whitfield",city:"Portland",province_code:"OR",zip:"97214",country_code:"US"},
+        line_items:[{id:14290017583267,title:"Trail Runner Pack 22L",sku:"TRP-22-OLV",quantity:1,price:"89.00"},{id:14290017616035,title:"Merino Crew Socks",sku:"MCS-M-GRY",quantity:2,price:"14.50"}]},
+      response:{line:"HTTP/1.1 500 Internal Server Error", headers:{"Content-Type":"application/json","X-Request-Id":"req_71fa0c39b2"}, body:{error:"TypeError: Cannot read properties of null (reading 'province_code')",at:"handlers/shopify/orders.js:42:31"}},
+      handler:[
+        '  // Topic: req.get("x-shopify-topic") is "orders/create"',
+        '  // billing_address is null in this capture, so guard before reading it',
+        '  const region = event.billing_address?.province_code ?? event.shipping_address?.province_code;',
+        '  await createFulfillment(event.id, { region, lineItems: event.line_items });'
+      ]
+    },
+    {
+      id:"msg_2hK9vQx4TzLmP8aW", src:"billing", srcLabel:"billing-svc", type:"subscription.renewed",
+      status:202, okStatus:202, ms:64, time:"13:57:10", size:"0.9 KB", ip:"10.42.7.18 via NAT 3.18.12.63", hasTs:true,
+      verify:"stdwh", secretEnv:"BILLING_WEBHOOK_SECRET",
+      route:"/hooks/billing", target:"pr-1842.preview.acme-pay.dev/hooks/billing",
+      sig:{ok:true, title:"webhook-signature verified", detail:"Standard Webhooks · v1 HMAC-SHA256 · timestamp within 5 min"},
+      headers:{"Host":"pb.patchbay.cloud","User-Agent":"acme-billing-svc/3.14.2","Content-Type":"application/json","Content-Length":"921","webhook-id":"msg_2hK9vQx4TzLmP8aW","webhook-timestamp":"1749146230","webhook-signature":"v1,K5oZfzN95Z9UVu1EsfQmfVNQhnkZ2pj9o9NDN/H/pI4="},
+      payload:{type:"subscription.renewed",timestamp:"2025-06-05T17:57:10Z",
+        data:{subscription_id:"sub_7731",account_id:"acct_northwind",plan:"team-annual",seats:24,amount_cents:230400,currency:"usd",period_start:"2025-06-05",period_end:"2026-06-05"}},
+      response:{line:"HTTP/1.1 202 Accepted", headers:{"Content-Type":"application/json","X-Request-Id":"req_0b6d93ce15"}, body:{queued:true,job:"entl_91f0c2"}},
+      handler:[
+        '  if (event.type === "subscription.renewed") {',
+        '    const { account_id, seats, period_end } = event.data;',
+        '    // Idempotency key: webhook-id "msg_2hK9vQx4TzLmP8aW"',
+        '    await extendEntitlements(account_id, { seats, until: period_end }, req.get("webhook-id"));',
+        '  }'
+      ]
+    },
+    {
+      id:"0f5d2b7e-8c41-4a9e-b3d6-71e2c9a04f18", src:"linear", srcLabel:"Linear", type:"Issue.update",
+      status:200, ms:96, time:"13:55:12", size:"2.2 KB", ip:"35.231.147.226", hasTs:false,
+      verify:"hex", secretEnv:"LINEAR_WEBHOOK_SECRET", sigHeader:"linear-signature", prefix:"",
+      route:"/webhooks/linear", target:"staging.acme-pay.dev/webhooks/linear",
+      staleNote:"accepted: the handler doesn't check webhookTimestamp (Linear suggests ±60 s)",
+      sig:{ok:true, title:"Linear-Signature verified", detail:"HMAC-SHA256 · hex · secret ends …a7c1"},
+      headers:{"Host":"pb.patchbay.cloud","User-Agent":"Linear-Webhook","Content-Type":"application/json; charset=utf-8","Content-Length":"2253","Linear-Delivery":"0f5d2b7e-8c41-4a9e-b3d6-71e2c9a04f18","Linear-Event":"Issue","Linear-Signature":"766e1d90a96e2f5ecec342a99c5552999dd95d49250171b902d703fd674f5086"},
+      payload:{action:"update",type:"Issue",createdAt:"2025-06-05T17:55:12.408Z",organizationId:"b6f1c3e2-7a4d-4e19-9c85-2f0d6b8a13e7",
+        data:{id:"a1c94e27-5b3d-4f8a-9e61-2d7c0b8f4a13",identifier:"BIL-318",title:"Past-due banner shows for paid accounts",priority:2,priorityLabel:"High",
+          state:{name:"In Progress",type:"started"},assignee:{name:"Jun Tanaka"},labels:[{name:"billing"},{name:"webhooks"}]},
+        updatedFrom:{stateId:"4e1b7a90-2c6d-4f35-8b0e-9a7d3c1f5e26",updatedAt:"2025-06-05T16:20:03.112Z"},
+        url:"https://linear.app/acme-pay/issue/BIL-318/past-due-banner-shows-for-paid-accounts",webhookTimestamp:1749146112408},
+      response:{line:"HTTP/1.1 200 OK", headers:{"Content-Type":"application/json","X-Request-Id":"req_5e28c4b09d"}, body:{posted:"#billing-support"}},
+      handler:[
+        '  if (event.type === "Issue" && event.action === "update") {',
+        '    // Captured: data.identifier "BIL-318", data.state.name "In Progress"',
+        '    await postToSupportChannel(event.data.identifier, event.data.state.name, event.url);',
+        '  }'
+      ]
+    },
+    {
+      id:"2b8f91c0-4238-11f0-9e7a-5c3d1b2a8f60", src:"github", srcLabel:"GitHub", type:"push",
+      status:200, ms:188, time:"13:52:44", size:"9.8 KB", ip:"140.82.115.24", hasTs:false,
+      verify:"hex", secretEnv:"GITHUB_WEBHOOK_SECRET", sigHeader:"x-hub-signature-256", prefix:"sha256=",
+      route:"/webhooks/github", target:"staging.acme-pay.dev/webhooks/github",
+      staleNote:"accepted: GitHub signatures carry no timestamp, so dedupe on X-GitHub-Delivery",
+      sig:{ok:true, title:"X-Hub-Signature-256 verified", detail:"HMAC-SHA256 · hex · secret ends …4f2e"},
+      headers:{"Host":"pb.patchbay.cloud","User-Agent":"GitHub-Hookshot/8f2a9c1","Content-Type":"application/json","Content-Length":"10035","X-GitHub-Event":"push","X-GitHub-Delivery":"2b8f91c0-4238-11f0-9e7a-5c3d1b2a8f60","X-GitHub-Hook-ID":"481203377","X-Hub-Signature-256":"sha256=a94c1e7f0b3d82c5e6f19a04d7b2c8e3f5a61d09b4c7e2f8a3d6b10c5e9f7a24"},
+      payload:{ref:"refs/heads/fix/webhook-backoff",before:"9c1d2e7b4a6f58e3d0c1b2a3f4e5d6c7b8a9f0e1",after:"e41f7a0c2b9d83f1a6e5c7d4b2a19f0e8c3d6b71",created:false,forced:false,
+        commits:[{id:"e41f7a0c2b9d83f1a6e5c7d4b2a19f0e8c3d6b71",message:"Use event.id as idempotency key for invoice handlers",timestamp:"2025-06-05T13:52:31-04:00",
+          author:{name:"Priya Raman",username:"priya-r"},added:["handlers/stripe/idempotency.ts"],modified:["handlers/stripe/invoice.ts","test/fixtures/invoice.payment_failed.json"],removed:[]}],
+        pusher:{name:"priya-r"},repository:{full_name:"acme-pay/billing-service",private:true},sender:{login:"priya-r"}},
+      response:{line:"HTTP/1.1 200 OK", headers:{"Content-Type":"application/json","X-Request-Id":"req_9a14f6d2c8"}, body:{ci:"queued",run:48821}},
+      handler:[
+        '  if (req.get("x-github-event") === "push") {',
+        '    // Captured: ref "refs/heads/fix/webhook-backoff", 1 commit',
+        '    await triggerCi(event.repository.full_name, event.after);',
+        '  }'
+      ]
+    }
+  ];
+  EVENTS.forEach(function(e){ e.short = e.id.slice(0, 12) + "…"; e.edited = null; });
+
+  var REASON = {200:"OK",202:"Accepted",400:"Bad Request",401:"Unauthorized",500:"Server Error"};
+  var MODE = {normal:"normal",dup:"duplicate",tamper:"tampered sig",stale:"stale timestamp",slow:"slow network"};
+  function sc(s){ return s >= 500 ? "s5" : s >= 400 ? "s4" : "s2"; }
+  function stc(s){ return s >= 500 ? "st-5" : s >= 400 ? "st-4" : "st-2"; }
+
+  /* ---------- Inspector ---------- */
+  var listEl = $("#ev-list"), preEl = $("#pre"), editorEl = $("#editor"), ta = $("#ta"), edStatus = $("#ed-status");
+  var editBtn = $("#edit-btn"), simEl = $("#sim"), logEl = $("#log"), logCount = $("#log-count");
+  var sel = 0, tab = "payload", editing = false, totalReplays = 3;
+
+  $("#ev-summary").textContent = EVENTS.length + " events · 45.3 KB";
+
+  listEl.innerHTML = EVENTS.map(function(e, i){
+    return '<li><button type="button" class="ev" data-i="' + i + '" aria-current="' + (i === sel) + '">' +
+      '<span class="ev-l1"><span class="src src-' + e.src + '">' + esc(e.srcLabel) + '</span><span class="ev-type">' + esc(e.type) + '</span></span>' +
+      '<span class="code ' + sc(e.status) + '">' + e.status + '</span>' +
+      '<span class="ev-meta">' + e.time + ' · ' + e.size + ' · ' + fmt(e.ms) + ' ms</span>' +
+      '<span class="ev-sig ' + (e.sig.ok ? "ok" : "bad") + '">' + (e.sig.ok ? "✓ sig" : "✕ sig") + '<span class="sr-only">' + (e.sig.ok ? " verified" : " failed") + '</span></span>' +
+      '</button></li>';
+  }).join("");
+
+  function select(i){
+    if (editing) stopEditing(false);
+    sel = i;
+    $$(".ev", listEl).forEach(function(b){ b.setAttribute("aria-current", String(+b.dataset.i === sel)); });
+    renderDetail();
+  }
+  listEl.addEventListener("click", function(ev){
+    var b = ev.target.closest(".ev"); if (b) select(+b.dataset.i);
+  });
+  listEl.addEventListener("keydown", function(ev){
+    if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp") return;
+    ev.preventDefault();
+    var n = (sel + (ev.key === "ArrowDown" ? 1 : -1) + EVENTS.length) % EVENTS.length;
+    select(n);
+    var b = listEl.querySelector('[data-i="' + n + '"]'); if (b) b.focus();
+  });
+
+  function renderDetail(){
+    var e = EVENTS[sel];
+    var srcEl = $("#d-src");
+    srcEl.className = "src src-" + e.src; srcEl.textContent = e.srcLabel;
+    $("#d-type").textContent = e.type;
+    $("#d-meta").innerHTML = esc(e.short) + " · received " + e.time + " EDT · from " + esc(e.ip) + "<br>" + e.size + " · handler replied <span class=\"" + stc(e.status) + "\">" + e.status + " " + (REASON[e.status] || "") + "</span> in " + fmt(e.ms) + " ms" + (e.edited ? '<span class="edited-tag">payload edited</span>' : "");
+    var sig = $("#d-sig");
+    sig.className = "sig " + (e.sig.ok ? "ok" : "bad");
+    sig.innerHTML = '<span class="ico" aria-hidden="true">' + (e.sig.ok ? "✓" : "✕") + '</span><div><strong>' + esc(e.sig.title) + '</strong><span class="sd">' + esc(e.sig.detail) + '</span></div>';
+    $("#d-target").textContent = e.target;
+    if (!editing) renderPanel();
+  }
+
+  function renderPanel(){
+    var e = EVENTS[sel], h = "";
+    if (tab === "payload") h = hlJSON(JSON.stringify(e.edited || e.payload, null, 2));
+    else if (tab === "headers") h = Object.keys(e.headers).map(function(k){ return '<span class="t-key">' + esc(k) + '</span>: <span class="t-str">' + esc(e.headers[k]) + '</span>'; }).join("\n");
+    else if (tab === "response") {
+      var r = e.response;
+      h = '<span class="' + stc(e.status) + '">' + esc(r.line) + '</span>\n' +
+        Object.keys(r.headers).map(function(k){ return '<span class="t-key">' + esc(k) + '</span>: <span class="t-str">' + esc(r.headers[k]) + '</span>'; }).join("\n") +
+        '\n<span class="t-com">X-Response-Time: ' + fmt(e.ms) + ' ms</span>\n\n' + hlJSON(JSON.stringify(r.body, null, 2));
+    }
+    else h = hlCode(snippetFor(e), "js");
+    preEl.innerHTML = h;
+    preEl.scrollTop = 0;
+  }
+
+  function snippetFor(e){
+    var L = [];
+    L.push("// Generated by Patchbay from " + e.short + " (" + e.srcLabel + " · " + e.type + ")");
+    L.push('import express from "express";');
+    if (e.verify === "stripe") L.push('import Stripe from "stripe";');
+    if (e.verify === "hex" || e.verify === "b64") L.push('import crypto from "node:crypto";');
+    if (e.verify === "stdwh") L.push('import { Webhook } from "standardwebhooks";');
+    L.push("");
+    if (e.verify === "stripe") L.push("const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);");
+    if (e.verify === "stdwh") L.push("const wh = new Webhook(process.env." + e.secretEnv + ");");
+    L.push("const app = express();", "");
+    L.push('app.post("' + e.route + '", express.raw({ type: "application/json" }), async (req, res) => {');
+    if (e.verify === "stripe") {
+      L.push("  let event;", "  try {", "    event = stripe.webhooks.constructEvent(",
+        '      req.body, req.get("stripe-signature"), process.env.STRIPE_WEBHOOK_SECRET',
+        "    );", "  } catch (err) {", '    return res.status(400).send("Invalid signature");', "  }");
+    } else if (e.verify === "stdwh") {
+      L.push("  let event;", "  try {", "    event = wh.verify(req.body, req.headers);", "  } catch (err) {", "    return res.sendStatus(400);", "  }");
+    } else {
+      var enc = e.verify === "hex" ? "hex" : "base64";
+      L.push("  const expected = " + (e.prefix ? '"' + e.prefix + '" + ' : "") + "crypto",
+        '    .createHmac("sha256", process.env.' + e.secretEnv + ")",
+        '    .update(req.body).digest("' + enc + '");',
+        '  if (!safeEqual(expected, req.get("' + e.sigHeader + '"))) return res.sendStatus(401);',
+        "  const event = JSON.parse(req.body);");
+    }
+    L.push("");
+    L = L.concat(e.handler);
+    L.push("", "  res.sendStatus(" + (e.okStatus || 200) + ");", "});");
+    if (e.verify === "hex" || e.verify === "b64") {
+      L.push("", 'function safeEqual(a, b = "") {', "  const x = Buffer.from(a), y = Buffer.from(b);", "  return x.length === y.length && crypto.timingSafeEqual(x, y);", "}");
+    }
+    return L.join("\n");
+  }
+
+  /* Tabs (inspector) */
+  var tabsWrap = $("#insp-tabs"), panelEl = $("#insp-panel");
+  function setTab(name){
+    if (editing && name !== "payload") { if (!stopEditing(true)) return; }
+    tab = name;
+    $$('[role="tab"]', tabsWrap).forEach(function(t){
+      var on = t.dataset.tab === name;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+      if (on) panelEl.setAttribute("aria-labelledby", t.id);
+    });
+    if (!editing) renderPanel();
+  }
+  function wireTabs(wrap, onSelect){
+    var tabs = $$('[role="tab"]', wrap);
+    tabs.forEach(function(t, i){
+      t.addEventListener("click", function(){ onSelect(t); });
+      t.addEventListener("keydown", function(ev){
+        var j = null;
+        if (ev.key === "ArrowRight") j = (i + 1) % tabs.length;
+        if (ev.key === "ArrowLeft") j = (i - 1 + tabs.length) % tabs.length;
+        if (ev.key === "Home") j = 0;
+        if (ev.key === "End") j = tabs.length - 1;
+        if (j !== null) { ev.preventDefault(); tabs[j].focus(); onSelect(tabs[j]); }
+      });
+    });
+  }
+  wireTabs(tabsWrap, function(t){ setTab(t.dataset.tab); });
+
+  /* Editing */
+  function validate(){
+    try { JSON.parse(ta.value); edStatus.className = "ed-ok"; edStatus.textContent = "✓ Valid JSON · " + fmt(new Blob([ta.value]).size) + " bytes"; return true; }
+    catch (err) { edStatus.className = "ed-bad"; edStatus.textContent = "✕ " + err.message.slice(0, 70); return false; }
+  }
+  function setEdited(e, p){
+    e.edited = JSON.stringify(p) === JSON.stringify(e.payload) ? null : p;
+  }
+  function startEditing(){
+    var e = EVENTS[sel];
+    setTab("payload");
+    editing = true;
+    ta.value = JSON.stringify(e.edited || e.payload, null, 2);
+    preEl.hidden = true; editorEl.hidden = false;
+    editBtn.textContent = "Save edits"; editBtn.setAttribute("aria-pressed", "true");
+    validate(); ta.focus();
+  }
+  function stopEditing(save){
+    var e = EVENTS[sel];
+    if (save) {
+      try { setEdited(e, JSON.parse(ta.value)); }
+      catch (err) { toast("Fix the JSON before saving your edits"); return false; }
+    }
+    editing = false;
+    editorEl.hidden = true; preEl.hidden = false;
+    editBtn.textContent = "Edit payload"; editBtn.setAttribute("aria-pressed", "false");
+    renderDetail();
+    return true;
+  }
+  editBtn.addEventListener("click", function(){
+    if (editing) { if (stopEditing(true)) toast(EVENTS[sel].edited ? "Edits saved. The next replay will use the edited payload." : "No changes from the original payload"); }
+    else startEditing();
+  });
+  ta.addEventListener("input", validate);
+  $("#ed-reset").addEventListener("click", function(){
+    var e = EVENTS[sel]; e.edited = null;
+    ta.value = JSON.stringify(e.payload, null, 2); validate(); renderDetail();
+    toast("Payload reset to the original capture");
+  });
+
+  /* Replay */
+  var t0 = Date.now(), BASE = 14 * 3600 + 2 * 60 + 40;
+  function clock(){
+    var s = (BASE + Math.floor((Date.now() - t0) / 1000)) % 86400;
+    return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(function(v){ return String(v).padStart(2, "0"); }).join(":");
+  }
+  function rnd(a, b){ return Math.round(a + Math.random() * (b - a)); }
+  function outcome(e, mode, i){
+    var p = e.edited || e.payload;
+    if (mode === "tamper") return {status:(e.verify === "stripe" || e.verify === "stdwh") ? 400 : 401, ms:rnd(14,40), note:"tampered signature rejected, as expected", tone:"pass"};
+    if (mode === "stale" && e.hasTs) return {status:400, ms:rnd(14,40), note:"stale timestamp rejected, as expected", tone:"pass"};
+    var r;
+    if (e.src === "shopify" && !p.billing_address) r = {status:500, ms:rnd(1850,2150), note:"TypeError: Cannot read properties of null (reading 'province_code')", tone:"fail"};
+    else r = {status:e.okStatus || 200, ms:rnd(70,210), note:e.replayNote || "", tone:"ok"};
+    if (e.edited && r.status < 400 && !r.note) r.note = "edited payload accepted";
+    if (mode === "stale" && !e.hasTs && r.status < 400) { r.note = e.staleNote; r.tone = "warn"; }
+    if (mode === "dup" && i > 0 && r.status < 400) { r.note = "same id delivered again, so check side effects ran once"; r.tone = "warn"; }
+    if (mode === "slow") { r.ms += rnd(8000,8400); if (!r.note) r.note = "delivered with +8 s network delay"; }
+    return r;
+  }
+  var log = [
+    {time:"14:00:05", short:"b54557e4-bdd…", type:"orders/create", target:"staging.acme-pay.dev/webhooks/shopify", mode:"original · normal", status:500, ms:1988, note:"TypeError: Cannot read properties of null (reading 'province_code')", tone:"fail"},
+    {time:"13:56:02", short:"0f5d2b7e-8c4…", type:"Issue.update", target:"staging.acme-pay.dev/webhooks/linear", mode:"original · normal", status:200, ms:88, note:"", tone:"ok"},
+    {time:"13:53:10", short:"2b8f91c0-423…", type:"push", target:"staging.acme-pay.dev/webhooks/github", mode:"original · tampered sig", status:401, ms:22, note:"tampered signature rejected, as expected", tone:"pass"}
+  ];
+  function renderLog(){
+    logEl.innerHTML = log.map(function(l){
+      var chip = l.pending ? '<span class="code sp">sending…</span>' : '<span class="code ' + sc(l.status) + '">' + l.status + ' ' + (REASON[l.status] || "") + '</span>';
+      return '<li class="' + (l.fresh ? "fresh" : "") + '">' +
+        '<span class="lg-time">' + l.time + '</span>' +
+        '<span class="lg-id" title="' + esc(l.type) + '">' + esc(l.short) + '</span>' +
+        '<span class="lg-target">→ ' + esc(l.target) + '</span>' +
+        '<span class="lg-note"><span class="lg-mode">' + esc(l.mode) + '</span>' + (l.note ? ' · <span class="tone-' + l.tone + '">' + esc(l.note) + '</span>' : "") + '</span>' +
+        chip +
+        '<span class="lg-ms">' + (l.pending ? "…" : fmt(l.ms) + " ms") + '</span></li>';
+    }).join("");
+    logCount.textContent = totalReplays + (totalReplays === 1 ? " replay" : " replays") + " this session";
+    log.forEach(function(l){ l.fresh = false; });
+  }
+  function replay(){
+    var e = EVENTS[sel];
+    if (editing) {
+      try { setEdited(e, JSON.parse(ta.value)); }
+      catch (err) { toast("The payload isn't valid JSON, so the replay wasn't sent"); return; }
+    }
+    var mode = simEl.value, n = mode === "dup" ? 3 : 1;
+    for (var i = 0; i < n; i++) {
+      (function(i){
+        var entry = {time:clock(), short:e.short, type:e.type, target:e.target,
+          mode:(e.edited ? "edited" : "original") + " · " + MODE[mode] + (n > 1 ? " " + (i + 1) + "/3" : ""), pending:true, fresh:true};
+        log.unshift(entry); totalReplays++;
+        var res = outcome(e, mode, i);
+        setTimeout(function(){
+          entry.pending = false; entry.fresh = true;
+          entry.status = res.status; entry.ms = res.ms; entry.note = res.note; entry.tone = res.tone;
+          renderLog();
+        }, (mode === "slow" ? 1800 : 450) + i * 280);
+      })(i);
+    }
+    log = log.slice(0, 8);
+    renderLog();
+    if (!editing) renderDetail();
+  }
+  $("#replay-btn").addEventListener("click", replay);
+  $("#share-btn").addEventListener("click", function(){
+    copy("https://app.patchbay.cloud/s/acme-pay/invoice-retry-bug", "Session link copied. Support can view it and engineering can replay.");
+  });
+  $("#copy-ep").addEventListener("click", function(){
+    copy($("#ep-url").textContent, "Endpoint URL copied to clipboard");
+  });
+
+  /* Countdown */
+  var left = 23 * 3600 + 14 * 60 + 8, expEl = $("#expires");
+  setInterval(function(){
+    left = Math.max(0, left - 1);
+    expEl.textContent = Math.floor(left / 3600) + "h " + String(Math.floor(left / 60) % 60).padStart(2, "0") + "m " + String(left % 60).padStart(2, "0") + "s";
+  }, 1000);
+
+  renderDetail();
+  renderLog();
+
+  /* ---------- Code snippet tabs (features) ---------- */
+  var codeTabs = $("#code-tabs");
+  $$(".codecard pre").forEach(function(p){ p.innerHTML = hlCode(p.textContent, p.dataset.lang); });
+  wireTabs(codeTabs, function(t){
+    $$('[role="tab"]', codeTabs).forEach(function(x){
+      var on = x === t;
+      x.setAttribute("aria-selected", String(on));
+      x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute("aria-controls")).hidden = !on;
+    });
+  });
+  $("#copy-code").addEventListener("click", function(){
+    var active = codeTabs.querySelector('[aria-selected="true"]');
+    var pre = document.getElementById(active.getAttribute("aria-controls"));
+    copy(pre.textContent, active.textContent.trim() + " snippet copied");
+  });
+
+  /* ---------- Waitlist ---------- */
+  var count = 2318, joined = false;
+  function bump(){
+    if (!joined) { count++; joined = true; }
+    $$("[data-count]").forEach(function(el){ el.textContent = fmt(count); });
+    return count;
+  }
+  var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  var heroForm = $("#hero-form"), heroEmail = $("#hero-email"), heroErr = $("#hero-err"), heroOk = $("#hero-ok");
+  heroForm.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var email = heroEmail.value.trim();
+    if (!emailRe.test(email)) {
+      heroErr.textContent = "Enter a work email, e.g. you@company.com";
+      heroEmail.setAttribute("aria-invalid", "true"); heroEmail.focus(); return;
+    }
+    heroErr.textContent = ""; heroEmail.removeAttribute("aria-invalid");
+    var pos = bump();
+    heroForm.hidden = true; heroOk.hidden = false;
+    heroOk.innerHTML = "<strong>You're #" + fmt(pos) + " on the waitlist.</strong> We'll email <b>" + esc(email) + "</b> when your cohort opens. <a href=\"#waitlist\">Tell us about your team</a> to be considered for Cohort 2.";
+    $("#wl-email").value = email;
+  });
+
+  var wlForm = $("#wl-form"), wlEmail = $("#wl-email"), wlErr = $("#wl-email-err"), wlDone = $("#wl-done");
+  wlForm.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var email = wlEmail.value.trim();
+    if (!emailRe.test(email)) {
+      wlErr.textContent = "Enter a work email so we can send your invite.";
+      wlEmail.setAttribute("aria-invalid", "true"); wlEmail.focus(); return;
+    }
+    wlErr.textContent = ""; wlEmail.removeAttribute("aria-invalid");
+    var providers = $$("#wl-providers input:checked").map(function(i){ return i.value; });
+    var users = $$("#wl-users input:checked").map(function(i){ return i.value; });
+    var name = $("#wl-name").value.trim(), company = $("#wl-company").value.trim();
+    bump();
+    var strong = providers.length >= 2 && users.indexOf("Support") !== -1;
+    $("#done-title").textContent = "You're on the list" + (name ? ", " + name.split(" ")[0] : "") + ".";
+    $("#done-cohort").textContent = strong ? "Likely Cohort 2 (invites June 9)" : "Likely Cohort 3 (July 2025)";
+    var rows = [
+      ["Email", email],
+      ["Team", (company || "Not given") + " · " + $("#wl-size").value + " engineers"],
+      ["Role", $("#wl-role").value],
+      ["Webhooks", providers.length ? providers.join(", ") : "Not given"],
+      ["Users", users.length ? users.join(", ") : "Not given"]
+    ];
+    $("#done-summary").innerHTML = rows.map(function(r){ return "<div><dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd></div>"; }).join("");
+    wlForm.hidden = true; wlDone.hidden = false; wlDone.focus();
+  });
+})();
+</script>
+</body>
+</html>

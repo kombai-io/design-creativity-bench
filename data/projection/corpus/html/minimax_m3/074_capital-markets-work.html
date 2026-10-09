@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halverston &amp; Dreyfus — Confirmation Queue</title>
+<style>
+:root {
+  /* ── Colour ─────────────────────────── */
+  --color-paper: #ece4d0;
+  --color-paper-soft: #f4ecd9;
+  --color-paper-deep: #e3d9bf;
+  --color-surface: #fbf7ec;
+  --color-surface-raised: #ffffff;
+  --color-ink: #1f1c14;
+  --color-ink-strong: #0e0c06;
+  --color-ink-muted: #6b6450;
+  --color-ink-soft: #a39b82;
+  --color-rule: #d6cdb5;
+  --color-rule-soft: #ebe3cb;
+  --color-accent: #4a5335;
+  --color-accent-strong: #2f361f;
+  --color-accent-soft: #d8dec5;
+
+  --color-status-action: #8a3a2f;
+  --color-status-action-bg: #f1dcd4;
+  --color-status-progress: #a87b35;
+  --color-status-progress-bg: #f3e5c6;
+  --color-status-ready: #5d7042;
+  --color-status-ready-bg: #dfe5cf;
+  --color-status-info: #4a6580;
+  --color-status-info-bg: #d4dde4;
+  --color-status-escalated: #6b2818;
+  --color-status-escalated-bg: #ead4cb;
+
+  --color-scrim: rgba(31, 28, 20, 0.55);
+
+  /* ── Type ──────────────────────────── */
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+  --font-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 17px;
+  --text-lg: 21px;
+  --text-xl: 28px;
+  --text-2xl: 38px;
+  --text-3xl: 56px;
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.06em;
+  --tracking-wider: 0.14em;
+  --tracking-widest: 0.24em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Spacing ───────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ── Radius ────────────────────────── */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* ── Shadow ────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(31, 28, 20, 0.05);
+  --shadow-md: 0 6px 18px rgba(31, 28, 20, 0.06), 0 2px 4px rgba(31, 28, 20, 0.04);
+  --shadow-lg: 0 32px 80px rgba(31, 28, 20, 0.24), 0 8px 24px rgba(31, 28, 20, 0.10);
+  --shadow-focus: 0 0 0 3px rgba(74, 83, 53, 0.30);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Marketing shell (behind modal) ───── */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  filter: blur(4px) saturate(0.7);
+  pointer-events: none;
+  user-select: none;
+}
+
+.site-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: var(--space-5) var(--space-8);
+  background: var(--color-paper-soft);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink);
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  display: grid;
+  place-items: center;
+  color: var(--color-paper-soft);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  box-shadow: var(--shadow-inset);
+}
+
+.brand-meta {
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-rule);
+  font-size: var(--text-xs);
+  color: var(--color-ink-soft);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  font-weight: var(--weight-medium);
+}
+
+.site-nav {
+  display: flex;
+  gap: var(--space-7);
+  justify-content: center;
+}
+
+.site-nav a {
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  font-weight: var(--weight-semibold);
+}
+
+.session {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  color: var(--color-accent-strong);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-rule);
+}
+
+.marketing {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-8);
+}
+
+.eyebrow {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-5);
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--color-ink-strong);
+  max-width: 16ch;
+}
+
+.hero p {
+  margin-top: var(--space-6);
+  max-width: 44ch;
+  font-size: var(--text-md);
+  color: var(--color-ink-muted);
+  line-height: var(--leading-relaxed);
+}
+
+.hero-graphic {
+  height: 340px;
+  color: var(--color-accent);
+  display: grid;
+  place-items: center;
+}
+
+.site-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-5) var(--space-8);
+  background: var(--color-paper-soft);
+  border-top: 1px solid var(--color-rule);
+  font-size: var(--text-xs);
+  color: var(--color-ink-soft);
+  letter-spacing: var(--tracking-wide);
+}
+
+.site-footer nav {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.site-footer nav a {
+  color: var(--color-ink-soft);
+  text-decoration: none;
+}
+
+/* ── Scrim ───────────────────────────── */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--color-scrim);
+  z-index: 10;
+}
+
+/* ── Modal dialog ────────────────────── */
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1100px;
+  max-width: calc(100vw - var(--space-7));
+  max-height: calc(100vh - var(--space-7));
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-rule);
+}
+
+.dialog-head {
+  padding: var(--space-7) var(--space-7) var(--space-6);
+  border-bottom: 1px solid var(--color-rule-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.dialog-intro {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-accent-strong);
+  font-weight: var(--weight-semibold);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-pill);
+}
+
+.dialog-eyebrow::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-status-action);
+}
+
+.dialog-head h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-tight);
+  margin-top: var(--space-4);
+  line-height: var(--leading-tight);
+  color: var(--color-ink-strong);
+}
+
+.dialog-head h2 em {
+  font-style: italic;
+  color: var(--color-accent);
+}
+
+.dialog-summary {
+  margin-top: var(--space-6);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: end;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-right: var(--space-5);
+  border-right: 1px solid var(--color-rule-soft);
+}
+
+.metric:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.metric-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  font-weight: var(--weight-semibold);
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+}
+
+.metric-value.escalated {
+  color: var(--color-status-action);
+}
+
+.metric-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-soft);
+  letter-spacing: var(--tracking-wide);
+}
+
+.dialog-close {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-rule);
+  background: var(--color-surface-raised);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.dialog-close:hover {
+  color: var(--color-ink);
+  border-color: var(--color-ink-muted);
+}
+
+.dialog-close:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* ── Tabs ────────────────────────────── */
+.tabs {
+  display: flex;
+  padding: 0 var(--space-7);
+  gap: var(--space-7);
+  border-bottom: 1px solid var(--color-rule-soft);
+  align-items: center;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: var(--space-4) 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  position: relative;
+  letter-spacing: var(--tracking-wide);
+  font-weight: var(--weight-medium);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.tab:hover {
+  color: var(--color-ink);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--color-ink);
+}
+
+.tab[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-accent);
+}
+
+.tab:focus-visible {
+  outline: none;
+}
+
+.tab:focus-visible::before {
+  content: '';
+  position: absolute;
+  inset: var(--space-2) 0;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-focus);
+  pointer-events: none;
+}
+
+.tab-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-ink-soft);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-paper-soft);
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-medium);
+  min-width: 24px;
+  text-align: center;
+}
+
+.tab[aria-selected="true"] .tab-count {
+  color: var(--color-accent-strong);
+  background: var(--color-accent-soft);
+}
+
+/* ── Table / queue ───────────────────── */
+.queue-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-7) 0;
+}
+
+.queue {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.queue thead th {
+  text-align: left;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  padding: var(--space-3) var(--space-4);
+  font-weight: var(--weight-semibold);
+  border-bottom: 1px solid var(--color-rule);
+  white-space: nowrap;
+}
+
+.queue thead th:last-child {
+  text-align: right;
+}
+
+.queue tbody td {
+  padding: var(--space-6) var(--space-4);
+  font-size: var(--text-base);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-rule-soft);
+  position: relative;
+}
+
+.queue tbody tr {
+  position: relative;
+}
+
+.queue tbody tr::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--row-indicator, transparent);
+}
+
+.queue tbody tr:hover {
+  background: var(--color-paper-soft);
+}
+
+.queue tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.queue td.ref {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  letter-spacing: var(--tracking-wide);
+}
+
+.queue td.amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  text-align: right;
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-strong);
+  white-space: nowrap;
+}
+
+.queue td.amount .currency {
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  margin-right: var(--space-1);
+}
+
+.queue td.when {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.queue td.when .day {
+  display: block;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.queue td.when .time {
+  display: block;
+  font-family: var(--font-mono);
+}
+
+.queue td.action-cell {
+  text-align: right;
+}
+
+/* ── Status pill ─────────────────────── */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.status-action { color: var(--color-status-action); background: var(--color-status-action-bg); }
+.status-progress { color: var(--color-status-progress); background: var(--color-status-progress-bg); }
+.status-ready { color: var(--color-status-ready); background: var(--color-status-ready-bg); }
+.status-info { color: var(--color-status-info); background: var(--color-status-info-bg); }
+.status-escalated { color: var(--color-status-escalated); background: var(--color-status-escalated-bg); }
+
+/* ── Deal description ────────────────── */
+.deal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.deal-title {
+  font-weight: var(--weight-medium);
+  color: var(--color-ink);
+  line-height: var(--leading-snug);
+}
+
+.deal-meta {
+  font-size: var(--text-2xs);
+  color: var(--color-ink-soft);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  font-weight: var(--weight-semibold);
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.deal-meta span + span::before {
+  content: '·';
+  margin-right: var(--space-2);
+  color: var(--color-ink-soft);
+}
+
+/* ── Counterparty ────────────────────── */
+.counter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.counter-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-soft);
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-ink-muted);
+  font-family: var(--font-display);
+  border: 1px solid var(--color-rule);
+  flex-shrink: 0;
+}
+
+.counter-name {
+  font-size: var(--text-base);
+  color: var(--color-ink);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+/* ── Buttons ─────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  border: 1px solid var(--color-rule);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.btn:hover {
+  border-color: var(--color-ink-muted);
+  background: var(--color-paper-soft);
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-paper-soft);
+  border-color: var(--color-accent);
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-ink-muted);
+  padding: var(--space-3) var(--space-3);
+}
+
+.btn-ghost:hover { color: var(--color-ink); background: transparent; }
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* ── Dialog footer ───────────────────── */
+.dialog-foot {
+  padding: var(--space-5) var(--space-7);
+  border-top: 1px solid var(--color-rule-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-paper-soft);
+  margin-top: auto;
+}
+
+.foot-meta {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.foot-meta strong {
+  color: var(--color-ink);
+  font-weight: var(--weight-medium);
+}
+
+.foot-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* ── Empty tabpanel message ──────────── */
+.tabpanel-empty {
+  padding: var(--space-9) var(--space-7);
+  text-align: center;
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+.tabpanel-empty strong {
+  color: var(--color-ink);
+  font-style: normal;
+  font-weight: var(--weight-medium);
+}
+</style>
+</head>
+<body>
+
+<!-- ── Marketing shell, blurred behind modal ── -->
+<div class="shell" aria-hidden="true">
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-mark">H</span>
+      <span>Halverston <span style="opacity: 0.4">&amp;</span> Dreyfus</span>
+      <span class="brand-meta">Est. 1924</span>
+    </div>
+    <nav class="site-nav">
+      <a href="#">Markets</a>
+      <a href="#">Solutions</a>
+      <a href="#">Insights</a>
+      <a href="#">Clients</a>
+      <a href="#">About</a>
+    </nav>
+    <div class="session">
+      <span>Vidal Aronberg Capital · Ron Halberstam</span>
+      <span class="avatar">RH</span>
+    </div>
+  </header>
+
+  <main class="marketing">
+    <div class="hero">
+      <p class="eyebrow">Capital Markets · Institutional</p>
+      <h1>Quiet certainty in a restless market.</h1>
+      <p>We move institutional capital for treasury teams, asset managers and sovereigns across debt, repo and structured credit. One counterparty. One workflow.</p>
+    </div>
+    <div class="hero-graphic">
+      <svg width="100%" height="100%" viewBox="0 0 320 280" fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <g stroke="currentColor" stroke-opacity="0.14" stroke-width="1">
+          <line x1="20" y1="60" x2="300" y2="60"/>
+          <line x1="20" y1="110" x2="300" y2="110"/>
+          <line x1="20" y1="160" x2="300" y2="160"/>
+          <line x1="20" y1="210" x2="300" y2="210"/>
+        </g>
+        <g fill="currentColor">
+          <rect x="40" y="170" width="30" height="60" fill-opacity="0.22"/>
+          <rect x="90" y="140" width="30" height="90" fill-opacity="0.32"/>
+          <rect x="140" y="105" width="30" height="125" fill-opacity="0.44"/>
+          <rect x="190" y="85" width="30" height="145" fill-opacity="0.58"/>
+          <rect x="240" y="70" width="30" height="160" fill-opacity="0.78"/>
+        </g>
+        <path d="M55 175 L105 145 L155 110 L205 90 L255 75" stroke="currentColor" stroke-width="1.5" fill="none" stroke-opacity="0.55"/>
+        <g fill="currentColor" fill-opacity="0.16">
+          <rect x="32" y="240" width="22" height="30" rx="2"/>
+          <rect x="60" y="240" width="22" height="30" rx="2"/>
+          <rect x="228" y="240" width="22" height="30" rx="2"/>
+          <rect x="256" y="240" width="22" height="30" rx="2"/>
+        </g>
+        <g fill="currentColor" fill-opacity="0.10">
+          <rect x="28" y="232" width="30" height="6" rx="1"/>
+          <rect x="56" y="232" width="30" height="6" rx="1"/>
+          <rect x="224" y="232" width="30" height="6" rx="1"/>
+          <rect x="252" y="232" width="30" height="6" rx="1"/>
+        </g>
+      </svg>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <span>© 2025 Halverston &amp; Dreyfus plc · Authorised &amp; regulated by the FCA</span>
+    <nav>
+      <a href="#">Terms</a>
+      <a href="#">Privacy</a>
+      <a href="#">Disclosures</a>
+      <a href="#">System status</a>
+    </nav>
+  </footer>
+</div>
+
+<div class="scrim" aria-hidden="true"></div>
+
+<!-- ── Modal dialog ──────────────────── -->
+<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+  <header class="dialog-head">
+    <div class="dialog-intro">
+      <span class="dialog-eyebrow">Confirmation queue · Live</span>
+      <h2 id="dialog-title">Four settlements awaiting <em>your approval</em></h2>
+      <div class="dialog-summary">
+        <div class="metric">
+          <span class="metric-label">Open items</span>
+          <span class="metric-value">4</span>
+          <span class="metric-sub">↑ 1 since yesterday</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Aggregate notional</span>
+          <span class="metric-value">€315.0M</span>
+          <span class="metric-sub">≈ $342.4M</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Escalated</span>
+          <span class="metric-value escalated">1</span>
+          <span class="metric-sub">KYC outstanding</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Cut-off</span>
+          <span class="metric-value">16:00</span>
+          <span class="metric-sub">BST · T+1 cycle</span>
+        </div>
+      </div>
+    </div>
+    <button class="dialog-close" type="button" aria-label="Close dialog">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <div role="tablist" class="tabs" aria-label="Filter queue by state">
+    <button role="tab" class="tab" type="button" aria-selected="true" aria-controls="panel-all" id="tab-all">All items <span class="tab-count">4</span></button>
+    <button role="tab" class="tab" type="button" aria-selected="false" aria-controls="panel-today" id="tab-today" tabindex="-1">Settling today <span class="tab-count">2</span></button>
+    <button role="tab" class="tab" type="button" aria-selected="false" aria-controls="panel-escalated" id="tab-escalated" tabindex="-1">Escalated <span class="tab-count">1</span></button>
+    <button role="tab" class="tab" type="button" aria-selected="false" aria-controls="panel-cleared" id="tab-cleared" tabindex="-1">Cleared today <span class="tab-count">7</span></button>
+  </div>
+
+  <div role="tabpanel" id="panel-all" aria-labelledby="tab-all" class="queue-wrap">
+    <table class="queue">
+      <caption class="tabpanel-empty" style="text-align:left; padding:0; margin:0; font-size:0; line-height:0; height:0; overflow:hidden; position:absolute; left:-9999px;">Four items awaiting confirmation</caption>
+      <thead>
+        <tr>
+          <th scope="col">State</th>
+          <th scope="col">Reference</th>
+          <th scope="col">Description</th>
+          <th scope="col">Counterparty</th>
+          <th scope="col">Notional</th>
+          <th scope="col">Settlement</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="--row-indicator: var(--color-status-action)">
+          <td><span class="status status-action">Action required</span></td>
+          <td class="ref">NX-24481</td>
+          <td>
+            <div class="deal">
+              <span class="deal-title">Republic of Vaterland 4.25% 2034 — secondary tap</span>
+              <span class="deal-meta">
+                <span>ISIN XS2893441287</span>
+                <span>Sovereign</span>
+                <span>EUR</span>
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="counter">
+              <span class="counter-mark">BP</span>
+              <span class="counter-name">BNP Paribas</span>
+            </div>
+          </td>
+          <td class="amount"><span class="currency">€</span>145,000,000</td>
+          <td class="when">
+            <span class="day">Tomorrow</span>
+            <span class="time">24 May · 14:00 BST</span>
+          </td>
+          <td class="action-cell">
+            <button class="btn btn-primary" type="button">Review &amp; sign</button>
+          </td>
+        </tr>
+        <tr style="--row-indicator: var(--color-status-info)">
+          <td><span class="status status-info">Counterparty signed</span></td>
+          <td class="ref">NX-24483</td>
+          <td>
+            <div class="deal">
+              <span class="deal-title">Thermionic Industries 6.10% 2029 — corporate tap</span>
+              <span class="deal-meta">
+                <span>ISIN US87942GAK33</span>
+                <span>Investment grade</span>
+                <span>USD</span>
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="counter">
+              <span class="counter-mark">GS</span>
+              <span class="counter-name">Goldman Sachs</span>
+            </div>
+          </td>
+          <td class="amount"><span class="currency">$</span>48,000,000</td>
+          <td class="when">
+            <span class="day">Tomorrow</span>
+            <span class="time">24 May · 17:30 BST</span>
+          </td>
+          <td class="action-cell">
+            <button class="btn" type="button">Confirm</button>
+          </td>
+        </tr>
+        <tr style="--row-indicator: var(--color-status-progress)">
+          <td><span class="status status-progress">Documentation pending</span></td>
+          <td class="ref">NX-24479</td>
+          <td>
+            <div class="deal">
+              <span class="deal-title">Boltzmann Capital — 7-day repo roll-over</span>
+              <span class="deal-meta">
+                <span>Triparty · GC basket</span>
+                <span>Open</span>
+                <span>USD</span>
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="counter">
+              <span class="counter-mark">MS</span>
+              <span class="counter-name">Morgan Stanley</span>
+            </div>
+          </td>
+          <td class="amount"><span class="currency">$</span>80,000,000</td>
+          <td class="when">
+            <span class="day">Sunday</span>
+            <span class="time">25 May · 09:00 BST</span>
+          </td>
+          <td class="action-cell">
+            <button class="btn" type="button">View docs</button>
+          </td>
+        </tr>
+        <tr style="--row-indicator: var(--color-status-escalated)">
+          <td><span class="status status-escalated">Escalated · KYC missing</span></td>
+          <td class="ref">NX-24476</td>
+          <td>
+            <div class="deal">
+              <span class="deal-title">Huambo Mining PLC 7.85% 2031 — private placement</span>
+              <span class="deal-meta">
+                <span>ISIN pending</span>
+                <span>High yield</span>
+                <span>USD</span>
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="counter">
+              <span class="counter-mark">JP</span>
+              <span class="counter-name">JPMorgan</span>
+            </div>
+          </td>
+          <td class="amount"><span class="currency">$</span>42,000,000</td>
+          <td class="when">
+            <span class="day">Monday</span>
+            <span class="time">26 May · 11:00 BST</span>
+          </td>
+          <td class="action-cell">
+            <button class="btn" type="button">Resolve</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div role="tabpanel" id="panel-today" aria-labelledby="tab-today" class="queue-wrap" hidden>
+    <p class="tabpanel-empty">2 items settling today — view them in <strong>All items</strong>.</p>
+  </div>
+
+  <div role="tabpanel" id="panel-escalated" aria-labelledby="tab-escalated" class="queue-wrap" hidden>
+    <p class="tabpanel-empty">1 escalated item — view it in <strong>All items</strong>.</p>
+  </div>
+
+  <div role="tabpanel" id="panel-cleared" aria-labelledby="tab-cleared" class="queue-wrap" hidden>
+    <p class="tabpanel-empty">7 items cleared today — auto-archived after 24 h.</p>
+  </div>
+
+  <footer class="dialog-foot">
+    <p class="foot-meta">Showing <strong>4 of 4</strong> · Last refreshed <strong>14 seconds ago</strong> · Auto-archive in <strong>2 days</strong></p>
+    <div class="foot-actions">
+      <button class="btn btn-ghost" type="button">Export CSV</button>
+      <button class="btn" type="button">Hold all</button>
+      <button class="btn btn-primary" type="button">Approve ready items</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function() {
+  function initTablist(list) {
+    const tabs = list.querySelectorAll('[role="tab"]');
+
+    tabs.forEach(function(t) {
+      t.setAttribute('tabindex', t.getAttribute('aria-selected') === 'true' ? '0' : '-1');
+    });
+
+    function activate(tab) {
+      tabs.forEach(function(t) {
+        const selected = t === tab;
+        t.setAttribute('aria-selected', selected ? 'true' : 'false');
+        t.setAttribute('tabindex', selected ? '0' : '-1');
+      });
+      tab.focus();
+
+      const panelId = tab.getAttribute('aria-controls');
+      const panels = document.querySelectorAll('[role="tabpanel"]');
+      panels.forEach(function(p) {
+        p.hidden = (p.id !== panelId);
+      });
+    }
+
+    list.addEventListener('click', function(e) {
+      const tab = e.target.closest('[role="tab"]');
+      if (!tab || !list.contains(tab)) return;
+      activate(tab);
+    });
+
+    list.addEventListener('keydown', function(e) {
+      const key = e.key;
+      if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'Home' && key !== 'End') return;
+      const tabsArr = Array.from(tabs);
+      const current = document.activeElement && document.activeElement.closest('[role="tab"]');
+      if (!current || !list.contains(current)) return;
+      let idx = tabsArr.indexOf(current);
+      if (key === 'ArrowRight') idx = (idx + 1) % tabsArr.length;
+      if (key === 'ArrowLeft')  idx = (idx - 1 + tabsArr.length) % tabsArr.length;
+      if (key === 'Home')       idx = 0;
+      if (key === 'End')        idx = tabsArr.length - 1;
+      e.preventDefault();
+      activate(tabsArr[idx]);
+    });
+  }
+
+  document.querySelectorAll('[role="tablist"]').forEach(initTablist);
+
+  // Close dialog button
+  const closeBtn = document.querySelector('.dialog-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      const dlg = document.querySelector('[role="dialog"]');
+      if (dlg) dlg.style.display = 'none';
+      const scrim = document.querySelector('.scrim');
+      if (scrim) scrim.style.display = 'none';
+      const shell = document.querySelector('.shell');
+      if (shell) {
+        shell.style.filter = 'none';
+        shell.style.pointerEvents = 'auto';
+      }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

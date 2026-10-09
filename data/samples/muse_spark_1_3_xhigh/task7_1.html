@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Branchglass — How it works</title>
+<meta name="description" content="Branchglass creates temporary, production-like cloud environments for every pull request. See how it works.">
+<style>
+*{box-sizing:border-box}
+:root{
+ --bg:#F6F8FA;
+ --bg2:#EEF3F0;
+ --surface:#FFFFFF;
+ --ink:#0E1E33;
+ --muted:#4B5E75;
+ --muted2:#6B7E94;
+ --line:#E2E8F0;
+ --line2:#D5DEE9;
+ --brand:#0A7A5C;
+ --brand-dark:#075E47;
+ --brand-soft:#DEF7EC;
+ --brand-soft2:#E6F4EF;
+ --accent:#0EA5E9;
+ --navy:#0B1D33;
+ --navy2:#132A47;
+ --amber:#B45309;
+ --amber-bg:#FEF3C7;
+ --radius:18px;
+ --shadow:0 12px 32px rgba(11,29,51,.10),0 2px 6px rgba(11,29,51,.08);
+ --shadow-sm:0 6px 18px rgba(11,29,51,.08);
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+ --sans:-apple-system,BlinkMacSystemFont,"Inter","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+html{scroll-behavior:smooth}
+body{
+ margin:0;
+ font-family:var(--sans);
+ background:var(--bg);
+ color:var(--ink);
+ line-height:1.6;
+ -webkit-font-smoothing:antialiased;
+ text-rendering:optimizeLegibility;
+}
+::selection{background:#0A7A5C;color:#fff}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.skip{
+ position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;
+}
+.skip:focus{left:16px;top:16px;width:auto;height:auto;background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;z-index:100}
+/* header */
+.site-header{
+ position:sticky;top:0;z-index:50;
+ background:rgba(246,248,250,.86);
+ backdrop-filter:blur(14px);
+ -webkit-backdrop-filter:blur(14px);
+ border-bottom:1px solid var(--line);
+}
+.header-inner{display:flex;align-items:center;gap:20px;height:68px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;letter-spacing:-.02em;font-size:19px}
+.brand-mark{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#0A7A5C 0%,#0EA5E9 100%);color:#fff;box-shadow:0 4px 12px rgba(10,122,92,.35);flex:none}
+.brand small{font-weight:600;color:var(--muted);font-size:12px;display:block;line-height:1;letter-spacing:.02em}
+.brand-text{line-height:1}
+.nav{display:flex;gap:4px;margin-left:12px}
+.nav a{text-decoration:none;font-size:14.5px;font-weight:550;color:var(--muted);padding:8px 12px;border-radius:999px}
+.nav a:hover,.nav a:focus-visible{background:#fff;color:var(--ink);outline:none;box-shadow:inset 0 0 0 1px var(--line)}
+.nav a[aria-current="page"]{background:var(--navy);color:#fff}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:650;font-size:14.5px;padding:11px 18px;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.btn-primary{background:var(--navy);color:#fff;box-shadow:0 6px 16px rgba(11,29,51,.22)}
+.btn-primary:hover{background:#162E51;transform:translateY(-1px)}
+.btn-secondary{background:#fff;border-color:var(--line2);color:var(--ink)}
+.btn-secondary:hover{border-color:var(--ink);transform:translateY(-1px)}
+.btn-sm{padding:9px 14px;font-size:13.5px}
+:focus-visible{outline:3px solid #0EA5E9;outline-offset:2px;border-radius:8px}
+/* hero */
+.hero{padding:56px 0 10px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:750;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-dark);background:#fff;border:1px solid var(--line);padding:7px 12px;border-radius:999px;box-shadow:var(--shadow-sm)}
+.eyebrow .dot{width:8px;height:8px;border-radius:50%;background:#10B981;box-shadow:0 0 0 4px #DEF7EC}
+.hero h1{font-size:clamp(32px,4.6vw,52px);line-height:1.04;letter-spacing:-.04em;margin:18px 0 14px;font-weight:800}
+.hero h1 .grad{background:linear-gradient(90deg,#0A7A5C,#0EA5E9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{font-size:18px;color:var(--muted);max-width:54ch;margin:0 0 22px}
+.hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.hero-proof{display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin:0;padding:0;list-style:none}
+.hero-proof li{display:flex;align-items:center;gap:7px}
+.hero-proof svg{flex:none}
+.hero-card{background:var(--navy);color:#E6EEF7;border-radius:20px;padding:18px;box-shadow:var(--shadow);border:1px solid #1E3A5E;position:relative;overflow:hidden}
+.hero-card::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 280px at 20% 0%,rgba(16,185,129,.22),transparent 60%),radial-gradient(500px 260px at 90% 20%,rgba(14,165,233,.22),transparent 60%);pointer-events:none}
+.pr-head{display:flex;align-items:center;gap:10px;position:relative}
+.pr-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#A7F3D0,#7DD3FC);display:grid;place-items:center;color:#0B1D33;font-weight:800;font-size:13px;flex:none}
+.pr-title{font-size:14px;line-height:1.4}
+.pr-title strong{display:block;font-size:14px;color:#fff}
+.pr-title span{color:#9AB0C9;font-size:12.5px}
+.pr-state{margin-left:auto;font-size:12px;font-weight:700;background:#10B981;color:#04281D;padding:5px 10px;border-radius:999px;white-space:nowrap}
+.bot-comment{position:relative;margin-top:14px;background:#fff;color:var(--ink);border-radius:14px;padding:14px 14px 12px;display:flex;gap:12px}
+.bot-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0A7A5C,#0EA5E9);display:grid;place-items:center;color:#fff;flex:none}
+.bot-comment h3{margin:0;font-size:13.5px}
+.bot-comment p{margin:4px 0 10px;font-size:13px;color:var(--muted)}
+.url-row{display:flex;gap:8px;align-items:center;background:#F1F5F9;border:1px solid var(--line);border-radius:10px;padding:7px 8px 7px 10px;font-family:var(--mono);font-size:12.5px}
+.url-row code{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.copy-btn{margin-left:auto;background:var(--navy);color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:700;padding:7px 10px;cursor:pointer;flex:none}
+.copy-btn:hover{background:#1A3355}
+.env-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;position:relative}
+.env-pills span{font-size:12px;font-weight:650;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:#D6E4F5}
+.env-pills span.live{background:#10B981;border-color:#10B981;color:#04281D}
+/* stack strip */
+.stack{padding:22px 0 6px}
+.stack-inner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 18px;box-shadow:var(--shadow-sm)}
+.stack-label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.stack-pills{display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0;list-style:none}
+.stack-pills li{font-size:13px;font-weight:600;border:1px solid var(--line);background:#F8FAFC;padding:6px 11px;border-radius:999px;color:#33475F;display:flex;align-items:center;gap:7px}
+.stack-pills i{width:8px;height:8px;border-radius:50%;background:var(--brand);display:inline-block}
+/* How it works */
+.hiw{padding:44px 0 20px}
+.hiw-panel{background:linear-gradient(180deg,#FFFFFF 0%,#F3F7F4 100%);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);overflow:hidden}
+.hiw-top{padding:44px 44px 8px;text-align:center;max-width:820px;margin:0 auto}
+.hiw-top .eyebrow{background:var(--brand-soft);border-color:#B9E9D3;color:var(--brand-dark)}
+.hiw-top h2{font-size:clamp(28px,3.6vw,42px);line-height:1.08;letter-spacing:-.035em;margin:18px 0 12px}
+.hiw-top h2 .grad{background:linear-gradient(90deg,#0A7A5C 10%,#0EA5E9 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:17.5px;color:var(--muted);margin:0 auto;max-width:66ch}
+.hiw-meta{list-style:none;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:20px 0 6px;padding:0}
+.hiw-meta li{font-size:13px;font-weight:700;background:#fff;border:1px solid var(--line);padding:8px 12px;border-radius:999px;display:flex;gap:8px;align-items:center;color:#243A55}
+.hiw-meta li b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--navy);color:#fff;font-size:12px}
+.hiw-grid{display:grid;grid-template-columns:430px 1fr;gap:28px;padding:28px 32px 10px;align-items:start}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;position:relative}
+.steps::before{content:"";position:absolute;left:30px;top:28px;bottom:28px;width:2px;background:linear-gradient(180deg,#0A7A5C,#0EA5E9,#CBD5E1);opacity:.35}
+.step{position:relative;background:#fff;border:1.5px solid var(--line);border-radius:16px;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.step.is-active{border-color:var(--brand);box-shadow:0 10px 26px rgba(10,122,92,.14);transform:translateY(-1px)}
+.step-btn{width:100%;background:transparent;border:0;text-align:left;display:flex;gap:14px;align-items:flex-start;padding:16px 16px 14px;cursor:pointer;border-radius:16px}
+.step-num{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:#EFF6F1;color:var(--brand-dark);border:1px solid #C8E8D8;flex:none;position:relative;z-index:1}
+.step.is-active .step-num{background:var(--brand);color:#fff;border-color:var(--brand)}
+.step-text{display:flex;flex-direction:column;gap:2px;flex:1}
+.step-kicker{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-dark)}
+.step-title{font-size:17px;font-weight:750;letter-spacing:-.02em;line-height:1.25}
+.step-chev{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--muted);transition:transform .2s}
+.step.is-active .step-chev{background:var(--navy);color:#fff;border-color:var(--navy);transform:rotate(90deg)}
+.step-panel{padding:0 16px 0 66px;margin-top:-6px}
+.step-panel p{margin:0 0 10px;font-size:14.5px;color:var(--muted)}
+.chip-row{list-style:none;display:flex;flex-wrap:wrap;gap:7px;margin:0 0 16px;padding:0}
+.chip-row li{font-size:12px;font-weight:700;background:#F1F5F9;border:1px solid var(--line);color:#33475F;padding:5px 9px;border-radius:999px}
+.step.is-active .chip-row li{background:var(--brand-soft);border-color:#BFE8D5;color:var(--brand-dark)}
+.step-panel{display:none}
+.step.is-active .step-panel{display:block}
+/* stage */
+.stage{position:sticky;top:88px}
+.browser{background:#fff;border:1px solid var(--line2);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
+.browser-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#F8FAFC}
+.traffic{display:flex;gap:6px}
+.traffic i{width:11px;height:11px;border-radius:50%;display:block}
+.traffic i:nth-child(1){background:#F87171}.traffic i:nth-child(2){background:#FBBF24}.traffic i:nth-child(3){background:#34D399}
+.urlbar{flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line2);border-radius:999px;padding:7px 10px;font-family:var(--mono);font-size:12.5px;min-width:0}
+.urlbar code{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.status.is-live{background:#DEF7EC;color:#065F46;border-color:#A7E9C6}
+.status.is-building{background:#FEF3C7;color:#92400E;border-color:#FDE68A}
+.status.is-updating{background:#E0F2FE;color:#075985;border-color:#BAE6FD}
+.status.is-destroyed{background:#F1F5F9;color:#475569;border-color:var(--line2)}
+.status.is-connected{background:#E6F4EF;color:#0A7A5C;border-color:#BFE8D5}
+.browser-body{display:grid;grid-template-columns:1.15fr .85fr;min-height:340px}
+.app-mock{padding:18px;border-right:1px solid var(--line);background:linear-gradient(180deg,#FFFFFF,#F8FAFC)}
+.app-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.app-logo{width:26px;height:26px;border-radius:8px;background:var(--navy)}
+.app-lines{flex:1}
+.app-lines i{display:block;height:8px;border-radius:99px;background:#E2E8F0;margin:4px 0}
+.app-lines i:first-child{width:42%}.app-lines i:last-child{width:68%;background:#EDF2F7}
+.app-avatars{display:flex}
+.app-avatars span{width:26px;height:26px;border-radius:50%;border:2px solid #fff;margin-left:-8px;display:grid;place-items:center;font-size:10px;font-weight:800;color:#fff}
+.app-hero{background:linear-gradient(135deg,#0B1D33 0%,#0A7A5C 55%,#0EA5E9 100%);border-radius:14px;padding:16px;color:#fff;position:relative;overflow:hidden}
+.app-hero h4{margin:0;font-size:15px;letter-spacing:-.02em}
+.app-hero p{margin:4px 0 12px;font-size:12.5px;color:#CDE8DD}
+.app-hero .row{display:flex;gap:8px}
+.btn-mini{font-size:12px;font-weight:750;padding:7px 11px;border-radius:999px;border:0;cursor:pointer}
+.btn-mini.light{background:#fff;color:var(--navy)}
+.btn-mini.ghost{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)}
+.skel{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+.skel div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+.skel div i{display:block;height:8px;border-radius:99px;background:#E2E8F0;margin:6px 0}
+.skel div b{font-size:11px}
+.collab{margin-top:12px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);background:#F1F5F9;border:1px dashed var(--line2);border-radius:12px;padding:9px 11px}
+.terminal{background:#0B1D33;color:#CBDDF0;font-family:var(--mono);font-size:12px;padding:16px;display:flex;flex-direction:column;gap:2px}
+.term-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-family:var(--sans);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8AA0BC}
+.term-head .pulse{width:8px;height:8px;border-radius:50%;background:#34D399;box-shadow:0 0 0 4px rgba(52,211,153,.18)}
+.log{line-height:1.7}
+.log .t{color:#64748B}
+.log .ok{color:#34D399}
+.log .warn{color:#FBBF24}
+.log .info{color:#7DD3FC}
+.log .dim{color:#8AA0BC}
+.stage-controls{display:flex;gap:8px;flex-wrap:wrap;padding:14px;background:#F8FAFC;border-top:1px solid var(--line)}
+.sim-btn{flex:1;min-width:130px;border:1px solid var(--line2);background:#fff;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;color:var(--ink)}
+.sim-btn:hover{border-color:var(--ink)}
+.sim-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sim-hint{padding:0 14px 14px;background:#F8FAFC;font-size:12.5px;color:var(--muted)}
+/* subgrid */
+.hiw-sub{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px 32px 10px}
+.info-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow-sm)}
+.info-card h3{margin:0 0 6px;font-size:18px;letter-spacing:-.02em}
+.info-card>p{margin:0 0 14px;font-size:14px;color:var(--muted)}
+.compare{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.compare li{display:flex;gap:10px;align-items:flex-start;background:#F8FAFC;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px}
+.compare li strong{display:block;font-size:13.5px}
+.compare li span{color:var(--muted);font-size:13px}
+.tick{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;font-weight:800}
+.tick.green{background:#DEF7EC;color:#065F46}
+.tick.blue{background:#E0F2FE;color:#075985}
+.personas{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.personas li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fff}
+.personas li:nth-child(odd){background:#F8FAFC}
+.avatar{width:32px;height:32px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;font-size:12px;color:#fff}
+.personas strong{font-size:13.5px;display:block}
+.personas p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+/* lifecycle */
+.lifecycle{margin:18px 32px 32px;background:var(--navy);color:#DCE8F7;border-radius:18px;padding:22px;position:relative;overflow:hidden}
+.lifecycle::after{content:"";position:absolute;right:-80px;top:-80px;width:280px;height:280px;background:radial-gradient(circle,rgba(16,185,129,.28),transparent 70%);pointer-events:none}
+.lifecycle h3{margin:0;font-size:16px;letter-spacing:-.01em;color:#fff}
+.lifecycle>p{margin:4px 0 16px;font-size:13.5px;color:#9AB0C9}
+.life-track{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative}
+.life-track::before{content:"";position:absolute;left:24px;right:24px;top:22px;height:2px;background:rgba(255,255,255,.18)}
+.life-step{position:relative;text-align:center;padding:0 8px}
+.life-dot{width:44px;height:44px;border-radius:50%;background:#132A47;border:1px solid rgba(255,255,255,.2);display:grid;place-items:center;margin:0 auto 8px;position:relative;z-index:1;color:#fff;font-weight:800}
+.life-step.done .life-dot{background:#10B981;border-color:#10B981;color:#04281D}
+.life-step.now .life-dot{background:#fff;color:var(--navy);box-shadow:0 0 0 6px rgba(255,255,255,.15)}
+.life-step strong{display:block;font-size:12.5px;color:#fff}
+.life-step span{font-size:11.5px;color:#8AA0BC;font-family:var(--mono)}
+/* CTA */
+.cta{padding:28px 0 48px}
+.cta-inner{background:linear-gradient(135deg,#0B1D33 0%,#0E3B2E 55%,#0A7A5C 100%);border-radius:24px;padding:40px;color:#fff;text-align:center;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.cta-inner::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 240px at 50% 0%,rgba(125,211,252,.25),transparent 70%);pointer-events:none}
+.cta-inner h2{margin:0 0 10px;font-size:clamp(24px,3vw,34px);letter-spacing:-.03em;position:relative}
+.cta-inner p{color:#C8DBD2;margin:0 auto 20px;max-width:56ch;position:relative}
+.cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative}
+.btn-light{background:#fff;color:var(--navy)}
+.btn-outline{border-color:rgba(255,255,255,.35);color:#fff;background:rgba(255,255,255,.08)}
+footer{border-top:1px solid var(--line);padding:22px 0 32px;color:var(--muted);font-size:13.5px}
+.foot-inner{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.foot-inner nav{display:flex;gap:14px;margin-left:auto}
+.foot-inner nav a{text-decoration:none;color:var(--muted)}
+.foot-inner nav a:hover{color:var(--ink)}
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *{transition:none!important;animation:none!important}
+ .reveal{opacity:1;transform:none}
+}
+@media (max-width:980px){
+ .hero-grid{grid-template-columns:1fr}
+ .hiw-grid{grid-template-columns:1fr;padding:20px 18px 6px}
+ .stage{position:static}
+ .hiw-top{padding:32px 20px 6px}
+ .hiw-sub{grid-template-columns:1fr;padding:14px 18px 6px}
+ .lifecycle{margin:14px 18px 22px}
+ .browser-body{grid-template-columns:1fr}
+ .app-mock{border-right:0;border-bottom:1px solid var(--line)}
+ .nav{display:none}
+ .life-track{grid-template-columns:repeat(5,minmax(130px,1fr));overflow-x:auto}
+}
+@media (max-width:560px){
+ .header-actions .btn-secondary{display:none}
+ .hero{padding-top:32px}
+ .life-track::before{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#how-it-works">Skip to How it works</a>
+<header class="site-header">
+ <div class="wrap header-inner">
+  <a class="brand" href="#" aria-label="Branchglass home">
+   <span class="brand-mark" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M12 8c0-2 2-3.5 4.5-3.5S21 6 21 6s0 4-4.5 4.5S12 8 12 8z"/><path d="M12 13c0-2-2-3.5-4.5-3.5S3 11 3 11s0 4 4.5 4.5S12 13 12 13z"/><path d="M12 17c0-1.5 1.5-2.5 3.5-2.5S19 16 19 16s0 3-3.5 3.2S12 17 12 17z"/></svg>
+   </span>
+   <span class="brand-text">Branchglass<small>preview environments</small></span>
+  </a>
+  <nav class="nav" aria-label="Primary">
+   <a href="#how-it-works" aria-current="page">How it works</a>
+   <a href="#">Product</a>
+   <a href="#">Docs</a>
+   <a href="#">Pricing</a>
+  </nav>
+  <div class="header-actions">
+   <a class="btn btn-secondary btn-sm" href="#">Sign in</a>
+   <a class="btn btn-primary btn-sm" href="#get-started">Get started
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+   </a>
+  </div>
+ </div>
+</header>
+
+<main>
+<!-- compact hero to set context -->
+<section class="hero" aria-labelledby="hero-title">
+ <div class="wrap hero-grid">
+  <div>
+   <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Branchglass • For pull requests</p>
+   <h1 id="hero-title">Every pull request gets its own <span class="grad">production-like world.</span></h1>
+   <p class="lead">Stop reviewing code blind. Branchglass builds an isolated, shareable cloud environment for each PR — with prod-like config and safe test data — and tears it down when you merge.</p>
+   <div class="hero-ctas">
+    <a class="btn btn-primary" href="#how-it-works">See how it works
+     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+    </a>
+    <a class="btn btn-secondary" href="#">Live demo</a>
+   </div>
+   <ul class="hero-proof">
+    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0A7A5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> No staging queue</li>
+    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0A7A5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> No YAML maze</li>
+    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0A7A5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> No manual cleanup</li>
+   </ul>
+  </div>
+  <div class="hero-card" aria-label="Example Branchglass pull request comment">
+   <div class="pr-head">
+    <span class="pr-avatar" aria-hidden="true">AK</span>
+    <div class="pr-title"><strong>Add checkout with Apple Pay #2487</strong><span>amara • wants to merge into main • 4 commits</span></div>
+    <span class="pr-state">Open</span>
+   </div>
+   <div class="bot-comment">
+    <span class="bot-icon" aria-hidden="true">
+     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M12 8c0-2 2-3.5 4.5-3.5S21 6 21 6s0 4-4.5 4.5S12 8 12 8z"/><path d="M12 13c0-2-2-3.5-4.5-3.5S3 11 3 11s0 4 4.5 4.5S12 13 12 13z"/></svg>
+    </span>
+    <div style="flex:1;min-width:0">
+     <h3>branchglass bot <span style="font-weight:500;color:#6B7E94">• 38s ago</span></h3>
+     <p>Preview environment is <strong style="color:#065F46">live</strong> — isolated, prod-like, seeded with safe test data.</p>
+     <div class="url-row">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A7A5C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+      <code id="heroUrl">pr-2487.checkout.branchglass.dev</code>
+      <button class="copy-btn" type="button" data-copy="pr-2487.checkout.branchglass.dev">Copy</button>
+     </div>
+    </div>
+   </div>
+   <div class="env-pills" aria-label="Environment highlights">
+    <span class="live">● Live in 1m 42s</span>
+    <span>Isolated VPC</span>
+    <span>Seeded test data</span>
+    <span>Auto-cleanup on merge</span>
+   </div>
+  </div>
+ </div>
+</section>
+
+<div class="wrap stack" aria-label="Integrations">
+ <div class="stack-inner reveal">
+  <span class="stack-label">Plugs into your workflow</span>
+  <ul class="stack-pills">
+   <li><i aria-hidden="true"></i>GitHub</li>
+   <li><i aria-hidden="true"></i>GitLab</li>
+   <li><i aria-hidden="true"></i>Bitbucket</li>
+   <li><i aria-hidden="true" style="background:#0EA5E9"></i>AWS</li>
+   <li><i aria-hidden="true" style="background:#0EA5E9"></i>Google Cloud</li>
+   <li><i aria-hidden="true" style="background:#0EA5E9"></i>Azure</li>
+   <li><i aria-hidden="true" style="background:#8B5CF6"></i>Terraform</li>
+   <li><i aria-hidden="true" style="background:#8B5CF6"></i>Docker</li>
+   <li><i aria-hidden="true" style="background:#F59E0B"></i>Slack</li>
+   <li><i aria-hidden="true" style="background:#F59E0B"></i>Linear</li>
+  </ul>
+ </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="hiw" aria-labelledby="hiw-title" id="how-it-works">
+ <div class="wrap">
+  <div class="hiw-panel">
+   <div class="hiw-top">
+    <p class="eyebrow"><span class="dot" aria-hidden="true"></span> How it works</p>
+    <h2 id="hiw-title">From pull request to production-like preview <span class="grad">in minutes.</span></h2>
+    <p class="lede">Connect Branchglass once to your repo and cloud. After that, it slots into the pull-request flow your team already uses — creating, updating, and removing environments automatically.</p>
+    <ul class="hiw-meta" aria-label="Key guarantees">
+     <li><b aria-hidden="true">✓</b> Spin-up in ~2 min</li>
+     <li><b aria-hidden="true">↻</b> Synced on every commit</li>
+     <li><b aria-hidden="true">◍</b> Removed on merge / close</li>
+    </ul>
+   </div>
+
+   <div class="hiw-grid">
+    <ol class="steps" aria-label="How Branchglass works, step by step">
+     <li class="step is-active reveal" data-step="0">
+      <button class="step-btn" type="button" aria-expanded="true" aria-controls="panel-0" id="btn-0">
+       <span class="step-num" aria-hidden="true">01</span>
+       <span class="step-text"><span class="step-kicker">Connect once</span><span class="step-title">Link your repo + cloud account</span></span>
+       <span class="step-chev" aria-hidden="true">›</span>
+      </button>
+      <div class="step-panel" id="panel-0" role="region" aria-labelledby="btn-0">
+       <p>OAuth your code host and cloud. Branchglass reads your service config and infra-as-code, maps env vars, secrets and networking — no migration, no rewrite.</p>
+       <ul class="chip-row"><li>5-min setup</li><li>GitHub • GitLab • Bitbucket</li><li>AWS • GCP • Azure</li></ul>
+      </div>
+     </li>
+     <li class="step reveal" data-step="1">
+      <button class="step-btn" type="button" aria-expanded="false" aria-controls="panel-1" id="btn-1">
+       <span class="step-num" aria-hidden="true">02</span>
+       <span class="step-text"><span class="step-kicker">Open a pull request</span><span class="step-title">Get an isolated, prod-like environment</span></span>
+       <span class="step-chev" aria-hidden="true">›</span>
+      </button>
+      <div class="step-panel" id="panel-1" role="region" aria-labelledby="btn-1">
+       <p>Every PR triggers its own namespaced environment with production-like configuration — same services, flags, and versions — seeded with scrubbed, synthetic test data. Safe to click, safe to break.</p>
+       <ul class="chip-row"><li>Automatic on PR open</li><li>Isolated VPC + data</li><li>Prod parity</li></ul>
+      </div>
+     </li>
+     <li class="step reveal" data-step="2">
+      <button class="step-btn" type="button" aria-expanded="false" aria-controls="panel-2" id="btn-2">
+       <span class="step-num" aria-hidden="true">03</span>
+       <span class="step-text"><span class="step-kicker">Share &amp; review</span><span class="step-title">Test together from one URL</span></span>
+       <span class="step-chev" aria-hidden="true">›</span>
+      </button>
+      <div class="step-panel" id="panel-2" role="region" aria-labelledby="btn-2">
+       <p>Branchglass posts a shareable URL on the PR. Developers, designers and reviewers open it — no local setup, no credentials chase. Comment, approve, or request changes with full context.</p>
+       <ul class="chip-row"><li>Shareable URL</li><li>No local setup</li><li>Design • PM • QA friendly</li></ul>
+      </div>
+     </li>
+     <li class="step reveal" data-step="3">
+      <button class="step-btn" type="button" aria-expanded="false" aria-controls="panel-3" id="btn-3">
+       <span class="step-num" aria-hidden="true">04</span>
+       <span class="step-text"><span class="step-kicker">Stay fresh, then vanish</span><span class="step-title">Auto-update &amp; auto-cleanup</span></span>
+       <span class="step-chev" aria-hidden="true">›</span>
+      </button>
+      <div class="step-panel" id="panel-3" role="region" aria-labelledby="btn-3">
+       <p>New commits rebuild incrementally, so the preview never goes stale. Merge or close the PR and the whole environment — infra, data, DNS — is destroyed in seconds. No zombies, no bill creep.</p>
+       <ul class="chip-row"><li>Updates per commit</li><li>Destroyed on merge</li><li>Zero leftovers</li></ul>
+      </div>
+     </li>
+    </ol>
+
+    <div class="stage reveal" aria-label="Live preview of the Branchglass lifecycle">
+     <div class="browser">
+      <div class="browser-bar">
+       <span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span>
+       <span class="urlbar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A7A5C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+        <code id="stageUrl">main • connected — ready for PRs</code>
+       </span>
+       <span class="status is-connected" id="stageStatus" role="status">● Connected</span>
+      </div>
+      <div class="browser-body">
+       <div class="app-mock" aria-hidden="true">
+        <div class="app-nav"><span class="app-logo"></span><span class="app-lines" style="flex:1"><i></i><i></i></span>
+         <span class="app-avatars"><span style="background:#0A7A5C">D</span><span style="background:#0EA5E9">J</span><span style="background:#8B5CF6">+2</span></span>
+        </div>
+        <div class="app-hero">
+         <h4 id="appTitle">Checkout — Apple Pay</h4>
+         <p id="appSub">PR #2487 • preview • seeded cart: 3 items</p>
+         <div class="row"><button class="btn-mini light" type="button" tabindex="-1">Pay $84.00</button><button class="btn-mini ghost" type="button" tabindex="-1">View logs</button></div>
+        </div>
+        <div class="skel"><div><b>Orders</b><i></i><i style="width:60%"></i></div><div><b>Flags</b><i></i><i style="width:45%"></i></div><div><b>Latency</b><i></i><i style="width:70%"></i></div></div>
+        <div class="collab"><span style="font-weight:800;color:#0A7A5C">↗ Share</span> Design + PM are viewing this URL now — no login needed.</div>
+       </div>
+       <div class="terminal" aria-label="Environment log">
+        <div class="term-head"><span class="pulse" aria-hidden="true"></span> Branchglass • env log <span style="margin-left:auto;font-family:var(--mono);font-weight:500;text-transform:none;letter-spacing:0" id="termSha">main@a1c9</span></div>
+        <div class="log" id="termLog" aria-live="polite"></div>
+       </div>
+      </div>
+      <div class="stage-controls" role="group" aria-label="Simulate the pull request lifecycle">
+       <button class="sim-btn" type="button" data-goto="1">◉ Open PR</button>
+       <button class="sim-btn" type="button" data-goto="2">⇄ Push commit</button>
+       <button class="sim-btn" type="button" data-goto="3">✔ Merge PR</button>
+      </div>
+      <p class="sim-hint">Try it: select a step on the left — or simulate the lifecycle here. The URL, status and logs update just like a real Branchglass run.</p>
+     </div>
+    </div>
+   </div>
+
+   <div class="hiw-sub">
+    <article class="info-card reveal">
+     <h3>Production-like, without production risk</h3>
+     <p>Mirrors what matters for confidence. Scrubs what matters for safety.</p>
+     <ul class="compare">
+      <li><span class="tick green" aria-hidden="true">✓</span><div><strong>Mirrored configuration</strong><span>Services, env vars, feature flags, migrations &amp; versions match prod.</span></div></li>
+      <li><span class="tick blue" aria-hidden="true">◍</span><div><strong>Safe test data, always</strong><span>Scrubbed + synthetic seed. PII never leaves prod. Reset in one click.</span></div></li>
+      <li><span class="tick green" aria-hidden="true">✓</span><div><strong>Isolated by default</strong><span>Namespaced network, DB &amp; buckets per PR — break it without breaking anyone else.</span></div></li>
+     </ul>
+    </article>
+    <article class="info-card reveal">
+     <h3>Built for the whole review loop</h3>
+     <p>One link replaces “works on my machine” threads and staging handoffs.</p>
+     <ul class="personas">
+      <li><span class="avatar" style="background:#0A7A5C" aria-hidden="true">DV</span><div><strong>Developers</strong><p>Debug the real running change. Share backend + frontend together.</p></div></li>
+      <li><span class="avatar" style="background:#0EA5E9" aria-hidden="true">DS</span><div><strong>Designers &amp; PMs</strong><p>Click the flow, check copy and edge cases — no dev setup.</p></div></li>
+      <li><span class="avatar" style="background:#0B1D33" aria-hidden="true">RV</span><div><strong>Reviewers &amp; QA</strong><p>Approve with evidence. Run manual or automated E2E on the URL.</p></div></li>
+     </ul>
+    </article>
+   </div>
+
+   <div class="lifecycle reveal" aria-label="Environment lifecycle timeline">
+    <h3>Lifecycle: it exists exactly as long as the PR does</h3>
+    <p>Nothing to start, nothing to remember to stop. Branchglass follows your Git flow.</p>
+    <div class="life-track" id="lifeTrack">
+     <div class="life-step done"><div class="life-dot" aria-hidden="true">✓</div><strong>Connected</strong><span>once • 5 min</span></div>
+     <div class="life-step now" data-life="1"><div class="life-dot" aria-hidden="true">◉</div><strong>PR opened</strong><span>env live • 1m 42s</span></div>
+     <div class="life-step" data-life="2"><div class="life-dot" aria-hidden="true">⇄</div><strong>Updated</strong><span>per commit • 38s</span></div>
+     <div class="life-step" data-life="3"><div class="life-dot" aria-hidden="true">✔</div><strong>Merged</strong><span>main • deploy</span></div>
+     <div class="life-step" data-life="3"><div class="life-dot" aria-hidden="true">◍</div><strong>Destroyed</strong><span>0 leftovers</span></div>
+    </div>
+   </div>
+
+  </div>
+</section>
+
+<section class="cta" id="get-started" aria-labelledby="cta-title">
+ <div class="wrap">
+  <div class="cta-inner reveal">
+   <h2 id="cta-title">Stop reviewing code blind.</h2>
+   <p>Connect your repo and cloud today. Your next pull request can come with a live, shareable, production-like environment — and clean up after itself.</p>
+   <div class="cta-row">
+    <a class="btn btn-light" href="#">Start free — no infra changes</a>
+    <a class="btn btn-outline" href="#how-it-works">Revisit how it works</a>
+   </div>
+   <p style="font-size:12.5px;margin:16px 0 0;color:#9AC3B3">Free for 1 repo • SOC 2 Type II • Secrets encrypted at rest</p>
+  </div>
+ </div>
+</section>
+</main>
+
+<footer>
+ <div class="wrap foot-inner">
+  <a class="brand" href="#" style="font-size:15px" aria-label="Branchglass home">
+   <span class="brand-mark" style="width:26px;height:26px" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M12 8c0-2 2-3.5 4.5-3.5S21 6 21 6s0 4-4.5 4.5S12 8 12 8z"/><path d="M12 13c0-2-2-3.5-4.5-3.5S3 11 3 11s0 4 4.5 4.5S12 13 12 13z"/></svg></span>
+   Branchglass
+  </a>
+  <span>© 2026 Branchglass, Inc. — Ephemeral environments for confident reviews.</span>
+  <nav aria-label="Footer"><a href="#">Docs</a><a href="#">Status</a><a href="#">Security</a><a href="#">Contact</a></nav>
+ </div>
+</footer>
+
+<script>
+(function(){
+ var steps = Array.prototype.slice.call(document.querySelectorAll('.step'));
+ var stageUrl = document.getElementById('stageUrl');
+ var stageStatus = document.getElementById('stageStatus');
+ var termLog = document.getElementById('termLog');
+ var termSha = document.getElementById('termSha');
+ var appTitle = document.getElementById('appTitle');
+ var appSub = document.getElementById('appSub');
+ var simBtns = Array.prototype.slice.call(document.querySelectorAll('.sim-btn'));
+ var lifeSteps = Array.prototype.slice.call(document.querySelectorAll('.life-step'));
+
+ var DATA = [
+  {
+   url:'main \u2022 connected \u2014 ready for PRs',
+   status:'\u25CF Connected', cls:'is-connected',
+   sha:'main@a1c9', title:'Checkout \u2014 Apple Pay', sub:'main \u2022 waiting for next PR',
+   log:[
+    '<div><span class="t">09:41:02</span> <span class="ok">\u2713</span> repo <span class="info">acme/checkout</span> linked</div>',
+    '<div><span class="t">09:41:18</span> <span class="ok">\u2713</span> cloud <span class="info">aws / prod-us-east</span> mapped</div>',
+    '<div><span class="t">09:41:31</span> <span class="dim">config mirrored \u2022 secrets vaulted \u2022 test seed ready</span></div>',
+    '<div><span class="t">09:41:32</span> <span class="ok">\u2713 listening for pull requests\u2026</span></div>'
+   ]
+  },
+  {
+   url:'pr-2487.checkout.branchglass.dev',
+   status:'\u25CF Live \u2022 1m 42s', cls:'is-live',
+   sha:'pr-2487@7f3a', title:'Checkout \u2014 Apple Pay', sub:'PR #2487 \u2022 preview \u2022 seeded cart: 3 items',
+   log:[
+    '<div><span class="t">10:12:04</span> PR <span class="info">#2487 opened</span> \u2014 provisioning\u2026</div>',
+    '<div><span class="t">10:12:41</span> <span class="ok">\u2713</span> isolated VPC + DB <span class="dim">(ns pr-2487)</span></div>',
+    '<div><span class="t">10:13:12</span> <span class="ok">\u2713</span> prod-like config applied <span class="dim">flags, migr. 084</span></div>',
+    '<div><span class="t">10:13:46</span> <span class="ok">\u2713 live</span> \u2014 <span class="info">seeded safe test data</span> \u2022 URL posted</div>'
+   ]
+  },
+  {
+   url:'pr-2487.checkout.branchglass.dev \u2022 v3',
+   status:'\u25CF Live \u2022 shared', cls:'is-live',
+   sha:'pr-2487@9b1e', title:'Checkout \u2014 Apple Pay + tips', sub:'PR #2487 \u2022 v3 \u2022 4 reviewers viewing',
+   log:[
+    '<div><span class="t">10:28:11</span> <span class="info">amara, jon, priya</span> opened URL <span class="dim">no login</span></div>',
+    '<div><span class="t">10:29:02</span> QA run <span class="ok">passed 42/42</span> <span class="dim">playwright on preview</span></div>',
+    '<div><span class="t">10:30:44</span> comment synced \u2014 <span class="dim">\u201cApple Pay sheet looks perfect\u201d</span></div>',
+    '<div><span class="t">10:31:00</span> <span class="ok">\u2713</span> ready to merge</div>'
+   ]
+  },
+  {
+   url:'pr-2487 \u2022 merged \u2014 env destroyed',
+   status:'\u25CB Destroyed \u2022 12s', cls:'is-destroyed',
+   sha:'main@d4f2', title:'Checkout \u2014 main', sub:'merged \u2022 preview removed \u2022 $0 lingering cost',
+   log:[
+    '<div><span class="t">10:42:19</span> push <span class="info">9b1e \u2192 main</span> \u2014 incremental update <span class="ok">38s</span></div>',
+    '<div><span class="t">10:44:02</span> PR <span class="warn">#2487 merged</span> \u2014 teardown started</div>',
+    '<div><span class="t">10:44:09</span> <span class="dim">dns removed \u2022 db snapshot deleted \u2022 ns released</span></div>',
+    '<div><span class="t">10:44:14</span> <span class="ok">\u2713 gone without a trace.</span> main is clean.</div>'
+   ]
+  }
+ ];
+
+ function render(i, animate){
+  var d = DATA[i];
+  if(animate !== false){
+   termLog.style.opacity = '0';
+   setTimeout(function(){ termLog.style.opacity = '1'; }, 140);
+  }
+  setTimeout(function(){
+   stageUrl.textContent = d.url;
+   stageStatus.textContent = d.status;
+   stageStatus.className = 'status ' + d.cls;
+   termSha.textContent = d.sha;
+   appTitle.textContent = d.title;
+   appSub.textContent = d.sub;
+   termLog.innerHTML = d.log.join('');
+  }, animate !== false ? 140 : 0);
+  simBtns.forEach(function(b){
+   var g = parseInt(b.getAttribute('data-goto'),10);
+   if((i===0 && g===1) || g===i) { /* keep */ }
+   b.classList.toggle('active', g===i || (i===0 && false));
+  });
+  lifeSteps.forEach(function(el){
+   var lv = el.getAttribute('data-life');
+   el.classList.remove('now');
+   if(lv && parseInt(lv,10)===i) el.classList.add('now');
+   if(i===3 && el.textContent.indexOf('Destroyed')>-1) el.classList.add('now');
+  });
+ }
+
+ function select(i, focusBtn){
+  steps.forEach(function(s, idx){
+   var on = idx===i;
+   s.classList.toggle('is-active', on);
+   var btn = s.querySelector('.step-btn');
+   btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+   if(on && focusBtn) btn.focus();
+  });
+  render(i, true);
+ }
+
+ steps.forEach(function(s, idx){
+  var btn = s.querySelector('.step-btn');
+  btn.addEventListener('click', function(){ select(idx, false); });
+  btn.addEventListener('keydown', function(e){
+   if(e.key==='ArrowDown' || e.key==='ArrowRight'){ e.preventDefault(); select((idx+1)%steps.length, true); }
+   if(e.key==='ArrowUp' || e.key==='ArrowLeft'){ e.preventDefault(); select((idx-1+steps.length)%steps.length, true); }
+  });
+ });
+ simBtns.forEach(function(b){
+  b.addEventListener('click', function(){
+   var g = parseInt(b.getAttribute('data-goto'),10);
+   select(g, false);
+  });
+ });
+
+ // initial
+ render(0, false);
+ termLog.style.transition = 'opacity .18s ease';
+
+ // copy buttons
+ document.querySelectorAll('[data-copy]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+   var v = btn.getAttribute('data-copy');
+   var done = function(){ var o=btn.textContent; btn.textContent='Copied!'; setTimeout(function(){btn.textContent=o;},1400); };
+   if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText('https://'+v).then(done, done);
+   } else {
+    var ta=document.createElement('textarea'); ta.value='https://'+v; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta); done();
+   }
+  });
+ });
+
+ // reveal on scroll
+ var reveals = document.querySelectorAll('.reveal');
+ if('IntersectionObserver' in window){
+  var io = new IntersectionObserver(function(entries){
+   entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, {threshold:.12});
+  reveals.forEach(function(r){ io.observe(r); });
+ } else {
+  reveals.forEach(function(r){ r.classList.add('in'); });
+ }
+})();
+</script>
+</body>
+</html>

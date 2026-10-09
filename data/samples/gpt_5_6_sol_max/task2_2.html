@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>Maya Chen · Candidate Deep-Dive | TalentPulse</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --ink: #172033;
+      --ink-2: #344054;
+      --muted: #667085;
+      --muted-2: #98a2b3;
+      --line: #e4e8ef;
+      --line-strong: #d6dce6;
+      --brand: #5b5bd6;
+      --brand-dark: #4646b8;
+      --brand-soft: #eeeeff;
+      --brand-faint: #f7f7ff;
+      --green: #138a63;
+      --green-soft: #e9f8f1;
+      --blue: #2878c8;
+      --blue-soft: #eaf4ff;
+      --amber: #b66a0a;
+      --amber-soft: #fff5df;
+      --red: #c33d52;
+      --red-soft: #fff0f2;
+      --sidebar: #111827;
+      --sidebar-muted: #aeb8ca;
+      --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 4px 16px rgba(16, 24, 40, .035);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { color: inherit; }
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3, p { margin: 0; }
+    ul, ol { margin: 0; padding: 0; list-style: none; }
+    svg { display: block; }
+    [hidden] { display: none !important; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 242px minmax(0, 1fr);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: #fff;
+      background:
+        radial-gradient(circle at 30px 30px, rgba(111, 100, 255, .13), transparent 170px),
+        var(--sidebar);
+      border-right: 1px solid rgba(255,255,255,.055);
+      overflow: hidden;
+    }
+
+    .brand {
+      height: 70px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      flex: 0 0 auto;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, #7367f0 0%, #6b82ef 52%, #42b5c8 100%);
+      box-shadow: 0 6px 18px rgba(91, 91, 214, .28);
+      flex: 0 0 auto;
+    }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-name { font-size: 17px; font-weight: 740; letter-spacing: -.25px; }
+
+    .sidebar-scroll {
+      padding: 18px 12px;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,.14) transparent;
+    }
+    .nav-section + .nav-section { margin-top: 25px; }
+    .nav-caption {
+      padding: 0 10px 8px;
+      color: #758198;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .nav-list { display: grid; gap: 4px; }
+    .nav-item {
+      width: 100%;
+      min-height: 40px;
+      padding: 0 11px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      border: 0;
+      border-radius: 9px;
+      color: var(--sidebar-muted);
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      transition: background .16s ease, color .16s ease;
+    }
+    .nav-item:hover { color: #fff; background: rgba(255,255,255,.06); }
+    .nav-item .icon { width: 19px; height: 19px; }
+    .nav-label { min-width: 0; flex: 1; font-size: 13.5px; font-weight: 570; }
+    .nav-count {
+      min-width: 23px;
+      height: 20px;
+      padding: 0 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 99px;
+      color: #cdd5e3;
+      background: rgba(255,255,255,.08);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .nav-item.parent-active { color: #f4f3ff; }
+    .nav-sub {
+      position: relative;
+      margin: 3px 0 7px 19px;
+      padding-left: 20px;
+      display: grid;
+      gap: 2px;
+    }
+    .nav-sub::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      bottom: 3px;
+      width: 1px;
+      background: rgba(255,255,255,.1);
+    }
+    .nav-sub .nav-item { min-height: 34px; padding: 0 10px; font-size: 13px; }
+    .nav-sub .nav-item.active {
+      position: relative;
+      color: #fff;
+      background: rgba(105, 93, 230, .23);
+    }
+    .nav-sub .nav-item.active::before {
+      content: "";
+      position: absolute;
+      left: -16px;
+      width: 3px;
+      height: 17px;
+      border-radius: 5px;
+      background: #8c83ff;
+      box-shadow: 0 0 10px rgba(140,131,255,.42);
+    }
+
+    .sidebar-bottom {
+      padding: 13px 12px 16px;
+      border-top: 1px solid rgba(255,255,255,.07);
+      flex: 0 0 auto;
+    }
+    .org-card {
+      width: 100%;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 10px;
+      color: #fff;
+      background: rgba(255,255,255,.035);
+      cursor: pointer;
+      text-align: left;
+    }
+    .org-logo {
+      width: 31px;
+      height: 31px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, #1d9a7a, #397fb6);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .org-copy { flex: 1; min-width: 0; }
+    .org-copy strong { display: block; font-size: 12.5px; font-weight: 650; white-space: nowrap; }
+    .org-copy span { display: block; margin-top: 1px; color: #8490a4; font-size: 10.5px; }
+
+    /* Main shell and topbar */
+    .main-shell { min-width: 0; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      height: 66px;
+      padding: 0 27px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(255,255,255,.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+    .mobile-menu { display: none; }
+    .breadcrumbs {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .breadcrumbs a:hover { color: var(--brand); }
+    .breadcrumbs .icon { width: 14px; height: 14px; color: #b2b9c6; }
+    .breadcrumbs strong {
+      max-width: 190px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--ink-2);
+      font-weight: 650;
+    }
+    .topbar-spacer { flex: 1; }
+    .search-box {
+      width: clamp(220px, 24vw, 340px);
+      height: 38px;
+      padding: 0 10px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      background: #f7f8fa;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .search-box:focus-within {
+      background: #fff;
+      border-color: #aaa9e8;
+      box-shadow: 0 0 0 3px rgba(91,91,214,.09);
+    }
+    .search-box .icon { width: 16px; height: 16px; }
+    .search-box input {
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 12.5px;
+    }
+    .search-box input::placeholder { color: #929baa; }
+    .shortcut {
+      padding: 2px 6px;
+      border: 1px solid #dde1e8;
+      border-bottom-color: #cbd1da;
+      border-radius: 5px;
+      color: #8a94a4;
+      background: #fff;
+      font-size: 10px;
+      line-height: 17px;
+    }
+    .top-actions { display: flex; align-items: center; gap: 7px; }
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+    .icon-button:hover { color: var(--ink); background: #f4f5f7; border-color: var(--line); }
+    .notification-button { position: relative; }
+    .notification-dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ef5b6d;
+      border: 2px solid #fff;
+      box-sizing: content-box;
+    }
+    .user-menu {
+      margin-left: 3px;
+      padding: 3px 5px 3px 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      cursor: pointer;
+    }
+    .user-menu:hover { background: #f5f6f8; }
+    .avatar {
+      display: inline-grid;
+      place-items: center;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      color: #fff;
+      background: linear-gradient(135deg, #6172dd, #8c5fb7);
+      font-weight: 730;
+      letter-spacing: -.01em;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.24);
+    }
+    .avatar.user-avatar { width: 32px; height: 32px; font-size: 11px; }
+    .user-copy { text-align: left; }
+    .user-copy strong { display: block; font-size: 11.5px; font-weight: 650; }
+    .user-copy span { display: block; color: var(--muted); font-size: 10px; }
+
+    .page-content {
+      width: 100%;
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 24px 28px 48px;
+    }
+
+    /* Buttons and badges */
+    .btn {
+      min-height: 38px;
+      padding: 0 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      color: var(--ink-2);
+      background: #fff;
+      box-shadow: 0 1px 1px rgba(16,24,40,.025);
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 640;
+      white-space: nowrap;
+      transition: transform .1s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover { border-color: #c2c9d4; background: #fafbfc; box-shadow: 0 2px 6px rgba(16,24,40,.06); }
+    .btn:active { transform: translateY(1px); }
+    .btn:focus-visible, .icon-button:focus-visible, .nav-item:focus-visible, .tab:focus-visible, .text-button:focus-visible {
+      outline: 3px solid rgba(91,91,214,.18);
+      outline-offset: 1px;
+    }
+    .btn .icon { width: 16px; height: 16px; }
+    .btn-primary {
+      color: #fff;
+      border-color: var(--brand);
+      background: var(--brand);
+      box-shadow: 0 2px 5px rgba(91,91,214,.2);
+    }
+    .btn-primary:hover { color: #fff; border-color: var(--brand-dark); background: var(--brand-dark); }
+    .btn-soft { color: var(--brand-dark); border-color: #d8d8f7; background: var(--brand-faint); }
+    .btn-danger-soft { color: var(--red); border-color: #f3d3d8; background: var(--red-soft); }
+    .btn-icon-only { width: 38px; padding: 0; }
+    .text-button {
+      padding: 4px 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 0;
+      border-radius: 6px;
+      color: var(--brand);
+      background: transparent;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 650;
+    }
+    .text-button:hover { color: var(--brand-dark); }
+    .text-button .icon { width: 14px; height: 14px; }
+    .badge {
+      min-height: 23px;
+      padding: 3px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 99px;
+      font-size: 10.5px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .9; }
+    .badge-green { color: var(--green); background: var(--green-soft); }
+    .badge-purple { color: var(--brand-dark); background: var(--brand-soft); }
+    .badge-blue { color: var(--blue); background: var(--blue-soft); }
+    .badge-amber { color: var(--amber); background: var(--amber-soft); }
+    .badge-neutral { color: #5d6778; background: #eff2f6; }
+    .badge-red { color: var(--red); background: var(--red-soft); }
+    .badge.no-dot::before { display: none; }
+
+    /* Candidate hero */
+    .profile-card {
+      position: relative;
+      overflow: visible;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+    .profile-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+      background: linear-gradient(90deg, #6059d8 0%, #7470ea 42%, #35a9ad 100%);
+    }
+    .profile-top {
+      padding: 23px 23px 17px;
+      display: flex;
+      align-items: flex-start;
+      gap: 17px;
+    }
+    .candidate-avatar-wrap { position: relative; flex: 0 0 auto; }
+    .candidate-avatar {
+      width: 64px;
+      height: 64px;
+      font-size: 20px;
+      background: linear-gradient(145deg, #435fb6 0%, #7a62b5 100%);
+    }
+    .active-indicator {
+      position: absolute;
+      right: 1px;
+      bottom: 2px;
+      width: 14px;
+      height: 14px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: #21a878;
+    }
+    .candidate-summary { min-width: 0; flex: 1; }
+    .candidate-name-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .candidate-name-row h1 {
+      color: #151d2d;
+      font-size: 25px;
+      line-height: 1.2;
+      font-weight: 730;
+      letter-spacing: -.55px;
+    }
+    .candidate-subtitle { margin-top: 5px; color: var(--ink-2); font-size: 13.5px; }
+    .candidate-subtitle .muted { color: var(--muted); }
+    .contact-strip {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .contact-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+    a.contact-item:hover { color: var(--brand); }
+    .contact-item .icon { width: 14px; height: 14px; color: #8a94a5; }
+    .contact-item b { color: var(--ink-2); font-weight: 630; }
+    .profile-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+    .menu-wrap { position: relative; }
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 7px);
+      z-index: 70;
+      width: 205px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(16,24,40,.14);
+    }
+    .dropdown-menu button {
+      width: 100%;
+      height: 36px;
+      padding: 0 9px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 0;
+      border-radius: 7px;
+      color: var(--ink-2);
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      font-size: 12.5px;
+    }
+    .dropdown-menu button:hover { background: #f5f6f8; }
+    .dropdown-menu button.danger { color: var(--red); }
+    .dropdown-menu .icon { width: 16px; height: 16px; }
+    .menu-divider { height: 1px; margin: 5px 3px; background: var(--line); }
+
+    .pipeline-panel {
+      padding: 16px 23px 18px;
+      border-top: 1px solid var(--line);
+      background: linear-gradient(180deg, #fafbff 0%, #fff 85%);
+      border-radius: 0 0 16px 16px;
+    }
+    .pipeline-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+    .pipeline-title { display: flex; align-items: center; gap: 9px; }
+    .pipeline-title strong { font-size: 12.5px; font-weight: 700; }
+    .pipeline-title span { color: var(--muted); font-size: 11.5px; }
+    .pipeline-state { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+    .pipeline-state b { color: var(--brand-dark); font-weight: 700; }
+    .stepper-scroll { margin-top: 15px; overflow-x: auto; padding: 1px 2px 4px; scrollbar-width: thin; }
+    .stage-stepper { min-width: 650px; display: flex; }
+    .stage-step {
+      position: relative;
+      flex: 1;
+      text-align: center;
+      color: var(--muted-2);
+    }
+    .stage-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      top: 12px;
+      left: calc(50% + 17px);
+      right: calc(-50% + 17px);
+      height: 2px;
+      background: #e2e6ed;
+    }
+    .stage-step.complete:not(:last-child)::after { background: #8c87df; }
+    .step-dot {
+      position: relative;
+      z-index: 1;
+      width: 25px;
+      height: 25px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      border: 2px solid #d9dee7;
+      border-radius: 50%;
+      color: #a0a8b5;
+      background: #fff;
+      font-size: 10px;
+      font-weight: 750;
+    }
+    .step-dot .icon { width: 13px; height: 13px; stroke-width: 2.4; }
+    .stage-step.complete .step-dot { color: #fff; border-color: var(--brand); background: var(--brand); }
+    .stage-step.current .step-dot {
+      color: var(--brand);
+      border-color: var(--brand);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(91,91,214,.12);
+    }
+    .step-label { display: block; margin-top: 7px; font-size: 10.5px; font-weight: 590; white-space: nowrap; }
+    .stage-step.complete .step-label { color: #596273; }
+    .stage-step.current .step-label { color: var(--brand-dark); font-weight: 730; }
+
+    /* General card layout */
+    .dashboard-grid {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(330px, .82fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .column-stack { min-width: 0; display: grid; gap: 20px; }
+    .card {
+      min-width: 0;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      min-height: 57px;
+      padding: 14px 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .card-title-wrap { min-width: 0; display: flex; align-items: center; gap: 10px; }
+    .section-icon {
+      width: 31px;
+      height: 31px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--brand);
+      background: var(--brand-soft);
+      flex: 0 0 auto;
+    }
+    .section-icon .icon { width: 16px; height: 16px; }
+    .section-icon.green { color: var(--green); background: var(--green-soft); }
+    .section-icon.amber { color: var(--amber); background: var(--amber-soft); }
+    .card-title { font-size: 14.5px; font-weight: 710; letter-spacing: -.1px; }
+    .card-subtitle { margin-top: 2px; color: var(--muted); font-size: 10.5px; }
+    .count-pill {
+      min-width: 22px;
+      height: 21px;
+      padding: 0 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 99px;
+      color: #687386;
+      background: #eef1f5;
+      font-size: 10px;
+      font-weight: 720;
+    }
+
+    /* Meeting */
+    .meeting-card { border-color: #deddf4; }
+    .meeting-card .card-header { background: linear-gradient(90deg, #faf9ff, #fff); }
+    .meeting-content { padding: 18px; }
+    .meeting-main {
+      display: grid;
+      grid-template-columns: 66px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+    }
+    .date-tile {
+      width: 64px;
+      height: 68px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid #dfe2eb;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 7px rgba(16,24,40,.05);
+    }
+    .date-month {
+      width: 100%;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--brand);
+      font-size: 9px;
+      font-weight: 780;
+      letter-spacing: .08em;
+    }
+    .date-day { padding-top: 5px; color: var(--ink); font-size: 23px; line-height: 1; font-weight: 740; letter-spacing: -.5px; }
+    .meeting-info { min-width: 0; }
+    .meeting-info h3 { font-size: 16px; font-weight: 710; letter-spacing: -.2px; }
+    .meeting-meta { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 11.5px; }
+    .meeting-meta span { display: inline-flex; align-items: center; gap: 6px; }
+    .meeting-meta .icon { width: 14px; height: 14px; color: #7c8697; }
+    .meeting-actions { display: flex; align-items: center; gap: 8px; }
+    .participants {
+      margin-top: 17px;
+      padding-top: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-top: 1px solid #edf0f4;
+    }
+    .participants-left { min-width: 0; display: flex; align-items: center; gap: 10px; }
+    .avatar-stack { display: flex; padding-left: 3px; flex: 0 0 auto; }
+    .mini-avatar {
+      width: 29px;
+      height: 29px;
+      margin-left: -5px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 8.5px;
+      font-weight: 750;
+    }
+    .mini-avatar:nth-child(1) { background: #357e8c; }
+    .mini-avatar:nth-child(2) { background: #b26373; }
+    .mini-avatar:nth-child(3) { background: #7d69b1; }
+    .participant-copy { min-width: 0; }
+    .participant-copy b { display: block; font-size: 11.5px; font-weight: 650; }
+    .participant-copy span { display: block; margin-top: 1px; color: var(--muted); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meeting-note { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+
+    /* Activity */
+    .activity-toolbar {
+      padding: 10px 17px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--line);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .activity-toolbar::-webkit-scrollbar { display: none; }
+    .tab {
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 620;
+      white-space: nowrap;
+    }
+    .tab:hover { color: var(--ink); background: #f6f7f9; }
+    .tab[aria-selected="true"] { color: var(--brand-dark); border-color: #dcdcf6; background: var(--brand-soft); }
+    .activity-list { padding: 4px 17px 0; }
+    .activity-item {
+      position: relative;
+      padding: 15px 0 15px 43px;
+    }
+    .activity-item:not(:last-of-type) { border-bottom: 1px solid #edf0f4; }
+    .activity-marker {
+      position: absolute;
+      left: 0;
+      top: 15px;
+      width: 29px;
+      height: 29px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+    }
+    .activity-marker .icon { width: 15px; height: 15px; }
+    .activity-marker.assessment { color: #4666c6; background: #edf1ff; }
+    .activity-marker.scorecard { color: #98710f; background: #fff6d9; }
+    .activity-marker.email { color: #2574a9; background: #e9f6ff; }
+    .activity-marker.call { color: #18825f; background: #e9f8f1; }
+    .activity-marker.note { color: #7257a3; background: #f2edfb; }
+    .activity-marker.calendar { color: #b15a55; background: #fff0ee; }
+    .activity-marker.file { color: #596579; background: #edf0f4; }
+    .activity-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .activity-title { color: var(--ink); font-size: 12.5px; font-weight: 670; }
+    .activity-time { color: var(--muted-2); font-size: 10px; white-space: nowrap; }
+    .activity-detail { margin-top: 3px; color: var(--muted); font-size: 11.5px; }
+    .activity-detail strong { color: var(--ink-2); font-weight: 640; }
+    .assessment-panel {
+      margin-top: 11px;
+      padding: 11px 12px;
+      display: grid;
+      grid-template-columns: 72px repeat(3, minmax(76px, 1fr));
+      align-items: center;
+      gap: 12px;
+      border: 1px solid #e5e8f1;
+      border-radius: 10px;
+      background: #fafbfe;
+    }
+    .score-block { padding-right: 12px; border-right: 1px solid var(--line); }
+    .score-block strong { display: block; color: #354eb0; font-size: 21px; line-height: 1.1; letter-spacing: -.5px; }
+    .score-block span { color: var(--muted); font-size: 9.5px; }
+    .skill-score { min-width: 0; }
+    .skill-score-label { display: flex; align-items: center; justify-content: space-between; gap: 7px; color: var(--muted); font-size: 9.5px; }
+    .skill-score-label b { color: var(--ink-2); font-weight: 680; }
+    .mini-bar { height: 4px; margin-top: 5px; overflow: hidden; border-radius: 99px; background: #e6e9ef; }
+    .mini-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6665d9, #7a8de2); }
+    .scorecard-summary {
+      margin-top: 9px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .rating-pill {
+      padding: 4px 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 6px;
+      color: #8b6511;
+      background: #fff6d9;
+      font-size: 10px;
+      font-weight: 720;
+    }
+    .rating-pill .icon { width: 11px; height: 11px; fill: currentColor; }
+    .tag {
+      padding: 3px 7px;
+      border: 1px solid #e4e7ec;
+      border-radius: 6px;
+      color: #657083;
+      background: #fafbfc;
+      font-size: 9.5px;
+      font-weight: 600;
+    }
+    .activity-empty { padding: 34px 20px; color: var(--muted); text-align: center; font-size: 12px; }
+    .card-footer-action {
+      min-height: 47px;
+      padding: 10px 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top: 1px solid var(--line);
+      background: #fcfcfd;
+    }
+
+    /* Matched requisitions */
+    .jobs-head-row,
+    .job-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.45fr) minmax(125px, .8fr) minmax(125px, .76fr) 62px;
+      gap: 14px;
+      align-items: center;
+    }
+    .jobs-head-row {
+      padding: 9px 17px;
+      color: var(--muted-2);
+      background: #fafbfc;
+      border-bottom: 1px solid var(--line);
+      font-size: 9.5px;
+      font-weight: 720;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .jobs-head-row span:last-child { text-align: center; }
+    .job-row {
+      min-height: 79px;
+      padding: 12px 17px;
+      border-bottom: 1px solid #edf0f4;
+      transition: background .15s ease;
+    }
+    .job-row:hover { background: #fcfcfe; }
+    .job-primary { min-width: 0; display: flex; align-items: center; gap: 11px; }
+    .job-icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #e1e5ec;
+      border-radius: 9px;
+      color: var(--brand);
+      background: #f8f8ff;
+      flex: 0 0 auto;
+    }
+    .job-icon .icon { width: 16px; height: 16px; }
+    .job-title {
+      max-width: 100%;
+      padding: 0;
+      display: block;
+      overflow: hidden;
+      border: 0;
+      color: var(--ink);
+      background: transparent;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 680;
+      text-align: left;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .job-title:hover { color: var(--brand); }
+    .job-id { margin-top: 3px; color: var(--muted); font-size: 9.5px; }
+    .job-cell { min-width: 0; color: var(--ink-2); font-size: 11px; }
+    .job-cell span { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mobile-label { display: none; }
+    .match-ring {
+      --match: 90;
+      position: relative;
+      width: 42px;
+      height: 42px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--green) calc(var(--match) * 1%), #e6ebe9 0);
+    }
+    .match-ring::before {
+      content: "";
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .match-ring span { position: relative; color: #286b55; font-size: 9.5px; font-weight: 780; }
+
+    /* Right rail */
+    .facts-grid { padding: 5px 17px 10px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+    .fact {
+      min-width: 0;
+      padding: 13px 0;
+      border-bottom: 1px solid #edf0f4;
+    }
+    .fact:nth-last-child(-n+2) { border-bottom: 0; }
+    .fact-label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 9.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .035em; }
+    .fact-label .icon { width: 13px; height: 13px; color: #8e98a8; }
+    .fact-value { margin-top: 5px; color: var(--ink); font-size: 11.5px; font-weight: 650; line-height: 1.4; }
+    .fact-help { margin-top: 2px; color: var(--muted); font-size: 9.5px; }
+
+    .authorization-body { padding: 6px 17px 16px; }
+    .auth-row {
+      padding: 12px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      border-bottom: 1px solid #edf0f4;
+    }
+    .auth-row-label { color: var(--muted); font-size: 10px; }
+    .auth-row-value { margin-top: 3px; color: var(--ink); font-size: 11.5px; font-weight: 650; }
+    .auth-row-help { margin-top: 2px; color: var(--muted); font-size: 9.5px; }
+    .auth-status { flex: 0 0 auto; }
+    .status-timeline { padding-top: 13px; }
+    .timeline-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .timeline-heading strong { font-size: 10.5px; font-weight: 680; }
+    .timeline-heading span { color: var(--muted); font-size: 9px; }
+    .timeline-list { margin-top: 11px; }
+    .timeline-event {
+      position: relative;
+      min-height: 38px;
+      padding: 0 0 10px 20px;
+    }
+    .timeline-event:last-child { min-height: auto; padding-bottom: 0; }
+    .timeline-event:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 11px;
+      bottom: -1px;
+      width: 1px;
+      background: #dce1e8;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: 1px;
+      top: 3px;
+      width: 9px;
+      height: 9px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #98a2b3;
+      box-shadow: 0 0 0 1px #cfd5de;
+    }
+    .timeline-event.done .timeline-dot { background: var(--green); box-shadow: 0 0 0 1px #71bda3; }
+    .timeline-event.current .timeline-dot { background: var(--blue); box-shadow: 0 0 0 3px #e5f1fc; }
+    .timeline-event.warning .timeline-dot { background: var(--amber); box-shadow: 0 0 0 1px #e2b66e; }
+    .timeline-event b { display: block; color: var(--ink-2); font-size: 10px; font-weight: 650; }
+    .timeline-event span { display: block; margin-top: 1px; color: var(--muted); font-size: 9px; }
+
+    /* Tasks */
+    .tasks-body { padding: 3px 17px 6px; }
+    .task-item {
+      padding: 12px 0;
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      align-items: flex-start;
+      gap: 9px;
+      border-bottom: 1px solid #edf0f4;
+      cursor: pointer;
+    }
+    .task-item:last-child { border-bottom: 0; }
+    .task-item input {
+      width: 16px;
+      height: 16px;
+      margin: 2px 0 0;
+      accent-color: var(--brand);
+      cursor: pointer;
+    }
+    .task-copy { min-width: 0; }
+    .task-title { color: var(--ink-2); font-size: 11.5px; font-weight: 620; line-height: 1.35; }
+    .task-meta { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px 7px; color: var(--muted); font-size: 9.5px; }
+    .task-meta span { display: inline-flex; align-items: center; gap: 4px; }
+    .task-meta .icon { width: 11px; height: 11px; }
+    .priority {
+      padding: 3px 6px;
+      border-radius: 5px;
+      font-size: 8.5px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: .035em;
+    }
+    .priority.high { color: var(--red); background: var(--red-soft); }
+    .priority.medium { color: var(--amber); background: var(--amber-soft); }
+    .priority.low { color: #647184; background: #eef1f5; }
+    .task-item.done { opacity: .58; }
+    .task-item.done .task-title { text-decoration: line-through; }
+
+    /* Modals */
+    dialog.modal {
+      width: min(520px, calc(100vw - 32px));
+      max-height: calc(100vh - 40px);
+      padding: 0;
+      overflow: auto;
+      border: 0;
+      border-radius: 15px;
+      color: var(--ink);
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(16,24,40,.25);
+    }
+    dialog.modal::backdrop { background: rgba(15,23,42,.48); backdrop-filter: blur(2px); }
+    .modal-head {
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .modal-title-wrap { display: flex; align-items: center; gap: 11px; }
+    .modal-title-wrap h2 { font-size: 16px; font-weight: 720; letter-spacing: -.2px; }
+    .modal-title-wrap p { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .modal-close { width: 32px; height: 32px; }
+    .modal-body { padding: 19px 20px; }
+    .modal-footer {
+      padding: 13px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid var(--line);
+      background: #fafbfc;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .field { min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    .field label, .field-label { display: block; margin-bottom: 6px; color: var(--ink-2); font-size: 11px; font-weight: 650; }
+    .input, .select, .textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      color: var(--ink);
+      background: #fff;
+      outline: 0;
+      font-size: 12px;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .input, .select { height: 39px; padding: 0 10px; }
+    .textarea { min-height: 88px; padding: 10px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: #9d9ce4; box-shadow: 0 0 0 3px rgba(91,91,214,.09); }
+    .field-help { margin-top: 5px; color: var(--muted); font-size: 9.5px; }
+    .share-link-row { display: flex; gap: 8px; }
+    .share-link-row .input { flex: 1; min-width: 0; color: #5a6575; background: #f8f9fb; }
+    .access-row {
+      margin-top: 14px;
+      padding: 11px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fafbfc;
+    }
+    .access-row .section-icon { width: 28px; height: 28px; }
+    .access-copy { min-width: 0; flex: 1; }
+    .access-copy b { display: block; font-size: 10.5px; font-weight: 650; }
+    .access-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 9.5px; }
+    .radio-list { display: grid; gap: 8px; }
+    .radio-option {
+      padding: 11px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      cursor: pointer;
+    }
+    .radio-option:hover { border-color: #c9c8ed; background: #fafaff; }
+    .radio-option input { accent-color: var(--brand); }
+    .radio-copy { flex: 1; }
+    .radio-copy b { display: block; font-size: 11.5px; font-weight: 650; }
+    .radio-copy span { display: block; margin-top: 1px; color: var(--muted); font-size: 9.5px; }
+
+    /* Toast and mobile overlay */
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 150;
+      min-width: 250px;
+      max-width: calc(100vw - 32px);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid #dfe5e4;
+      border-radius: 10px;
+      color: #fff;
+      background: #1d2939;
+      box-shadow: 0 12px 35px rgba(16,24,40,.22);
+      font-size: 11.5px;
+      font-weight: 620;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast .toast-check {
+      width: 21px;
+      height: 21px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--green);
+    }
+    .toast .icon { width: 13px; height: 13px; stroke-width: 2.5; }
+    .mobile-overlay { display: none; }
+
+    @media (max-width: 1180px) and (min-width: 761px) {
+      .app-shell { grid-template-columns: 78px minmax(0, 1fr); }
+      .brand { justify-content: center; padding: 0; }
+      .brand-copy, .nav-caption, .nav-label, .nav-count, .nav-sub, .org-copy, .org-card > .icon { display: none; }
+      .sidebar-scroll { padding-left: 10px; padding-right: 10px; }
+      .nav-item { justify-content: center; padding: 0; }
+      .nav-item.parent-active { color: #fff; background: rgba(105,93,230,.22); }
+      .org-card { justify-content: center; padding: 8px; }
+      .topbar { padding-left: 21px; padding-right: 21px; }
+      .page-content { padding-left: 22px; padding-right: 22px; }
+      .user-copy { display: none; }
+    }
+
+    @media (max-width: 1050px) {
+      .dashboard-grid { grid-template-columns: minmax(0, 1fr) 322px; gap: 16px; }
+      .column-stack { gap: 16px; }
+      .meeting-main { grid-template-columns: 66px minmax(0,1fr); }
+      .meeting-actions { grid-column: 1 / -1; justify-content: flex-end; }
+      .assessment-panel { grid-template-columns: 65px repeat(3, minmax(60px, 1fr)); gap: 9px; }
+      .jobs-head-row, .job-row { grid-template-columns: minmax(190px, 1.35fr) minmax(110px, .75fr) minmax(110px, .72fr) 52px; gap: 10px; }
+    }
+
+    @media (max-width: 920px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .right-column { grid-template-columns: 1fr 1fr; align-items: start; }
+      .tasks-card { grid-column: 1 / -1; }
+      .meeting-main { grid-template-columns: 66px minmax(0, 1fr) auto; }
+      .meeting-actions { grid-column: auto; }
+      .search-box { width: 210px; }
+      .user-menu .icon { display: none; }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell { display: block; }
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 242px;
+        transform: translateX(-102%);
+        transition: transform .2s ease;
+        box-shadow: 16px 0 40px rgba(15,23,42,.2);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mobile-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 45;
+        display: block;
+        background: rgba(15,23,42,.42);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+      }
+      .mobile-overlay.show { opacity: 1; pointer-events: auto; }
+      .mobile-menu { display: inline-grid; }
+      .topbar { height: 60px; padding: 0 14px; gap: 10px; }
+      .topbar .search-box { display: none; }
+      .topbar-spacer { display: none; }
+      .breadcrumbs { flex: 1; }
+      .breadcrumbs a:first-child, .breadcrumbs .crumb-first-separator { display: none; }
+      .user-copy, .user-menu > .icon, .help-button { display: none; }
+      .page-content { padding: 16px 14px 36px; }
+      .profile-top { padding: 20px 17px 16px; flex-wrap: wrap; }
+      .candidate-summary { min-width: calc(100% - 82px); }
+      .profile-actions { width: 100%; justify-content: flex-end; }
+      .pipeline-panel { padding-left: 17px; padding-right: 17px; }
+      .pipeline-title span { display: none; }
+      .right-column { grid-template-columns: 1fr; }
+      .tasks-card { grid-column: auto; }
+    }
+
+    @media (max-width: 650px) {
+      .meeting-main { grid-template-columns: 58px minmax(0, 1fr); gap: 12px; }
+      .date-tile { width: 57px; height: 64px; }
+      .meeting-actions { grid-column: 1 / -1; justify-content: stretch; }
+      .meeting-actions .btn { flex: 1; }
+      .participants { align-items: flex-start; }
+      .meeting-note { display: none; }
+      .assessment-panel { grid-template-columns: 1fr 1fr; }
+      .score-block { border-right: 0; }
+      .jobs-head-row { display: none; }
+      .job-row { grid-template-columns: minmax(0, 1fr) 55px; gap: 10px; padding: 14px 16px; }
+      .job-primary { grid-column: 1 / 2; }
+      .job-cell { padding-left: 45px; }
+      .job-cell.comp-cell { grid-column: 1 / 2; }
+      .match-ring { grid-column: 2; grid-row: 1 / span 3; }
+      .mobile-label { display: inline !important; margin-right: 4px; color: var(--muted-2) !important; font-size: 9px !important; text-transform: uppercase; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+    }
+
+    @media (max-width: 520px) {
+      .top-actions .notification-button { display: none; }
+      .candidate-avatar { width: 55px; height: 55px; font-size: 17px; }
+      .candidate-summary { min-width: calc(100% - 72px); }
+      .candidate-name-row h1 { font-size: 22px; }
+      .profile-actions { justify-content: stretch; }
+      .profile-actions .share-button, .profile-actions .stage-button { flex: 1; }
+      .pipeline-head { align-items: center; }
+      .pipeline-title { display: block; }
+      .pipeline-state { display: block; text-align: right; }
+      .pipeline-state .badge { margin-bottom: 3px; }
+      .card-header { padding-left: 14px; padding-right: 14px; }
+      .meeting-content { padding: 15px; }
+      .meeting-actions { flex-direction: column; }
+      .meeting-actions .btn { width: 100%; }
+      .participant-copy span { max-width: 235px; }
+      .activity-list { padding-left: 14px; padding-right: 14px; }
+      .activity-head { display: block; }
+      .activity-time { display: block; margin-top: 3px; }
+      .assessment-panel { grid-template-columns: 1fr; }
+      .score-block { padding: 0 0 7px; border-bottom: 1px solid var(--line); }
+      .facts-grid { grid-template-columns: 1fr; }
+      .fact:nth-last-child(-n+2) { border-bottom: 1px solid #edf0f4; }
+      .fact:last-child { border-bottom: 0; }
+      .share-link-row { flex-direction: column; }
+      .share-link-row .btn { width: 100%; }
+      .modal-footer .btn { flex: 1; }
+      .toast { right: 16px; bottom: 16px; left: 16px; min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Inline icon sprite: no external assets -->
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden">
+    <symbol id="i-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7M3 12.5c5.6 2 12.4 2 18 0M10 13h4"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 20v-1.7a4.3 4.3 0 0 0-4.3-4.3H6.3A4.3 4.3 0 0 0 2 18.3V20"/><circle cx="9" cy="7" r="4"/><path d="M17 10.7a3.5 3.5 0 1 0 0-7M22 20v-1.8a4 4 0 0 0-3-3.9"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"/></symbol>
+    <symbol id="i-task" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="m8 9 1.5 1.5L12 8M14.5 9H17m-9 6 1.5 1.5L12 14m2.5 1H17"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.7 2c-1 .6-1.5 1.1-1.5 2M12 17h.01"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.3m-6.6 6.9 6.6 4.3"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M21 16.8v2.7a1.8 1.8 0 0 1-2 1.8A17.8 17.8 0 0 1 3 5.3a1.8 1.8 0 0 1 1.8-2h2.7a1.8 1.8 0 0 1 1.8 1.5c.1.9.4 1.8.7 2.6a1.8 1.8 0 0 1-.4 1.9L8.5 10.4a14.5 14.5 0 0 0 5.1 5.1l1.1-1.1a1.8 1.8 0 0 1 1.9-.4c.8.3 1.7.6 2.6.7a1.8 1.8 0 0 1 1.8 2.1Z"/></symbol>
+    <symbol id="i-referral" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20v-1.5A5.5 5.5 0 0 1 8.5 13h1A5.5 5.5 0 0 1 15 18.5V20m3-11v6m-3-3h6"/></symbol>
+    <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 5.5-8 11-8 11S4 15.5 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1.1M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1"/></symbol>
+    <symbol id="i-calendar-edit" viewBox="0 0 24 24"><path d="M14 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M8 2v4m8-4v4M3 9h18m-5 10 4-4 2 2-4 4h-2v-2Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 9-4 3 4 3m8-6 4 3-4 3m-2-9-4 12"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></symbol>
+    <symbol id="i-call" viewBox="0 0 24 24"><path d="M7 3H4a1 1 0 0 0-1 1c0 9.4 7.6 17 17 17a1 1 0 0 0 1-1v-3l-4-1-1.5 2a14.5 14.5 0 0 1-9.5-9.5L8 7 7 3Z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3Z"/><path d="M14 3v5h4M9 12h6m-6 4h6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-money" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="12" cy="12" r="3"/><path d="M7 9H6v1m11 5h1v-1"/></symbol>
+    <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7 3c0 4 1.8 6.2 5 9-3.2 2.8-5 5-5 9m10-18c0 4-1.8 6.2-5 9 3.2 2.8 5 5 5 9"/></symbol>
+    <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M2 19h20M9 19h6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.3 8.3-8 10-4.7-1.7-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
+    <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8" cy="11" r="2"/><path d="M5.5 16c.7-1.5 1.5-2 2.5-2s1.8.5 2.5 2M13 10h5m-5 4h4"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16.5 9"/></symbol>
+    <symbol id="i-alert-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V5l8-3v19m0-13h8v13M2 21h20M7 7h2m-2 4h2m-2 4h2m7-3h1m-1 4h1"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Zm6 11 .8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14Z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 8h16v13H4V8Zm-1-5h18v5H3V3Zm6 9h6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20H4v-8L15.5.5a2.1 2.1 0 0 1 3 0l1 1a2.1 2.1 0 0 1 0 3L8 16l-4 1 1-4L16.5 1.5M14 4l6 6"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5M5 20h14"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 12h4l2.2-5.4 4.1 11.1 2.3-5.7H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="brand-copy"><span class="brand-name">TalentPulse</span></div>
+      </div>
+
+      <div class="sidebar-scroll">
+        <nav aria-label="Workspace">
+          <section class="nav-section">
+            <div class="nav-caption">Workspace</div>
+            <ul class="nav-list">
+              <li><button class="nav-item" type="button" data-toast="Dashboard is ready"><svg class="icon" viewBox="0 0 24 24"><use href="#i-dashboard"/></svg><span class="nav-label">Dashboard</span></button></li>
+              <li><button class="nav-item" type="button" data-toast="Opening jobs"><svg class="icon" viewBox="0 0 24 24"><use href="#i-briefcase"/></svg><span class="nav-label">Jobs</span><span class="nav-count">12</span></button></li>
+              <li>
+                <button class="nav-item parent-active" type="button" aria-expanded="true"><svg class="icon" viewBox="0 0 24 24"><use href="#i-users"/></svg><span class="nav-label">Candidates</span><svg class="icon" viewBox="0 0 24 24" style="width:14px"><use href="#i-chevron-down"/></svg></button>
+                <ul class="nav-sub" aria-label="Candidate pipeline">
+                  <li><button class="nav-item" type="button" data-toast="Showing all candidates"><span class="nav-label">All candidates</span><span class="nav-count">428</span></button></li>
+                  <li><button class="nav-item" type="button" data-toast="Showing sourced candidates"><span class="nav-label">Sourced</span><span class="nav-count">56</span></button></li>
+                  <li><button class="nav-item active" type="button" aria-current="page"><span class="nav-label">Interviewing</span><span class="nav-count">24</span></button></li>
+                  <li><button class="nav-item" type="button" data-toast="Showing offer-stage candidates"><span class="nav-label">Offer</span><span class="nav-count">7</span></button></li>
+                </ul>
+              </li>
+              <li><button class="nav-item" type="button" data-toast="Opening interview schedule"><svg class="icon" viewBox="0 0 24 24"><use href="#i-calendar"/></svg><span class="nav-label">Interviews</span><span class="nav-count">8</span></button></li>
+              <li><button class="nav-item" type="button" data-toast="Opening your tasks"><svg class="icon" viewBox="0 0 24 24"><use href="#i-task"/></svg><span class="nav-label">Tasks</span><span class="nav-count">5</span></button></li>
+            </ul>
+          </section>
+
+          <section class="nav-section">
+            <div class="nav-caption">Insights</div>
+            <ul class="nav-list">
+              <li><button class="nav-item" type="button" data-toast="Opening reports"><svg class="icon" viewBox="0 0 24 24"><use href="#i-chart"/></svg><span class="nav-label">Reports</span></button></li>
+              <li><button class="nav-item" type="button" data-toast="Opening talent analytics"><svg class="icon" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg><span class="nav-label">Talent insights</span></button></li>
+            </ul>
+          </section>
+        </nav>
+      </div>
+
+      <div class="sidebar-bottom">
+        <button class="org-card" type="button" data-toast="Workspace switcher opened">
+          <span class="org-logo">NL</span>
+          <span class="org-copy"><strong>Northstar Labs</strong><span>Growth workspace</span></span>
+          <svg class="icon" viewBox="0 0 24 24" style="width:14px;color:#77839a"><use href="#i-chevron-down"/></svg>
+        </button>
+      </div>
+    </aside>
+    <div class="mobile-overlay" id="mobileOverlay" aria-hidden="true"></div>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" id="mobileMenuButton" type="button" aria-label="Open navigation" aria-expanded="false">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-menu"/></svg>
+        </button>
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <a href="#" onclick="return false">Candidates</a>
+          <svg class="icon crumb-first-separator" viewBox="0 0 24 24"><use href="#i-chevron-right"/></svg>
+          <a href="#" onclick="return false">Interviewing</a>
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-chevron-right"/></svg>
+          <strong aria-current="page">Maya Chen</strong>
+        </nav>
+        <div class="topbar-spacer"></div>
+        <form class="search-box" id="searchForm" role="search">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-search"/></svg>
+          <label class="sr-only" for="globalSearch">Search TalentPulse</label>
+          <input id="globalSearch" type="search" placeholder="Search candidates, jobs…" autocomplete="off">
+          <span class="shortcut">⌘K</span>
+        </form>
+        <div class="top-actions">
+          <button class="icon-button help-button" type="button" aria-label="Help" data-toast="Help center opened"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg></button>
+          <button class="icon-button notification-button" type="button" aria-label="Notifications" data-toast="You have 3 new notifications"><svg class="icon" viewBox="0 0 24 24"><use href="#i-bell"/></svg><span class="notification-dot"></span></button>
+          <button class="user-menu" type="button" data-toast="Account menu opened">
+            <span class="avatar user-avatar">AM</span>
+            <span class="user-copy"><strong>Alex Morgan</strong><span>Tech Recruiter</span></span>
+            <svg class="icon" viewBox="0 0 24 24" style="width:13px;color:#98a2b3"><use href="#i-chevron-down"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <section class="profile-card" aria-labelledby="candidateName">
+          <div class="profile-top">
+            <div class="candidate-avatar-wrap">
+              <span class="avatar candidate-avatar" aria-hidden="true">MC</span>
+              <span class="active-indicator" title="Active candidate"></span>
+            </div>
+            <div class="candidate-summary">
+              <div class="candidate-name-row">
+                <h1 id="candidateName">Maya Chen</h1>
+                <span class="badge badge-green">Active</span>
+                <span class="badge badge-purple" id="profileStageBadge">Interviewing</span>
+              </div>
+              <p class="candidate-subtitle">Senior Backend Engineer at Stripe <span class="muted">· San Francisco, CA</span></p>
+              <div class="contact-strip" aria-label="Candidate contact information">
+                <a class="contact-item" href="mailto:maya.chen@email.com"><svg class="icon" viewBox="0 0 24 24"><use href="#i-mail"/></svg>maya.chen@email.com</a>
+                <a class="contact-item" href="tel:+14155550184"><svg class="icon" viewBox="0 0 24 24"><use href="#i-phone"/></svg>+1 (415) 555-0184</a>
+                <span class="contact-item"><svg class="icon" viewBox="0 0 24 24"><use href="#i-referral"/></svg><b>Source:</b> Employee referral · Priya Shah</span>
+                <span class="contact-item"><svg class="icon" viewBox="0 0 24 24"><use href="#i-id"/></svg>TP-24817</span>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button class="btn share-button" id="shareProfileButton" type="button"><svg class="icon" viewBox="0 0 24 24"><use href="#i-share"/></svg>Share profile</button>
+              <div class="menu-wrap">
+                <button class="btn btn-icon-only" id="moreButton" type="button" aria-label="More candidate actions" aria-haspopup="menu" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24"><use href="#i-more"/></svg></button>
+                <div class="dropdown-menu" id="moreMenu" role="menu" hidden>
+                  <button type="button" role="menuitem" data-toast="Candidate edit form opened"><svg class="icon" viewBox="0 0 24 24"><use href="#i-edit"/></svg>Edit candidate</button>
+                  <button type="button" role="menuitem" data-toast="Resume download started"><svg class="icon" viewBox="0 0 24 24"><use href="#i-download"/></svg>Download resume</button>
+                  <div class="menu-divider"></div>
+                  <button class="danger" type="button" role="menuitem" data-toast="Archive action requires confirmation"><svg class="icon" viewBox="0 0 24 24"><use href="#i-archive"/></svg>Archive candidate</button>
+                </div>
+              </div>
+              <button class="btn btn-primary stage-button" id="updateStageButton" type="button">Update stage<svg class="icon" viewBox="0 0 24 24"><use href="#i-chevron-down"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pipeline-panel">
+            <div class="pipeline-head">
+              <div class="pipeline-title">
+                <strong>Pipeline progress</strong>
+                <span>Primary application · Staff Platform Engineer · REQ-1092</span>
+              </div>
+              <div class="pipeline-state">
+                <span class="badge badge-purple" id="currentStageText">Panel interviews</span>
+                <span id="stepCounter">Step <b>4</b> of 6</span>
+              </div>
+            </div>
+            <div class="stepper-scroll">
+              <ol class="stage-stepper" id="stageStepper" aria-label="Candidate pipeline stage">
+                <li class="stage-step complete" data-index="1"><span class="step-dot"><svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="step-label">Applied</span></li>
+                <li class="stage-step complete" data-index="2"><span class="step-dot"><svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="step-label">Recruiter screen</span></li>
+                <li class="stage-step complete" data-index="3"><span class="step-dot"><svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="step-label">Technical screen</span></li>
+                <li class="stage-step current" data-index="4" aria-current="step"><span class="step-dot">4</span><span class="step-label">Panel interviews</span></li>
+                <li class="stage-step" data-index="5"><span class="step-dot">5</span><span class="step-label">Offer</span></li>
+                <li class="stage-step" data-index="6"><span class="step-dot">6</span><span class="step-label">Hired</span></li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <div class="dashboard-grid">
+          <div class="column-stack left-column">
+            <section class="card meeting-card" aria-labelledby="meetingTitle">
+              <header class="card-header">
+                <div class="card-title-wrap">
+                  <span class="section-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-calendar"/></svg></span>
+                  <div><h2 class="card-title" id="meetingTitle">Next interview</h2><p class="card-subtitle">Upcoming meeting in the interview plan</p></div>
+                </div>
+                <span class="badge badge-blue" id="meetingStatus">Scheduled</span>
+              </header>
+              <div class="meeting-content">
+                <div class="meeting-main">
+                  <div class="date-tile" aria-hidden="true"><span class="date-month" id="meetingMonth">JUN</span><span class="date-day" id="meetingDay">18</span></div>
+                  <div class="meeting-info">
+                    <h3>System design interview</h3>
+                    <div class="meeting-meta">
+                      <span><svg class="icon" viewBox="0 0 24 24"><use href="#i-clock"/></svg><span id="meetingDateTime">Wednesday, June 18 · 10:30–11:15 AM PDT</span></span>
+                      <span><svg class="icon" viewBox="0 0 24 24"><use href="#i-video"/></svg>Panel interview · Google Meet</span>
+                    </div>
+                  </div>
+                  <div class="meeting-actions">
+                    <button class="btn btn-soft" id="inviteButton" type="button"><svg class="icon" viewBox="0 0 24 24"><use href="#i-link"/></svg>Get calendar invite</button>
+                    <button class="btn" id="rescheduleButton" type="button"><svg class="icon" viewBox="0 0 24 24"><use href="#i-calendar-edit"/></svg>Reschedule</button>
+                  </div>
+                </div>
+                <div class="participants">
+                  <div class="participants-left">
+                    <div class="avatar-stack" aria-hidden="true"><span class="mini-avatar">NW</span><span class="mini-avatar">EG</span><span class="mini-avatar">JL</span></div>
+                    <div class="participant-copy"><b>3 interviewers</b><span>Noah Williams · Elena García · Jordan Lee</span></div>
+                  </div>
+                  <span class="meeting-note">45 min · Hiring manager + engineering panel</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="card activity-card" aria-labelledby="activityTitle">
+              <header class="card-header">
+                <div class="card-title-wrap">
+                  <span class="section-icon green"><svg class="icon" viewBox="0 0 24 24"><use href="#i-chart"/></svg></span>
+                  <div><h2 class="card-title" id="activityTitle">Activity <span class="count-pill" id="activityCount">7</span></h2><p class="card-subtitle">Candidate interactions and evaluations</p></div>
+                </div>
+                <button class="btn" id="addActivityButton" type="button"><svg class="icon" viewBox="0 0 24 24"><use href="#i-plus"/></svg>Add activity</button>
+              </header>
+              <div class="activity-toolbar" role="tablist" aria-label="Filter candidate activity">
+                <button class="tab" type="button" role="tab" aria-selected="true" data-filter="all">All activity</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="email">Emails</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="call">Calls</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="scorecard">Scorecards</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="assessment">Assessments</button>
+              </div>
+              <div class="activity-list" id="activityList">
+                <article class="activity-item" data-kind="assessment">
+                  <span class="activity-marker assessment"><svg class="icon" viewBox="0 0 24 24"><use href="#i-code"/></svg></span>
+                  <div class="activity-head"><div><h3 class="activity-title">Technical assessment completed</h3><p class="activity-detail">Maya completed the <strong>Backend Systems · Advanced</strong> assessment.</p></div><time class="activity-time">Today · 11:42 AM</time></div>
+                  <div class="assessment-panel" aria-label="Technical assessment scores">
+                    <div class="score-block"><strong>86<span style="font-size:11px;color:#7e88a0">/100</span></strong><span>Overall score</span></div>
+                    <div class="skill-score"><div class="skill-score-label"><span>Algorithms</span><b>92</b></div><div class="mini-bar"><span style="width:92%"></span></div></div>
+                    <div class="skill-score"><div class="skill-score-label"><span>System design</span><b>84</b></div><div class="mini-bar"><span style="width:84%"></span></div></div>
+                    <div class="skill-score"><div class="skill-score-label"><span>Code quality</span><b>82</b></div><div class="mini-bar"><span style="width:82%"></span></div></div>
+                  </div>
+                </article>
+
+                <article class="activity-item" data-kind="scorecard">
+                  <span class="activity-marker scorecard"><svg class="icon" viewBox="0 0 24 24"><use href="#i-star"/></svg></span>
+                  <div class="activity-head"><div><h3 class="activity-title">Scorecard submitted by Noah Williams</h3><p class="activity-detail">“Excellent depth in distributed systems and pragmatic trade-off thinking.”</p></div><time class="activity-time">Today · 9:18 AM</time></div>
+                  <div class="scorecard-summary"><span class="rating-pill"><svg class="icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>Strong hire · 4.5/5</span><span class="tag">System design</span><span class="tag">Technical depth</span><span class="tag">Communication</span></div>
+                </article>
+
+                <article class="activity-item" data-kind="email">
+                  <span class="activity-marker email"><svg class="icon" viewBox="0 0 24 24"><use href="#i-mail"/></svg></span>
+                  <div class="activity-head"><div><h3 class="activity-title">Email sent · Interview preparation</h3><p class="activity-detail">Alex sent the panel agenda, architecture prompt overview, and interviewer details. <strong>Opened twice.</strong></p></div><time class="activity-time">Yesterday · 4:36 PM</time></div>
+                </article>
+
+                <article class="activity-item" data-kind="call">
+                  <span class="activity-marker call"><svg class="icon" viewBox="0 0 24 24"><use href="#i-call"/></svg></span>
+                  <div class="activity-head"><div><h3 class="activity-title">Recruiter call · 24 minutes</h3><p class="activity-detail">Aligned on compensation, H-1B transfer timing, and the remaining interview process.</p></div><time class="activity-time">Jun 14 · 2:05 PM</time></div>
+                </article>
+
+                <article class="activity-item" data-kind="note" data-extra="true" hidden>
+                  <span class="activity-marker note"><svg class="icon" viewBox="0 0 24 24"><use href="#i-note"/></svg></span>
+                  <div class="activity-head"><div><h3 class="activity-title">Private recruiter note added</h3><p class="activity-detail">Candidate is also in a late-stage process; decision expected within three weeks.</p></div><time class="activity-time">Jun 13 · 10:22 AM</time></div>
+                </article>
+
+                <article class="activity-item" data-kind="calendar" data-extra="true" hidden>
+                  <span class="activity-marker calendar"><svg class="icon" viewBox="0 0 24 24"><use href="#i-calendar"/></svg></span>
+                  <div class="activity-head"><div><h3 class="activity-title">Panel interview scheduled</h3><p class="activity-detail">System design session booked with Noah, Elena, and Jordan via Google Meet.</p></div><time class="activity-time">Jun 12 · 3:47 PM</time></div>
+                </article>
+
+                <article class="activity-item" data-kind="file" data-extra="true" hidden>
+                  <span class="activity-marker file"><svg class="icon" viewBox="0 0 24 24"><use href="#i-file"/></svg></span>
+                  <div class="activity-head"><div><h3 class="activity-title">Resume updated</h3><p class="activity-detail">Maya_Chen_Backend_Engineer_2025.pdf · 284 KB</p></div><time class="activity-time">Jun 10 · 8:54 AM</time></div>
+                </article>
+                <div class="activity-empty" id="activityEmpty" hidden>No activity found for this filter.</div>
+              </div>
+              <footer class="card-footer-action"><button class="text-button" id="historyButton" type="button" aria-expanded="false">View full history (7)<svg class="icon" viewBox="0 0 24 24"><use href="#i-chevron-down"/></svg></button></footer>
+            </section>
+
+            <section class="card jobs-card" aria-labelledby="jobsTitle">
+              <header class="card-header">
+                <div class="card-title-wrap">
+                  <span class="section-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg></span>
+                  <div><h2 class="card-title" id="jobsTitle">Matched requisitions <span class="count-pill">5</span></h2><p class="card-subtitle">Ranked from Maya’s skills and preferences</p></div>
+                </div>
+                <button class="text-button" id="viewJobsButton" type="button" aria-expanded="false">View all 5<svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></button>
+              </header>
+              <div class="jobs-head-row" aria-hidden="true"><span>Role</span><span>Department &amp; location</span><span>Compensation</span><span>Match</span></div>
+              <div id="jobsList">
+                <article class="job-row">
+                  <div class="job-primary"><span class="job-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-briefcase"/></svg></span><div style="min-width:0"><button class="job-title" type="button" data-toast="Opening Staff Platform Engineer requisition">Staff Platform Engineer</button><div class="job-id">REQ-1092 · Primary application</div></div></div>
+                  <div class="job-cell"><span class="mobile-label">Team</span>Infrastructure<span>San Francisco · Hybrid</span></div>
+                  <div class="job-cell comp-cell"><span class="mobile-label">Comp</span>$190K–$225K<span>Base · Equity</span></div>
+                  <div class="match-ring" style="--match:94" aria-label="94 percent skill match"><span>94%</span></div>
+                </article>
+                <article class="job-row">
+                  <div class="job-primary"><span class="job-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-briefcase"/></svg></span><div style="min-width:0"><button class="job-title" type="button" data-toast="Opening Staff Backend Engineer requisition">Staff Backend Engineer</button><div class="job-id">REQ-1128 · Added 2 days ago</div></div></div>
+                  <div class="job-cell"><span class="mobile-label">Team</span>Data Platform<span>Remote · United States</span></div>
+                  <div class="job-cell comp-cell"><span class="mobile-label">Comp</span>$185K–$220K<span>Base · Equity</span></div>
+                  <div class="match-ring" style="--match:91" aria-label="91 percent skill match"><span>91%</span></div>
+                </article>
+                <article class="job-row">
+                  <div class="job-primary"><span class="job-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-briefcase"/></svg></span><div style="min-width:0"><button class="job-title" type="button" data-toast="Opening Backend Engineer IV requisition">Backend Engineer IV</button><div class="job-id">REQ-1077 · Strong skills overlap</div></div></div>
+                  <div class="job-cell"><span class="mobile-label">Team</span>Payments<span>New York · Hybrid</span></div>
+                  <div class="job-cell comp-cell"><span class="mobile-label">Comp</span>$175K–$210K<span>Base · Equity</span></div>
+                  <div class="match-ring" style="--match:86" aria-label="86 percent skill match"><span>86%</span></div>
+                </article>
+                <article class="job-row" data-job-extra="true" hidden>
+                  <div class="job-primary"><span class="job-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-briefcase"/></svg></span><div style="min-width:0"><button class="job-title" type="button" data-toast="Opening Principal Software Engineer requisition">Principal Software Engineer</button><div class="job-id">REQ-1140 · Leadership match</div></div></div>
+                  <div class="job-cell"><span class="mobile-label">Team</span>Core Services<span>Austin · Remote flexible</span></div>
+                  <div class="job-cell comp-cell"><span class="mobile-label">Comp</span>$205K–$245K<span>Base · Equity</span></div>
+                  <div class="match-ring" style="--match:81" aria-label="81 percent skill match"><span>81%</span></div>
+                </article>
+                <article class="job-row" data-job-extra="true" hidden>
+                  <div class="job-primary"><span class="job-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-briefcase"/></svg></span><div style="min-width:0"><button class="job-title" type="button" data-toast="Opening Senior Backend Engineer requisition">Senior Backend Engineer</button><div class="job-id">REQ-1058 · Adjacent opportunity</div></div></div>
+                  <div class="job-cell"><span class="mobile-label">Team</span>Developer Experience<span>Seattle · Hybrid</span></div>
+                  <div class="job-cell comp-cell"><span class="mobile-label">Comp</span>$170K–$205K<span>Base · Equity</span></div>
+                  <div class="match-ring" style="--match:78" aria-label="78 percent skill match"><span>78%</span></div>
+                </article>
+              </div>
+            </section>
+          </div>
+
+          <aside class="column-stack right-column" aria-label="Candidate details and tasks">
+            <section class="card" aria-labelledby="preferencesTitle">
+              <header class="card-header">
+                <div class="card-title-wrap"><span class="section-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-target"/></svg></span><div><h2 class="card-title" id="preferencesTitle">What Maya is looking for</h2><p class="card-subtitle">Confirmed on the last recruiter call</p></div></div>
+              </header>
+              <div class="facts-grid">
+                <div class="fact"><div class="fact-label"><svg class="icon" viewBox="0 0 24 24"><use href="#i-target"/></svg>Target role</div><div class="fact-value">Staff Backend / Platform Engineer</div><div class="fact-help">Distributed systems focus</div></div>
+                <div class="fact"><div class="fact-label"><svg class="icon" viewBox="0 0 24 24"><use href="#i-money"/></svg>Target salary</div><div class="fact-value">$190K–$220K base</div><div class="fact-help">Flexible with equity mix</div></div>
+                <div class="fact"><div class="fact-label"><svg class="icon" viewBox="0 0 24 24"><use href="#i-hourglass"/></svg>Availability</div><div class="fact-value">4 weeks after offer</div><div class="fact-help">No active non-compete</div></div>
+                <div class="fact"><div class="fact-label"><svg class="icon" viewBox="0 0 24 24"><use href="#i-laptop"/></svg>Work model</div><div class="fact-value">Hybrid preferred</div><div class="fact-help">Remote open · 2 office days max</div></div>
+              </div>
+            </section>
+
+            <section class="card" aria-labelledby="authorizationTitle">
+              <header class="card-header">
+                <div class="card-title-wrap"><span class="section-icon green"><svg class="icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg></span><div><h2 class="card-title" id="authorizationTitle">Authorization &amp; clearance</h2><p class="card-subtitle">Last reviewed by Alex · Jun 14</p></div></div>
+              </header>
+              <div class="authorization-body">
+                <div class="auth-row">
+                  <div><div class="auth-row-label">Visa / work authorization</div><div class="auth-row-value">H-1B · Transfer required</div><div class="auth-row-help">Valid through Sep 30, 2026</div></div>
+                  <span class="badge badge-amber no-dot auth-status">Review</span>
+                </div>
+                <div class="auth-row">
+                  <div><div class="auth-row-label">Background check</div><div class="auth-row-value">In progress</div><div class="auth-row-help">Submitted Jun 12 · ETA 3–5 days</div></div>
+                  <span class="badge badge-blue auth-status">In progress</span>
+                </div>
+                <div class="auth-row">
+                  <div><div class="auth-row-label">Clearance level</div><div class="auth-row-value">Public Trust eligible</div><div class="auth-row-help">No active clearance on file</div></div>
+                  <span class="badge badge-green no-dot auth-status">Eligible</span>
+                </div>
+                <div class="status-timeline">
+                  <div class="timeline-heading"><strong>Status timeline</strong><span>Compliance milestones</span></div>
+                  <ol class="timeline-list">
+                    <li class="timeline-event done"><span class="timeline-dot"></span><b>Work authorization reviewed</b><span>May 30 · Documentation verified</span></li>
+                    <li class="timeline-event current"><span class="timeline-dot"></span><b>Background check initiated</b><span>Jun 12 · Vendor review in progress</span></li>
+                    <li class="timeline-event"><span class="timeline-dot"></span><b>Expected check completion</b><span>Jun 20 · Estimated</span></li>
+                    <li class="timeline-event warning"><span class="timeline-dot"></span><b>H-1B authorization expires</b><span>Sep 30, 2026 · Transfer before start</span></li>
+                  </ol>
+                </div>
+              </div>
+            </section>
+
+            <section class="card tasks-card" aria-labelledby="tasksTitle">
+              <header class="card-header">
+                <div class="card-title-wrap"><span class="section-icon amber"><svg class="icon" viewBox="0 0 24 24"><use href="#i-task"/></svg></span><div><h2 class="card-title" id="tasksTitle">Open tasks <span class="count-pill" id="taskCount">3</span></h2><p class="card-subtitle">Owned by you and the hiring team</p></div></div>
+                <button class="text-button" id="addTaskButton" type="button"><svg class="icon" viewBox="0 0 24 24"><use href="#i-plus"/></svg>Add</button>
+              </header>
+              <div class="tasks-body" id="tasksList">
+                <label class="task-item"><input type="checkbox"><span class="task-copy"><span class="task-title">Send architecture interview prep pack</span><span class="task-meta"><span><svg class="icon" viewBox="0 0 24 24"><use href="#i-clock"/></svg>Today · 5:00 PM</span><span>Alex Morgan</span></span></span><span class="priority high">High</span></label>
+                <label class="task-item"><input type="checkbox"><span class="task-copy"><span class="task-title">Collect H-1B transfer documents</span><span class="task-meta"><span><svg class="icon" viewBox="0 0 24 24"><use href="#i-clock"/></svg>Due Jun 19</span><span>People Ops</span></span></span><span class="priority medium">Medium</span></label>
+                <label class="task-item"><input type="checkbox"><span class="task-copy"><span class="task-title">Confirm panel feedback is complete</span><span class="task-meta"><span><svg class="icon" viewBox="0 0 24 24"><use href="#i-clock"/></svg>Due Jun 20</span><span>Alex Morgan</span></span></span><span class="priority medium">Medium</span></label>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Share profile modal -->
+  <dialog class="modal" id="shareDialog" aria-labelledby="shareDialogTitle">
+    <div class="modal-head">
+      <div class="modal-title-wrap"><span class="section-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-share"/></svg></span><div><h2 id="shareDialogTitle">Share Maya’s profile</h2><p>Give teammates a direct link to this candidate deep-dive.</p></div></div>
+      <button class="icon-button modal-close" type="button" data-close="shareDialog" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label for="shareLink">Private profile link</label><div class="share-link-row"><input class="input" id="shareLink" value="https://talentpulse.app/candidates/TP-24817" readonly><button class="btn btn-primary" id="copyShareLink" type="button"><svg class="icon" viewBox="0 0 24 24"><use href="#i-copy"/></svg>Copy link</button></div></div>
+      <div class="access-row"><span class="section-icon green"><svg class="icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg></span><span class="access-copy"><b>Northstar Labs members only</b><span>Recipients must sign in to TalentPulse to view candidate data.</span></span><span class="badge badge-green no-dot">Secure</span></div>
+    </div>
+    <div class="modal-footer"><button class="btn" type="button" data-close="shareDialog">Done</button></div>
+  </dialog>
+
+  <!-- Reschedule modal -->
+  <dialog class="modal" id="rescheduleDialog" aria-labelledby="rescheduleDialogTitle">
+    <form id="rescheduleForm">
+      <div class="modal-head">
+        <div class="modal-title-wrap"><span class="section-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-calendar-edit"/></svg></span><div><h2 id="rescheduleDialogTitle">Reschedule interview</h2><p>System design interview · All 3 interviewers will be notified.</p></div></div>
+        <button class="icon-button modal-close" type="button" data-close="rescheduleDialog" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field full"><label for="interviewDate">Date</label><input class="input" id="interviewDate" type="date" value="2025-06-18" required></div>
+          <div class="field"><label for="interviewStart">Start time</label><input class="input" id="interviewStart" type="time" value="10:30" required></div>
+          <div class="field"><label for="interviewEnd">End time</label><input class="input" id="interviewEnd" type="time" value="11:15" required></div>
+          <div class="field full"><label for="interviewTimezone">Time zone</label><select class="select" id="interviewTimezone"><option value="PDT">Pacific Time (PDT)</option><option value="MDT">Mountain Time (MDT)</option><option value="CDT">Central Time (CDT)</option><option value="EDT">Eastern Time (EDT)</option></select></div>
+          <div class="field full"><label for="rescheduleNote">Message to participants <span style="color:var(--muted);font-weight:500">(optional)</span></label><textarea class="textarea" id="rescheduleNote" placeholder="Add context for the schedule change…"></textarea><div class="field-help">A revised calendar invite will be sent to Maya and all interviewers.</div></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn" type="button" data-close="rescheduleDialog">Cancel</button><button class="btn btn-primary" type="submit">Save new time</button></div>
+    </form>
+  </dialog>
+
+  <!-- Add activity modal -->
+  <dialog class="modal" id="activityDialog" aria-labelledby="activityDialogTitle">
+    <form id="activityForm">
+      <div class="modal-head">
+        <div class="modal-title-wrap"><span class="section-icon green"><svg class="icon" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span><div><h2 id="activityDialogTitle">Add candidate activity</h2><p>Log an interaction or internal update for Maya.</p></div></div>
+        <button class="icon-button modal-close" type="button" data-close="activityDialog" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field full"><label for="activityType">Activity type</label><select class="select" id="activityType" required><option value="note">Recruiter note</option><option value="email">Email</option><option value="call">Call</option><option value="scorecard">Scorecard</option><option value="assessment">Assessment update</option></select></div>
+          <div class="field full"><label for="activitySubject">Title</label><input class="input" id="activitySubject" placeholder="e.g. Candidate availability confirmed" required maxlength="90"></div>
+          <div class="field full"><label for="activityDetails">Details</label><textarea class="textarea" id="activityDetails" placeholder="Add useful context for the hiring team…" required></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn" type="button" data-close="activityDialog">Cancel</button><button class="btn btn-primary" type="submit">Add activity</button></div>
+    </form>
+  </dialog>
+
+  <!-- Add task modal -->
+  <dialog class="modal" id="taskDialog" aria-labelledby="taskDialogTitle">
+    <form id="taskForm">
+      <div class="modal-head">
+        <div class="modal-title-wrap"><span class="section-icon amber"><svg class="icon" viewBox="0 0 24 24"><use href="#i-task"/></svg></span><div><h2 id="taskDialogTitle">Add task</h2><p>Create a follow-up tied to Maya’s candidacy.</p></div></div>
+        <button class="icon-button modal-close" type="button" data-close="taskDialog" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field full"><label for="taskDetails">Task details</label><input class="input" id="taskDetails" placeholder="What needs to happen next?" required maxlength="100"></div>
+          <div class="field"><label for="taskPriority">Priority</label><select class="select" id="taskPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+          <div class="field"><label for="taskDue">Due date</label><input class="input" id="taskDue" type="date" value="2025-06-20" required></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn" type="button" data-close="taskDialog">Cancel</button><button class="btn btn-primary" type="submit">Create task</button></div>
+    </form>
+  </dialog>
+
+  <!-- Stage modal -->
+  <dialog class="modal" id="stageDialog" aria-labelledby="stageDialogTitle">
+    <form id="stageForm">
+      <div class="modal-head">
+        <div class="modal-title-wrap"><span class="section-icon"><svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span><div><h2 id="stageDialogTitle">Update pipeline stage</h2><p>Move Maya within the Staff Platform Engineer pipeline.</p></div></div>
+        <button class="icon-button modal-close" type="button" data-close="stageDialog" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="radio-list">
+          <label class="radio-option"><input type="radio" name="pipelineStage" value="3"><span class="radio-copy"><b>Technical screen</b><span>Return to technical evaluation</span></span></label>
+          <label class="radio-option"><input type="radio" name="pipelineStage" value="4" checked><span class="radio-copy"><b>Panel interviews</b><span>Current stage · System design scheduled</span></span><span class="badge badge-purple no-dot">Current</span></label>
+          <label class="radio-option"><input type="radio" name="pipelineStage" value="5"><span class="radio-copy"><b>Offer</b><span>Advance to offer preparation and approvals</span></span></label>
+          <label class="radio-option"><input type="radio" name="pipelineStage" value="6"><span class="radio-copy"><b>Hired</b><span>Mark candidate as hired</span></span></label>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn" type="button" data-close="stageDialog">Cancel</button><button class="btn btn-primary" type="submit">Update stage</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-check"><svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span id="toastMessage">Done</span></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      let toastTimer;
+      function showToast(message) {
+        clearTimeout(toastTimer);
+        toastMessage.textContent = message;
+        toast.classList.add('show');
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+      }
+
+      document.addEventListener('click', function (event) {
+        const trigger = event.target.closest('[data-toast]');
+        if (trigger) showToast(trigger.getAttribute('data-toast'));
+      });
+
+      function openDialog(id) {
+        const dialog = document.getElementById(id);
+        if (!dialog) return;
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+      }
+      function closeDialog(id) {
+        const dialog = document.getElementById(id);
+        if (!dialog) return;
+        if (typeof dialog.close === 'function') dialog.close();
+        else dialog.removeAttribute('open');
+      }
+      document.querySelectorAll('[data-close]').forEach(button => {
+        button.addEventListener('click', () => closeDialog(button.getAttribute('data-close')));
+      });
+      document.querySelectorAll('dialog.modal').forEach(dialog => {
+        dialog.addEventListener('click', event => {
+          const rect = dialog.getBoundingClientRect();
+          const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+          if (outside) dialog.close();
+        });
+      });
+
+      // Mobile navigation
+      const sidebar = document.getElementById('sidebar');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+      const mobileMenuButton = document.getElementById('mobileMenuButton');
+      function setMobileNav(open) {
+        sidebar.classList.toggle('open', open);
+        mobileOverlay.classList.toggle('show', open);
+        mobileMenuButton.setAttribute('aria-expanded', String(open));
+      }
+      mobileMenuButton.addEventListener('click', () => setMobileNav(!sidebar.classList.contains('open')));
+      mobileOverlay.addEventListener('click', () => setMobileNav(false));
+
+      // Search shortcut and submit
+      const globalSearch = document.getElementById('globalSearch');
+      document.addEventListener('keydown', event => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          globalSearch.focus();
+        }
+      });
+      document.getElementById('searchForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const query = globalSearch.value.trim();
+        showToast(query ? 'Searching TalentPulse for “' + query + '”' : 'Enter a candidate, job, or keyword');
+      });
+
+      // More actions menu
+      const moreButton = document.getElementById('moreButton');
+      const moreMenu = document.getElementById('moreMenu');
+      moreButton.addEventListener('click', event => {
+        event.stopPropagation();
+        const willOpen = moreMenu.hidden;
+        moreMenu.hidden = !willOpen;
+        moreButton.setAttribute('aria-expanded', String(willOpen));
+      });
+      moreMenu.addEventListener('click', () => {
+        moreMenu.hidden = true;
+        moreButton.setAttribute('aria-expanded', 'false');
+      });
+      document.addEventListener('click', event => {
+        if (!event.target.closest('.menu-wrap')) {
+          moreMenu.hidden = true;
+          moreButton.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Safe copy helper
+      function fallbackCopy(text) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand('copy'); } catch (e) { /* visual demo fallback */ }
+        area.remove();
+      }
+      function copyText(text, message) {
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(() => showToast(message)).catch(() => { fallbackCopy(text); showToast(message); });
+        } else {
+          fallbackCopy(text);
+          showToast(message);
+        }
+      }
+
+      // Share profile
+      document.getElementById('shareProfileButton').addEventListener('click', () => openDialog('shareDialog'));
+      document.getElementById('copyShareLink').addEventListener('click', () => {
+        copyText(document.getElementById('shareLink').value, 'Secure profile link copied');
+      });
+
+      // Meeting actions
+      const inviteLink = 'https://talentpulse.app/interviews/TP-24817/system-design-0618';
+      document.getElementById('inviteButton').addEventListener('click', () => copyText(inviteLink, 'Calendar invite link copied'));
+      document.getElementById('rescheduleButton').addEventListener('click', () => openDialog('rescheduleDialog'));
+      function formatTime(value) {
+        const parts = value.split(':');
+        let hour = Number(parts[0]);
+        const minute = parts[1];
+        const suffix = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        return hour + ':' + minute + ' ' + suffix;
+      }
+      document.getElementById('rescheduleForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const rawDate = document.getElementById('interviewDate').value;
+        const date = new Date(rawDate + 'T12:00:00');
+        const start = formatTime(document.getElementById('interviewStart').value);
+        const endFull = formatTime(document.getElementById('interviewEnd').value);
+        const startSuffix = start.slice(-2);
+        const endSuffix = endFull.slice(-2);
+        const startDisplay = startSuffix === endSuffix ? start.slice(0, -3) : start;
+        const timezone = document.getElementById('interviewTimezone').value;
+        document.getElementById('meetingMonth').textContent = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+        document.getElementById('meetingDay').textContent = date.getDate();
+        document.getElementById('meetingDateTime').textContent = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' · ' + startDisplay + '–' + endFull + ' ' + timezone;
+        document.getElementById('meetingStatus').textContent = 'Updated';
+        closeDialog('rescheduleDialog');
+        showToast('Interview rescheduled and participants notified');
+      });
+
+      // Activity filtering and history expansion
+      let activityFilter = 'all';
+      let historyExpanded = false;
+      const activityList = document.getElementById('activityList');
+      const historyButton = document.getElementById('historyButton');
+      const activityEmpty = document.getElementById('activityEmpty');
+      const activityCount = document.getElementById('activityCount');
+      function allActivityItems() { return Array.from(activityList.querySelectorAll('.activity-item')); }
+      function renderActivities() {
+        let visible = 0;
+        allActivityItems().forEach(item => {
+          const kindMatches = activityFilter === 'all' || item.dataset.kind === activityFilter;
+          const historyMatches = historyExpanded || item.dataset.extra !== 'true';
+          item.hidden = !(kindMatches && historyMatches);
+          if (!item.hidden) visible++;
+        });
+        activityEmpty.hidden = visible !== 0;
+        historyButton.setAttribute('aria-expanded', String(historyExpanded));
+        historyButton.innerHTML = historyExpanded
+          ? 'Show recent activity<svg class="icon" viewBox="0 0 24 24" style="transform:rotate(180deg)"><use href="#i-chevron-down"/></svg>'
+          : 'View full history (' + allActivityItems().length + ')<svg class="icon" viewBox="0 0 24 24"><use href="#i-chevron-down"/></svg>';
+        activityCount.textContent = allActivityItems().length;
+      }
+      document.querySelectorAll('.activity-toolbar .tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.activity-toolbar .tab').forEach(other => other.setAttribute('aria-selected', 'false'));
+          tab.setAttribute('aria-selected', 'true');
+          activityFilter = tab.dataset.filter;
+          renderActivities();
+        });
+      });
+      historyButton.addEventListener('click', () => { historyExpanded = !historyExpanded; renderActivities(); });
+
+      // Add activity
+      document.getElementById('addActivityButton').addEventListener('click', () => openDialog('activityDialog'));
+      const iconByActivity = { note: 'i-note', email: 'i-mail', call: 'i-call', scorecard: 'i-star', assessment: 'i-code' };
+      document.getElementById('activityForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const type = document.getElementById('activityType').value;
+        const subject = document.getElementById('activitySubject').value.trim();
+        const details = document.getElementById('activityDetails').value.trim();
+        const item = document.createElement('article');
+        item.className = 'activity-item';
+        item.dataset.kind = type;
+        const marker = document.createElement('span');
+        marker.className = 'activity-marker ' + type;
+        marker.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><use href="#' + iconByActivity[type] + '"/></svg>';
+        const head = document.createElement('div');
+        head.className = 'activity-head';
+        const copy = document.createElement('div');
+        const title = document.createElement('h3');
+        title.className = 'activity-title';
+        title.textContent = subject;
+        const detail = document.createElement('p');
+        detail.className = 'activity-detail';
+        detail.textContent = details;
+        const time = document.createElement('time');
+        time.className = 'activity-time';
+        time.textContent = 'Just now · ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        copy.append(title, detail);
+        head.append(copy, time);
+        item.append(marker, head);
+        activityList.insertBefore(item, activityList.firstChild);
+        document.getElementById('activityForm').reset();
+        closeDialog('activityDialog');
+        renderActivities();
+        showToast('Activity added to Maya’s timeline');
+      });
+
+      // Job list expansion
+      const viewJobsButton = document.getElementById('viewJobsButton');
+      let jobsExpanded = false;
+      viewJobsButton.addEventListener('click', () => {
+        jobsExpanded = !jobsExpanded;
+        document.querySelectorAll('[data-job-extra="true"]').forEach(row => row.hidden = !jobsExpanded);
+        viewJobsButton.setAttribute('aria-expanded', String(jobsExpanded));
+        viewJobsButton.innerHTML = jobsExpanded
+          ? 'Show top matches<svg class="icon" viewBox="0 0 24 24"><use href="#i-chevron-down"/></svg>'
+          : 'View all 5<svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg>';
+      });
+
+      // Tasks
+      const tasksList = document.getElementById('tasksList');
+      const taskCount = document.getElementById('taskCount');
+      function updateTaskCount() {
+        const open = tasksList.querySelectorAll('input[type="checkbox"]:not(:checked)').length;
+        taskCount.textContent = open;
+      }
+      tasksList.addEventListener('change', event => {
+        if (event.target.matches('input[type="checkbox"]')) {
+          event.target.closest('.task-item').classList.toggle('done', event.target.checked);
+          updateTaskCount();
+          showToast(event.target.checked ? 'Task marked complete' : 'Task reopened');
+        }
+      });
+      document.getElementById('addTaskButton').addEventListener('click', () => openDialog('taskDialog'));
+      document.getElementById('taskForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const text = document.getElementById('taskDetails').value.trim();
+        const priority = document.getElementById('taskPriority').value;
+        const rawDate = document.getElementById('taskDue').value;
+        const date = new Date(rawDate + 'T12:00:00');
+        const label = document.createElement('label');
+        label.className = 'task-item';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        const copy = document.createElement('span');
+        copy.className = 'task-copy';
+        const title = document.createElement('span');
+        title.className = 'task-title';
+        title.textContent = text;
+        const meta = document.createElement('span');
+        meta.className = 'task-meta';
+        meta.innerHTML = '<span><svg class="icon" viewBox="0 0 24 24"><use href="#i-clock"/></svg>Due ' + date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</span><span>Alex Morgan</span>';
+        const priorityBadge = document.createElement('span');
+        priorityBadge.className = 'priority ' + priority;
+        priorityBadge.textContent = priority;
+        copy.append(title, meta);
+        label.append(checkbox, copy, priorityBadge);
+        tasksList.prepend(label);
+        document.getElementById('taskForm').reset();
+        closeDialog('taskDialog');
+        updateTaskCount();
+        showToast('New task created');
+      });
+
+      // Pipeline stage update
+      document.getElementById('updateStageButton').addEventListener('click', () => openDialog('stageDialog'));
+      const stageNames = ['Applied', 'Recruiter screen', 'Technical screen', 'Panel interviews', 'Offer', 'Hired'];
+      document.getElementById('stageForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const selected = Number(document.querySelector('input[name="pipelineStage"]:checked').value);
+        document.querySelectorAll('#stageStepper .stage-step').forEach(step => {
+          const index = Number(step.dataset.index);
+          step.classList.toggle('complete', index < selected);
+          step.classList.toggle('current', index === selected);
+          if (index === selected) step.setAttribute('aria-current', 'step');
+          else step.removeAttribute('aria-current');
+          const dot = step.querySelector('.step-dot');
+          dot.innerHTML = index < selected ? '<svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg>' : String(index);
+        });
+        document.getElementById('currentStageText').textContent = stageNames[selected - 1];
+        document.getElementById('stepCounter').innerHTML = 'Step <b>' + selected + '</b> of 6';
+        document.getElementById('profileStageBadge').textContent = selected === 5 ? 'Offer' : selected === 6 ? 'Hired' : 'Interviewing';
+        closeDialog('stageDialog');
+        showToast('Pipeline updated to ' + stageNames[selected - 1]);
+      });
+
+      renderActivities();
+      updateTaskCount();
+    })();
+  </script>
+</body>
+</html>

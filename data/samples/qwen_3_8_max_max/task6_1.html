@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conduit Lake — Integrations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06151b; --panel:#0a2129; --panel2:#0c2731; --deep:#04111a;
+    --line:rgba(126,214,201,.14); --line2:rgba(126,214,201,.28);
+    --ink:#e6f4f1; --dim:#8fb0ab; --faint:#5c7f7c;
+    --aqua:#34e0c0; --ice:#7fd6ff; --amber:#ffb054; --violet:#b9a7ff; --leaf:#79dfa4;
+    --disp:'Schibsted Grotesk',sans-serif; --body:'Instrument Sans',sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1000px 560px at 80% -8%, rgba(52,224,192,.09), transparent 62%),
+      radial-gradient(760px 480px at 4% 16%, rgba(127,214,255,.06), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.55;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  ::selection{background:var(--aqua); color:#04231d}
+  a{color:inherit; text-decoration:none}
+  :focus-visible{outline:2px solid var(--aqua); outline-offset:3px; border-radius:4px}
+  .mono{font-family:var(--mono)}
+
+  /* noise overlay */
+  body::after{
+    content:""; position:fixed; inset:0; z-index:80; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .shell{max-width:1440px; margin:0 auto; padding:0 72px}
+  section{scroll-margin-top:24px}
+
+  /* ---------- eyebrow / rules ---------- */
+  .eb{display:flex; align-items:center; gap:16px; font-family:var(--mono); font-size:11px; letter-spacing:.22em; color:var(--dim); text-transform:uppercase}
+  .eb b{color:var(--aqua); font-weight:500}
+  .eb .rl{flex:1; height:1px; background:var(--line); transform:scaleX(0); transform-origin:left; transition:transform 1.1s cubic-bezier(.2,.7,.2,1)}
+  .in .eb .rl, .eb.in .rl{transform:scaleX(1)}
+
+  /* ---------- reveals ---------- */
+  .js .rv{opacity:0; transform:translateY(26px); transition:opacity .8s ease, transform .9s cubic-bezier(.2,.7,.2,1); transition-delay:var(--d,0s)}
+  .js .rv.in{opacity:1; transform:none}
+  .lm{overflow:hidden; display:block}
+  .lm>span{display:block; transform:translateY(112%); transition:transform .95s cubic-bezier(.22,.75,.18,1); transition-delay:var(--d,0s)}
+  .in .lm>span, .lm.in>span{transform:none}
+
+  /* ---------- top strip ---------- */
+  .topstrip{display:flex; justify-content:space-between; align-items:center; padding:18px 0; border-bottom:1px solid var(--line)}
+  .topstrip .l{font-family:var(--mono); font-size:11px; letter-spacing:.24em; color:var(--dim)}
+  .topstrip .l b{color:var(--ink); font-weight:500}
+  .topstrip .r{font-family:var(--mono); font-size:11px; color:var(--dim); display:flex; align-items:center; gap:10px}
+  .pulse{width:7px; height:7px; border-radius:50%; background:var(--aqua); box-shadow:0 0 0 0 rgba(52,224,192,.5); animation:pulse 2.2s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,224,192,.5)}70%{box-shadow:0 0 0 9px rgba(52,224,192,0)}100%{box-shadow:0 0 0 0 rgba(52,224,192,0)}}
+
+  /* ---------- opener ---------- */
+  .opener{display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:56px; padding:64px 0 56px; align-items:start}
+  .kicker{font-family:var(--mono); font-size:12px; letter-spacing:.3em; color:var(--aqua); margin-bottom:22px; display:flex; align-items:center; gap:12px}
+  .kicker::before{content:""; width:34px; height:1px; background:var(--aqua)}
+  h1{font-family:var(--disp); font-weight:800; font-size:62px; line-height:1.0; letter-spacing:-.028em}
+  h1 .alt{font-style:italic; font-weight:600; color:var(--aqua)}
+  .opener .sub{margin-top:26px; max-width:470px; color:var(--dim); font-size:16.5px; line-height:1.65}
+  .opener .sub b{color:var(--ink); font-weight:600}
+  .ctas{display:flex; gap:14px; margin-top:34px; align-items:center}
+  .btn{display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12.5px; letter-spacing:.06em; padding:15px 24px; border-radius:10px; transition:transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s, background .25s, border-color .25s; cursor:pointer; border:1px solid transparent}
+  .btn-p{background:var(--aqua); color:#04231d; font-weight:700}
+  .btn-p:hover{transform:translateY(-2px); box-shadow:0 10px 30px rgba(52,224,192,.28)}
+  .btn-p:active{transform:translateY(0)}
+  .btn-g{border-color:var(--line2); color:var(--ink)}
+  .btn-g:hover{border-color:var(--aqua); color:var(--aqua); transform:translateY(-2px)}
+  .micro{margin-top:14px; font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.05em}
+  .stats{display:grid; grid-template-columns:repeat(4,auto); gap:34px; margin-top:44px; padding-top:28px; border-top:1px solid var(--line); justify-content:start}
+  .stat .num{font-family:var(--disp); font-weight:800; font-size:30px; letter-spacing:-.02em; color:var(--ink)}
+  .stat .num em{font-style:normal; color:var(--aqua); font-size:20px}
+  .stat .lb{display:block; font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-top:4px}
+
+  /* ---------- diagram panel ---------- */
+  .topo{position:relative; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px 18px 14px; overflow:hidden;
+    background-image:radial-gradient(rgba(127,214,255,.09) 1px, transparent 1px); background-size:23px 23px}
+  .topo::before{content:""; position:absolute; inset:0; background:radial-gradient(600px 340px at 50% 48%, rgba(52,224,192,.07), transparent 70%); pointer-events:none}
+  .topo-head{display:flex; justify-content:space-between; align-items:center; font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; color:var(--dim); padding:0 6px 12px; text-transform:uppercase}
+  .topo-head .live{color:var(--aqua); display:flex; gap:8px; align-items:center}
+  .topo-foot{display:flex; justify-content:space-between; padding:10px 6px 2px; font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--faint)}
+  .leg{display:flex; gap:16px}
+  .leg i{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:0}
+  svg text{font-family:var(--mono)}
+  .wire{stroke:#1e444c; stroke-width:1.4; fill:none}
+  .wire.lit{stroke:var(--aqua); stroke-width:1.8; filter:drop-shadow(0 0 6px rgba(52,224,192,.7))}
+  .flow{stroke:var(--aqua); stroke-width:1.4; fill:none; opacity:.55; stroke-dasharray:3 9; animation:dashmv 1.1s linear infinite}
+  @keyframes dashmv{to{stroke-dashoffset:-12}}
+  .pk{fill:var(--aqua); filter:drop-shadow(0 0 5px rgba(52,224,192,.9))}
+  .pk.alt{fill:var(--ice); filter:drop-shadow(0 0 5px rgba(127,214,255,.9))}
+  .node{cursor:pointer}
+  .node rect{fill:#0b2530; stroke:#204750; stroke-width:1; transition:stroke .3s}
+  .node:hover rect{stroke:var(--aqua)}
+  .node .nm{font-family:var(--disp); font-weight:600; font-size:13.5px; fill:var(--ink)}
+  .node .rl2{font-size:8.5px; letter-spacing:.14em; fill:var(--faint); text-transform:uppercase}
+  .hublbl{font-size:12px; letter-spacing:.3em; fill:var(--aqua); font-weight:700}
+  .hubsub{font-size:8.5px; letter-spacing:.12em; fill:var(--dim)}
+  .hubtag{font-size:9px; fill:var(--faint)}
+  .ripple{fill:none; stroke:rgba(52,224,192,.5); stroke-width:1; transform-box:fill-box; transform-origin:center; animation:rip 3.2s ease-out infinite}
+  .ripple.r2{animation-delay:1.6s}
+  @keyframes rip{0%{transform:scale(1); opacity:.7}100%{transform:scale(1.22); opacity:0}}
+  .mlab{font-size:9px; letter-spacing:.12em; fill:#5f8a86}
+
+  /* ---------- ticker ---------- */
+  .ticker{border-top:1px solid var(--line); border-bottom:1px solid var(--line); overflow:hidden; padding:15px 0; margin-top:8px;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent); mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+  .tk-in{display:flex; width:max-content; gap:0; animation:tk 32s linear infinite}
+  .ticker:hover .tk-in{animation-play-state:paused}
+  @keyframes tk{to{transform:translateX(-50%)}}
+  .tk-it{font-family:var(--mono); font-size:12px; letter-spacing:.14em; color:var(--dim); text-transform:uppercase; white-space:nowrap; padding:0 18px; display:flex; align-items:center; gap:18px}
+  .tk-it b{color:var(--ink); font-weight:500}
+  .tk-it .tag{color:var(--faint); font-size:10px}
+  .tk-it::after{content:"✦"; color:var(--aqua); font-size:10px}
+
+  /* ---------- section headers ---------- */
+  .shead{margin:96px 0 46px}
+  .shead h2{font-family:var(--disp); font-weight:800; font-size:44px; letter-spacing:-.025em; line-height:1.05; margin-top:18px; max-width:720px}
+  .shead h2 em{font-style:italic; font-weight:600; color:var(--aqua)}
+  .shead .desc{color:var(--dim); max-width:560px; margin-top:16px; font-size:16px}
+
+  /* ---------- fit: sticky two-col ---------- */
+  .fit{display:grid; grid-template-columns:5fr 7fr; gap:64px; align-items:start}
+  .fit-left{position:sticky; top:100px}
+  .fit-left h2{font-family:var(--disp); font-weight:800; font-size:42px; line-height:1.06; letter-spacing:-.025em; margin:18px 0 22px}
+  .fit-left h2 em{font-style:italic; font-weight:600; color:var(--aqua)}
+  .fit-left p{color:var(--dim); max-width:400px; font-size:15.5px}
+  .legend{margin-top:34px; border:1px solid var(--line); border-radius:14px; padding:20px 22px; background:rgba(10,33,41,.55)}
+  .legend .row{display:flex; align-items:center; gap:12px; padding:8px 0; font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; color:var(--dim); text-transform:uppercase}
+  .legend .row+.row{border-top:1px dashed var(--line)}
+  .dot{width:9px; height:9px; border-radius:3px; flex:none}
+  .legend .ex{margin-left:auto; color:var(--faint); font-size:10.5px; text-transform:none; letter-spacing:.03em}
+
+  .steps{display:flex; flex-direction:column; gap:26px; position:relative}
+  .steps::before{content:""; position:absolute; left:27px; top:30px; bottom:30px; width:1px; background:linear-gradient(var(--line2), var(--line))}
+  .step{position:relative; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:28px 30px 26px 76px; transition:border-color .3s, transform .3s}
+  .step:hover{border-color:var(--line2); transform:translateX(6px)}
+  .step .idx{position:absolute; left:12px; top:26px; width:32px; height:32px; border-radius:50%; background:var(--deep); border:1px solid var(--line2); color:var(--aqua); font-family:var(--mono); font-size:11px; display:flex; align-items:center; justify-content:center}
+  .step h3{font-family:var(--disp); font-weight:700; font-size:21px; letter-spacing:-.01em; display:flex; align-items:baseline; gap:12px}
+  .step h3 .verb{font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:var(--aqua); text-transform:uppercase}
+  .step p{color:var(--dim); font-size:14.5px; margin-top:10px; max-width:560px}
+  .step pre{margin-top:16px; background:var(--deep); border:1px solid var(--line); border-radius:10px; padding:14px 18px; font-family:var(--mono); font-size:12px; line-height:1.7; color:var(--dim); overflow-x:auto}
+  .step pre .k{color:var(--aqua)} .step pre .v{color:var(--amber)} .step pre .c{color:var(--faint)}
+
+  /* ---------- ecosystem mosaic ---------- */
+  .filt{display:flex; align-items:center; gap:10px; margin:0 0 30px; flex-wrap:wrap}
+  .chip{font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); background:transparent; border:1px solid var(--line); border-radius:999px; padding:9px 18px; cursor:pointer; transition:all .25s}
+  .chip:hover{border-color:var(--line2); color:var(--ink)}
+  .chip.active{border-color:var(--aqua); color:var(--aqua); background:rgba(52,224,192,.07)}
+  .filt .count{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.1em}
+  .mosaic{display:grid; grid-template-columns:repeat(12,1fr); gap:18px}
+  .cc{grid-column:span 3; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:26px 26px 22px; position:relative; overflow:hidden; transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s, opacity .3s}
+  .cc.c6{grid-column:span 6}
+  .cc:hover{transform:translateY(-5px); border-color:rgba(52,224,192,.5); box-shadow:0 22px 44px rgba(2,10,14,.5)}
+  .cc.hidden{opacity:0; transform:scale(.96)}
+  .tile{width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line2); background:var(--deep); transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+  .cc:hover .tile{transform:rotate(-6deg) scale(1.06)}
+  .tile svg{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  .cc h3{font-family:var(--disp); font-weight:700; font-size:20px; margin-top:18px; letter-spacing:-.01em}
+  .cc .cat{font-family:var(--mono); font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; display:inline-block; margin-top:6px}
+  .cc .blurb{color:var(--dim); font-size:13.5px; margin-top:12px; line-height:1.6}
+  .modes{display:flex; gap:8px; margin-top:16px}
+  .m{font-family:var(--mono); font-size:9px; letter-spacing:.14em; padding:5px 9px; border-radius:6px; border:1px solid var(--line); color:var(--faint)}
+  .m.on{color:var(--aqua); border-color:rgba(52,224,192,.4)}
+  .m.on::before{content:"✓ "}
+  .cc .go{position:absolute; right:22px; bottom:20px; font-family:var(--mono); color:var(--aqua); font-size:14px; opacity:0; transform:translateX(-8px); transition:all .3s}
+  .cc:hover .go{opacity:1; transform:none}
+  .cc .ver{font-family:var(--mono); font-size:9.5px; color:var(--faint); margin-top:16px; letter-spacing:.08em}
+  .fstats{display:flex; gap:40px; margin-top:20px; padding-top:18px; border-top:1px dashed var(--line)}
+  .fstats div b{font-family:var(--disp); font-weight:800; font-size:24px; display:block; letter-spacing:-.02em}
+  .fstats div span{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+  .cc.cfg{display:flex; flex-direction:column; justify-content:center; align-items:flex-start; background:linear-gradient(160deg, rgba(52,224,192,.12), rgba(10,33,41,.4)), var(--panel)}
+  .cc.cfg .big{font-family:var(--disp); font-weight:800; font-size:30px; letter-spacing:-.02em; line-height:1.12}
+  .cc.cfg .big em{font-style:italic; font-weight:600; color:var(--aqua)}
+  .cc.cfg .lnk{font-family:var(--mono); font-size:12px; color:var(--aqua); margin-top:18px; display:inline-flex; gap:8px; align-items:center}
+  .cc.cfg .lnk:hover{text-decoration:underline}
+  .cc.cfg .sdk{font-family:var(--mono); font-size:10.5px; color:var(--faint); margin-top:22px; background:var(--deep); border:1px solid var(--line); padding:10px 14px; border-radius:8px}
+
+  /* ---------- recipes deck ---------- */
+  .deck{position:relative; padding-bottom:12vh}
+  .rc{position:sticky; background:var(--panel2); border:1px solid var(--line2); border-radius:20px; padding:44px 48px; margin-bottom:34px; min-height:330px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:48px; box-shadow:0 -14px 40px rgba(2,10,14,.55); will-change:transform; transform-origin:top center}
+  .rc:nth-child(1){top:96px} .rc:nth-child(2){top:120px} .rc:nth-child(3){top:144px} .rc:nth-child(4){top:168px}
+  .rc .rnum{font-family:var(--mono); font-size:11px; letter-spacing:.3em; color:var(--faint)}
+  .rc h3{font-family:var(--disp); font-weight:800; font-size:33px; letter-spacing:-.02em; line-height:1.08; margin-top:14px}
+  .rc h3 em{font-style:italic; font-weight:600; color:var(--aqua)}
+  .rc p{color:var(--dim); font-size:14.5px; margin-top:14px; max-width:440px}
+  .rstats{display:flex; gap:12px; margin-top:24px; flex-wrap:wrap}
+  .rstat{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--aqua); border:1px solid rgba(52,224,192,.35); border-radius:8px; padding:8px 12px; background:rgba(52,224,192,.05)}
+  .rdia{display:flex; flex-direction:column; justify-content:center; gap:0; border-left:1px dashed var(--line); padding-left:48px}
+  .rrow{display:flex; align-items:center; gap:12px}
+  .rnode{display:flex; align-items:center; gap:10px; background:var(--deep); border:1px solid var(--line2); border-radius:10px; padding:10px 14px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; white-space:nowrap}
+  .rnode .tile{width:26px; height:26px; border-radius:7px}
+  .rnode .tile svg{width:15px; height:15px}
+  .rnode.hub{border-color:rgba(52,224,192,.5); color:var(--aqua)}
+  .rwire{flex:1; height:2px; min-width:30px; background:repeating-linear-gradient(90deg, var(--aqua) 0 5px, transparent 5px 11px); animation:wiremv .9s linear infinite; opacity:.7}
+  @keyframes wiremv{to{background-position:11px 0}}
+  .rcap{font-family:var(--mono); font-size:9.5px; letter-spacing:.18em; color:var(--faint); text-transform:uppercase; margin:10px 0 10px 2px}
+  .rc .q{grid-column:1/-1; font-family:var(--mono); font-size:11px; color:var(--faint); border-top:1px dashed var(--line); padding-top:16px; margin-top:6px}
+  .rc .q b{color:var(--dim); font-weight:500}
+
+  /* ---------- catalog ---------- */
+  .catalog{margin-top:24px; border:1px solid var(--line2); border-radius:22px; background:linear-gradient(170deg, rgba(52,224,192,.09), rgba(10,33,41,.2) 46%), var(--panel); padding:60px 64px 54px; position:relative; overflow:hidden}
+  .catalog::before{content:""; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg, transparent, var(--aqua), transparent)}
+  .cat-grid{display:grid; grid-template-columns:auto 1fr; gap:64px; align-items:start}
+  .cat-count{font-family:var(--disp); font-weight:900; font-size:104px; line-height:.9; letter-spacing:-.04em}
+  .cat-count small{font-size:22px; color:var(--aqua); font-weight:700; letter-spacing:0; display:block; margin-top:10px; font-family:var(--mono); font-size:11px; letter-spacing:.28em; text-transform:uppercase}
+  .catalog h2{font-family:var(--disp); font-weight:800; font-size:40px; letter-spacing:-.025em; line-height:1.05}
+  .catalog h2 em{font-style:italic; font-weight:600; color:var(--aqua)}
+  .search{display:flex; margin-top:28px; max-width:640px; border:1px solid var(--line2); border-radius:12px; overflow:hidden; background:var(--deep); transition:border-color .3s, box-shadow .3s}
+  .search:focus-within{border-color:var(--aqua); box-shadow:0 0 0 4px rgba(52,224,192,.12)}
+  .search .ic{display:flex; align-items:center; padding:0 6px 0 18px; color:var(--faint)}
+  .search input{flex:1; background:transparent; border:0; outline:0; color:var(--ink); font-family:var(--mono); font-size:13px; padding:17px 12px; letter-spacing:.02em}
+  .search input::placeholder{color:var(--faint); transition:opacity .3s}
+  .search button{background:var(--aqua); color:#04231d; border:0; font-family:var(--mono); font-weight:700; font-size:12px; letter-spacing:.06em; padding:0 26px; cursor:pointer; transition:background .25s}
+  .search button:hover{background:#5ff0d4}
+  .pills{display:flex; flex-wrap:wrap; gap:9px; margin-top:26px; max-width:720px}
+  .pill{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--dim); border:1px solid var(--line); border-radius:999px; padding:7px 13px; transition:all .25s; cursor:pointer; background:rgba(4,17,26,.4)}
+  .pill:hover{border-color:var(--aqua); color:var(--aqua); transform:translateY(-2px)}
+  .more{font-family:var(--mono); font-size:10.5px; color:var(--faint); letter-spacing:.1em; align-self:center}
+  .cat-links{display:flex; gap:28px; margin-top:34px; align-items:center}
+  .cat-links a.t{font-family:var(--mono); font-size:12px; color:var(--ink); border-bottom:1px solid var(--line2); padding-bottom:3px; transition:color .25s, border-color .25s}
+  .cat-links a.t:hover{color:var(--aqua); border-color:var(--aqua)}
+  .cat-links span{font-family:var(--mono); font-size:11px; color:var(--faint)}
+
+  .footline{display:flex; justify-content:space-between; gap:20px; padding:34px 0 44px; margin-top:60px; border-top:1px solid var(--line); font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--faint); text-transform:uppercase}
+  .footline b{color:var(--dim); font-weight:500}
+
+  @media (max-width:1280px){
+    .shell{padding:0 40px}
+    .opener{grid-template-columns:1fr; gap:48px}
+    h1{font-size:52px}
+    .fit{grid-template-columns:1fr}
+    .fit-left{position:static}
+    .cc,.cc.c6{grid-column:span 6}
+    .rc{grid-template-columns:1fr}
+    .rdia{border-left:0; padding-left:0; border-top:1px dashed var(--line); padding-top:28px}
+    .cat-grid{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important}
+    .pk{display:none}
+    .tk-in{animation:none; flex-wrap:wrap}
+    .rwire{animation:none}
+    .js .rv,.lm>span{opacity:1; transform:none}
+  }
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add('js')</script>
+
+<!-- icon symbols -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-pg" viewBox="0 0 24 24">
+      <path d="M4.5 6.3c0-1.6 3.4-2.8 7.5-2.8s7.5 1.2 7.5 2.8v11.4c0 1.6-3.4 2.8-7.5 2.8s-7.5-1.2-7.5-2.8Z"/>
+      <path d="M4.5 6.3c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8"/><path d="M4.5 12c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8"/>
+    </symbol>
+    <symbol id="i-s3" viewBox="0 0 24 24">
+      <path d="M4.6 5.4h14.8l-2.3 13.4a2 2 0 0 1-2 1.6H8.9a2 2 0 0 1-2-1.6Z"/>
+      <path d="M4.6 5.4c0 1.3 3.3 2.3 7.4 2.3s7.4-1 7.4-2.3"/><path d="M8 10.5l.8 7M16 10.5l-.8 7" opacity=".6"/>
+    </symbol>
+    <symbol id="i-kafka" viewBox="0 0 24 24">
+      <circle cx="5.6" cy="12" r="2.7"/><circle cx="18.4" cy="5.4" r="2.7"/><circle cx="18.4" cy="18.6" r="2.7"/>
+      <path d="M8.1 10.8l7.8-4.2M8.1 13.2l7.8 4.2"/>
+    </symbol>
+    <symbol id="i-snow" viewBox="0 0 24 24">
+      <path d="M12 2.6v18.8M3.9 7.3l16.2 9.4M20.1 7.3 3.9 16.7"/>
+    </symbol>
+    <symbol id="i-bq" viewBox="0 0 24 24">
+      <path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4Z"/><path d="M12 21.2V12M12 12 4 7.4M12 12l8-4.6"/>
+    </symbol>
+    <symbol id="i-db" viewBox="0 0 24 24">
+      <path d="M4 8.8 12 4l8 4.8-8 4.8Z"/><path d="M4 14.6 12 19.4l8-4.8"/>
+    </symbol>
+    <symbol id="i-dbt" viewBox="0 0 24 24">
+      <circle cx="7.4" cy="15.6" r="4.2"/><circle cx="16.6" cy="15.6" r="4.2"/><circle cx="12" cy="7.8" r="4.2" opacity=".55"/>
+    </symbol>
+    <symbol id="i-lk" viewBox="0 0 24 24">
+      <path d="M5.5 13.6V4.4L13 9l-7.5 4.6Z"/><path d="M11.5 20v-5.8l7-4.1V16Z" opacity=".65"/>
+    </symbol>
+  </defs>
+</svg>
+
+<main class="shell">
+<section id="integrations" aria-label="Conduit Lake integrations">
+
+  <!-- top strip -->
+  <div class="topstrip rv">
+    <div class="l"><b>CONDUIT LAKE</b> &nbsp;/&nbsp; INTEGRATIONS GRID</div>
+    <div class="r"><span class="pulse" aria-hidden="true"></span> v4.2 · 212 connectors · all systems streaming</div>
+  </div>
+
+  <!-- ============ OPENER : live topology ============ -->
+  <div class="opener">
+    <div class="rv">
+      <div class="kicker">INTEGRATIONS</div>
+      <h1>
+        <span class="lm in"><span>Everything you</span></span>
+        <span class="lm in" style="--d:.08s"><span>already run,</span></span>
+        <span class="lm in" style="--d:.16s"><span class="alt scr" data-txt="wired into one current.">wired into one current.</span></span>
+      </h1>
+      <p class="sub">Conduit Lake is the connective tissue of your data stack. It sits between operational sources — <b>PostgreSQL, Amazon S3, Apache Kafka</b> — and analytical destinations — <b>Snowflake, BigQuery, Databricks, dbt, Looker</b> — moving change data, events and models under one contract, in both directions.</p>
+      <div class="ctas">
+        <a class="btn btn-p" href="#catalog">Explore all 212 integrations <span aria-hidden="true">→</span></a>
+        <a class="btn btn-g" href="#ecosystem">Connector SDK ↗</a>
+      </div>
+      <div class="micro">no credit card · first sync in ~5 minutes · connectors maintained by Conduit Lake, not you</div>
+      <div class="stats">
+        <div class="stat"><span class="num" data-to="212">0</span><span class="lb">Connectors maintained</span></div>
+        <div class="stat"><span class="num" data-to="96">0</span><span class="lb">With true CDC</span></div>
+        <div class="stat"><span class="num" data-to="4.1" data-dec="1">0</span><em class="num" style="font-size:20px">s</em><span class="lb">Median lag, src→tgt</span></div>
+        <div class="stat"><span class="num" data-to="99.98" data-dec="2">0</span><em class="num" style="font-size:20px">%</em><span class="lb">Delivery SLA</span></div>
+      </div>
+    </div>
+
+    <div class="topo rv" style="--d:.15s" aria-label="Live topology diagram of Conduit Lake connecting sources to destinations">
+      <div class="topo-head">
+        <span class="live"><span class="pulse"></span> LIVE TOPOLOGY — PROD</span>
+        <span>us-east-1 · exactly-once</span>
+      </div>
+      <svg viewBox="0 0 780 560" width="100%" role="img" aria-label="PostgreSQL, S3 and Kafka flow through the Conduit Lake hub into Snowflake, BigQuery, Databricks, dbt and Looker">
+        <!-- base wires -->
+        <path class="wire" data-r="pg" d="M178 85 C 252 85, 240 240, 305 240"/>
+        <path class="wire" data-r="s3" d="M178 265 C 246 265, 240 280, 305 280"/>
+        <path class="wire" data-r="kafka" d="M178 445 C 252 445, 240 320, 305 320"/>
+        <path class="wire" data-r="snowflake" d="M475 226 C 540 226, 540 52, 602 52"/>
+        <path class="wire" data-r="bigquery" d="M475 254 C 540 254, 540 154, 602 154"/>
+        <path class="wire" data-r="databricks" d="M475 282 C 540 282, 540 256, 602 256"/>
+        <path class="wire" data-r="dbt" d="M475 310 C 540 310, 540 358, 602 358"/>
+        <path class="wire" data-r="looker" d="M475 338 C 540 338, 540 460, 602 460"/>
+        <!-- animated flow overlays -->
+        <path class="flow" d="M178 85 C 252 85, 240 240, 305 240"/>
+        <path class="flow" d="M178 445 C 252 445, 240 320, 305 320"/>
+        <path class="flow" style="animation-duration:1.4s" d="M475 226 C 540 226, 540 52, 602 52"/>
+        <path class="flow" style="animation-duration:1.6s" d="M475 254 C 540 254, 540 154, 602 154"/>
+        <!-- packets -->
+        <circle class="pk" r="3.2"><animateMotion dur="3.2s" repeatCount="indefinite" path="M178 85 C 252 85, 240 240, 305 240"/></circle>
+        <circle class="pk" r="2.6"><animateMotion dur="4.1s" begin="-1.4s" repeatCount="indefinite" path="M178 265 C 246 265, 240 280, 305 280"/></circle>
+        <circle class="pk" r="3.2"><animateMotion dur="2.6s" begin="-.7s" repeatCount="indefinite" path="M178 445 C 252 445, 240 320, 305 320"/></circle>
+        <circle class="pk alt" r="3"><animateMotion dur="2.9s" begin="-.4s" repeatCount="indefinite" path="M475 226 C 540 226, 540 52, 602 52"/></circle>
+        <circle class="pk alt" r="2.6"><animateMotion dur="3.5s" begin="-1.9s" repeatCount="indefinite" path="M475 254 C 540 254, 540 154, 602 154"/></circle>
+        <circle class="pk alt" r="2.6"><animateMotion dur="3.1s" begin="-1.1s" repeatCount="indefinite" path="M475 282 C 540 282, 540 256, 602 256"/></circle>
+        <circle class="pk alt" r="2.4"><animateMotion dur="3.8s" begin="-2.2s" repeatCount="indefinite" path="M475 310 C 540 310, 540 358, 602 358"/></circle>
+        <circle class="pk alt" r="2.4"><animateMotion dur="4.3s" begin="-.2s" repeatCount="indefinite" path="M475 338 C 540 338, 540 460, 602 460"/></circle>
+        <!-- micro labels -->
+        <text class="mlab" x="216" y="150">CDC</text>
+        <text class="mlab" x="212" y="258">PARQUET</text>
+        <text class="mlab" x="206" y="392">AVRO · 2.1M EVT/S</text>
+        <text class="mlab" x="512" y="120">MERGE LOADS</text>
+        <text class="mlab" x="512" y="206">STREAMING INSERTS</text>
+        <text class="mlab" x="512" y="296">DELTA MERGE</text>
+        <text class="mlab" x="512" y="344">ON-WATERMARK BUILD</text>
+        <text class="mlab" x="512" y="412">LIVE CUBES</text>
+
+        <!-- hub -->
+        <g>
+          <rect class="ripple" x="297" y="188" width="186" height="184" rx="26"/>
+          <rect class="ripple r2" x="297" y="188" width="186" height="184" rx="26"/>
+          <rect x="305" y="196" width="170" height="168" rx="20" fill="#0b2530" stroke="rgba(52,224,192,.55)" stroke-width="1.2"/>
+          <text class="hublbl" x="390" y="252" text-anchor="middle">CONDUIT</text>
+          <text class="hublbl" x="390" y="270" text-anchor="middle">LAKE</text>
+          <text class="hubsub" x="390" y="292" text-anchor="middle">the current layer</text>
+          <text class="hubtag" x="390" y="316" text-anchor="middle">schema registry</text>
+          <text class="hubtag" x="390" y="330" text-anchor="middle">exactly-once · watermarks</text>
+          <circle cx="390" cy="220" r="3" fill="#34e0c0"><animate attributeName="opacity" values="1;.25;1" dur="1.8s" repeatCount="indefinite"/></circle>
+        </g>
+
+        <!-- source nodes -->
+        <g class="node" data-n="pg" tabindex="0">
+          <rect x="8" y="56" width="170" height="58" rx="14"/>
+          <use href="#i-pg" x="22" y="71" width="26" height="26" style="color:#7db4e8"/>
+          <text class="nm" x="58" y="82">PostgreSQL</text>
+          <text class="rl2" x="58" y="99">source · logical repl.</text>
+        </g>
+        <g class="node" data-n="s3" tabindex="0">
+          <rect x="8" y="236" width="170" height="58" rx="14"/>
+          <use href="#i-s3" x="22" y="251" width="26" height="26" style="color:#e88a5d"/>
+          <text class="nm" x="58" y="262">Amazon S3</text>
+          <text class="rl2" x="58" y="279">source · event-driven</text>
+        </g>
+        <g class="node" data-n="kafka" tabindex="0">
+          <rect x="8" y="416" width="170" height="58" rx="14"/>
+          <use href="#i-kafka" x="22" y="431" width="26" height="26" style="color:#b8c6d4"/>
+          <text class="nm" x="58" y="442">Apache Kafka</text>
+          <text class="rl2" x="58" y="459">source · streaming</text>
+        </g>
+        <!-- destination nodes -->
+        <g class="node" data-n="snowflake" tabindex="0">
+          <rect x="602" y="26" width="170" height="52" rx="13"/>
+          <use href="#i-snow" x="614" y="39" width="24" height="24" style="color:#4cc9f0"/>
+          <text class="nm" x="648" y="48">Snowflake</text>
+          <text class="rl2" x="648" y="64">warehouse</text>
+        </g>
+        <g class="node" data-n="bigquery" tabindex="0">
+          <rect x="602" y="128" width="170" height="52" rx="13"/>
+          <use href="#i-bq" x="614" y="141" width="24" height="24" style="color:#7aa7ff"/>
+          <text class="nm" x="648" y="150">BigQuery</text>
+          <text class="rl2" x="648" y="166">warehouse</text>
+        </g>
+        <g class="node" data-n="databricks" tabindex="0">
+          <rect x="602" y="230" width="170" height="52" rx="13"/>
+          <use href="#i-db" x="614" y="243" width="24" height="24" style="color:#ff6f61"/>
+          <text class="nm" x="648" y="252">Databricks</text>
+          <text class="rl2" x="648" y="268">lakehouse</text>
+        </g>
+        <g class="node" data-n="dbt" tabindex="0">
+          <rect x="602" y="332" width="170" height="52" rx="13"/>
+          <use href="#i-dbt" x="614" y="345" width="24" height="24" style="color:#ffc24b"/>
+          <text class="nm" x="648" y="354">dbt</text>
+          <text class="rl2" x="648" y="370">transform</text>
+        </g>
+        <g class="node" data-n="looker" tabindex="0">
+          <rect x="602" y="434" width="170" height="52" rx="13"/>
+          <use href="#i-lk" x="614" y="447" width="24" height="24" style="color:#b18cff"/>
+          <text class="nm" x="648" y="456">Looker</text>
+          <text class="rl2" x="648" y="472">analytics</text>
+        </g>
+      </svg>
+      <div class="topo-foot">
+        <div class="leg">
+          <span><i style="background:var(--amber)"></i>SOURCES</span>
+          <span><i style="background:var(--aqua)"></i>CONDUIT</span>
+          <span><i style="background:var(--ice)"></i>DESTINATIONS</span>
+        </div>
+        <span>hover a node to trace its route</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ticker -->
+  <div class="ticker rv" aria-hidden="true">
+    <div class="tk-in">
+      <span class="tk-it"><b>PostgreSQL</b><span class="tag">CDC</span></span>
+      <span class="tk-it"><b>Amazon S3</b><span class="tag">EVENTS</span></span>
+      <span class="tk-it"><b>Apache Kafka</b><span class="tag">STREAM</span></span>
+      <span class="tk-it"><b>Snowflake</b><span class="tag">MERGE</span></span>
+      <span class="tk-it"><b>Google BigQuery</b><span class="tag">LOAD</span></span>
+      <span class="tk-it"><b>Databricks</b><span class="tag">DELTA</span></span>
+      <span class="tk-it"><b>dbt</b><span class="tag">BUILD</span></span>
+      <span class="tk-it"><b>Looker</b><span class="tag">SERVE</span></span>
+      <span class="tk-it"><b>MongoDB</b><span class="tag">CDC</span></span>
+      <span class="tk-it"><b>Stripe</b><span class="tag">EVENTS</span></span>
+      <span class="tk-it"><b>ClickHouse</b><span class="tag">LOAD</span></span>
+      <span class="tk-it"><b>Salesforce</b><span class="tag">SYNC</span></span>
+      <!-- duplicate for loop -->
+      <span class="tk-it"><b>PostgreSQL</b><span class="tag">CDC</span></span>
+      <span class="tk-it"><b>Amazon S3</b><span class="tag">EVENTS</span></span>
+      <span class="tk-it"><b>Apache Kafka</b><span class="tag">STREAM</span></span>
+      <span class="tk-it"><b>Snowflake</b><span class="tag">MERGE</span></span>
+      <span class="tk-it"><b>Google BigQuery</b><span class="tag">LOAD</span></span>
+      <span class="tk-it"><b>Databricks</b><span class="tag">DELTA</span></span>
+      <span class="tk-it"><b>dbt</b><span class="tag">BUILD</span></span>
+      <span class="tk-it"><b>Looker</b><span class="tag">SERVE</span></span>
+      <span class="tk-it"><b>MongoDB</b><span class="tag">CDC</span></span>
+      <span class="tk-it"><b>Stripe</b><span class="tag">EVENTS</span></span>
+      <span class="tk-it"><b>ClickHouse</b><span class="tag">LOAD</span></span>
+      <span class="tk-it"><b>Salesforce</b><span class="tag">SYNC</span></span>
+    </div>
+  </div>
+
+  <!-- ============ 01 — WHERE IT FITS ============ -->
+  <div class="shead rv" id="fit">
+    <div class="eb"><b>01</b> WHERE IT FITS <span class="rl"></span></div>
+    <h2 class="lm"><span>It slots between your systems of record and <em>everything downstream.</em></span></h2>
+    <p class="desc">No new pipeline code, no cron jobs, no “sync scripts” folder. Conduit Lake reads change at the source and delivers it, shaped, wherever your stack needs it.</p>
+  </div>
+
+  <div class="fit">
+    <div class="fit-left rv">
+      <div class="eb" style="margin-bottom:0"><b>THE CONTRACT</b><span class="rl"></span></div>
+      <h2>One wire. <em>Every direction.</em></h2>
+      <p>Every connector speaks the same envelope: watermarked, schema-registered, replayable. That's why a new destination is a checkbox, not a project.</p>
+      <div class="legend">
+        <div class="row"><span class="dot" style="background:var(--amber)"></span> Sources <span class="ex">Postgres · S3 · Kafka · +89</span></div>
+        <div class="row"><span class="dot" style="background:var(--ice)"></span> Destinations <span class="ex">Snowflake · BigQuery · Databricks</span></div>
+        <div class="row"><span class="dot" style="background:var(--violet)"></span> Transform <span class="ex">dbt · SQL lenses</span></div>
+        <div class="row"><span class="dot" style="background:var(--leaf)"></span> Analytics <span class="ex">Looker · reverse ETL</span></div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <article class="step rv">
+        <span class="idx">01</span>
+        <h3>Capture <span class="verb">change, not tables</span></h3>
+        <p>Logical replication from Postgres, bucket events from S3, consumer groups on Kafka. Conduit Lake reads the change stream directly — no locks, no batch windows, no impact on the source.</p>
+        <pre><code>{ <span class="k">"op"</span>: <span class="v">"insert"</span>, <span class="k">"src"</span>: <span class="v">"pg.orders"</span>, <span class="k">"lsn"</span>: <span class="v">"0/1B44F08"</span>,
+  <span class="k">"ts"</span>: <span class="v">"02:14:07.331"</span>, <span class="k">"row"</span>: { <span class="k">"id"</span>: <span class="v">8842</span>, <span class="k">"total"</span>: <span class="v">129.0</span> } }</code></pre>
+      </article>
+      <article class="step rv" style="--d:.08s">
+        <span class="idx">02</span>
+        <h3>Shape <span class="verb">schema drift, handled</span></h3>
+        <p>Types map through one registry. A new column upstream becomes a governed migration downstream — not a 3 a.m. page.</p>
+        <pre><code><span class="k">shape</span>:
+  <span class="k">on_new_column</span>: <span class="v">evolve_target</span>   <span class="c"># never fail the stream</span>
+  <span class="k">map</span>: { <span class="k">created_at</span>: <span class="v">timestamptz</span>, <span class="k">total</span>: <span class="v">numeric(12,2)</span> }</code></pre>
+      </article>
+      <article class="step rv" style="--d:.16s">
+        <span class="idx">03</span>
+        <h3>Route <span class="verb">one stream, many lands</span></h3>
+        <p>Fan a single capture out to a warehouse, a lakehouse and an object archive at once. Each route keeps its own watermark, so a slow target never blocks the rest.</p>
+        <pre><code><span class="k">routes</span>:
+  - <span class="k">to</span>: <span class="v">snowflake.analytics.orders</span>   <span class="c"># merge by id</span>
+  - <span class="k">to</span>: <span class="v">databricks.bronze.orders</span>     <span class="c"># delta append</span>
+  - <span class="k">to</span>: <span class="v">s3://lake/raw/orders/</span>        <span class="c"># parquet archive</span></code></pre>
+      </article>
+      <article class="step rv" style="--d:.24s">
+        <span class="idx">04</span>
+        <h3>Activate <span class="verb">downstream wakes itself</span></h3>
+        <p>Watermarks trigger dbt runs the moment data lands, and Looker's PDTs refresh on arrival — dashboards show what happened seconds ago, not last night.</p>
+        <pre><code><span class="k">triggers</span>:
+  - <span class="k">on_watermark</span>: <span class="v">orders</span>  → <span class="k">dbt run</span> <span class="v">+orders_mart</span>
+  - <span class="k">on_arrival</span>: <span class="v">orders_mart</span> → <span class="k">looker refresh</span> <span class="v">revenue_live</span> <span class="c"># 4.1s p50</span></code></pre>
+      </article>
+    </div>
+  </div>
+
+  <!-- ============ 02 — ECOSYSTEM ============ -->
+  <div class="shead rv" id="ecosystem">
+    <div class="eb"><b>02</b> THE ECOSYSTEM <span class="rl"></span></div>
+    <h2 class="lm"><span>First-class connectors, <em>maintained for you.</em></span></h2>
+    <p class="desc">Every connector is built and owned by Conduit Lake — versioned, tested against real endpoints, and upgraded without a migration project on your side.</p>
+  </div>
+
+  <div class="rv">
+    <div class="filt" role="group" aria-label="Filter connectors by category">
+      <button class="chip active" data-f="all">All</button>
+      <button class="chip" data-f="source">Sources</button>
+      <button class="chip" data-f="destination">Destinations</button>
+      <button class="chip" data-f="transform">Transform</button>
+      <button class="chip" data-f="analytics">Analytics</button>
+      <span class="count" id="fcount">8 of 8 connectors shown</span>
+    </div>
+
+    <div class="mosaic" id="mosaic">
+      <!-- Snowflake feature -->
+      <article class="cc c6" data-cat="destination">
+        <div class="tile" style="color:#4cc9f0"><svg><use href="#i-snow"/></svg></div>
+        <h3>Snowflake</h3>
+        <span class="cat" style="color:var(--ice)">Destination · Warehouse</span>
+        <p class="blurb">Merge-style loads with auto-suspending clusters, Iceberg external tables and zero-copy reverse syncs back out to operational stores.</p>
+        <div class="modes"><span class="m on">CDC</span><span class="m on">BATCH</span><span class="m on">STREAM</span></div>
+        <div class="fstats">
+          <div><b>&lt;30s</b><span>load latency</span></div>
+          <div><b>0</b><span>staging tables to manage</span></div>
+          <div><b>auto</b><span>clustering hints</span></div>
+        </div>
+        <div class="ver">connector v4.2.1 · snowpipe streaming · key-pair auth</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <article class="cc" data-cat="source">
+        <div class="tile" style="color:#7db4e8"><svg><use href="#i-pg"/></svg></div>
+        <h3>PostgreSQL</h3>
+        <span class="cat" style="color:var(--amber)">Source · Operational</span>
+        <p class="blurb">Logical replication CDC with 200+ types mapped, TOAST-safe and gentle on your primary.</p>
+        <div class="modes"><span class="m on">CDC</span><span class="m on">BATCH</span><span class="m">STREAM</span></div>
+        <div class="ver">connector v4.2.0 · pgoutput · 12+ · RDS &amp; AlloyDB ok</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <article class="cc" data-cat="source">
+        <div class="tile" style="color:#e88a5d"><svg><use href="#i-s3"/></svg></div>
+        <h3>Amazon S3</h3>
+        <span class="cat" style="color:var(--amber)">Source &amp; Sink · Lake</span>
+        <p class="blurb">Event-driven parquet and CSV ingestion; write back governed, partitioned archives.</p>
+        <div class="modes"><span class="m">CDC</span><span class="m on">BATCH</span><span class="m on">STREAM</span></div>
+        <div class="ver">connector v4.1.4 · eventbridge · glacier-aware</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <!-- Kafka feature -->
+      <article class="cc c6" data-cat="source">
+        <div class="tile" style="color:#b8c6d4"><svg><use href="#i-kafka"/></svg></div>
+        <h3>Apache Kafka</h3>
+        <span class="cat" style="color:var(--amber)">Source &amp; Sink · Streaming</span>
+        <p class="blurb">Exactly-once bridging between your event backbone and every analytical target. Schema-registry aware, rebalance-safe, with per-partition watermarks.</p>
+        <div class="modes"><span class="m on">CDC</span><span class="m">BATCH</span><span class="m on">STREAM</span></div>
+        <div class="fstats">
+          <div><b>2.1M</b><span>msg/s per worker</span></div>
+          <div><b>EOS</b><span>exactly-once sink</span></div>
+          <div><b>avro / json / pb</b><span>deserialization</span></div>
+        </div>
+        <div class="ver">connector v4.2.1 · MSK &amp; Confluent tested · SASL/TLS</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <article class="cc" data-cat="destination">
+        <div class="tile" style="color:#7aa7ff"><svg><use href="#i-bq"/></svg></div>
+        <h3>Google BigQuery</h3>
+        <span class="cat" style="color:var(--ice)">Destination · Warehouse</span>
+        <p class="blurb">Streaming inserts for hot data, storage-API loads for bulk — one connector, both lanes.</p>
+        <div class="modes"><span class="m on">CDC</span><span class="m on">BATCH</span><span class="m on">STREAM</span></div>
+        <div class="ver">connector v4.1.9 · time-travel safe · partition hints</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <article class="cc" data-cat="destination">
+        <div class="tile" style="color:#ff6f61"><svg><use href="#i-db"/></svg></div>
+        <h3>Databricks</h3>
+        <span class="cat" style="color:var(--ice)">Destination · Lakehouse</span>
+        <p class="blurb">Delta merges with unity-catalog lineage preserved; bronze in, gold out.</p>
+        <div class="modes"><span class="m on">CDC</span><span class="m on">BATCH</span><span class="m on">STREAM</span></div>
+        <div class="ver">connector v4.1.7 · autoloader-friendly · UC volumes</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <article class="cc" data-cat="transform">
+        <div class="tile" style="color:#ffc24b"><svg><use href="#i-dbt"/></svg></div>
+        <h3>dbt</h3>
+        <span class="cat" style="color:var(--violet)">Transform · Orchestrated</span>
+        <p class="blurb">Watermark-triggered builds — models run the moment upstream data lands, not on a guess.</p>
+        <div class="modes"><span class="m">CDC</span><span class="m">BATCH</span><span class="m on">STREAM</span></div>
+        <div class="ver">connector v4.0.8 · cloud &amp; core · slim ci aware</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <article class="cc" data-cat="analytics">
+        <div class="tile" style="color:#b18cff"><svg><use href="#i-lk"/></svg></div>
+        <h3>Looker</h3>
+        <span class="cat" style="color:var(--leaf)">Analytics · Serving</span>
+        <p class="blurb">PDT refresh on arrival plus reverse-ETL segments back to your operational stores.</p>
+        <div class="modes"><span class="m">CDC</span><span class="m on">BATCH</span><span class="m on">STREAM</span></div>
+        <div class="ver">connector v4.0.6 · lookml refresh api · embeds</div>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+
+      <!-- SDK card -->
+      <article class="cc c6 cfg" data-static>
+        <div class="big">Missing something?<br><em>Ship it as a plugin.</em></div>
+        <span class="lnk">Read the Connector SDK docs <span aria-hidden="true">↗</span></span>
+        <span class="sdk">$ conduit sdk init my-connector --wasm &amp;&amp; conduit deploy</span>
+        <span class="go" aria-hidden="true">→</span>
+      </article>
+    </div>
+  </div>
+
+  <!-- ============ 03 — WHAT BECOMES POSSIBLE ============ -->
+  <div class="shead rv" id="recipes">
+    <div class="eb"><b>03</b> WHAT BECOMES POSSIBLE <span class="rl"></span></div>
+    <h2 class="lm"><span>When everything is connected, <em>this is the normal.</em></span></h2>
+    <p class="desc">Four production patterns our customers run on day one. No pipeline code — just routes.</p>
+  </div>
+
+  <div class="deck">
+    <article class="rc">
+      <div>
+        <div class="rnum">RECIPE / 01</div>
+        <h3>Postgres → Snowflake, <em>without the ETL tax.</em></h3>
+        <p>Capture every insert, update and delete from your OLTP database and merge it into your warehouse in under thirty seconds. No nightly dumps, no full-table refreshs, no lock contention.</p>
+        <div class="rstats"><span class="rstat">4 MIN SETUP</span><span class="rstat">&lt;30S FRESHNESS</span><span class="rstat">ZERO LOCK TABLES</span></div>
+      </div>
+      <div class="rdia">
+        <div class="rcap">capture → merge</div>
+        <div class="rrow">
+          <span class="rnode"><span class="tile" style="color:#7db4e8"><svg><use href="#i-pg"/></svg></span>pg.orders</span>
+          <span class="rwire"></span>
+          <span class="rnode hub">CONDUIT</span>
+          <span class="rwire"></span>
+          <span class="rnode"><span class="tile" style="color:#4cc9f0"><svg><use href="#i-snow"/></svg></span>analytics.orders</span>
+        </div>
+      </div>
+      <div class="q"><b>“We deleted 340 lines of cron and the warehouse is now fresher than the app DB cache.”</b> — data platform lead, fintech</div>
+    </article>
+
+    <article class="rc">
+      <div>
+        <div class="rnum">RECIPE / 02</div>
+        <h3>Kafka → BigQuery, <em>streaming by default.</em></h3>
+        <p>Two million events a second, deserialized, schema-registered and queryable in BigQuery while they're still warm. Exactly-once delivery, rebalance-proof.</p>
+        <div class="rstats"><span class="rstat">2.1M EVT/S</span><span class="rstat">800MS MEDIAN LAG</span><span class="rstat">EXACTLY-ONCE</span></div>
+      </div>
+      <div class="rdia">
+        <div class="rcap">stream → query</div>
+        <div class="rrow">
+          <span class="rnode"><span class="tile" style="color:#b8c6d4"><svg><use href="#i-kafka"/></svg></span>events.clicks</span>
+          <span class="rwire"></span>
+          <span class="rnode hub">CONDUIT</span>
+          <span class="rwire"></span>
+          <span class="rnode"><span class="tile" style="color:#7aa7ff"><svg><use href="#i-bq"/></svg></span>bq.streams.clicks</span>
+        </div>
+      </div>
+      <div class="q"><b>“Marketing queries events that happened during this meeting.”</b> — analytics engineer, retail</div>
+    </article>
+
+    <article class="rc">
+      <div>
+        <div class="rnum">RECIPE / 03</div>
+        <h3>dbt builds <em>the moment data lands.</em></h3>
+        <p>Stop scheduling dbt on hope. Watermarks from S3 and Kafka trigger model runs precisely when upstream data is complete — and Looker refreshes when the mart is done.</p>
+        <div class="rstats"><span class="rstat">NO CRON</span><span class="rstat">WATERMARK-DRIVEN</span><span class="rstat">CHAIN: S3 → dbt → LOOKER</span></div>
+      </div>
+      <div class="rdia">
+        <div class="rcap">land → build → serve</div>
+        <div class="rrow">
+          <span class="rnode"><span class="tile" style="color:#e88a5d"><svg><use href="#i-s3"/></svg></span>lake/raw</span>
+          <span class="rwire"></span>
+          <span class="rnode"><span class="tile" style="color:#ffc24b"><svg><use href="#i-dbt"/></svg></span>dbt run</span>
+          <span class="rwire"></span>
+          <span class="rnode"><span class="tile" style="color:#b18cff"><svg><use href="#i-lk"/></svg></span>looker</span>
+        </div>
+      </div>
+      <div class="q"><b>“Our morning dashboard moved from 09:40 ‘ready-ish’ to continuously current.”</b> — head of data, logistics</div>
+    </article>
+
+    <article class="rc">
+      <div>
+        <div class="rnum">RECIPE / 04</div>
+        <h3>Looker answers that are <em>never stale.</em></h3>
+        <p>Full circle: governed tables feed Looker, and high-value segments flow back out to Postgres and Kafka where your product can act on them in real time.</p>
+        <div class="rstats"><span class="rstat">REVERSE ETL</span><span class="rstat">PDT ON ARRIVAL</span><span class="rstat">BI-DIRECTIONAL</span></div>
+      </div>
+      <div class="rdia">
+        <div class="rcap">serve → act</div>
+        <div class="rrow">
+          <span class="rnode"><span class="tile" style="color:#b18cff"><svg><use href="#i-lk"/></svg></span>segment: churn-risk</span>
+          <span class="rwire"></span>
+          <span class="rnode hub">CONDUIT</span>
+          <span class="rwire"></span>
+          <span class="rnode"><span class="tile" style="color:#7db4e8"><svg><use href="#i-pg"/></svg></span>pg.segments</span>
+        </div>
+      </div>
+      <div class="q"><b>“The dashboard and the product database finally agree.”</b> — CTO, B2B SaaS</div>
+    </article>
+  </div>
+
+  <!-- ============ 04 — CATALOG ============ -->
+  <div class="catalog rv" id="catalog">
+    <div class="cat-grid">
+      <div>
+        <div class="cat-count"><span class="num" data-to="212">0</span><small>connectors · shipped weekly</small></div>
+      </div>
+      <div>
+        <div class="eb" style="margin-bottom:14px"><b>04</b> THE COMPLETE CATALOG <span class="rl"></span></div>
+        <h2 class="lm"><span>Explore the full set — or <em>build the missing one.</em></span></h2>
+        <form class="search" onsubmit="return false">
+          <span class="ic" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </span>
+          <input id="catq" type="search" placeholder="try: postgres → snowflake" aria-label="Search the connector catalog">
+          <button type="submit">SEARCH</button>
+        </form>
+        <div class="pills">
+          <span class="pill">MongoDB</span><span class="pill">MySQL</span><span class="pill">Redis</span><span class="pill">ClickHouse</span>
+          <span class="pill">Redshift</span><span class="pill">Iceberg Tables</span><span class="pill">Salesforce</span><span class="pill">Stripe</span>
+          <span class="pill">HubSpot</span><span class="pill">Segment</span><span class="pill">Zendesk</span><span class="pill">Shopify</span>
+          <span class="pill">DynamoDB</span><span class="pill">Oracle</span><span class="pill">SQL Server</span><span class="pill">Kinesis</span>
+          <span class="pill">Google Pub/Sub</span><span class="pill">GCS</span><span class="pill">Azure Blob</span><span class="pill">Firehose</span>
+          <span class="pill">Elasticsearch</span><span class="pill">DuckDB</span><span class="pill">REST / Webhooks</span>
+          <span class="more">+ 189 more in the catalog →</span>
+        </div>
+        <div class="cat-links">
+          <a class="t" href="#integrations">Browse all integrations →</a>
+          <a class="t" href="#ecosystem">Connector docs ↗</a>
+          <span>missing one? ship it as a WASM plugin with the SDK</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footline">
+    <span><b>CONDUIT LAKE</b> · integrations grid</span>
+    <span>connectors maintained by conduit lake · exactly-once · schema registry · replay anytime</span>
+  </div>
+
+</section>
+</main>
+
+<script>
+(function(){
+  var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- reveal observer ---------- */
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, {threshold:.18, rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.rv,.lm,.eb').forEach(function(el){ io.observe(el); });
+
+  /* ---------- scramble decode ---------- */
+  var CHARS = '#<>/\\|=+*▓▒░01';
+  function scramble(el){
+    var txt = el.getAttribute('data-txt') || el.textContent;
+    if(RM){ el.textContent = txt; return; }
+    var frame = 0, total = Math.max(26, txt.length * 2);
+    (function tick(){
+      var out = '', reveal = Math.floor((frame/total) * txt.length);
+      for(var i=0;i<txt.length;i++){
+        if(i < reveal || txt[i]===' ') out += txt[i];
+        else out += CHARS[Math.floor(Math.random()*CHARS.length)];
+      }
+      el.textContent = out;
+      if(frame++ <= total) requestAnimationFrame(tick);
+      else el.textContent = txt;
+    })();
+  }
+  var sio = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ scramble(e.target); sio.unobserve(e.target); }
+    });
+  }, {threshold:.6});
+  document.querySelectorAll('.scr').forEach(function(el){ sio.observe(el); });
+
+  /* ---------- counters ---------- */
+  function runCount(el){
+    var to = parseFloat(el.getAttribute('data-to'));
+    var dec = parseInt(el.getAttribute('data-dec')||'0',10);
+    if(RM){ el.textContent = to.toFixed(dec); return; }
+    var t0 = null, dur = 1400;
+    (function step(ts){
+      if(!t0) t0 = ts;
+      var p = Math.min((ts-t0)/dur, 1);
+      var e = 1 - Math.pow(1-p, 3);
+      el.textContent = (to*e).toFixed(dec);
+      if(p<1) requestAnimationFrame(step); else el.textContent = to.toFixed(dec);
+    })(performance.now());
+  }
+  var cio = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ runCount(e.target); cio.unobserve(e.target); }
+    });
+  }, {threshold:.5});
+  document.querySelectorAll('.num[data-to]').forEach(function(el){ cio.observe(el); });
+
+  /* ---------- topology: trace routes on hover ---------- */
+  document.querySelectorAll('.node').forEach(function(node){
+    var id = node.getAttribute('data-n');
+    var wires = document.querySelectorAll('path.wire[data-r="'+id+'"]');
+    function on(){ wires.forEach(function(w){ w.classList.add('lit'); }); }
+    function off(){ wires.forEach(function(w){ w.classList.remove('lit'); }); }
+    node.addEventListener('mouseenter', on);
+    node.addEventListener('mouseleave', off);
+    node.addEventListener('focus', on);
+    node.addEventListener('blur', off);
+  });
+
+  /* ---------- mosaic filter ---------- */
+  var chips = document.querySelectorAll('.chip[data-f]');
+  var cards = document.querySelectorAll('#mosaic .cc');
+  var fcount = document.getElementById('fcount');
+  chips.forEach(function(ch){
+    ch.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      ch.classList.add('active');
+      var f = ch.getAttribute('data-f'), shown = 0;
+      cards.forEach(function(card){
+        var match = card.hasAttribute('data-static') || f==='all' || card.getAttribute('data-cat')===f;
+        if(match){
+          if(!card.hasAttribute('data-static')) shown++;
+          card.style.display='';
+          requestAnimationFrame(function(){ requestAnimationFrame(function(){ card.classList.remove('hidden'); }); });
+        } else {
+          card.classList.add('hidden');
+          setTimeout(function(){ if(card.classList.contains('hidden')) card.style.display='none'; }, 260);
+        }
+      });
+      fcount.textContent = shown + ' of 8 connectors shown';
+    });
+  });
+
+  /* ---------- stacked deck: settle effect ---------- */
+  var deck = Array.prototype.slice.call(document.querySelectorAll('.rc'));
+  var ticking = false;
+  function settle(){
+    ticking = false;
+    for(var i=0;i<deck.length-1;i++){
+      var r = deck[i].getBoundingClientRect();
+      var n = deck[i+1].getBoundingClientRect();
+      var p = Math.min(Math.max((r.bottom - n.top) / (r.height*0.9), 0), 1);
+      deck[i].style.transform = 'scale(' + (1 - p*0.045) + ')';
+      deck[i].style.filter = 'brightness(' + (1 - p*0.28) + ')';
+    }
+  }
+  if(!RM && deck.length){
+    window.addEventListener('scroll', function(){
+      if(!ticking){ ticking = true; requestAnimationFrame(settle); }
+    }, {passive:true});
+    settle();
+  }
+
+  /* ---------- rotating search placeholder ---------- */
+  var q = document.getElementById('catq');
+  if(q && !RM){
+    var hints = ['try: postgres → snowflake','try: kafka → bigquery','try: s3 → dbt → looker','try: reverse ETL segments','try: schema evolution policy'];
+    var hi = 0;
+    setInterval(function(){
+      hi = (hi+1) % hints.length;
+      q.style.opacity = '0';
+      setTimeout(function(){ q.placeholder = hints[hi]; q.style.opacity = '1'; }, 260);
+    }, 2800);
+    q.style.transition = 'opacity .25s';
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works · Branchglass</title>
+<meta name="description" content="How Branchglass creates a temporary, production-like preview environment for every pull request, then removes it when the pull request is merged or closed.">
+<style>
+  :root{
+    --bg:#F4F5F1;
+    --surface:#FFFFFF;
+    --surface-2:#FAFBF9;
+    --chip:#F0F2EE;
+    --ink:#0F1A24;
+    --ink-2:#3E4C59;
+    --ink-3:#5E6B77;
+    --line:#E2E5E0;
+    --line-2:#D1D6D0;
+    --accent:#0A7B61;
+    --accent-ink:#075C49;
+    --accent-soft:#E0F2EA;
+    --accent-softer:#F1F9F5;
+    --accent-line:#BADFD0;
+    --violet:#5B4BC9;
+    --violet-soft:#ECE9FB;
+    --amber:#8A5300;
+    --amber-soft:#FCF0D6;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 10px 28px -12px rgba(16,24,40,.16);
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.5;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  }
+  p{margin:0}
+  code{font-family:var(--mono);font-size:.86em;background:var(--chip);border:1px solid var(--line);padding:1px 5px;border-radius:5px;white-space:nowrap}
+  .vh{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .muted{color:var(--ink-3);font-weight:400}
+
+  /* ---------- Section shell ---------- */
+  .hiw{position:relative;padding:104px 24px 112px;overflow:hidden}
+  .hiw::before{
+    content:"";position:absolute;inset:0 0 auto 0;height:620px;pointer-events:none;
+    background-image:linear-gradient(to right,rgba(15,26,36,.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(15,26,36,.05) 1px,transparent 1px);
+    background-size:44px 44px;
+    -webkit-mask-image:radial-gradient(ellipse 70% 100% at 50% 0%,#000 25%,transparent 75%);
+    mask-image:radial-gradient(ellipse 70% 100% at 50% 0%,#000 25%,transparent 75%);
+  }
+  .wrap{position:relative;max-width:1200px;margin:0 auto}
+
+  /* ---------- Header ---------- */
+  .hiw-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;align-items:end;margin-bottom:48px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:18px;font-size:13px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);padding:5px 12px 5px 10px;border-radius:999px}
+  .eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .hiw h2{font-size:clamp(32px,4.4vw,52px);line-height:1.06;letter-spacing:-.03em;margin:0 0 20px;max-width:20ch;font-weight:720}
+  .lead{font-size:18px;color:var(--ink-2);max-width:62ch}
+  .head-stats{display:flex;margin:0;border:1px solid var(--line);background:rgba(255,255,255,.75);border-radius:14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .head-stats div{padding:16px 20px;display:flex;flex-direction:column-reverse;gap:2px;min-width:140px}
+  .head-stats div+div{border-left:1px solid var(--line)}
+  .head-stats dt{font-size:12.5px;color:var(--ink-3);max-width:15ch;line-height:1.35}
+  .head-stats dd{margin:0;font-size:24px;font-weight:720;letter-spacing:-.02em}
+
+  .follow{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px;font-size:14px;color:var(--ink-2)}
+  .follow-badge{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--violet);background:var(--violet-soft);padding:3px 8px;border-radius:6px}
+  .follow strong{font-weight:620;color:var(--ink)}
+
+  /* ---------- Flow: steps + stage ---------- */
+  .flow{display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:36px;align-items:stretch}
+
+  .steps-wrap{position:relative}
+  .steps-track{position:absolute;left:19px;top:30px;bottom:30px;width:2px;background:var(--line-2);border-radius:2px}
+  .steps-fill{position:absolute;left:0;top:0;width:100%;height:0;background:var(--accent);border-radius:2px;transition:height .35s ease}
+  .steps{display:flex;flex-direction:column;gap:4px}
+  .step{
+    position:relative;display:grid;grid-template-columns:40px minmax(0,1fr);gap:14px;align-items:start;
+    width:100%;padding:0;border:0;background:none;text-align:left;font:inherit;color:inherit;cursor:pointer;border-radius:14px;
+  }
+  .step:focus{outline:none}
+  .step-num{
+    position:relative;z-index:1;display:grid;place-items:center;width:40px;height:40px;margin-top:10px;border-radius:50%;
+    background:var(--bg);border:1.5px solid var(--line-2);font:600 13px/1 var(--mono);color:var(--ink-3);
+    transition:background .2s,border-color .2s,color .2s,box-shadow .2s;
+  }
+  .step-body{display:block;padding:11px 16px 13px;border-radius:14px;border:1px solid transparent;transition:background .2s,border-color .2s,box-shadow .2s}
+  .step-title{display:block;font-weight:650;font-size:16px;letter-spacing:-.005em;color:var(--ink)}
+  .step-desc{display:block;font-size:14px;color:var(--ink-3);margin-top:3px;line-height:1.5}
+  .step:hover .step-body{background:rgba(255,255,255,.65)}
+  .step[aria-selected="true"] .step-body{background:var(--surface);border-color:var(--line);box-shadow:var(--shadow)}
+  .step[aria-selected="true"] .step-desc{color:var(--ink-2)}
+  .step[aria-selected="true"] .step-num{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 5px var(--accent-soft)}
+  .step.is-past .step-num{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink)}
+  .step:focus-visible .step-body{outline:2px solid var(--accent);outline-offset:2px}
+
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+  .stage-bar{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--surface-2);font-size:13px;color:var(--ink-3)}
+  .dots{display:inline-flex;gap:6px;flex:none}
+  .dots i{width:10px;height:10px;border-radius:50%;background:var(--line-2)}
+  .stage-ctx{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stage-ctx b{color:var(--ink);font-weight:600}
+  .stage-ctx .sep{color:var(--line-2)}
+  .stage-count{margin-left:auto;flex:none;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+  .panels{display:grid;flex:1}
+  .panel{grid-area:1/1;display:flex;flex-direction:column;padding:24px;min-width:0;transition:opacity .28s ease,transform .28s ease}
+  .panel:not(.is-active){visibility:hidden;opacity:0;transform:translateY(6px);pointer-events:none}
+  .panel:focus{outline:none}
+  .panel:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;border-radius:14px}
+  .panel-intro{display:none}
+  .panel-body{margin-bottom:20px}
+  .panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px 16px;flex-wrap:wrap;margin-bottom:18px}
+  .kicker{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin-bottom:4px}
+  .panel-title{margin:0;font-size:20px;line-height:1.25;letter-spacing:-.015em;font-weight:680}
+  .timing{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ink-2);background:var(--chip);border:1px solid var(--line);padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .timing .ic{width:14px;height:14px;color:var(--accent)}
+  .panel-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;border-top:1px solid var(--line);font-size:13.5px;color:var(--ink-3)}
+  .next{display:inline-flex;align-items:center;gap:8px;flex:none;font:inherit;font-size:14px;font-weight:620;color:var(--accent-ink);background:var(--accent-softer);border:1px solid var(--accent-line);padding:8px 12px 8px 14px;border-radius:10px;cursor:pointer;transition:background .2s,transform .2s}
+  .next:hover{background:var(--accent-soft)}
+  .next:hover .ic{transform:translateX(2px)}
+  .next .ic{transition:transform .2s}
+  .next:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* shared bits */
+  .card{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .block{margin-top:18px}
+  .sub-h{font-size:13px;font-weight:620;color:var(--ink-2);margin-bottom:10px}
+  .small{font-size:12.5px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:620;padding:3px 9px;border-radius:999px;background:var(--chip);color:var(--ink-2);white-space:nowrap}
+  .pill.ok{background:var(--accent-soft);color:var(--accent-ink)}
+  .pill.ok::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .pill.violet{background:var(--violet-soft);color:var(--violet)}
+  .pill.live::before{animation:pulse 1.8s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(10,123,97,.5)}100%{box-shadow:0 0 0 6px rgba(10,123,97,0)}}
+  .icon-box{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--chip);color:var(--ink);flex:none}
+  .icon-box .ic{width:20px;height:20px}
+  .bg-mark{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,#0A7B61,#2BB48D);display:inline-grid;place-items:center;color:#fff;flex:none}
+  .bg-mark .ic{width:12px;height:12px;stroke-width:2.4}
+  .tick{width:18px;height:18px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+  .tick .ic{width:11px;height:11px;stroke-width:3}
+
+  /* Panel 1: connect */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .conn{padding:16px}
+  .conn-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .conn-label{font-size:12px;color:var(--ink-3)}
+  .conn-name{font-weight:650;font-size:15px}
+  .conn-top .pill{margin-left:auto}
+  .kv{margin:0;display:grid;gap:7px;font-size:13px}
+  .kv div{display:flex;justify-content:space-between;gap:12px;border-top:1px dashed var(--line);padding-top:7px}
+  .kv dt{color:var(--ink-3)}
+  .kv dd{margin:0;font-weight:560;text-align:right}
+  .repo-chips{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+  .repo-chips li{font:12px var(--mono);padding:3px 7px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line)}
+  .repo-chips li.more{font-family:inherit;color:var(--ink-3)}
+  .spend{margin-top:12px}
+  .spend-top{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-3);margin-bottom:6px}
+  .spend-top b{color:var(--ink);font-weight:620}
+  .meter{height:6px;border-radius:999px;background:var(--chip);overflow:hidden}
+  .meter i{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .svc-row{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .svc{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--surface-2);min-width:0}
+  .svc b{display:block;font:600 13px var(--mono)}
+  .svc span{display:block;font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .svc.is-changed{border-color:var(--accent);background:var(--accent-softer)}
+  .svc.is-changed span{color:var(--accent-ink);font-weight:600}
+  .svc.is-kept{border-color:#E9D29B;background:#FFFAEE}
+  .svc.is-kept span{color:var(--amber);font-weight:600}
+  .toggles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .toggles li{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+  .switch{position:relative;width:30px;height:18px;border-radius:999px;background:var(--accent);flex:none}
+  .switch::after{content:"";position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+
+  /* Panel 2: PR opened */
+  .pr{padding:16px}
+  .pr-row{display:flex;gap:12px;align-items:flex-start}
+  .state{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:650;color:#fff;background:#1F8A3E;padding:4px 10px 4px 8px;border-radius:999px;flex:none;margin-top:1px}
+  .state .ic{width:14px;height:14px}
+  .state.merged{background:var(--violet)}
+  .pr-title{font-weight:650;font-size:16px;line-height:1.3}
+  .pr-meta{font-size:13px;color:var(--ink-3);margin-top:3px}
+  .pr-meta b{color:var(--ink-2);font-weight:600}
+  .check{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+  .check-head{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;font-size:14px}
+  .check-head .pill{margin-left:auto}
+  .gantt{display:flex;height:6px;gap:2px;margin:12px 0 2px;border-radius:999px;overflow:hidden}
+  .gantt i{display:block;height:100%;background:var(--accent)}
+  .gantt i:nth-child(2){opacity:.75}
+  .gantt i:nth-child(3){opacity:.55}
+  .gantt i:nth-child(4){opacity:.35}
+  .pipeline{list-style:none;margin:6px 0 0;padding:0;font-size:14px}
+  .pipeline li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px 0}
+  .dur{font:12.5px var(--mono);color:var(--ink-3)}
+  .envs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .env{border:1px dashed var(--line-2);border-radius:10px;padding:10px 12px;background:var(--surface-2);display:flex;flex-direction:column;gap:1px;min-width:0}
+  .env-id{display:flex;align-items:center;justify-content:space-between;gap:6px;font:600 12.5px var(--mono)}
+  .env-id em{font:600 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;font-style:normal;color:var(--accent-ink);background:var(--accent-soft);padding:3px 6px;border-radius:5px}
+  .env-name{font-size:13px;font-weight:560;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .env-meta{font-size:12px;color:var(--ink-3)}
+  .env.is-new{border-style:solid;border-color:var(--accent);background:var(--accent-softer);box-shadow:0 0 0 3px var(--accent-soft)}
+
+  /* Panel 3: production-like */
+  .parity{padding:2px 16px}
+  .parity-row{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;font-size:14px}
+  .parity-row+.parity-row{border-top:1px solid var(--line)}
+  .p-label{font-weight:620}
+  .p-val{color:var(--ink-2)}
+  .data{padding:14px 16px 6px}
+  .data-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+  .data-head .sub-h{margin-bottom:2px;color:var(--ink);font-size:14px}
+  .data-stats{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+  .data-stats li{font-size:12.5px;color:var(--ink-2);background:var(--chip);border-radius:7px;padding:3px 8px}
+  .data-stats b{color:var(--ink)}
+  .table-scroll{overflow-x:auto}
+  .mask{width:100%;border-collapse:collapse;font-size:13px}
+  .mask th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:650;padding:8px 10px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+  .mask td{padding:8px 10px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+  .mask tr:last-child td{border-bottom:0}
+  .masked{display:inline-flex;align-items:center;gap:6px;color:var(--ink-3)}
+  .masked .ic{width:13px;height:13px}
+  .masked .bar{display:inline-block;width:54px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,var(--line-2) 0 6px,transparent 6px 9px)}
+  .pv{font:12.5px var(--mono);color:var(--accent-ink)}
+
+  /* Panel 4: share */
+  .url-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:6px 6px 6px 12px;background:var(--surface-2)}
+  .url-row>.ic{color:var(--accent)}
+  .url{flex:1;min-width:0;font:13.5px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btn-sm{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:620;line-height:1;padding:9px 12px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;flex:none}
+  .btn-sm:hover{background:#22303D}
+  .btn-sm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .access{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12.5px;color:var(--ink-3)}
+  .access span{display:inline-flex;align-items:center;gap:6px}
+  .access .ic{width:13px;height:13px}
+  .share-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin-top:16px;align-items:start}
+  .browser{border:1px solid var(--line-2);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 12px 30px -16px rgba(16,24,40,.3)}
+  .b-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--chip);border-bottom:1px solid var(--line)}
+  .b-bar .dots i{width:8px;height:8px}
+  .b-addr{flex:1;min-width:0;background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font:11px var(--mono);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-tool{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--ink);color:#D6DFDB;font-size:11px;white-space:nowrap;overflow:hidden}
+  .b-tool .bg-mark{width:16px;height:16px;border-radius:5px}
+  .b-tool .bg-mark .ic{width:10px;height:10px}
+  .b-tool code{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15);color:#fff;font-size:10.5px}
+  .b-tool .sp{margin-left:auto;display:inline-flex;align-items:center;gap:5px;color:#fff;font-weight:600}
+  .b-tool .sp i{width:6px;height:6px;border-radius:50%;background:#F5A524}
+  .app{padding:12px 14px 16px}
+  .app-nav{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;padding-bottom:9px;border-bottom:1px solid var(--line);margin-bottom:12px;color:var(--ink-2)}
+  .app-logo{font-weight:800;letter-spacing:-.02em;color:#2F6B3A;font-size:13px}
+  .app-h{display:block;font-weight:700;font-size:15px;letter-spacing:-.01em}
+  .app-sub{display:block;font-size:11.5px;color:var(--ink-3)}
+  .cart{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin-top:8px;font-size:12px}
+  .cart b{display:block;font-size:12.5px}
+  .cart small{display:block;font-size:11px;color:var(--ink-3)}
+  .cart-price{font-weight:650;font-variant-numeric:tabular-nums}
+  .cart-restore{background:#2F6B3A;color:#fff;border-radius:6px;padding:4px 8px;font-weight:600;font-size:11px}
+  .pin{position:absolute;right:-6px;top:-14px;display:flex;align-items:center;gap:6px}
+  .pin-av{width:22px;height:22px;border-radius:50% 50% 50% 4px;background:#C2621B;color:#fff;font-size:9.5px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px #fff}
+  .pin-note{background:var(--ink);color:#fff;font-size:10.5px;padding:4px 7px;border-radius:6px;white-space:nowrap}
+  .people{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+  .people li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line)}
+  .people li:last-child{border-bottom:0}
+  .av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
+  .av-1{background:#E8E3FB;color:#4B3FB8}
+  .av-2{background:#FCE6D5;color:#8F430C}
+  .av-3{background:#DCEDF9;color:#1D5A85}
+  .av-4{background:var(--accent-soft);color:var(--accent-ink)}
+  .person b{display:block;font-size:14px;font-weight:620}
+  .person span{display:block;font-size:12.5px;color:var(--ink-3)}
+  .person .ok-txt{color:var(--accent-ink);font-weight:600}
+
+  /* Panel 5: commits */
+  .commits-card{padding:4px 16px}
+  .commits{list-style:none;margin:0;padding:0}
+  .commit{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 0}
+  .commit+.commit{border-top:1px solid var(--line)}
+  .commit::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--line)}
+  .commit:first-child::before{top:24px}
+  .commit:last-child::before{bottom:auto;height:24px}
+  .c-dot{position:relative;z-index:1;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--line-2);display:grid;place-items:center;margin-top:1px}
+  .commit.is-live .c-dot{border-color:var(--accent);background:var(--accent-soft)}
+  .commit.is-live .c-dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .c-msg{font-weight:620;font-size:14.5px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .c-meta{font-size:13px;color:var(--ink-3);margin-top:2px}
+  .same-url{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);margin-top:12px}
+  .same-url .ic{color:var(--accent)}
+
+  /* Panel 6: teardown */
+  .merge-banner{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1px solid #D9D3F6;background:#F8F6FE;border-radius:12px;font-size:14px}
+  .merge-banner b{font-weight:620}
+  .teardown{list-style:none;margin:14px 0 0;padding:4px 16px;border:1px solid var(--line);border-radius:12px}
+  .teardown li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;font-size:14px}
+  .teardown li+li{border-top:1px solid var(--line)}
+  .teardown time{font:12.5px var(--mono);color:var(--ink-3)}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 0}
+  .summary div{padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:flex;flex-direction:column-reverse}
+  .summary dt{font-size:12.5px;color:var(--ink-3)}
+  .summary dd{margin:0;font-size:22px;font-weight:720;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .summary .zero dd{color:var(--accent-ink)}
+
+  /* ---------- Where it fits ---------- */
+  .fit{margin-top:96px}
+  .fit-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px 40px;flex-wrap:wrap;margin-bottom:24px}
+  .fit-head h3{font-size:28px;line-height:1.2;letter-spacing:-.02em;margin:0 0 8px;font-weight:700}
+  .fit-head p{color:var(--ink-2);max-width:62ch}
+  .legend{list-style:none;margin:0;padding:0;display:flex;gap:18px;font-size:13px;color:var(--ink-2)}
+  .legend li{display:flex;align-items:center;gap:8px}
+  .sw{width:14px;height:14px;border-radius:4px;border:1px solid var(--line-2);background:#fff}
+  .sw.bg{background:var(--accent);border-color:var(--accent)}
+  .sw.tr{background:var(--accent-softer);border-color:var(--accent-line)}
+  .lane{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px 14px}
+  .lane-bracket{grid-column:2/6;position:relative;text-align:center;font-size:12.5px;font-weight:650;color:var(--accent-ink);padding-bottom:12px}
+  .lane-bracket span{position:relative;z-index:1;background:var(--bg);padding:0 10px}
+  .lane-bracket::after{content:"";position:absolute;left:8%;right:8%;bottom:0;height:12px;border:2px solid var(--accent-line);border-bottom:0;border-radius:10px 10px 0 0}
+  .lane-steps{grid-column:1/-1;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+  .lane-item{position:relative;display:flex;flex-direction:column;gap:6px;padding:14px 14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-height:150px}
+  .lane-item:not(:last-child)::after{content:"";position:absolute;top:50%;right:-11px;width:7px;height:7px;border-top:2px solid var(--ink-3);border-right:2px solid var(--ink-3);transform:translateY(-50%) rotate(45deg);opacity:.55}
+  .lane-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .who{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+  .lane-item .ic{width:20px;height:20px;color:var(--ink-2)}
+  .lane-item b{font-size:15px;font-weight:650;line-height:1.3}
+  .lane-item .d{font-size:13px;color:var(--ink-2);line-height:1.45}
+  .lane-item.is-trigger{background:var(--accent-softer);border-color:var(--accent-line)}
+  .lane-item.is-trigger .who,.lane-item.is-trigger .ic{color:var(--accent-ink)}
+  .lane-item.is-bg{background:var(--accent);border-color:var(--accent);color:#fff}
+  .lane-item.is-bg .who{color:#CDEDE1}
+  .lane-item.is-bg .ic{color:#fff}
+  .lane-item.is-bg .d{color:#E3F5EE}
+
+  /* ---------- Facts ---------- */
+  .facts{list-style:none;margin:56px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}
+  .fact{padding:24px 24px 0 0}
+  .fact+.fact{padding-left:24px;border-left:1px solid var(--line)}
+  .fact .icon-box{background:var(--surface);border:1px solid var(--line);color:var(--accent);margin-bottom:14px}
+  .fact h4{margin:0 0 6px;font-size:16px;font-weight:650;letter-spacing:-.005em}
+  .fact p{font-size:14px;color:var(--ink-2)}
+
+  /* ---------- CTA ---------- */
+  .cta{margin-top:56px;display:flex;align-items:center;justify-content:space-between;gap:20px 32px;flex-wrap:wrap;padding:26px 28px;border-radius:18px;background:var(--ink);color:#fff;position:relative;overflow:hidden}
+  .cta::before{content:"";position:absolute;right:-60px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(43,180,141,.35),transparent 65%);pointer-events:none}
+  .cta-text{position:relative}
+  .cta-text strong{display:block;font-size:19px;font-weight:650;letter-spacing:-.01em}
+  .cta-text span{display:block;color:#B4C5BF;font-size:14.5px;margin-top:2px}
+  .cta-actions{position:relative;display:flex;gap:10px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:620;text-decoration:none;padding:12px 18px;border-radius:10px;border:1px solid transparent;transition:background .2s}
+  .btn-primary{background:#2BB48D;color:#06261D}
+  .btn-primary:hover{background:#3CC79F}
+  .btn-ghost{color:#fff;border-color:rgba(255,255,255,.28)}
+  .btn-ghost:hover{background:rgba(255,255,255,.08)}
+  .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:1080px){
+    .hiw-head{grid-template-columns:1fr;gap:28px}
+    .head-stats{justify-self:start}
+    .lane-item{min-height:170px}
+  }
+  @media (max-width:920px){
+    .hiw{padding:72px 20px 80px}
+    .flow{grid-template-columns:1fr;gap:16px}
+    .steps-track{display:none}
+    .steps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .step{grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);background:rgba(255,255,255,.6)}
+    .step-num{width:30px;height:30px;margin-top:0;font-size:12px}
+    .step-body{padding:0;border:0!important;box-shadow:none!important;background:none!important}
+    .step-title{font-size:14px;line-height:1.3}
+    .step-desc{display:none}
+    .step[aria-selected="true"]{background:var(--surface);border-color:var(--accent);box-shadow:var(--shadow)}
+    .step[aria-selected="true"] .step-num{box-shadow:0 0 0 3px var(--accent-soft)}
+    .step:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .panel-intro{display:block;font-size:15px;color:var(--ink-2);margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+    .lane-bracket{display:none}
+    .lane,.lane-steps{grid-template-columns:1fr 1fr 1fr}
+    .lane-item:nth-child(3n)::after{display:none}
+    .lane-item{min-height:0}
+    .facts{grid-template-columns:1fr 1fr}
+    .fact:nth-child(3){padding-left:0;border-left:0}
+    .fact:nth-child(n+3){margin-top:8px}
+  }
+  @media (max-width:640px){
+    .hiw{padding:56px 16px 64px}
+    .lead{font-size:16.5px}
+    .head-stats{flex-direction:column;width:100%}
+    .head-stats div+div{border-left:0;border-top:1px solid var(--line)}
+    .head-stats div{flex-direction:row-reverse;justify-content:space-between;align-items:center;min-width:0}
+    .head-stats dt{max-width:none}
+    .head-stats dd{font-size:20px}
+    .panel{padding:18px}
+    .stage-bar .dots{display:none}
+    .grid-2,.toggles,.share-grid,.envs{grid-template-columns:1fr}
+    .svc-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .parity-row{grid-template-columns:1fr auto}
+    .parity-row .p-val{grid-column:1/-1;grid-row:2;font-size:13px}
+    .summary{grid-template-columns:1fr}
+    .panel-foot{flex-direction:column;align-items:stretch}
+    .next{justify-content:center}
+    .lane,.lane-steps{grid-template-columns:1fr}
+    .lane-item:not(:last-child)::after,.lane-item:nth-child(3n)::after{display:block;top:auto;bottom:-12px;right:auto;left:50%;transform:translateX(-50%) rotate(135deg)}
+    .facts{grid-template-columns:1fr}
+    .fact,.fact+.fact{padding:20px 0 0;border-left:0}
+    .cta{padding:22px}
+    .cta-actions,.btn{width:100%;justify-content:center}
+  }
+  @media (max-width:400px){
+    .steps{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- Icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2.25"/><circle cx="6" cy="18.5" r="2.25"/><circle cx="18" cy="7.5" r="2.25"/><path d="M6 7.75v8.5M18 9.75c0 4.5-4 5.5-9.6 7.4"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.5 18.5h9.25a4.25 4.25 0 0 0 .55-8.46A6 6 0 0 0 5.9 9.7a4.4 4.4 0 0 0 1.6 8.8z"/></symbol>
+  <symbol id="i-pr" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2.25"/><circle cx="6" cy="18.5" r="2.25"/><circle cx="18" cy="18.5" r="2.25"/><path d="M6 7.75v8.5M18 16.25V9.5a3 3 0 0 0-3-3h-4.5M12.5 4L10 6.5 12.5 9"/></symbol>
+  <symbol id="i-merge" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2.25"/><circle cx="6" cy="18.5" r="2.25"/><circle cx="18" cy="12.5" r="2.25"/><path d="M6 7.75v8.5M6 7.75c0 3.2 3 4.75 9.75 4.75"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8z"/><path d="M3.5 12.25l8.5 4.5 8.5-4.5"/><path d="M3.5 16.25l8.5 4.5 8.5-4.5"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 1 0-5.66-5.66l-.9.9"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 1 0 5.66 5.66l.9-.9"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 11A7.5 7.5 0 0 0 6.2 7.1L4.5 9"/><path d="M4.5 4.5V9H9"/><path d="M4.5 13a7.5 7.5 0 0 0 13.3 3.9l1.7-1.9"/><path d="M19.5 19.5V15H15"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.5h9.2L17.5 7"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6A1.5 1.5 0 0 0 14 4.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5l7 3v5c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9v-5z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8.5 7L3.5 12l5 5M15.5 7l5 5-5 5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.75"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M14 5c2.6-1.3 5.5-1.5 5.5-1.5S19.3 6.4 18 9l-6 6-3-3z"/><path d="M9 12l-3.5.3L3.5 14.5 7 15.5M12 15l-.3 3.5-2.2 2L8.5 17"/><circle cx="15" cy="9" r="1.2"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3.5l8 4.5v8L12 20.5 4 16V8z"/><path d="M4 8l8 4.5L20 8M12 12.5v8"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.3c-.5-.8-1.4-1.3-2.5-1.3-1.5 0-2.5.8-2.5 1.9 0 2.6 5.2 1.4 5.2 4.1 0 1.2-1.1 2-2.7 2-1.2 0-2.2-.5-2.7-1.3M12 6.5V8M12 16v1.5"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></symbol>
+</svg>
+
+<main>
+<section class="hiw" id="how-it-works" aria-labelledby="hiw-title">
+  <div class="wrap">
+
+    <header class="hiw-head">
+      <div>
+        <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>How it works</p>
+        <h2 id="hiw-title">Every pull request gets its own production-like environment</h2>
+        <p class="lead">Connect Branchglass to your repository and cloud account once. After that, every pull request gets an isolated preview with a shareable URL. The preview updates with every commit and is removed when the PR is merged or closed.</p>
+      </div>
+      <dl class="head-stats">
+        <div><dt>From PR opened to a live URL</dt><dd>~2 min</dd></div>
+        <div><dt>Manual steps per pull request</dt><dd>0</dd></div>
+        <div><dt>Left running after merge</dt><dd>Nothing</dd></div>
+      </dl>
+    </header>
+
+    <p class="follow"><span class="follow-badge">Example</span> Follow one pull request at Fernhill, an online grocery team, from open to merge: <strong>checkout-web #482 · Add saved carts to checkout</strong></p>
+
+    <div class="flow">
+      <!-- Step list -->
+      <div class="steps-wrap">
+        <span class="steps-track" aria-hidden="true"><span class="steps-fill"></span></span>
+        <div class="steps" role="tablist" aria-label="How Branchglass works, step by step" aria-orientation="vertical">
+          <button class="step" type="button" role="tab" id="tab-1" aria-controls="panel-1" aria-selected="true" tabindex="0" aria-labelledby="tab-1-title" aria-describedby="tab-1-desc">
+            <span class="step-num" aria-hidden="true">01</span>
+            <span class="step-body">
+              <span class="step-title" id="tab-1-title">Connect your repository and cloud</span>
+              <span class="step-desc" id="tab-1-desc">Install the Branchglass app on your repositories and link the cloud account where previews will run.</span>
+            </span>
+          </button>
+          <button class="step" type="button" role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1" aria-labelledby="tab-2-title" aria-describedby="tab-2-desc">
+            <span class="step-num" aria-hidden="true">02</span>
+            <span class="step-body">
+              <span class="step-title" id="tab-2-title">Open a pull request</span>
+              <span class="step-desc" id="tab-2-desc">Branchglass builds an isolated environment for the branch, with its own services, database and network.</span>
+            </span>
+          </button>
+          <button class="step" type="button" role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false" tabindex="-1" aria-labelledby="tab-3-title" aria-describedby="tab-3-desc">
+            <span class="step-num" aria-hidden="true">03</span>
+            <span class="step-body">
+              <span class="step-title" id="tab-3-title">Production-like, with safe data</span>
+              <span class="step-desc" id="tab-3-desc">Previews mirror production infrastructure and settings, seeded with masked data instead of real records.</span>
+            </span>
+          </button>
+          <button class="step" type="button" role="tab" id="tab-4" aria-controls="panel-4" aria-selected="false" tabindex="-1" aria-labelledby="tab-4-title" aria-describedby="tab-4-desc">
+            <span class="step-num" aria-hidden="true">04</span>
+            <span class="step-body">
+              <span class="step-title" id="tab-4-title">Share one URL with the team</span>
+              <span class="step-desc" id="tab-4-desc">Developers, designers and reviewers test the real change in a browser. The link is posted on the PR.</span>
+            </span>
+          </button>
+          <button class="step" type="button" role="tab" id="tab-5" aria-controls="panel-5" aria-selected="false" tabindex="-1" aria-labelledby="tab-5-title" aria-describedby="tab-5-desc">
+            <span class="step-num" aria-hidden="true">05</span>
+            <span class="step-body">
+              <span class="step-title" id="tab-5-title">Push commits, the preview updates</span>
+              <span class="step-desc" id="tab-5-desc">Each new commit redeploys the environment at the same URL. Only the services that changed are rebuilt.</span>
+            </span>
+          </button>
+          <button class="step" type="button" role="tab" id="tab-6" aria-controls="panel-6" aria-selected="false" tabindex="-1" aria-labelledby="tab-6-title" aria-describedby="tab-6-desc">
+            <span class="step-num" aria-hidden="true">06</span>
+            <span class="step-body">
+              <span class="step-title" id="tab-6-title">Merge or close, and it’s gone</span>
+              <span class="step-desc" id="tab-6-desc">When the pull request is merged or closed, Branchglass removes every resource it created.</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stage -->
+      <div class="stage">
+        <div class="stage-bar">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="stage-ctx">
+            <svg class="ic" aria-hidden="true"><use href="#i-branch"/></svg>
+            <b>fernhill/checkout-web</b><span class="sep">/</span><span>#482</span><span class="sep">·</span><span>feature/saved-carts</span>
+          </span>
+          <span class="stage-count" id="stage-count" aria-live="polite">Step 1 of 6</span>
+        </div>
+
+        <div class="panels">
+
+          <!-- Panel 1 -->
+          <div class="panel is-active" role="tabpanel" id="panel-1" aria-labelledby="tab-1-title" tabindex="0">
+            <p class="panel-intro">Install the Branchglass app on your repositories and link the cloud account where previews will run.</p>
+            <div class="panel-body">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">Organization settings · Integrations</p>
+                  <h3 class="panel-title">Fernhill is connected</h3>
+                </div>
+                <span class="timing"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>One-time setup · about 10 min</span>
+              </div>
+
+              <div class="grid-2">
+                <article class="card conn">
+                  <div class="conn-top">
+                    <span class="icon-box"><svg class="ic" aria-hidden="true"><use href="#i-branch"/></svg></span>
+                    <div>
+                      <p class="conn-label">Code repository</p>
+                      <h4 class="conn-name" style="margin:0">GitHub · fernhill</h4>
+                    </div>
+                    <span class="pill ok">Connected</span>
+                  </div>
+                  <dl class="kv">
+                    <div><dt>App installed</dt><dd>Jun 3, 2024 · Leah Chen</dd></div>
+                    <div><dt>Repositories</dt><dd>6 of 38 enabled</dd></div>
+                    <div><dt>Listens for</dt><dd>Pull requests, pushes</dd></div>
+                  </dl>
+                  <ul class="repo-chips" aria-label="Enabled repositories">
+                    <li>checkout-web</li><li>catalog-api</li><li>accounts-service</li><li class="more">+3 more</li>
+                  </ul>
+                </article>
+
+                <article class="card conn">
+                  <div class="conn-top">
+                    <span class="icon-box"><svg class="ic" aria-hidden="true"><use href="#i-cloud"/></svg></span>
+                    <div>
+                      <p class="conn-label">Cloud account</p>
+                      <h4 class="conn-name" style="margin:0">AWS · 3921-4471-0086</h4>
+                    </div>
+                    <span class="pill ok">Connected</span>
+                  </div>
+                  <dl class="kv">
+                    <div><dt>Region</dt><dd>us-east-1</dd></div>
+                    <div><dt>Access</dt><dd>IAM role BranchglassPreview</dd></div>
+                    <div><dt>Runs on</dt><dd>EKS cluster bg-previews</dd></div>
+                  </dl>
+                  <div class="spend">
+                    <div class="spend-top"><span>Preview spend in June</span><b>$312.40 <span class="muted">of $1,500 limit</span></b></div>
+                    <div class="meter" aria-hidden="true"><i style="width:20.8%"></i></div>
+                  </div>
+                </article>
+              </div>
+
+              <div class="block">
+                <p class="sub-h">Detected in <code>checkout-web</code> from <code>docker-compose.yml</code> and <code>infra/terraform</code></p>
+                <ul class="svc-row">
+                  <li class="svc"><b>web</b><span>Next.js 14</span></li>
+                  <li class="svc"><b>api</b><span>Node 20</span></li>
+                  <li class="svc"><b>worker</b><span>BullMQ jobs</span></li>
+                  <li class="svc"><b>postgres</b><span>v15.4</span></li>
+                  <li class="svc"><b>redis</b><span>v7.2</span></li>
+                </ul>
+              </div>
+
+              <div class="block">
+                <p class="sub-h">Preview defaults for checkout-web</p>
+                <ul class="toggles">
+                  <li><span>Create a preview when a PR opens</span><span class="vh">: on</span><span class="switch" aria-hidden="true"></span></li>
+                  <li><span>Redeploy on every new commit</span><span class="vh">: on</span><span class="switch" aria-hidden="true"></span></li>
+                  <li><span>Remove on merge or close</span><span class="vh">: on</span><span class="switch" aria-hidden="true"></span></li>
+                  <li><span>Require fernhill.com sign-in</span><span class="vh">: on</span><span class="switch" aria-hidden="true"></span></li>
+                </ul>
+              </div>
+            </div>
+            <div class="panel-foot">
+              <span>Nothing to rewrite. Branchglass reads the service definitions you already have.</span>
+              <button class="next" type="button" data-go="1">Next: Open a pull request <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </div>
+          </div>
+
+          <!-- Panel 2 -->
+          <div class="panel" role="tabpanel" id="panel-2" aria-labelledby="tab-2-title" tabindex="0">
+            <p class="panel-intro">Branchglass builds an isolated environment for the branch, with its own services, database and network.</p>
+            <div class="panel-body">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">GitHub · fernhill/checkout-web</p>
+                  <h3 class="panel-title">Pull request opened, preview created</h3>
+                </div>
+                <span class="timing"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>Automatic · ready in about 2 min</span>
+              </div>
+
+              <div class="card pr">
+                <div class="pr-row">
+                  <span class="state"><svg class="ic" aria-hidden="true"><use href="#i-pr"/></svg>Open</span>
+                  <div>
+                    <p class="pr-title">Add saved carts to checkout <span class="muted">#482</span></p>
+                    <p class="pr-meta"><b>priya-r</b> wants to merge 1 commit into <code>main</code> from <code>feature/saved-carts</code> · Jun 11, 10:14</p>
+                  </div>
+                </div>
+                <div class="check">
+                  <div class="check-head">
+                    <span class="bg-mark" aria-hidden="true"><svg class="ic"><use href="#i-branch"/></svg></span>
+                    <b>branchglass / preview</b>
+                    <span class="muted">Environment <code>pr-482</code></span>
+                    <span class="pill ok">Ready in 1m 53s</span>
+                  </div>
+                  <div class="gantt" aria-hidden="true"><i style="width:51.3%"></i><i style="width:10.6%"></i><i style="width:30.1%"></i><i style="width:8%"></i></div>
+                  <ol class="pipeline">
+                    <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Build images for <code>web</code>, <code>api</code> and <code>worker</code></span><span class="dur">58s</span></li>
+                    <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Create isolated namespace, network and secrets</span><span class="dur">12s</span></li>
+                    <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Restore masked data snapshot into a new database</span><span class="dur">34s</span></li>
+                    <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Health checks: 5 of 5 services passing</span><span class="dur">9s</span></li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="block">
+                <p class="sub-h">Running side by side in bg-previews, fully isolated from each other</p>
+                <ul class="envs">
+                  <li class="env"><span class="env-id">pr-479</span><span class="env-name">Update shipping rate tables</span><span class="env-meta">Arjun Mehta · up 2 days</span></li>
+                  <li class="env"><span class="env-id">pr-481</span><span class="env-name">Gift card balance check</span><span class="env-meta">Sofia Reyes · up 5 hours</span></li>
+                  <li class="env is-new"><span class="env-id">pr-482 <em>New</em></span><span class="env-name">Add saved carts to checkout</span><span class="env-meta">Priya Raman · up 1 min</span></li>
+                </ul>
+              </div>
+            </div>
+            <div class="panel-foot">
+              <span>Every PR gets its own services, database and secrets. Nothing is shared with staging or other PRs.</span>
+              <button class="next" type="button" data-go="2">Next: Production-like, with safe data <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </div>
+          </div>
+
+          <!-- Panel 3 -->
+          <div class="panel" role="tabpanel" id="panel-3" aria-labelledby="tab-3-title" tabindex="0">
+            <p class="panel-intro">Previews mirror production infrastructure and settings, seeded with masked data instead of real records.</p>
+            <div class="panel-body">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">Environment pr-482 · Parity report</p>
+                  <h3 class="panel-title">Like production where it matters, without the risk</h3>
+                </div>
+                <span class="timing"><svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg>Checked on every deploy</span>
+              </div>
+
+              <div class="card parity">
+                <div class="parity-row"><span class="p-label">Infrastructure</span><span class="p-val">Same Terraform modules as production, 1 replica instead of 6</span><span class="pill ok">Matched</span></div>
+                <div class="parity-row"><span class="p-label">Runtime versions</span><span class="p-val">node 20.11 · postgres 15.4 · redis 7.2</span><span class="pill ok">Matched</span></div>
+                <div class="parity-row"><span class="p-label">Environment variables</span><span class="p-val">42 of 42 synced from production config</span><span class="pill ok">Matched</span></div>
+                <div class="parity-row"><span class="p-label">Third-party services</span><span class="p-val">Stripe, SendGrid and Algolia use test-mode keys</span><span class="pill violet">Sandboxed</span></div>
+              </div>
+
+              <div class="card data block">
+                <div class="data-head">
+                  <div>
+                    <p class="sub-h">Safe test data</p>
+                    <p class="muted small">Snapshot <code>prod-2024-06-10</code>, masked before it leaves production</p>
+                  </div>
+                  <ul class="data-stats">
+                    <li><b>48,212</b> rows</li>
+                    <li><b>14</b> PII columns masked</li>
+                    <li><b>0</b> real customer records</li>
+                  </ul>
+                </div>
+                <div class="table-scroll">
+                  <table class="mask">
+                    <thead><tr><th scope="col">Field</th><th scope="col">Production value</th><th scope="col">In the preview</th></tr></thead>
+                    <tbody>
+                      <tr><td><code>customers.email</code></td><td><span class="masked"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span class="bar" aria-hidden="true"></span><span class="vh">Never copied</span></span></td><td class="pv">customer_1842@example.test</td></tr>
+                      <tr><td><code>customers.full_name</code></td><td><span class="masked"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span class="bar" aria-hidden="true"></span><span class="vh">Never copied</span></span></td><td class="pv">Casey Fenwick</td></tr>
+                      <tr><td><code>payments.card_token</code></td><td><span class="masked"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span class="bar" aria-hidden="true"></span><span class="vh">Never copied</span></span></td><td class="pv">tok_visa (test mode)</td></tr>
+                      <tr><td><code>addresses.line_1</code></td><td><span class="masked"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span class="bar" aria-hidden="true"></span><span class="vh">Never copied</span></span></td><td class="pv">100 Sample Street</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="panel-foot">
+              <span>Production secrets and personal data never reach a preview.</span>
+              <button class="next" type="button" data-go="3">Next: Share one URL <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </div>
+          </div>
+
+          <!-- Panel 4 -->
+          <div class="panel" role="tabpanel" id="panel-4" aria-labelledby="tab-4-title" tabindex="0">
+            <p class="panel-intro">Developers, designers and reviewers test the real change in a browser. The link is posted on the PR.</p>
+            <div class="panel-body">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">Preview URL · posted to PR #482 and #checkout-team</p>
+                  <h3 class="panel-title">One link for everyone reviewing the change</h3>
+                </div>
+                <span class="timing"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg>Posted to the PR automatically</span>
+              </div>
+
+              <div class="url-row">
+                <svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>
+                <span class="url">https://pr-482.checkout-web.fernhill.branchglass.app</span>
+                <button class="btn-sm" type="button" id="copy-url" data-url="https://pr-482.checkout-web.fernhill.branchglass.app"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span class="lbl">Copy link</span></button>
+              </div>
+              <span class="vh" id="copy-status" aria-live="polite"></span>
+              <p class="access">
+                <span><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>Sign-in with a fernhill.com account</span>
+                <span><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>Stops working when the PR closes</span>
+              </p>
+
+              <div class="share-grid">
+                <div class="browser" role="img" aria-label="The Fernhill checkout app running on the preview URL for PR 482, showing the new Saved carts page with a design comment from Dan Whitaker pinned to the Restore button.">
+                  <div class="b-bar"><span class="dots"><i></i><i></i><i></i></span><span class="b-addr">pr-482.checkout-web.fernhill.branchglass.app/cart/saved</span></div>
+                  <div class="b-tool">
+                    <span class="bg-mark"><svg class="ic"><use href="#i-branch"/></svg></span>
+                    <span>Preview · #482 · <code>7be04d1</code></span>
+                    <span class="sp"><i></i>2 comments</span>
+                  </div>
+                  <div class="app">
+                    <div class="app-nav"><span class="app-logo">fernhill market</span><span>Deliver to 94110 · Cart (3)</span></div>
+                    <span class="app-h">Saved carts</span>
+                    <span class="app-sub">Pick up where you left off</span>
+                    <div class="cart">
+                      <span><b>Weekend groceries</b><small>6 items · saved Jun 9</small></span>
+                      <span class="cart-price">$84.20</span>
+                      <span class="cart-restore">Restore</span>
+                    </div>
+                    <div class="cart">
+                      <span><b>Office snacks</b><small>11 items · saved Jun 4</small></span>
+                      <span class="cart-price">$132.75</span>
+                      <span class="cart-restore">Restore</span>
+                      <span class="pin"><span class="pin-note">Button needs more contrast</span><span class="pin-av">DW</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="sub-h">Testing this preview</p>
+                  <ul class="people">
+                    <li><span class="av av-1" aria-hidden="true">PR</span><span class="person"><b>Priya Raman</b><span>Engineer · author · opened it 6 times</span></span></li>
+                    <li><span class="av av-2" aria-hidden="true">DW</span><span class="person"><b>Dan Whitaker</b><span>Product designer · 2 comments on /cart/saved</span></span></li>
+                    <li><span class="av av-3" aria-hidden="true">MO</span><span class="person"><b>Marcus Obi</b><span>QA · <span class="ok-txt" style="display:inline">14 of 14 test cases passed</span></span></span></li>
+                    <li><span class="av av-4" aria-hidden="true">LC</span><span class="person"><b>Leah Chen</b><span>Staff engineer · review requested</span></span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="panel-foot">
+              <span>No local setup for reviewers. If you have the link and a company login, you can test the change.</span>
+              <button class="next" type="button" data-go="4">Next: Push commits <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </div>
+          </div>
+
+          <!-- Panel 5 -->
+          <div class="panel" role="tabpanel" id="panel-5" aria-labelledby="tab-5-title" tabindex="0">
+            <p class="panel-intro">Each new commit redeploys the environment at the same URL. Only the services that changed are rebuilt.</p>
+            <div class="panel-body">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">Deployments · pr-482</p>
+                  <h3 class="panel-title">Same URL, always showing the latest commit</h3>
+                </div>
+                <span class="timing"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg>Automatic · on every push</span>
+              </div>
+
+              <div class="card commits-card">
+                <ol class="commits">
+                  <li class="commit is-live">
+                    <span class="c-dot" aria-hidden="true"></span>
+                    <div>
+                      <p class="c-msg"><code>e51c8aa</code><span>Fix empty-state copy per design review</span></p>
+                      <p class="c-meta">Priya Raman · Jun 12, 09:25 · updated in 31s · rebuilt <code>web</code></p>
+                    </div>
+                    <span class="pill ok live">Live</span>
+                  </li>
+                  <li class="commit">
+                    <span class="c-dot" aria-hidden="true"></span>
+                    <div>
+                      <p class="c-msg"><code>7be04d1</code><span>Wire saved carts into cart drawer</span></p>
+                      <p class="c-meta">Priya Raman · Jun 11, 13:02 · updated in 46s · rebuilt <code>web</code>, <code>api</code> · ran migration 0042</p>
+                    </div>
+                    <span class="pill">Replaced</span>
+                  </li>
+                  <li class="commit">
+                    <span class="c-dot" aria-hidden="true"></span>
+                    <div>
+                      <p class="c-msg"><code>a3f9c21</code><span>Add SavedCart model and migration</span></p>
+                      <p class="c-meta">Priya Raman · Jun 11, 10:14 · created in 1m 53s · all 5 services</p>
+                    </div>
+                    <span class="pill">Replaced</span>
+                  </li>
+                </ol>
+              </div>
+
+              <div class="block">
+                <p class="sub-h">What the latest update touched (<code>e51c8aa</code>)</p>
+                <ul class="svc-row">
+                  <li class="svc is-changed"><b>web</b><span>Rebuilt · 31s</span></li>
+                  <li class="svc"><b>api</b><span>Unchanged</span></li>
+                  <li class="svc"><b>worker</b><span>Unchanged</span></li>
+                  <li class="svc is-kept"><b>postgres</b><span>Data kept</span></li>
+                  <li class="svc"><b>redis</b><span>Unchanged</span></li>
+                </ul>
+                <p class="same-url"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg>pr-482.checkout-web.fernhill.branchglass.app: same URL across 3 deploys</p>
+              </div>
+            </div>
+            <div class="panel-foot">
+              <span>Test data survives redeploys, so reviewers keep their saved carts between pushes.</span>
+              <button class="next" type="button" data-go="5">Next: Merge or close <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </div>
+          </div>
+
+          <!-- Panel 6 -->
+          <div class="panel" role="tabpanel" id="panel-6" aria-labelledby="tab-6-title" tabindex="0">
+            <p class="panel-intro">When the pull request is merged or closed, Branchglass removes every resource it created.</p>
+            <div class="panel-body">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">PR #482 · Environment pr-482</p>
+                  <h3 class="panel-title">Fully removed within 2 minutes of merge</h3>
+                </div>
+                <span class="timing"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>Automatic · on merge or close</span>
+              </div>
+
+              <div class="merge-banner">
+                <span class="state merged"><svg class="ic" aria-hidden="true"><use href="#i-merge"/></svg>Merged</span>
+                <p><b>Leah Chen</b> merged 3 commits into <code>main</code> from <code>feature/saved-carts</code> · Jun 12, 16:42</p>
+              </div>
+
+              <ol class="teardown">
+                <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Preview URL revoked and DNS record removed</span><time datetime="2024-06-12T16:42:08">16:42:08</time></li>
+                <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Stopped 5 services and deleted their container images</span><time datetime="2024-06-12T16:42:31">16:42:31</time></li>
+                <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Dropped database <code>pr_482</code> and its masked data copy</span><time datetime="2024-06-12T16:43:02">16:43:02</time></li>
+                <li><span class="tick"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span>Deleted namespace, load balancer and preview secrets</span><time datetime="2024-06-12T16:43:40">16:43:40</time></li>
+              </ol>
+
+              <dl class="summary">
+                <div><dt>Environment lifetime</dt><dd>1d 6h 27m</dd></div>
+                <div><dt>Compute cost for this PR</dt><dd>$4.18</dd></div>
+                <div class="zero"><dt>Resources left behind</dt><dd>0</dd></div>
+              </dl>
+            </div>
+            <div class="panel-foot">
+              <span>Closing a PR without merging triggers the same cleanup.</span>
+              <button class="next" type="button" data-go="0">Start again from step 1 <svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Where it fits -->
+    <div class="fit" aria-labelledby="fit-title" role="region">
+      <div class="fit-head">
+        <div>
+          <h3 id="fit-title">Where it fits in your workflow</h3>
+          <p>You keep your editor, your Git host and your CI/CD pipeline. Branchglass reacts to pull request events and manages the environment in between, then reports back where your team already works.</p>
+        </div>
+        <ul class="legend" aria-label="Legend">
+          <li><span class="sw" aria-hidden="true"></span>Your existing tools</li>
+          <li><span class="sw tr" aria-hidden="true"></span>Trigger</li>
+          <li><span class="sw bg" aria-hidden="true"></span>Branchglass</li>
+        </ul>
+      </div>
+      <div class="lane">
+        <div class="lane-bracket" aria-hidden="true"><span>Branchglass manages the environment for the life of the pull request</span></div>
+        <ol class="lane-steps">
+          <li class="lane-item">
+            <span class="lane-top"><span class="who">Your tools</span><svg class="ic" aria-hidden="true"><use href="#i-code"/></svg></span>
+            <b>Write code</b>
+            <span class="d">On a feature branch, in the editor you already use</span>
+          </li>
+          <li class="lane-item is-trigger">
+            <span class="lane-top"><span class="who">Trigger</span><svg class="ic" aria-hidden="true"><use href="#i-pr"/></svg></span>
+            <b>Open a pull request</b>
+            <span class="d">In GitHub, GitLab or Bitbucket, as usual</span>
+          </li>
+          <li class="lane-item is-bg">
+            <span class="lane-top"><span class="who">Branchglass</span><svg class="ic" aria-hidden="true"><use href="#i-box"/></svg></span>
+            <b>Preview environment</b>
+            <span class="d">Built in your cloud account in about 2 minutes</span>
+          </li>
+          <li class="lane-item is-bg">
+            <span class="lane-top"><span class="who">Branchglass</span><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg></span>
+            <b>Review &amp; QA</b>
+            <span class="d">Shared URL alongside your normal code review, updated on every push</span>
+          </li>
+          <li class="lane-item is-trigger">
+            <span class="lane-top"><span class="who">Trigger</span><svg class="ic" aria-hidden="true"><use href="#i-merge"/></svg></span>
+            <b>Merge or close</b>
+            <span class="d">Branchglass removes the environment automatically</span>
+          </li>
+          <li class="lane-item">
+            <span class="lane-top"><span class="who">Your tools</span><svg class="ic" aria-hidden="true"><use href="#i-rocket"/></svg></span>
+            <b>Ship to production</b>
+            <span class="d">Through your existing CI/CD pipeline, unchanged</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Facts -->
+    <ul class="facts">
+      <li class="fact">
+        <span class="icon-box"><svg class="ic" aria-hidden="true"><use href="#i-cloud"/></svg></span>
+        <h4>Runs in your cloud account</h4>
+        <p>Previews are created in your own AWS, Google Cloud or Azure account, under your existing security policies.</p>
+      </li>
+      <li class="fact">
+        <span class="icon-box"><svg class="ic" aria-hidden="true"><use href="#i-code"/></svg></span>
+        <h4>No pipeline changes</h4>
+        <p>Your CI/CD keeps deploying to production. Branchglass only handles preview environments.</p>
+      </li>
+      <li class="fact">
+        <span class="icon-box"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg></span>
+        <h4>Safe by default</h4>
+        <p>Previews use masked data and test-mode keys, and they sit behind your company sign-in.</p>
+      </li>
+      <li class="fact">
+        <span class="icon-box"><svg class="ic" aria-hidden="true"><use href="#i-coin"/></svg></span>
+        <h4>Pay only while a PR is open</h4>
+        <p>Environments are removed on merge or close, so idle previews don’t pile up on your bill.</p>
+      </li>
+    </ul>
+
+    <div class="cta">
+      <p class="cta-text">
+        <strong>See it on your own repository</strong>
+        <span>Connect a repository, and your next pull request gets a preview. Free for 14 days.</span>
+      </p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#how-it-works">Connect a repository <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn btn-ghost" href="#how-it-works">Read the setup guide</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.step'));
+  var panels = tabs.map(function(t){ return document.getElementById(t.getAttribute('aria-controls')); });
+  var wrap = document.querySelector('.steps-wrap');
+  var track = document.querySelector('.steps-track');
+  var fill = document.querySelector('.steps-fill');
+  var count = document.getElementById('stage-count');
+  var stage = document.querySelector('.stage');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var current = 0;
+
+  function mid(el){ var r = el.getBoundingClientRect(); return r.top + r.height / 2; }
+
+  function layoutTrack(){
+    if (!track || getComputedStyle(track).display === 'none') return;
+    var base = wrap.getBoundingClientRect().top;
+    var nums = tabs.map(function(t){ return t.querySelector('.step-num'); });
+    var top = mid(nums[0]) - base;
+    var bottom = mid(nums[nums.length - 1]) - base;
+    track.style.top = top + 'px';
+    track.style.bottom = 'auto';
+    track.style.height = Math.max(0, bottom - top) + 'px';
+    fill.style.height = Math.max(0, mid(nums[current]) - base - top) + 'px';
+  }
+
+  function select(i, focusPanel){
+    current = i;
+    tabs.forEach(function(tab, j){
+      var on = j === i;
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      tab.tabIndex = on ? 0 : -1;
+      tab.classList.toggle('is-past', j < i);
+      panels[j].classList.toggle('is-active', on);
+    });
+    count.textContent = 'Step ' + (i + 1) + ' of ' + tabs.length;
+    layoutTrack();
+    if (focusPanel) {
+      try { panels[i].focus({ preventScroll: true }); } catch (e) { panels[i].focus(); }
+    }
+  }
+
+  tabs.forEach(function(tab, i){
+    tab.addEventListener('click', function(){ select(i); });
+    tab.addEventListener('keydown', function(e){
+      var n = null;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') n = (i + 1) % tabs.length;
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') n = (i - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') n = 0;
+      else if (e.key === 'End') n = tabs.length - 1;
+      if (n !== null) { e.preventDefault(); select(n); tabs[n].focus(); }
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function(btn){
+    btn.addEventListener('click', function(){
+      select(parseInt(btn.getAttribute('data-go'), 10), true);
+      if (stage.getBoundingClientRect().top < 0) {
+        stage.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Copy preview link
+  var copyBtn = document.getElementById('copy-url');
+  var status = document.getElementById('copy-status');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function(){
+      var url = copyBtn.getAttribute('data-url');
+      var lbl = copyBtn.querySelector('.lbl');
+      function done(){
+        lbl.textContent = 'Copied';
+        status.textContent = 'Preview link copied to clipboard';
+        clearTimeout(copyBtn._t);
+        copyBtn._t = setTimeout(function(){ lbl.textContent = 'Copy link'; status.textContent = ''; }, 2000);
+      }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = url; ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(done, fallback);
+      } else {
+        fallback();
+      }
+    });
+  }
+
+  layoutTrack();
+  window.addEventListener('resize', layoutTrack);
+  window.addEventListener('load', layoutTrack);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutTrack);
+})();
+</script>
+</body>
+</html>

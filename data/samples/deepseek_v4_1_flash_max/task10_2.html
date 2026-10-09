@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Fieldline HVAC · Dispatch Board</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+:root{
+  --navy:#0b1a2e; --navy2:#122742;
+  --ink:#0d1b2a; --muted:#5c6b7f; --muted2:#8496ab;
+  --line:#e2e8f0; --line2:#eef2f7; --bg:#eef2f7; --card:#fff;
+  --brand:#1a56db; --teal:#0d9488; --amber:#b45309; --red:#c62828; --purple:#6d28d9;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(13,27,42,.06), 0 10px 24px -16px rgba(13,27,42,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:13px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.warn{color:var(--amber)}
+.crit{color:var(--red)}
+.ok{color:var(--teal)}
+.tiny{font-size:10.5px;color:var(--muted2)}
+.muted{color:var(--muted)}
+h1,h2,h3,h4{margin:0;font-weight:650}
+button{font:inherit}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:60;height:56px;display:flex;align-items:center;gap:14px;
+  padding:0 16px;background:linear-gradient(180deg,#0b1a2e,#0f2338);color:#eaf1f8;
+  border-bottom:1px solid #0a1524;
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:262px}
+.mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(140deg,#22d3ee,#1a56db);display:grid;place-items:center;flex:none}
+.mark svg{width:19px;height:19px}
+.bname{font-weight:700;letter-spacing:-.01em;font-size:13.5px;color:#fff;line-height:1.1}
+.bsub{font-size:10.5px;color:#8fb0cf;letter-spacing:.02em}
+.daynav{display:flex;align-items:center;gap:6px;background:#0a1727;border:1px solid #1c3550;border-radius:9px;padding:5px 8px}
+.daynav .dtitle{font-size:12.5px;font-weight:600;color:#fff;padding:0 6px}
+.nbtn{background:#132a44;border:1px solid #24425f;color:#cfe0ef;border-radius:7px;width:24px;height:24px;display:grid;place-items:center;cursor:pointer;font-size:12px}
+.nbtn:hover{background:#1a3660}
+.searchwrap{margin-left:auto;position:relative}
+.searchwrap svg{position:absolute;left:9px;top:8px;width:14px;height:14px;color:#7c9cbb}
+.searchwrap input{
+  width:290px;background:#0a1727;border:1px solid #1c3550;color:#dbe8f4;border-radius:9px;
+  padding:7px 10px 7px 28px;font-size:12px;outline:none;
+}
+.searchwrap input::placeholder{color:#6d8dab}
+.tb-right{display:flex;align-items:center;gap:12px}
+.iconbtn{position:relative;width:32px;height:32px;border-radius:9px;background:#132a44;border:1px solid #24425f;color:#cfe0ef;display:grid;place-items:center;cursor:pointer}
+.iconbtn svg{width:16px;height:16px}
+.badge{position:absolute;top:-5px;right:-5px;background:#e2483d;color:#fff;font-size:9.5px;font-weight:700;border-radius:999px;padding:1px 5px;border:2px solid #0b1a2e}
+.who{display:flex;align-items:center;gap:9px;padding-left:10px;border-left:1px solid #1c3550}
+.who .av{width:30px;height:30px;border-radius:999px;background:#1a56db;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+.who .wn{font-size:11.5px;font-weight:600;color:#fff;line-height:1.15}
+.who .wr{font-size:10px;color:#8fb0cf}
+
+/* ---------- layout ---------- */
+.app{display:grid;grid-template-columns:64px minmax(0,1fr)}
+.rail{
+  position:sticky;top:56px;height:calc(100vh - 56px);background:var(--navy);border-right:1px solid #0a1524;
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;
+}
+.navitem{width:44px;height:42px;border-radius:10px;display:grid;place-items:center;color:#7d9bb8;cursor:pointer;position:relative}
+.navitem svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.navitem:hover{background:#132a44;color:#dbe8f4}
+.navitem.active{background:#1a3660;color:#fff}
+.navitem.active:before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:#22d3ee}
+.main{padding:16px 20px 44px;min-width:0}
+
+/* ---------- page head ---------- */
+.pagehead{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.ph-title{font-size:20px;letter-spacing:-.02em}
+.ph-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.ph-sub b{color:var(--ink)}
+.toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden;box-shadow:var(--shadow)}
+.seg button{background:transparent;border:0;padding:7px 12px;font-size:12px;color:var(--muted);cursor:pointer}
+.seg button.on{background:#e8effd;color:var(--brand);font-weight:650}
+.btn{background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12px;color:var(--ink);cursor:pointer;box-shadow:var(--shadow)}
+.btn:hover{border-color:#c3cfdd}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.btn.primary:hover{background:#1547b8}
+.btn.sm{padding:5px 9px;font-size:11px}
+.btn.sel{border-color:var(--brand);background:#e8effd}
+
+/* ---------- kpi ---------- */
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line)}
+.kpi.k-warn:before{background:#e8a33d}
+.kpi.k-crit:before{background:#d94b41}
+.kpi.k-ok:before{background:#12b3a4}
+.kl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:650}
+.kv{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-top:3px;line-height:1.1}
+.kv small{font-size:12px;font-weight:600;color:var(--muted)}
+.kn{font-size:10.5px;color:var(--muted2);margin-top:3px;line-height:1.35}
+
+/* ---------- cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.card-t{font-size:13.5px;font-weight:680;letter-spacing:-.01em}
+.card-sub{font-size:11px;color:var(--muted)}
+.card-h .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.card-b{padding:13px 14px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 404px;gap:14px;align-items:start;margin-bottom:14px}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+section.block{margin-bottom:14px}
+
+/* ---------- chips ---------- */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.03em;padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase}
+.c-p1{background:#fdeceb;color:#a51f1f;border:1px solid #f6c6c2}
+.c-high{background:#fff3e6;color:#8a4b0a;border:1px solid #f6d8ae}
+.c-med{background:#e9effc;color:#16357e;border:1px solid #c9d9f8}
+.c-low{background:#f1f5f9;color:#46586e;border:1px solid #dde5ee}
+.c-proj{background:#f2ecfe;color:#4b1fa8;border:1px solid #ddd0fb}
+.c-lite{background:#f7f9fc;color:#46586e;border:1px solid var(--line);text-transform:none;letter-spacing:0;font-weight:600}
+.c-lite.crit-lite{background:#fdeceb;color:#a51f1f;border-color:#f6c6c2}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:650;white-space:nowrap}
+.st:before{content:"";width:6px;height:6px;border-radius:999px;background:currentColor}
+.st-ok{color:#0f766e}
+.st-info{color:#1d4ed8}
+.st-warn{color:#b45309}
+.st-crit{color:#b3261e}
+.st-muted{color:#7b8ba0}
+.st.sel{outline:0}
+
+/* ---------- board ---------- */
+.board-body{overflow-x:auto}
+.board-inner{min-width:1000px}
+.bd-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--muted)}
+.lg{display:flex;align-items:center;gap:5px}
+.sw{width:14px;height:9px;border-radius:3px;border-left:3px solid}
+.sw.p1{background:#fdeceb;border-color:#c62828}
+.sw.high{background:#fff3e6;border-color:#d97706}
+.sw.med{background:#e9effc;border-color:#2563eb}
+.sw.low{background:#f1f5f9;border-color:#8296ad}
+.sw.proj{background:#f2ecfe;border-color:#6d28d9}
+.sw.trav{background:repeating-linear-gradient(45deg,#e6ecf3 0 3px,#d7e0ea 3px 6px);border:0;height:8px;border-radius:3px}
+.sw.brk{background:#f8fafc;border:1px dashed #c3cfdd;border-left:1px dashed #c3cfdd;height:8px}
+.axrow,.lane{display:grid;grid-template-columns:236px minmax(0,1fr)}
+.axrow{height:26px;border-bottom:1px solid var(--line2)}
+.track{position:relative;border-left:1px solid var(--line2);
+  background-image:linear-gradient(to right,#e6ecf3 1px,transparent 1px),linear-gradient(to right,#f3f6fa 1px,transparent 1px);
+  background-size:calc(100%/12) 100%,calc(100%/24) 100%;
+}
+.track.ax{background-image:none;border-left:1px solid transparent}
+.axl{position:absolute;top:6px;transform:translateX(-50%);font-size:10px;color:var(--muted2);font-variant-numeric:tabular-nums}
+.axl.last{transform:translateX(-100%)}
+.nowpill{position:absolute;top:5px;transform:translateX(-50%);background:#c62828;color:#fff;font-size:9.5px;font-weight:700;border-radius:999px;padding:1px 6px;z-index:6}
+.lane{height:58px;border-bottom:1px solid var(--line2);position:relative}
+.lane:last-child{border-bottom:0}
+.lane-special{background:#fdf6f5}
+.lane-info{display:flex;gap:9px;align-items:center;padding:6px 10px;border-right:1px solid var(--line2);background:#fcfdff;min-width:0}
+.lane-special .lane-info{background:#fdefee;border-right:1px solid #f6d5d2}
+.av{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:10.5px;font-weight:800;flex:none;letter-spacing:.01em}
+.li-name{font-size:11.5px;font-weight:680;display:flex;align-items:center;gap:6px;line-height:1.2}
+.li-sub{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-sub2{font-size:9.5px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk{position:absolute;border-radius:7px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(13,27,42,.08)}
+.blk.sel{outline:2px solid var(--brand);outline-offset:1px;z-index:7}
+.visit{top:5px;height:36px;padding:3px 6px 4px;border-left:3px solid;display:flex;flex-direction:column;justify-content:center;font-size:10px;line-height:1.25}
+.visit .l1{display:flex;gap:5px;align-items:baseline;white-space:nowrap;overflow:hidden;min-width:0}
+.bid{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:9.5px;opacity:.9;flex:none}
+.bcust{font-weight:680;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.visit .l2{font-size:9px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.tagx{font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.p-p1{background:#fdeceb;border-color:#c62828;color:#8d1b1b}
+.p-high{background:#fff3e6;border-color:#d97706;color:#7f450a}
+.p-med{background:#e9effc;border-color:#2563eb;color:#12306f}
+.p-low{background:#f1f5f9;border-color:#8296ad;color:#41526a}
+.p-proj{background:#f2ecfe;border-color:#6d28d9;color:#40188f}
+.visit.runlong{box-shadow:0 0 0 1.5px #d97706, 0 1px 2px rgba(13,27,42,.1)}
+.visit.certgap{box-shadow:0 0 0 1.5px #c62828, 0 1px 2px rgba(13,27,42,.1)}
+.visit.unassigned{border:1.5px dashed #c62828;border-left:4px solid #c62828;background:#fef2f1;color:#8d1b1b}
+.trav{top:44px;height:9px;border-radius:4px;font-size:8.5px;font-weight:650;color:#5c6b7f;
+  background:repeating-linear-gradient(45deg,#e6ecf3 0 4px,#d8e1eb 4px 8px);display:flex;align-items:center;padding-left:5px;white-space:nowrap}
+.brk{top:44px;height:9px;border-radius:4px;font-size:8.5px;color:#8496ab;background:#f8fafc;border:1px dashed #c3cfdd;display:flex;align-items:center;padding-left:5px;white-space:nowrap}
+.brk.brk-warn{border-color:#e8a33d;color:#8a4b0a;background:#fff8ee}
+.wrap{top:5px;height:36px;border-radius:7px;background:#f8fafc;border:1px dashed #c3cfdd;color:#7b8ba0;font-size:9.5px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 6px}
+.over{top:5px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#7f450a;
+  background:repeating-linear-gradient(45deg,#ffe8cb 0 5px,#ffd9a8 5px 10px);border:1.5px dashed #d97706}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:rgba(198,40,40,.55);z-index:4}
+
+/* ---------- alerts ---------- */
+.alert{border:1px solid var(--line);border-left:3px solid var(--muted2);border-radius:10px;padding:10px 11px;background:#fff;margin-bottom:9px}
+.alert:last-child{margin-bottom:0}
+.alert.crit{border-left-color:#c62828;background:#fef8f7;border-color:#f6d5d2}
+.alert.warn{border-left-color:#d97706;background:#fffaf3;border-color:#f6e0c0}
+.alert.info{border-left-color:#1a56db;background:#f8fbff;border-color:#d8e5fb}
+.al-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.al-time{margin-left:auto;font-size:10px;color:var(--muted2);font-variant-numeric:tabular-nums}
+.al-title{font-size:12px;font-weight:680;line-height:1.3}
+.al-body{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.45}
+.al-body b{color:var(--ink)}
+.al-act{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+
+/* ---------- detail ---------- */
+.dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.dtitle{font-size:15.5px;letter-spacing:-.01em;margin-top:2px}
+.daddr{font-size:11.5px;color:var(--muted);margin-top:2px}
+.dstats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 4px}
+.dstats>div{background:#f8fafc;border:1px solid var(--line2);border-radius:9px;padding:8px 9px}
+.dstats .l{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2);font-weight:650}
+.dstats b{font-size:12px;display:block;margin-top:2px}
+.dstats b em{font-style:normal;color:#b45309;font-weight:700;font-size:10.5px}
+.dsec{border-top:1px solid var(--line2);padding-top:9px;margin-top:9px}
+.dsec h4{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-bottom:4px}
+.dsec p{margin:0;font-size:11.5px;color:#26374a;line-height:1.5}
+.dsec .chips{display:flex;flex-wrap:wrap;gap:5px}
+ul.mini{margin:0;padding-left:16px;font-size:11.5px;color:#26374a}
+ul.mini li{margin-bottom:2px}
+.sugg{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--line)}
+.sugg:last-child{border-bottom:0}
+.sugg .sn{font-size:11.5px;font-weight:680}
+.sugg .sc{font-size:10.5px;color:var(--muted2)}
+.sugg .fit{margin-left:auto;flex:none}
+.dactions{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--line2)}
+
+/* ---------- tables ---------- */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{position:sticky;top:0;z-index:2;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+  font-weight:700;padding:8px 10px;background:#f7f9fc;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:7px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+.tbl tbody tr:hover{background:#f8fbff}
+.tbl tbody tr.sel{background:#eef4ff;box-shadow:inset 3px 0 0 var(--brand)}
+.tbl tbody tr{cursor:pointer}
+.ell{max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#33445a}
+.pc{display:inline-block;font-size:10px;font-weight:650;padding:2px 6px;border-radius:999px;white-space:nowrap}
+.pc.ok{background:#e7f7f4;color:#0f766e}
+.pc.info{background:#e9effc;color:#16357e}
+.pc.warn{background:#fff3e6;color:#8a4b0a}
+.pc.crit{background:#fdeceb;color:#a51f1f}
+.pc.muted{background:#f1f5f9;color:#5c6b7f}
+.util{display:inline-block;font-weight:700;font-size:11px;padding:2px 6px;border-radius:6px}
+.util.hi{background:#fff3e6;color:#8a4b0a}
+.util.lo{background:#e7f7f4;color:#0f766e}
+
+/* ---------- chart ---------- */
+.chart{position:relative;padding:16px 4px 0}
+.cap100{position:absolute;left:0;right:0;border-top:1.5px dashed #d94b41;top:0}
+.cap100 span{position:absolute;right:0;top:-14px;font-size:9.5px;color:#b3261e;font-weight:700}
+.bars{display:flex;align-items:flex-end;gap:5px;height:128px}
+.barc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative}
+.barc i{display:block;width:100%;border-radius:5px 5px 2px 2px;background:#0d9488}
+.barc.amber i{background:#e8a33d}
+.barc.red i{background:#d94b41}
+.barc .bv{font-size:9px;font-weight:700;color:#41526a;margin-bottom:3px}
+.barc .bl{font-size:9.5px;color:var(--muted2);margin-top:5px;font-variant-numeric:tabular-nums}
+.crewlab{font-size:9px;color:var(--muted2);margin-top:1px}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--muted);margin-top:10px}
+.chart-legend .d{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}
+
+/* ---------- lists ---------- */
+.lrow{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow .lk{flex:1;min-width:0}
+.lrow .lt{font-size:11.5px;font-weight:650}
+.lrow .ls{font-size:10.5px;color:var(--muted);margin-top:1px}
+.lrow .ls b{color:#33445a}
+.dotm{width:8px;height:8px;border-radius:999px;background:#cbd5e1;margin-top:5px;flex:none}
+.dotm.ok{background:#12b3a4}.dotm.warn{background:#e8a33d}.dotm.crit{background:#d94b41}.dotm.info{background:#3b6fd8}
+
+/* ---------- map ---------- */
+.map{width:100%;height:auto;display:block}
+.tz{fill:#eef4fb;stroke:#cfdceb;stroke-width:1}
+.tz.b{fill:#f2f7fd}
+.tz.c{fill:#eaf1fa}
+.tz.d{fill:#f6f9fd}
+.tz.e{fill:#e9f0f9}
+.tzl{font-size:9.5px;fill:#7b8ba0;font-weight:650;letter-spacing:.02em}
+.pin{fill:#0d9488;stroke:#fff;stroke-width:1.5}
+.pin.amber{fill:#e8a33d}
+.pin.red{fill:#d94b41}
+.pint{font-size:9px;fill:#fff;font-weight:800;text-anchor:middle}
+.leg{fill:none;stroke:#8fa6bf;stroke-width:1.4;stroke-dasharray:4 3}
+.legl{font-size:9px;fill:#5c6b7f;font-weight:650}
+
+@media (max-width:1360px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:1180px){.grid2{grid-template-columns:1fr}.grid4{grid-template-columns:1fr}#lanes2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v6M12 15v6M4.5 6.8l5.2 3M14.3 14.2l5.2 3M4.5 17.2l5.2-3M14.3 9.8l5.2-3"/>
+        <circle cx="12" cy="12" r="2.6" fill="#fff" stroke="none"/>
+      </svg>
+    </span>
+    <div>
+      <div class="bname">Fieldline HVAC</div>
+      <div class="bsub">Dispatch Console · Region 4</div>
+    </div>
+  </div>
+
+  <div class="daynav">
+    <button class="nbtn" title="Previous day">&#8249;</button>
+    <span class="dtitle">Tue, Jan 13, 2026</span>
+    <button class="nbtn" title="Next day">&#8250;</button>
+  </div>
+  <span class="chip c-lite" style="background:#132a44;color:#cfe0ef;border-color:#24425f">Today · Week 3</span>
+
+  <div class="searchwrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+    <input value="" placeholder="Search visits, customers, addresses, part numbers…" />
+  </div>
+
+  <div class="tb-right">
+    <button class="iconbtn" title="4 notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 16v-5a6 6 0 10-12 0v5l-1.6 2.2h15.2L18 16z"/><path d="M10 20.5a2.2 2.2 0 004 0"/></svg>
+      <span class="badge">4</span>
+    </button>
+    <div class="who">
+      <span class="av">RK</span>
+      <div>
+        <div class="wn">Riley Kwan</div>
+        <div class="wr">Dispatcher II · Shift 06:00–14:30</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="rail">
+    <div class="navitem active" title="Dispatch board">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></svg>
+    </div>
+    <div class="navitem" title="Schedule calendar">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.4"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    </div>
+    <div class="navitem" title="Customers &amp; sites">
+      <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.2"/><path d="M9 7h2.2M13 7h2M9 11h2.2M13 11h2M10 21v-4.5h4V21"/></svg>
+    </div>
+    <div class="navitem" title="Technicians">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.8"/><path d="M4.5 21c0-4 3.4-6.2 7.5-6.2S19.5 17 19.5 21"/></svg>
+    </div>
+    <div class="navitem" title="Parts &amp; inventory">
+      <svg viewBox="0 0 24 24"><path d="M3 7.2L12 3l9 4.2v9.6L12 21l-9-4.2z"/><path d="M3 7.2l9 4.2 9-4.2M12 11.4V21"/></svg>
+    </div>
+    <div class="navitem" title="Reports">
+      <svg viewBox="0 0 24 24"><rect x="4" y="12" width="3.6" height="8" rx="1"/><rect x="10.2" y="6" width="3.6" height="14" rx="1"/><rect x="16.4" y="9" width="3.6" height="11" rx="1"/></svg>
+    </div>
+    <div class="navitem" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/></svg>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="pagehead">
+      <div>
+        <h1 class="ph-title">Dispatch Board — Tuesday, January 13, 2026</h1>
+        <div class="ph-sub"><b>9</b> technicians on shift · <b>40</b> site visits · <b>1</b> P1 emergency unassigned · <b>3</b> windows at risk ·
+          schedule v3 published <b>06:58</b> by Riley Kwan (<b>2</b> changes since publish)</div>
+      </div>
+      <div class="toolbar">
+        <div class="seg">
+          <button class="on">Board</button>
+          <button>Map</button>
+          <button>List</button>
+        </div>
+        <button class="btn">All territories &#9662;</button>
+        <button class="btn">All priorities &#9662;</button>
+        <button class="btn">Auto-optimize routes</button>
+        <button class="btn primary">Publish schedule</button>
+      </div>
+    </div>
+
+    <section class="kpis">
+      <div class="kpi k-ok">
+        <div class="kl">Site visits today</div>
+        <div class="kv">40</div>
+        <div class="kn">20 planned maintenance · 9 repairs · 6 diagnostics · 3 projects · 2 open</div>
+      </div>
+      <div class="kpi k-crit">
+        <div class="kl">Unassigned</div>
+        <div class="kv">2</div>
+        <div class="kn">1 P1 emergency (CRAC-3, Riverbend) · 1 on hold awaiting PO</div>
+      </div>
+      <div class="kpi">
+        <div class="kl">Technicians on shift</div>
+        <div class="kv">9 <small>of 12</small></div>
+        <div class="kn">2 PTO · 1 training · first start 06:00, last finish 17:00</div>
+      </div>
+      <div class="kpi k-warn">
+        <div class="kl">Crew utilization</div>
+        <div class="kv">92%</div>
+        <div class="kn">60h 30m wrench · 10h 38m travel of 77h 30m available</div>
+      </div>
+      <div class="kpi k-crit">
+        <div class="kl">Windows at risk</div>
+        <div class="kv">3</div>
+        <div class="kn">1 running 55m long · 1 cert gap · 1 waiting on a part ETA</div>
+      </div>
+      <div class="kpi">
+        <div class="kl">Open capacity</div>
+        <div class="kv">6h 22m</div>
+        <div class="kn">Mostly after 15:30 · no slack between 10:00 and 14:00</div>
+      </div>
+    </section>
+
+    <div class="grid2">
+      <!-- LEFT COLUMN -->
+      <div class="col">
+        <section class="card">
+          <div class="card-h">
+            <div>
+              <div class="card-t">Crew timeline · 06:00 – 18:00</div>
+              <div class="card-sub">Drag a visit to reassign, resize to extend a window. Red line = 10:42 now.</div>
+            </div>
+            <div class="right bd-legend">
+              <span class="lg"><i class="sw p1"></i>Emergency</span>
+              <span class="lg"><i class="sw high"></i>High</span>
+              <span class="lg"><i class="sw med"></i>Medium</span>
+              <span class="lg"><i class="sw low"></i>Low</span>
+              <span class="lg"><i class="sw proj"></i>Project</span>
+              <span class="lg"><i class="sw trav"></i>Drive</span>
+              <span class="lg"><i class="sw brk"></i>Break / admin</span>
+            </div>
+          </div>
+          <div class="board-body">
+            <div class="board-inner">
+              <div class="axrow">
+                <div class="lane-info" style="background:#fcfdff;align-items:flex-start;flex-direction:column;justify-content:center;gap:1px">
+                  <div class="li-sub" style="font-weight:650;color:var(--muted)">Technician / lane</div>
+                  <div class="li-sub2">Shift · territory · load</div>
+                </div>
+                <div class="track ax" id="axis"></div>
+              </div>
+              <div id="lanes"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col">
+        <section class="card">
+          <div class="card-h">
+            <div>
+              <div class="card-t">Needs attention</div>
+              <div class="card-sub">6 items ranked by service risk</div>
+            </div>
+            <div class="right"><span class="chip c-p1">1 emergency</span><span class="chip c-high">4 warnings</span></div>
+          </div>
+          <div class="card-b">
+            <div class="alert crit">
+              <div class="al-top"><span class="chip c-p1">P1 · unassigned</span><span class="al-time">open 1h 30m</span></div>
+              <div class="al-title">CRAC-3 down — Riverbend Data Hall B, 84&deg;F and climbing</div>
+              <div class="al-body">Reported 09:12 by NOC. Needs <b>two technicians</b> with EPA 608 Universal and critical-site clearance. Client SLA breaches at 90&deg;F; projected 3h 00m of work. Parts already on the parts truck.</div>
+              <div class="al-act"><button class="btn sm primary" data-visit="V-2110">Review &amp; assign</button><button class="btn sm">Page on-call lead</button><button class="btn sm">Notify client</button></div>
+            </div>
+
+            <div class="alert warn">
+              <div class="al-top"><span class="chip c-high">Running long</span><span class="al-time">V-2043 · +55m</span></div>
+              <div class="al-title">Tyrell Banks is 55 min over plan at Westside Fitness</div>
+              <div class="al-body">Failed reversing valve found, not the charge. Projected finish <b>14:30</b>, which collapses the travel buffer to <b>V-2044</b> (Cedar Ridge Apartments boiler lockout — window closes 16:00, 62 units without heat). Ben Farrow is 10 min away and free at 14:25.</div>
+              <div class="al-act"><button class="btn sm" data-visit="V-2044">Move V-2044 to Ben Farrow</button><button class="btn sm" data-visit="V-2043">Extend window</button></div>
+            </div>
+
+            <div class="alert crit">
+              <div class="al-top"><span class="chip c-p1">Certification gap</span><span class="al-time">V-2083 · 11:35</span></div>
+              <div class="al-title">Chiller oil service assigned to an apprentice</div>
+              <div class="al-body">V-2083 (Trane CVHF centrifugal chiller, Central Plant) requires <b>EPA 608 Universal + centrifugal certification</b>. Nina Kowalski holds Type I only. Priya Raman is on a chiller job at Northgate until 09:45 and could take the 11:35 slot.</div>
+              <div class="al-act"><button class="btn sm primary" data-visit="V-2083">Reassign V-2083</button><button class="btn sm" data-visit="V-2071">Swap Nina to V-2071</button></div>
+            </div>
+
+            <div class="alert warn">
+              <div class="al-top"><span class="chip c-high">Parts ETA</span><span class="al-time">V-2073 · 13:50</span></div>
+              <div class="al-title">Fan motor arriving 50 min before the visit starts</div>
+              <div class="al-body">1/3 HP condenser fan motor on the Westside depot courier, <b>ETA 13:00</b>. Aaron Osei starts at 13:50 — a single late courier misses the window. Courier confirmed 12:40 by dispatch.</div>
+              <div class="al-act"><button class="btn sm" data-visit="V-2073">Open visit</button><button class="btn sm">Track courier</button></div>
+            </div>
+
+            <div class="alert info">
+              <div class="al-top"><span class="chip c-med">Travel time</span><span class="al-time">V-2033 · 45m leg</span></div>
+              <div class="al-title">Cross-town drive eats the buffer on Marcus Delgado</div>
+              <div class="al-body">Harborview Plaza to Lakeside Medical Center is a <b>45 min / 6.8 mi</b> drive in midday traffic. Dana Whitfield finishes 2.1 mi from Lakeside at 13:20 and is controls-certified for the VFD diagnostics.</div>
+              <div class="al-act"><button class="btn sm" data-visit="V-2033">Reassign V-2033</button><button class="btn sm">Recalculate route</button></div>
+            </div>
+
+            <div class="alert info">
+              <div class="al-top"><span class="chip c-med">Access</span><span class="al-time">V-2103 · 09:55</span></div>
+              <div class="al-title">Bellweather guest-room window closes at 14:00</div>
+              <div class="al-body">18 PTAC units, rooms 3–5. Entry only 10:00–14:00 and <b>Maria Solis (front desk) must stay on site</b> as the onsite contact. Confirmed by phone at 07:20 — escort holds until 13:00.</div>
+              <div class="al-act"><button class="btn sm" data-visit="V-2103">Open visit</button><button class="btn sm">Message contact</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-h">
+            <div>
+              <div class="card-t">Visit detail</div>
+              <div class="card-sub">Select any block on the board or row in the visit log</div>
+            </div>
+            <div class="right"><span class="chip c-lite">Read-only preview</span></div>
+          </div>
+          <div class="card-b" id="detailBody"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="card block">
+      <div class="card-h">
+        <div>
+          <div class="card-t">Visit log — today (40 visits)</div>
+          <div class="card-sub">Sorted by service window · click any row for the full detail panel</div>
+        </div>
+        <div class="right">
+          <span class="chip c-p1">2 emergency</span>
+          <span class="chip c-high">13 high</span>
+          <span class="chip c-med">21 medium</span>
+          <span class="chip c-low">4 low</span>
+        </div>
+      </div>
+      <div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>ID</th><th>Priority</th><th>Window</th><th>Customer</th><th>System / equipment</th>
+              <th>Reported problem</th><th>Est.</th><th>Parts</th><th>Technician</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="vrows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card block">
+      <div class="card-h">
+        <div>
+          <div class="card-t">Technician roster — today</div>
+          <div class="card-sub">Shifts, territories, certifications and load · 12 technicians on file, 9 on shift</div>
+        </div>
+        <div class="right"><span class="chip c-lite">Capacity 77h 30m</span><span class="chip c-lite">Scheduled 71h 08m</span></div>
+      </div>
+      <div>
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Technician</th><th>Shift</th><th>Territory</th><th>Certifications</th><th>Commercial systems serviced</th>
+              <th>Visits</th><th>Wrench</th><th>Drive</th><th>Util.</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Marcus Delgado</b><div class="tiny">Senior commercial technician · T-1042</div></td>
+              <td class="mono">07:00–16:00</td><td>Downtown · North Loop</td>
+              <td class="tiny">EPA 608 Universal · NATE Senior · VFD/Drives L2</td>
+              <td class="tiny">Rooftop package, split, air-cooled chillers, drives</td>
+              <td>4</td><td>6h 35m</td><td>1h 55m</td><td><span class="util hi">94%</span></td><td><span class="st st-ok">On site</span></td>
+            </tr>
+            <tr>
+              <td><b>Priya Raman</b><div class="tiny">Chiller &amp; VRV specialist · T-1047</div></td>
+              <td class="mono">07:00–15:30</td><td>North Loop · Midtown</td>
+              <td class="tiny">EPA 608 Universal · Centrifugal chiller · Daikin VRV</td>
+              <td class="tiny">Centrifugal/water-cooled chillers, VRV/VRF, hydronic</td>
+              <td>4</td><td>7h 10m</td><td>50m</td><td><span class="util hi">94%</span></td><td><span class="st st-ok">On site</span></td>
+            </tr>
+            <tr>
+              <td><b>Tyrell Banks</b><div class="tiny">Journeyman technician · T-1051</div></td>
+              <td class="mono">08:00–17:00</td><td>Westside</td>
+              <td class="tiny">EPA 608 Universal · Commercial refrigeration</td>
+              <td class="tiny">Rooftop, walk-in refrigeration, low-temp</td>
+              <td>4</td><td>6h 15m</td><td>1h 08m</td><td><span class="util lo">82%</span></td><td><span class="st st-warn">Running long</span></td>
+            </tr>
+            <tr>
+              <td><b>Sofia Marchetti</b><div class="tiny">Commercial refrigeration lead · T-1038</div></td>
+              <td class="mono">06:30–15:00</td><td>Downtown</td>
+              <td class="tiny">EPA 608 Universal · R-290 · Rack systems</td>
+              <td class="tiny">Parallel racks, ice machines, reach-ins, walk-ins</td>
+              <td>5</td><td>6h 55m</td><td>1h 05m</td><td><span class="util hi">94%</span></td><td><span class="st st-ok">On site</span></td>
+            </tr>
+            <tr>
+              <td><b>Dana Whitfield</b><div class="tiny">Controls lead · T-1009</div></td>
+              <td class="mono">07:00–15:30</td><td>North Loop · Midtown</td>
+              <td class="tiny">Tridium N4 · Controls L3 · Calibration L2</td>
+              <td class="tiny">BAS/BMS, VAV, AHU controls, sensor networks</td>
+              <td>4</td><td>6h 45m</td><td>55m</td><td><span class="util hi">90%</span></td><td><span class="st st-ok">On site</span></td>
+            </tr>
+            <tr>
+              <td><b>Aaron Osei</b><div class="tiny">Journeyman technician · T-1055</div></td>
+              <td class="mono">08:00–16:30</td><td>Midtown · North Loop</td>
+              <td class="tiny">EPA 608 Universal · Lift certified</td>
+              <td class="tiny">Rooftop, exhaust fans, controls assist</td>
+              <td>5</td><td>6h 55m</td><td>1h 05m</td><td><span class="util hi">94%</span></td><td><span class="st st-info">En route</span></td>
+            </tr>
+            <tr>
+              <td><b>Nina Kowalski</b><div class="tiny">Apprentice, level 2 · T-1063</div></td>
+              <td class="mono">07:30–16:00</td><td>Midtown · Downtown</td>
+              <td class="tiny">EPA 608 Type I only · water management</td>
+              <td class="tiny">Rooftop PM, cooling towers, PTAC</td>
+              <td>4</td><td>6h 30m</td><td>1h 05m</td><td><span class="util lo">89%</span></td><td><span class="st st-crit">Cert gap</span></td>
+            </tr>
+            <tr>
+              <td><b>Ben Farrow</b><div class="tiny">Boiler &amp; hydronics technician · T-1028</div></td>
+              <td class="mono">07:00–15:30</td><td>North Loop · Industrial</td>
+              <td class="tiny">Boiler licensed · Gas fitting · Combustion L2</td>
+              <td class="tiny">Firetube boilers, hydronic pumps, steam traps</td>
+              <td>4</td><td>6h 50m</td><td>1h 10m</td><td><span class="util hi">94%</span></td><td><span class="st st-ok">On site</span></td>
+            </tr>
+            <tr>
+              <td><b>Camille Reyes</b><div class="tiny">Rooftop &amp; PTAC technician · T-1071</div></td>
+              <td class="mono">06:00–14:30</td><td>Northgate · Harborview</td>
+              <td class="tiny">EPA 608 Type II · Data center clearance</td>
+              <td class="tiny">Rooftop units, PTAC, economizers, CRAC support</td>
+              <td>5</td><td>6h 35m</td><td>1h 25m</td><td><span class="util hi">94%</span></td><td><span class="st st-info">Completing</span></td>
+            </tr>
+            <tr style="opacity:.72">
+              <td><b>Ruth Iglesias</b><div class="tiny">Journeyman technician · T-1033</div></td>
+              <td class="mono">Off</td><td>—</td>
+              <td class="tiny">EPA 608 Universal · Refrigeration</td>
+              <td class="tiny">Rack refrigeration, walk-ins</td>
+              <td>0</td><td>—</td><td>—</td><td><span class="util lo">0%</span></td><td><span class="st st-muted">PTO (approved 01/05)</span></td>
+            </tr>
+            <tr style="opacity:.72">
+              <td><b>Jonas Whitmore</b><div class="tiny">Refrigeration technician · T-1021</div></td>
+              <td class="mono">Off</td><td>—</td>
+              <td class="tiny">EPA 608 Universal · R-448A</td>
+              <td class="tiny">Parallel racks, ice machines</td>
+              <td>0</td><td>—</td><td>—</td><td><span class="util lo">0%</span></td><td><span class="st st-muted">PTO · back Wed 07:00</span></td>
+            </tr>
+            <tr style="opacity:.72">
+              <td><b>Leo Nakamura</b><div class="tiny">Controls technician · T-1060</div></td>
+              <td class="mono">Off</td><td>—</td>
+              <td class="tiny">Tridium N4 · pursuing Controls L3</td>
+              <td class="tiny">BAS/BMS, VAV, sensor networks</td>
+              <td>0</td><td>—</td><td>—</td><td><span class="util lo">0%</span></td><td><span class="st st-muted">Training — NATE day 2 of 2</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="grid4 block">
+      <section class="card">
+        <div class="card-h">
+          <div>
+            <div class="card-t">Required tech-hours vs crew on shift</div>
+            <div class="card-sub">Includes the unassigned emergency and the projected Westside overrun</div>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="chart" style="padding-top:18px">
+            <div class="bars" id="bars"></div>
+          </div>
+          <div class="chart-legend">
+            <span><i class="d" style="background:#0d9488"></i>Within crew capacity</span>
+            <span><i class="d" style="background:#e8a33d"></i>Tight · 1–5% over</span>
+            <span><i class="d" style="background:#d94b41"></i>Over capacity · &gt;5%</span>
+            <span><i class="d" style="background:#fff;border:1.5px dashed #d94b41"></i>100% crew threshold</span>
+          </div>
+          <div class="tiny" style="margin-top:10px;">
+            Peak pressure 11:00–14:00 (109% required at 11:00). Closing hours 16:00–17:00 release 4h 10m of crew capacity for the Riverbend emergency.
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-h">
+          <div>
+            <div class="card-t">Parts readiness</div>
+            <div class="card-sub">7 parts linked to today's visits</div>
+          </div>
+          <div class="right"><span class="chip c-p1">1 backorder</span><span class="chip c-high">3 in transit</span></div>
+        </div>
+        <div class="card-b">
+          <div class="lrow"><i class="dotm crit"></i><div class="lk"><div class="lt">VAV controller x12 (Tridium)</div><div class="ls">For <b>V-2061</b> · Cascade Cancer Center · <b>PARTIAL</b> — 6 of 12 zones deferred to Thursday</div></div><span class="pc crit">Backorder · ETA Thu</span></div>
+          <div class="lrow"><i class="dotm warn"></i><div class="lk"><div class="lt">Fan motor, 1/3 HP condenser</div><div class="ls">For <b>V-2073</b> · Summit Offices · courier from Westside depot, 50 min buffer</div></div><span class="pc warn">En route · ETA 13:00</span></div>
+          <div class="lrow"><i class="dotm warn"></i><div class="lk"><div class="lt">Reversing valve kit RV-440</div><div class="ls">For <b>V-2043</b> · Westside Fitness · pickup scheduled 14:00, visit running long</div></div><span class="pc warn">Depot pickup 14:00</span></div>
+          <div class="lrow"><i class="dotm warn"></i><div class="lk"><div class="lt">Seal kit SK-55 + 10 gal glycol</div><div class="ls">For <b>V-2092</b> · Riverside Cold Storage · Ben Farrow picks up at 08:45</div></div><span class="pc warn">Pickup 08:45</span></div>
+          <div class="lrow"><i class="dotm info"></i><div class="lk"><div class="lt">Scroll compressor ZP154K5E</div><div class="ls">For <b>V-2037</b> · Midtown Galleria · staged for the 12:15 crane lift</div></div><span class="pc info">Staged · depot</span></div>
+          <div class="lrow"><i class="dotm info"></i><div class="lk"><div class="lt">Pump seal kit MS-228</div><div class="ls">For <b>V-2032</b> · Harborview Plaza · reserved in van 214</div></div><span class="pc info">Reserved · van 214</span></div>
+          <div class="lrow"><i class="dotm ok"></i><div class="lk"><div class="lt">Contactor 40A + EC fan motor</div><div class="ls">For <b>V-2110</b> · Riverbend Data Hall B · loaded on the parts truck</div></div><span class="pc ok">On parts truck</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-h">
+          <div>
+            <div class="card-t">Restricted access &amp; site requirements</div>
+            <div class="card-sub">Windows and onsite contacts that constrain today</div>
+          </div>
+          <div class="right"><span class="chip c-med">7 sites</span></div>
+        </div>
+        <div class="card-b">
+          <div class="lrow"><i class="dotm crit"></i><div class="lk"><div class="lt">Northgate Data Center · V-2101</div><div class="ls">Rooftop access <b>06:00–08:00 only</b>; badge escort required. Visit projects 07:50 — no room for a late start.</div></div><span class="pc crit">Window 06:00–08:00</span></div>
+          <div class="lrow"><i class="dotm warn"></i><div class="lk"><div class="lt">Bellweather Hotel · V-2103 / V-2038</div><div class="ls">Guest-room entry <b>10:00–14:00</b>; onsite contact Maria Solis must be present for the whole visit.</div></div><span class="pc warn">Contact required</span></div>
+          <div class="lrow"><i class="dotm warn"></i><div class="lk"><div class="lt">Cascade Cancer Center · V-2061 / V-2071</div><div class="ls">Infection-control permit needed; <b>no dust work 08:00–10:00</b> while the clinic is open.</div></div><span class="pc warn">Permit</span></div>
+          <div class="lrow"><i class="dotm warn"></i><div class="lk"><div class="lt">St. Aloysius Hospital · V-2093 / V-2094</div><div class="ls">Boiler-room escort; facilities contact Ray Nunez on site 07:00–15:30. No shutdown without permit.</div></div><span class="pc warn">Escort</span></div>
+          <div class="lrow"><i class="dotm crit"></i><div class="lk"><div class="lt">Cedar Ridge Apartments · V-2044</div><div class="ls">Boiler-room escort and property manager onsite until <b>16:00</b> — the visit window closes with the escort.</div></div><span class="pc crit">Closes 16:00</span></div>
+          <div class="lrow"><i class="dotm info"></i><div class="lk"><div class="lt">Downtown Deli Co-op · V-2053</div><div class="ls">Alley access only; deliveries blocked 11:30–13:00. Onsite contact Omar Haddad confirmed.</div></div><span class="pc info">Rear access</span></div>
+          <div class="lrow"><i class="dotm info"></i><div class="lk"><div class="lt">Meridian Tower · V-2031 / V-2082</div><div class="ls">Freight elevator booking required; slot held 07:00–08:00 and 09:30–10:30 for filter and basin work.</div></div><span class="pc info">Booking</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-h">
+          <div>
+            <div class="card-t">Territory coverage &amp; drives today</div>
+            <div class="card-sub">Pin counts = visits scheduled in each territory</div>
+          </div>
+          <div class="right"><span class="chip c-lite">40 visits mapped</span></div>
+        </div>
+        <div class="card-b">
+          <svg viewBox="0 0 420 216" class="map" role="img" aria-label="Territory map with visit counts and drive legs">
+            <path class="tz" d="M16,14 L188,8 L200,80 L28,96 Z"/>
+            <path class="tz b" d="M28,96 L200,80 L212,150 L42,170 Z"/>
+            <path class="tz c" d="M200,80 L318,64 L350,142 L212,150 Z"/>
+            <path class="tz d" d="M42,170 L212,150 L228,204 L58,208 Z"/>
+            <path class="tz e" d="M212,150 L350,142 L374,200 L228,204 Z"/>
+            <text class="tzl" x="52" y="52">North Loop · 9</text>
+            <text class="tzl" x="68" y="132">Downtown · 12</text>
+            <text class="tzl" x="240" y="112">Midtown · 8</text>
+            <text class="tzl" x="72" y="188">Westside · 7</text>
+            <text class="tzl" x="252" y="180">Harborview · 4</text>
+            <path class="leg" d="M138,178 C160,150 200,140 250,146"/>
+            <text class="legl" x="168" y="160">18 min</text>
+            <path class="leg" d="M288,174 C270,150 230,136 180,128"/>
+            <text class="legl" x="228" y="128">45 min</text>
+            <circle class="pin" cx="104" cy="72" r="10"/><text class="pint" x="104" y="75">9</text>
+            <circle class="pin amber" cx="112" cy="126" r="11"/><text class="pint" x="112" y="129">12</text>
+            <circle class="pin" cx="280" cy="104" r="10"/><text class="pint" x="280" y="107">8</text>
+            <circle class="pin red" cx="130" cy="182" r="10"/><text class="pint" x="130" y="185">7</text>
+            <circle class="pin" cx="300" cy="176" r="9"/><text class="pint" x="300" y="179">4</text>
+          </svg>
+          <div class="chart-legend" style="margin-top:6px">
+            <span><i class="d" style="background:#0d9488"></i>On plan</span>
+            <span><i class="d" style="background:#e8a33d"></i>Heavy day</span>
+            <span><i class="d" style="background:#d94b41"></i>Troubled (overrun at Westside)</span>
+          </div>
+          <div class="tiny" style="margin-top:8px;">
+            Longest drive legs: Harborview Plaza &#8594; Lakeside Medical Center 45 min · Pinnacle Logistics &#8594; Westside Fitness 15 min ·
+            Cedar Ridge Apartments 18 min round trip is <b>not</b> budgeted on V-2044.
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var START = 360, SPAN = 720, NOW = 642; // minutes; window 06:00–18:00
+
+  function fmt(m){ return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0'); }
+  function L(m){ return ((m - START) / SPAN * 100).toFixed(3) + '%'; }
+  function Wd(d){ return (d / SPAN * 100).toFixed(3) + '%'; }
+  function durTxt(m){ var h = Math.floor(m/60), mm = m % 60; return h ? (mm ? h + 'h ' + mm + 'm' : h + 'h') : mm + 'm'; }
+
+  /* ------------------------------------------------------------------ visits */
+  var VISITS = [
+  {id:'V-2031',prio:'med',type:'Planned maintenance',cust:'Meridian Tower',addr:'400 N Market St, Bldg A',s:450,d:90,tech:'Marcus Delgado',
+   equip:'RTU-3 · 25-ton rooftop package unit (Trane)',
+   prob:'Quarterly PM — filters, belts, condenser coil rinse, refrigerant charge check.',
+   parts:['MERV-13 filter set · van stock'],certs:['EPA 608 Universal'],
+   access:'Roof key at the lobby security desk; freight elevator booked 07:00–08:00.',
+   contact:'Jules Ferrand · Building Ops · (312) 555-0148',
+   notes:'Belt wear noted 12/04 — replace if deflection exceeds 3/16 in.',status:'On track'},
+
+  {id:'V-2032',prio:'high',type:'Repair',cust:'Harborview Plaza',addr:'275 Harbor St, Mezzanine',s:560,d:120,tech:'Marcus Delgado',
+   equip:'Chiller condenser water pump · Bell &amp; Gossett 3x3',
+   prob:'Mechanical seal leaking at 2 gal/hr — floor drain overflow risk in the mezzanine.',
+   parts:['Pump seal kit MS-228 · reserved in van 214'],certs:['EPA 608 Universal'],
+   access:'Loading dock entry; sign in at the engineering office before 09:00.',
+   contact:'Erin Vasquez · Chief Engineer · (312) 555-0129',
+   notes:'Coupling replaced 03/12; vibration still within spec at 0.09 in/s.',status:'On track'},
+
+  {id:'V-2033',prio:'high',type:'Diagnostic',cust:'Lakeside Medical Center',addr:'1200 Lakeside Dr, Central Plant',s:755,d:120,tech:'Marcus Delgado',
+   equip:'AHU-2 · 40 HP VFD (ABB ACS880)',
+   prob:'VFD trips on fault F-07 (DC overvoltage) during high-load afternoons.',
+   parts:['Spare VFD cooling fan · depot'],certs:['VFD/Drives Level 2','EPA 608 Universal'],
+   access:'Escort past central plant door; badge at Security Desk A. Megger and thermal camera required.',
+   contact:'Vance Whitlock · Facilities Lead · (312) 555-0193',
+   notes:'Fault logged 9 times in 14 days, all between 13:00 and 16:00.',status:'On track'},
+
+  {id:'V-2034',prio:'med',type:'Planned maintenance',cust:'Bellweather Hotel',addr:'88 W Kingsley Ave, Podium Roof',s:895,d:65,tech:'Marcus Delgado',
+   equip:'Cooling tower CT-1 · 400-ton',
+   prob:'Monthly water treatment verification and basin inspection.',
+   parts:['Test kit reagents · van stock'],certs:['EPA 608 Universal','Water management'],
+   access:'Tower on the podium roof; access with a front-desk escort only.',
+   contact:'Maria Solis · Front Desk Manager · (312) 555-0155',
+   notes:'Conductivity probe calibration is due 01/15 — flag for next visit.',status:'On track'},
+
+  {id:'V-2035',prio:'proj',type:'Project',cust:'Northgate Data Center',addr:'9400 Northgate Pkwy, Hall B',s:435,d:150,tech:'Priya Raman',
+   equip:'Centrifugal chiller CH-1 · 900-ton (York YK)',
+   prob:'Annual teardown, day 2 of 3 — oil analysis, bearing inspection, purge unit service.',
+   parts:['Oil filter kit · staged','Purge filter · staged','Bearing set · depot, if needed'],certs:['EPA 608 Universal','Centrifugal chiller certified'],
+   access:'Data hall clearance and badge escort; no hot work permitted.',
+   contact:'Sanjay Mehta · Critical Facilities Mgr · (312) 555-0100',
+   notes:'Bearing wear at 0.003 in — decide on replacement before 14:00 handoff.',status:'On track'},
+
+  {id:'V-2036',prio:'high',type:'Diagnostic',cust:'Summit Offices',addr:'77 Summit Ave, 3rd Fl MDP',s:605,d:90,tech:'Priya Raman',
+   equip:'VRV system · zone 4 outdoor branch (Daikin)',
+   prob:'Zone 4 locked out on low pressure; suspected refrigerant leak at the branch joint.',
+   parts:['R-410A 10 lb · van stock','Schrader core kit'],certs:['EPA 608 Universal','VRV/VRF certified'],
+   access:'Tenant space — escort by the building engineer; quiet hours 09:00–11:00.',
+   contact:'Reese Calder · Property Manager · (312) 555-0188',
+   notes:'Same zone leaked in 08/2024 and the joint was re-brazed then.',status:'On track'},
+
+  {id:'V-2037',prio:'proj',type:'Replacement',cust:'Midtown Galleria',addr:'2100 Midtown Blvd, Roof C',s:725,d:120,tech:'Priya Raman',
+   equip:'RTU-7 · 15-ton scroll compressor (Copeland ZP154K5E)',
+   prob:'Compressor replacement — grounded windings; RTU-7 locked out since 01/06.',
+   parts:['Scroll compressor ZP154K5E · staged at Westside depot','Filter drier and suction filter'],
+   certs:['EPA 608 Universal'],
+   access:'Roof crane spot reserved 12:00–13:00; hard hats and screens required.',
+   contact:'Alma Brooks · Mall Facilities · (312) 555-0114',
+   notes:'Crane permit approved; rigging crew booked for 12:15.',status:'On track'},
+
+  {id:'V-2038',prio:'med',type:'Planned maintenance',cust:'Bellweather Hotel',addr:'88 W Kingsley Ave, Rooftop',s:860,d:70,tech:'Priya Raman',
+   equip:'Split systems SS-1 / SS-2 · 5-ton (Carrier)',
+   prob:'Quarterly PM — filter, coil clean, condensate pan treatment.',
+   parts:['Filter set · van stock'],certs:['EPA 608 Universal'],
+   access:'Escort required; rooftop key from the front desk.',
+   contact:'Maria Solis · Front Desk Manager · (312) 555-0155',
+   notes:'Condensate overflow switch tripped in 11/2024 — test the float.',status:'On track'},
+
+  {id:'V-2041',prio:'p1',type:'Emergency repair',cust:'Grover Foods Westside',addr:'5100 Industrial Row, Dock 4',s:500,d:75,tech:'Tyrell Banks',
+   equip:'Walk-in freezer · 12x20 ft, low-temp unit',
+   prob:'Box at 22&deg;F and rising — roughly $40k of product at risk. Compressor running with no pump-down.',
+   parts:['Defrost termination klixon · van stock'],certs:['EPA 608 Universal','Commercial refrigeration'],
+   access:'Dock access 06:00–16:00; check in with the night manager.',
+   contact:'Hector Nunez · Store Manager · (312) 555-0177',
+   notes:'Escalated to P1 at 08:22 after a repeat temperature alarm.',status:'Contained'},
+
+  {id:'V-2042',prio:'med',type:'Planned maintenance',cust:'Pinnacle Logistics',addr:'7800 Westside Rd',s:590,d:90,tech:'Tyrell Banks',
+   equip:'4x rooftop units RTU-1…RTU-4 · 20-ton each',
+   prob:'Quarterly PM — filter change, belt inspection, economizer check.',
+   parts:['16x MERV-8 filters · van stock'],certs:['EPA 608 Universal'],
+   access:'Roof hatch in the warehouse; ladder access, harness required.',
+   contact:'Kim Delacroix · Ops Supervisor · (312) 555-0133',
+   notes:'RTU-3 economizer actuator is sticking — report only, no repair today.',status:'On track'},
+
+  {id:'V-2043',prio:'high',type:'Repair',cust:'Westside Fitness',addr:'3100 Westside Rd, Suite 12',s:695,d:120,over:55,tech:'Tyrell Banks',
+   equip:'RTU-9 · 12.5-ton packaged unit',
+   prob:'Compressor short-cycling — suspected reversing valve. Two prior visits flagged this unit as chronic.',
+   parts:['Reversing valve kit RV-440 · depot pickup 14:00'],certs:['EPA 608 Universal','Refrigeration diagnostics'],
+   access:'Open to the public 05:00–23:00; work near the member area with screens up.',
+   contact:'Owen Marsh · Facility Manager · (312) 555-0171',
+   notes:'Projected finish 14:30 — 55 min over plan. Crew found a failed valve, not a charge issue.',status:'Running long'},
+
+  {id:'V-2044',prio:'high',type:'Repair',cust:'Cedar Ridge Apartments',addr:'1450 Cedar Ridge Ct',s:870,d:90,tech:'Tyrell Banks',
+   equip:'Boiler B-2 · 1.2 MMBtu hydronic',
+   prob:'Ignition lockout — 62 units without heat and an overnight low of 28&deg;F.',
+   parts:['Flame sensor FS-2 · van stock','Ignition control module for B-2'],
+   certs:['EPA 608 Universal','Gas fitting / boiler licensed'],
+   access:'Boiler room with escort 07:00–16:00; property manager must be onsite the whole time.',
+   contact:'Ruth Kimble · Property Manager · (312) 555-0166',
+   notes:'Window closes at 16:00 and the 18-min drive from V-2043 is not budgeted anywhere.',status:'At risk'},
+
+  {id:'V-2051',prio:'low',type:'Planned maintenance',cust:'Grandview Cafe Group',addr:'18 Grandview Row (3 sites)',s:410,d:90,tech:'Sofia Marchetti',
+   equip:'Ice machines and reach-in coolers · 5 units',
+   prob:'Scheduled PM — descale ice machines, clean condenser coils, check door gaskets.',
+   parts:['Descaler · van stock','Universal gasket set'],certs:['EPA 608 Universal','Commercial refrigeration'],
+   access:'Kitchen access preferred before 07:00; back door code 4417.',
+   contact:'Ana Petrova · General Manager · (312) 555-0142',
+   notes:'Ice machine #2 produces cloudy ice — inspect the water filter.',status:'On track'},
+
+  {id:'V-2052',prio:'high',type:'Diagnostic',cust:'Harborview Grocery',addr:'240 Harbor St',s:515,d:90,tech:'Sofia Marchetti',
+   equip:'Refrigeration rack · 6-compressor parallel',
+   prob:'Rack alarm 402 — discharge temperature high, suction low. Overnight product risk.',
+   parts:['R-448A 25 lb cylinder · issued'],certs:['EPA 608 Universal','Commercial refrigeration'],
+   access:'Store opens 06:00; compressor room requires an escort.',
+   contact:'Marco Duarte · Store Manager · (312) 555-0126',
+   notes:'Second alarm this week; the December leak check found nothing.',status:'On track'},
+
+  {id:'V-2053',prio:'med',type:'Repair',cust:'Downtown Deli Co-op',addr:'615 Vine St, Rear',s:620,d:120,tech:'Sofia Marchetti',
+   equip:'Walk-in cooler · 8x10 ft, door and closer',
+   prob:'Door gasket torn and closer failed; box holding 41&deg;F, which is borderline.',
+   parts:['Gasket 36x78 magnetic · depot','Door closer DC-700'],certs:['EPA 608 Universal'],
+   access:'Alley access only; deliveries blocked 11:30–13:00. Onsite contact required.',
+   contact:'Omar Haddad · Co-op Manager · (312) 555-0197',
+   notes:'Gasket replaced 06/2024 — hinge sag may be the root cause.',status:'On track'},
+
+  {id:'V-2054',prio:'med',type:'Planned maintenance',cust:'Merryweather Senior Living',addr:'4300 Elder Way',s:770,d:90,tech:'Sofia Marchetti',
+   equip:'Kitchen refrigeration and ice machine · 6 units',
+   prob:'Quarterly PM — coil cleaning, temperature logs, ice machine descale.',
+   parts:['Coil cleaner · van stock'],certs:['EPA 608 Universal'],
+   access:'Kitchen closed 13:00–14:00; sign in at the front desk.',
+   contact:'Bev Chandler · Dietary Director · (312) 555-0163',
+   notes:'Temperature log deviation three times in December — review with the director.',status:'On track'},
+
+  {id:'V-2055',prio:'low',type:'Diagnostic',cust:'Grandview Cafe',addr:'18 Grandview Row, Site 2',s:875,d:25,tech:'Sofia Marchetti',
+   equip:'Ice machine IM-2 · 500 lb/day',
+   prob:'Callback verification — production measured at 240 lb/day after the morning service.',
+   parts:['Water filter WF-2 · if needed'],certs:['EPA 608 Universal'],
+   access:'Back door code 4417; no escort needed.',
+   contact:'Ana Petrova · General Manager · (312) 555-0142',
+   notes:'Verify against the 500 lb/day spec and log it in the asset history.',status:'On track'},
+
+  {id:'V-2060',prio:'med',type:'Planned maintenance',cust:'Riverbend Office Park',addr:'2200 Riverbend Dr, Bldg 1',s:440,d:100,tech:'Dana Whitfield',
+   equip:'BAS · AHU-1 and AHU-2 controls (Tridium N4)',
+   prob:'Point-to-point verification, VAV zone calibration and graphics cleanup.',
+   parts:['One spare VAV controller · van stock'],certs:['Tridium N4','Controls Level 3'],
+   access:'Work above ceiling tiles in tenant space; tenants notified 24h ahead.',
+   contact:'Ivy Sandoval · Building Engineer · (312) 555-0108',
+   notes:'Two VAVs reported drifting last week — recheck zones 5 and 9.',status:'On track'},
+
+  {id:'V-2061',prio:'proj',type:'Project',cust:'Cascade Cancer Center',addr:'990 Cascade Blvd, Bldg A',s:560,d:120,tech:'Dana Whitfield + Aaron Osei',
+   equip:'BAS retrofit · 12 VAV controllers (Tridium)',
+   prob:'Controller swap-out, integration and point checkout across 12 zones. Requires two technicians for lift and rack work.',
+   parts:['VAV controller x12 · BACKORDERED, ETA Thursday','Comm modules x4 · van stock'],
+   certs:['Tridium N4','Controls Level 3','OSHA lift certified'],
+   access:'Infection-control permit required; no dust work 08:00–10:00 while the clinic is open.',
+   contact:'Dr. Nadia Fey · Facilities · (312) 555-0121',
+   notes:'Six of twelve zones deferred to Thursday because of the controller backorder.',status:'Parts ETA',
+   suggest:[{n:'Aaron Osei',c:'Lift certified · EPA 608 Universal',note:'Already paired on this visit and free at 09:20 — keep as the second technician.',fit:'Assigned'}]},
+
+  {id:'V-2062',prio:'high',type:'Diagnostic',cust:'Summit Offices',addr:'77 Summit Ave, MDP 2',s:710,d:90,tech:'Dana Whitfield',
+   equip:'BAS · AHU-3 static pressure sensor',
+   prob:'Static pressure sensor drifting — VAVs hunting and complaints from 3rd-floor tenants.',
+   parts:['Static sensor 0.25 in wc · van stock'],certs:['Tridium N4'],
+   access:'Tenant escort for the mechanical room; quiet hours 12:00–13:00.',
+   contact:'Reese Calder · Property Manager · (312) 555-0188',
+   notes:'Sensor replaced in 11/2024 — check the sensing tubing for condensate.',status:'On track'},
+
+  {id:'V-2063',prio:'med',type:'Planned maintenance',cust:'Lakeside Medical Center',addr:'1200 Lakeside Dr, Bldg C',s:815,d:95,tech:'Dana Whitfield',
+   equip:'BAS · sensor calibration across 42 points',
+   prob:'Semi-annual controls PM — sensor calibration, alarm routing test, graphics update.',
+   parts:['Calibration gases · depot'],certs:['Tridium N4','Calibration Level 2'],
+   access:'OR floor restricted 07:00–09:00; work elsewhere first.',
+   contact:'Vance Whitlock · Facilities Lead · (312) 555-0193',
+   notes:'Add humidity sensor recalibration to scope per the December request.',status:'On track'},
+
+  {id:'V-2071',prio:'low',type:'Planned maintenance',cust:'Cascade Cancer Center',addr:'990 Cascade Blvd, Bldg A',s:500,d:60,tech:'Aaron Osei',
+   equip:'4x fan coil units FC-1…FC-4 · Bldg A',
+   prob:'Filter change-out and condensate pan flush.',
+   parts:['Filters · van stock'],certs:['EPA 608 Universal'],
+   access:'Infection-control permit required; escort to the mechanical closet.',
+   contact:'Dr. Nadia Fey · Facilities · (312) 555-0121',
+   notes:'Finishes in time to join the two-technician retrofit at 09:20 at the same site.',status:'On track'},
+
+  {id:'V-2072',prio:'med',type:'Planned maintenance',cust:'Midtown Galleria',addr:'2100 Midtown Blvd',s:725,d:90,tech:'Aaron Osei',
+   equip:'6x rooftop units · 8–20 ton',
+   prob:'Belt and filter PM, condenser coil rinse, bearing check.',
+   parts:['Belts B-42 x4 · van stock','Filters · van stock'],certs:['EPA 608 Universal'],
+   access:'Roof access via the service elevator; mall hours 10:00–21:00.',
+   contact:'Alma Brooks · Mall Facilities · (312) 555-0114',
+   notes:'RTU-2 bearing noise noted last visit — grease or plan a replacement.',status:'On track'},
+
+  {id:'V-2073',prio:'high',type:'Repair',cust:'Summit Offices',addr:'77 Summit Ave, Roof',s:830,d:90,tech:'Aaron Osei',
+   equip:'RTU-2 · condenser fan motor, 1/3 HP',
+   prob:'Condenser fan motor tripping the thermal overload; unit cycling on high head pressure.',
+   parts:['Fan motor 1/3 HP · EN ROUTE from Westside depot, ETA 13:00'],certs:['EPA 608 Universal'],
+   access:'Roof key from the lobby; escort required by the property manager.',
+   contact:'Reese Calder · Property Manager · (312) 555-0188',
+   notes:'Motor must land before the 13:50 start — only a 50 min buffer.',status:'Parts ETA'},
+
+  {id:'V-2074',prio:'med',type:'Planned maintenance',cust:'Eastgate Plaza',addr:'66 Eastgate Rd, Suite 100',s:935,d:55,tech:'Aaron Osei',
+   equip:'RTU-4 · 7.5-ton',
+   prob:'Monthly PM — filter, belt, drain pan, economizer function check.',
+   parts:['Filters · van stock'],certs:['EPA 608 Universal'],
+   access:'Rear service court access; gate code 2210.',
+   contact:'Sam Iyer · Plaza Management · (312) 555-0150',
+   notes:'Economizer linkage adjusted in 12/2024 — verify the full stroke.',status:'On track'},
+
+  {id:'V-2081',prio:'med',type:'Planned maintenance',cust:'Midtown Galleria',addr:'2100 Midtown Blvd, Roof A',s:470,d:90,tech:'Nina Kowalski',
+   equip:'RTU-1 / RTU-2 / RTU-3 · rooftop package units',
+   prob:'PM — filters, belts, coil rinse, drain pans.',
+   parts:['Filters · van stock'],certs:['EPA 608 Type I'],
+   access:'Service elevator reserved 07:45–09:30.',
+   contact:'Alma Brooks · Mall Facilities · (312) 555-0114',
+   notes:'Apprentice on rooftop disconnect lockout — lead verifies by radio.',status:'On track'},
+
+  {id:'V-2082',prio:'med',type:'Planned maintenance',cust:'Meridian Tower',addr:'400 N Market St, Roof',s:575,d:90,tech:'Nina Kowalski',
+   equip:'Cooling tower CT-2 · 300-ton',
+   prob:'Basin cleaning, water treatment check, strainer blowdown.',
+   parts:['Treatment chemicals · van stock'],certs:['EPA 608 Type I','Cooling tower water management'],
+   access:'Escort required on the podium roof; no work during the 12:00 lunch rush.',
+   contact:'Jules Ferrand · Building Ops · (312) 555-0148',
+   notes:'Legionella water management log must be signed on site.',status:'On track'},
+
+  {id:'V-2083',prio:'high',type:'Repair',cust:'Lakeside Medical Center',addr:'1200 Lakeside Dr, Central Plant',s:695,d:120,tech:'Nina Kowalski',
+   equip:'Centrifugal chiller CH-2 · 700-ton (Trane CVHF)',
+   prob:'Oil analysis and oil filter change; low oil pressure alarm on start-up.',
+   parts:['Oil filter kit OFK-700 · staged at depot'],
+   certs:['EPA 608 Universal (REQUIRED)','Centrifugal chiller certified (REQUIRED)'],
+   access:'Central plant escort; hospital critical space, no shutdown without a permit.',
+   contact:'Vance Whitlock · Facilities Lead · (312) 555-0193',
+   notes:'CERT GAP: Nina holds EPA 608 Type I only. Reassign to Priya Raman or Dana Whitfield before 11:35.',
+   status:'Cert gap',
+   suggest:[{n:'Priya Raman',c:'EPA 608 Universal · Centrifugal certified',note:'Free from 09:45 and already certified on this exact chiller model.',fit:'Best match'},
+            {n:'Dana Whitfield',c:'Controls Level 3 · EPA 608 Universal',note:'At Summit Offices until 13:20 — needs V-2062 covered first.',fit:'Possible'},
+            {n:'Nina Kowalski',c:'EPA 608 Type I only',note:'Not eligible for refrigerant work on a centrifugal chiller.',fit:'Ineligible'}]},
+
+  {id:'V-2084',prio:'low',type:'Planned maintenance',cust:'Eastgate Plaza',addr:'66 Eastgate Rd, Floors 2–3',s:830,d:90,tech:'Nina Kowalski',
+   equip:'PTAC units · 22 units',
+   prob:'PTAC PM — filters, coil clean, condensate check.',
+   parts:['Filters x22 · van stock'],certs:['EPA 608 Type I'],
+   access:'Room access 10:00–15:00 with tenant notice already sent.',
+   contact:'Sam Iyer · Plaza Management · (312) 555-0150',
+   notes:'Filter cycle extended from 60 to 90 days this quarter.',status:'On track'},
+
+  {id:'V-2091',prio:'high',type:'Planned maintenance',cust:'Foundry Lofts',addr:'9 Foundry Ln, Boiler Room',s:440,d:120,tech:'Ben Farrow',
+   equip:'2x 1.5 MMBtu boilers',
+   prob:'Annual combustion analysis and inspection — tune burners, inspect refractories.',
+   parts:['Combustion test kit · van stock','Ignition electrodes · van stock'],
+   certs:['Boiler licensed','Gas fitting','Combustion analysis Level 2'],
+   access:'Boiler room in an occupied residential building; escort required.',
+   contact:'Ravi Chandran · Building Engineer · (312) 555-0137',
+   notes:'Last year CO readings hit 78 ppm — verify flue damper operation.',status:'On track'},
+
+  {id:'V-2092',prio:'high',type:'Repair',cust:'Riverside Cold Storage',addr:'3300 Riverside Dr',s:575,d:120,tech:'Ben Farrow',
+   equip:'Hydronic loop pump P-1 · 5 HP',
+   prob:'Pump seal failure — glycol on the floor and loop pressure dropping.',
+   parts:['Seal kit SK-55 · depot pickup 08:45','Glycol 10 gal · depot'],
+   certs:['Hydronics Level 2','EPA 608 Universal'],
+   access:'Freezer dock access; PPE required (bump cap and freezer suit).',
+   contact:'Lena Okafor · Plant Engineer · (312) 555-0119',
+   notes:'P-2 is on standby — recommend a loop swap during the repair.',status:'On track'},
+
+  {id:'V-2093',prio:'med',type:'Planned maintenance',cust:'St. Aloysius Hospital',addr:'700 Mercy Rd, Bldg C',s:745,d:120,tech:'Ben Farrow',
+   equip:'Boiler and burner · 3 MMBtu',
+   prob:'Semi-annual tune-up — combustion, controls, safety shutdown test.',
+   parts:['Gaskets and flame rod · van stock'],certs:['Boiler licensed','Gas fitting'],
+   access:'Boiler room escort required and the facilities contact must be present (Ray Nunez, 07:00–15:30).',
+   contact:'Ray Nunez · Facilities · (312) 555-0181',
+   notes:'Burner control upgrade is pending capital approval — do not modify.',status:'On track'},
+
+  {id:'V-2094',prio:'med',type:'Planned maintenance',cust:'St. Aloysius Hospital',addr:'700 Mercy Rd, Bldg C and B',s:880,d:50,tech:'Ben Farrow',
+   equip:'Steam trap survey · 40 traps',
+   prob:'Steam trap survey — ultrasonic survey and tagging, report for the capital plan.',
+   parts:['Replacement trap elements · depot, as needed'],certs:['Steam systems','Ultrasonic survey'],
+   access:'Escort required in the Bldg B mechanical spaces.',
+   contact:'Ray Nunez · Facilities · (312) 555-0181',
+   notes:'Nursing staff reported two failed traps in Bldg B — start there.',status:'On track'},
+
+  {id:'V-2101',prio:'med',type:'Planned maintenance',cust:'Northgate Data Center',addr:'9400 Northgate Pkwy, Roof',s:380,d:90,tech:'Camille Reyes',
+   equip:'RTU-1 · 30-ton (Liebert)',
+   prob:'Semi-annual PM — filters, belts, economizer and controls verification.',
+   parts:['Filters · van stock'],certs:['EPA 608 Universal','Data center clearance'],
+   access:'Rooftop access window 06:00–08:00 only; badge escort required.',
+   contact:'Sanjay Mehta · Critical Facilities Mgr · (312) 555-0100',
+   notes:'Must clear the roof by 08:00 — data hall noise restrictions.',status:'On track'},
+
+  {id:'V-2102',prio:'high',type:'Repair',cust:'Harborview Plaza',addr:'275 Harbor St, Roof',s:490,d:90,tech:'Camille Reyes',
+   equip:'RTU-5 economizer damper actuator (Belimo)',
+   prob:'Actuator failed — damper stuck open and the space has over-cooled since 01/05.',
+   parts:['Actuator Belimo LF230 · van stock'],certs:['EPA 608 Universal'],
+   access:'Roof access with an engineering escort.',
+   contact:'Erin Vasquez · Chief Engineer · (312) 555-0129',
+   notes:'Also check linkage wear on RTU-6 while on the roof.',status:'On track'},
+
+  {id:'V-2103',prio:'med',type:'Planned maintenance',cust:'Bellweather Hotel',addr:'88 W Kingsley Ave, Floors 3–5',s:595,d:90,tech:'Camille Reyes',
+   equip:'PTAC units · 18 guest rooms',
+   prob:'PTAC PM — filters, coil clean, drain pans, thermostat calibration.',
+   parts:['Filters x18 · van stock'],certs:['EPA 608 Type II'],
+   access:'Guest room entry only 10:00–14:00; onsite contact must be present the whole visit.',
+   contact:'Maria Solis · Front Desk Manager · (312) 555-0155',
+   notes:'Rooms 402 and 511 report noisy units — inspect blower wheels.',status:'On track'},
+
+  {id:'V-2104',prio:'med',type:'Planned maintenance',cust:'Eastbrook Mall',addr:'1200 Eastbrook Rd, Food Court',s:730,d:90,tech:'Camille Reyes',
+   equip:'5x rooftop units · food court wing',
+   prob:'Quarterly PM — filter change, coil rinse, belt check, condensate treatment.',
+   parts:['Filter sets x5 · van stock','Pan treatment tablets'],certs:['EPA 608 Universal'],
+   access:'Roof access via the dock stair; mall hours 10:00–21:00, work above the food court.',
+   contact:'Alma Brooks · Mall Facilities · (312) 555-0114',
+   notes:'Grease-laden coils on RTU-3 — schedule a degrease on the next visit.',status:'On track'},
+
+  {id:'V-2105',prio:'low',type:'Diagnostic',cust:'Westside Fitness',addr:'3100 Westside Rd, Suite 12',s:835,d:35,tech:'Camille Reyes',
+   equip:'RTU-2 · 8.5-ton heat pump',
+   prob:'Quick diagnostic — no heat in the locker rooms, reversing valve suspected.',
+   parts:['Diagnostic only — no parts pulled'],certs:['EPA 608 Universal'],
+   access:'Open to the public; check in at the front desk.',
+   contact:'Owen Marsh · Facility Manager · (312) 555-0171',
+   notes:'Preliminary to a full repair quote — capture pressures and amp draw.',status:'On track'},
+
+  {id:'V-2110',prio:'p1',type:'Emergency',cust:'Riverbend Data Center',addr:'2200 Riverbend Dr, Hall B',s:552,d:180,tech:'UNASSIGNED',
+   equip:'CRAC-3 · 30-ton downflow computer room unit (Liebert DSE)',
+   prob:'CRAC unit down — hall temperature 84&deg;F and climbing. Client SLA breaches at 90&deg;F. Reported 09:12 by the NOC.',
+   parts:['Contactor 40A · on parts truck','EC fan motor · on parts truck'],
+   certs:['EPA 608 Universal','Centrifugal / CRAC experience','Critical-site clearance'],
+   access:'Escort and badge required; hot aisle work needs heat PPE and 20-min rotation.',
+   contact:'NOC · (312) 555-0100 · Sanjay Mehta',
+   notes:'Needs TWO technicians. Suggest Priya Raman (free 09:45) as lead with Dana Whitfield after 15:10, or a 12:00–15:00 window with Tyrell Banks reassigned.',
+   status:'Unassigned',
+   suggest:[{n:'Priya Raman',c:'EPA 608 Universal · Centrifugal certified · cleared for Hall B',note:'Finishes V-2035 at 09:45 and is 6 min from Riverbend. Best lead tech.',fit:'Best match'},
+            {n:'Camille Reyes',c:'EPA 608 Type II · data center clearance',note:'Free at 14:30 and already badged for Northgate/Riverbend sites.',fit:'2nd tech'},
+            {n:'Nina Kowalski',c:'EPA 608 Type I only',note:'Not eligible — the CRAC compressor work needs Universal certification.',fit:'Ineligible'}]},
+
+  {id:'V-2111',prio:'med',type:'On hold',cust:'Mission Point Offices',addr:'55 Mission Point Rd, Roof',s:900,d:150,tech:'ON HOLD',
+   equip:'RTU-6 · 20-ton replacement (full unit)',
+   prob:'Rooftop replacement is quoted and the customer asked for a window, but the proposal sent 01/08 is unsigned.',
+   parts:['Replacement RTU-6 · held at depot','Crane booking · tentative 01/14'],certs:['EPA 608 Universal','Rigging'],
+   access:'Crane staging in the north lot 14:00–16:00 must be confirmed with the property.',
+   contact:'Alicia Grant · Property Owner · (312) 555-0160',
+   notes:'Do not dispatch until the PO arrives. The 15:00–17:30 slot is a soft hold only.',status:'On hold'}
+  ];
+
+  var V = {};
+  VISITS.forEach(function(v){ V[v.id] = v; });
+
+  var TERR = {
+    'Marcus Delgado':'Downtown · North Loop',
+    'Priya Raman':'North Loop · Midtown',
+    'Tyrell Banks':'Westside',
+    'Sofia Marchetti':'Downtown',
+    'Dana Whitfield':'North Loop · Midtown',
+    'Aaron Osei':'Midtown · North Loop',
+    'Nina Kowalski':'Midtown · Downtown',
+    'Ben Farrow':'North Loop · Industrial',
+    'Camille Reyes':'Northgate · Harborview',
+    'Dana Whitfield + Aaron Osei':'North Loop · Midtown (split crew)'
+  };
+
+  var PSTATE = {
+    'V-2032':['Reserved · van 214','info'],
+    'V-2037':['Staged · depot','info'],
+    'V-2043':['Pickup 14:00','warn'],
+    'V-2061':['6 of 12 backordered','crit'],
+    'V-2073':['ETA 13:00','warn'],
+    'V-2092':['Pickup 08:45','warn'],
+    'V-2110':['On parts truck','ok'],
+    'V-2111':['Awaiting PO','muted'],
+    'V-2035':['Staged at depot','info'],
+    'V-2091':['Van stock','ok'],
+    'V-2105':['Diagnostic · none','muted']
+  };
+
+  var PRIOL = {'p1':'Emergency','high':'High','med':'Medium','low':'Low','proj':'Project'};
+  var PRIOC = {'p1':'c-p1','high':'c-high','med':'c-med','low':'c-low','proj':'c-proj'};
+  var PRIOS = {'p1':'crit','high':'high','med':'med','low':'low','proj':'proj'};
+
+  function stKey(s){
+    if(s==='On track'||s==='Contained') return 'st-ok';
+    if(s==='En route'||s==='Completing') return 'st-info';
+    if(s==='Running long'||s==='At risk'||s==='Parts ETA') return 'st-warn';
+    if(s==='Cert gap'||s==='Unassigned') return 'st-crit';
+    return 'st-muted';
+  }
+
+  /* ------------------------------------------------------------------ lanes */
+  var LANES = [
+    {special:true, items:[{k:'v',id:'V-2110'},{k:'v',id:'V-2111'}]},
+    {name:'Marcus Delgado',init:'MD',color:'#2563eb',shift:'07:00–16:00',terr:'Downtown · North Loop',
+     stat:'4 visits · 6h 35m wrench · 1h 55m drive · 94%',
+     items:[{k:'travel',s:420,d:30,to:'Meridian Tower'},{k:'v',id:'V-2031'},{k:'travel',s:540,d:20,to:'Harborview Plaza'},
+            {k:'v',id:'V-2032'},{k:'travel',s:680,d:45,to:'Lakeside Medical Center'},{k:'break',s:725,d:30},
+            {k:'v',id:'V-2033'},{k:'travel',s:875,d:20,to:'Bellweather Hotel'},{k:'v',id:'V-2034'}]},
+    {name:'Priya Raman',init:'PR',color:'#0d9488',shift:'07:00–15:30',terr:'North Loop · Midtown',
+     stat:'4 visits · 7h 10m wrench · 50m drive · 94%',
+     items:[{k:'travel',s:420,d:15,to:'Northgate Data Center'},{k:'v',id:'V-2035'},{k:'travel',s:585,d:20,to:'Summit Offices'},
+            {k:'v',id:'V-2036'},{k:'break',s:695,d:30},{k:'v',id:'V-2037'},{k:'travel',s:845,d:15,to:'Bellweather Hotel'},{k:'v',id:'V-2038'}]},
+    {name:'Tyrell Banks',init:'TB',color:'#b45309',shift:'08:00–17:00',terr:'Westside',
+     stat:'4 visits · 6h 15m wrench · 1h 08m drive · 82%',
+     items:[{k:'travel',s:480,d:20,to:'Grover Foods Westside'},{k:'v',id:'V-2041'},{k:'travel',s:575,d:15,to:'Pinnacle Logistics'},
+            {k:'v',id:'V-2042'},{k:'travel',s:680,d:15,to:'Westside Fitness'},{k:'v',id:'V-2043'},
+            {k:'break',s:815,d:30,warn:true},{k:'v',id:'V-2044'},{k:'wrap',s:960,d:60,label:'Documentation, parts return'}]},
+    {name:'Sofia Marchetti',init:'SM',color:'#6d28d9',shift:'06:30–15:00',terr:'Downtown',
+     stat:'5 visits · 6h 55m wrench · 1h 05m drive · 94%',
+     items:[{k:'travel',s:390,d:20,to:'Grandview Cafe Group'},{k:'v',id:'V-2051'},{k:'travel',s:500,d:15,to:'Harborview Grocery'},
+            {k:'v',id:'V-2052'},{k:'travel',s:605,d:15,to:'Downtown Deli Co-op'},{k:'v',id:'V-2053'},{k:'break',s:740,d:30},
+            {k:'v',id:'V-2054'},{k:'travel',s:860,d:15,to:'Grandview Cafe'},{k:'v',id:'V-2055'}]},
+    {name:'Dana Whitfield',init:'DW',color:'#1a56db',shift:'07:00–15:30',terr:'North Loop · Midtown',
+     stat:'4 visits · 6h 45m wrench · 55m drive · 90%',
+     items:[{k:'travel',s:420,d:20,to:'Riverbend Office Park'},{k:'v',id:'V-2060'},{k:'travel',s:540,d:20,to:'Cascade Cancer Center'},
+            {k:'v',id:'V-2061',shared:true},{k:'break',s:680,d:30},{k:'v',id:'V-2062'},{k:'travel',s:800,d:15,to:'Lakeside Medical Center'},
+            {k:'v',id:'V-2063'},{k:'wrap',s:910,d:20,label:'Admin &amp; handoff'}]},
+    {name:'Aaron Osei',init:'AO',color:'#0e7490',shift:'08:00–16:30',terr:'Midtown · North Loop',
+     stat:'5 visits · 6h 55m wrench · 1h 05m drive · 94%',
+     items:[{k:'travel',s:480,d:20,to:'Cascade Cancer Center'},{k:'v',id:'V-2071'},{k:'v',id:'V-2061',shared:true},{k:'break',s:680,d:30},
+            {k:'travel',s:710,d:15,to:'Midtown Galleria'},{k:'v',id:'V-2072'},{k:'travel',s:815,d:15,to:'Summit Offices'},
+            {k:'v',id:'V-2073'},{k:'travel',s:920,d:15,to:'Eastgate Plaza'},{k:'v',id:'V-2074'}]},
+    {name:'Nina Kowalski',init:'NK',color:'#c2410c',shift:'07:30–16:00',terr:'Midtown · Downtown',
+     stat:'4 visits · 6h 30m wrench · 1h 05m drive · 89% · cert gap',
+     items:[{k:'travel',s:450,d:20,to:'Midtown Galleria'},{k:'v',id:'V-2081'},{k:'travel',s:560,d:15,to:'Meridian Tower'},
+            {k:'v',id:'V-2082'},{k:'break',s:665,d:30},{k:'v',id:'V-2083'},{k:'travel',s:815,d:15,to:'Eastgate Plaza'},
+            {k:'v',id:'V-2084'},{k:'wrap',s:920,d:40,label:'Paperwork'}]},
+    {name:'Ben Farrow',init:'BF',color:'#475569',shift:'07:00–15:30',terr:'North Loop · Industrial',
+     stat:'4 visits · 6h 50m wrench · 1h 10m drive · 94%',
+     items:[{k:'travel',s:420,d:20,to:'Foundry Lofts'},{k:'v',id:'V-2091'},{k:'travel',s:560,d:15,to:'Riverside Cold Storage'},
+            {k:'v',id:'V-2092'},{k:'break',s:695,d:30},{k:'travel',s:725,d:20,to:'St. Aloysius Hospital'},{k:'v',id:'V-2093'},
+            {k:'travel',s:865,d:15,to:'Bldg B boiler room'},{k:'v',id:'V-2094'}]},
+    {name:'Camille Reyes',init:'CR',color:'#0891b2',shift:'06:00–14:30',terr:'Northgate · Harborview',
+     stat:'5 visits · 6h 35m wrench · 1h 25m drive · 94%',
+     items:[{k:'travel',s:360,d:20,to:'Northgate Data Center'},{k:'v',id:'V-2101'},{k:'travel',s:470,d:20,to:'Harborview Plaza'},
+            {k:'v',id:'V-2102'},{k:'travel',s:580,d:15,to:'Bellweather Hotel'},{k:'v',id:'V-2103'},{k:'break',s:685,d:30},
+            {k:'travel',s:715,d:15,to:'Eastbrook Mall'},{k:'v',id:'V-2104'},{k:'travel',s:820,d:15,to:'Westside Fitness'},{k:'v',id:'V-2105'}]}
+  ];
+
+  function itemHTML(it){
+    if(it.k === 'travel'){
+      return '<div class="blk trav" style="left:' + L(it.s) + ';width:' + Wd(it.d) + '" title="Drive ' + it.d + ' min to ' + it.to + '">' +
+             (it.d >= 35 ? it.d + ' min drive' : '') + '</div>';
+    }
+    if(it.k === 'break'){
+      return '<div class="blk brk' + (it.warn ? ' brk-warn' : '') + '" style="left:' + L(it.s) + ';width:' + Wd(it.d) + '" title="' +
+             (it.warn ? 'Lunch deferred by the overrun' : 'Lunch break (30 min)') + '">' +
+             (it.warn ? 'Lunch · deferred' : (it.d >= 30 ? 'Lunch 30m' : '')) + '</div>';
+    }
+    if(it.k === 'wrap'){
+      return '<div class="blk wrap" style="left:' + L(it.s) + ';width:' + Wd(it.d) + '">' + it.label + '</div>';
+    }
+    var v = V[it.id];
+    var cls = ['blk','visit','p-' + v.prio];
+    if(it.shared) cls.push('shared');
+    if(v.over) cls.push('runlong');
+    if(v.status === 'Cert gap') cls.push('certgap');
+    if(v.id === 'V-2110' || v.id === 'V-2111') cls.push('unassigned');
+    var extra = '';
+    if(it.shared) extra = '<span class="tagx">2 techs</span>';
+    else if(v.status === 'Cert gap') extra = '<span class="tagx warn">cert gap</span>';
+    else if(v.over) extra = '<span class="tagx warn">running long</span>';
+    else if(v.status === 'At risk') extra = '<span class="tagx warn">window risk</span>';
+    else if(v.status === 'Parts ETA') extra = '<span class="tagx warn">parts eta</span>';
+    else if(v.id === 'V-2110') extra = '<span class="tagx warn">needs 2 techs</span>';
+    var over = '';
+    if(v.over){
+      over = '<div class="blk over" style="left:' + L(v.s + v.d) + ';width:' + Wd(v.over) + '" title="Projected ' + v.over +
+             ' min over plan">+' + v.over + 'm over</div>';
+    }
+    return '<div class="' + cls.join(' ') + '" data-visit="' + v.id + '" style="left:' + L(v.s) + ';width:' + Wd(v.d) +
+      '" title="' + v.id + ' · ' + v.cust + ' · ' + fmt(v.s) + '–' + fmt(v.s + v.d) + ' · ' + v.status + '">' +
+      '<div class="l1"><span class="bid">' + v.id + '</span><span class="bcust">' + v.cust + '</span></div>' +
+      '<div class="l2">' + fmt(v.s) + '–' + fmt(v.s + v.d) + (v.over ? ' <b>+' + v.over + 'm</b>' : '') +
+      (extra ? ' ' + extra : '') + '</div></div>' + over;
+  }
+
+  function laneHTML(lane){
+    var info;
+    if(lane.special){
+      info = '<div class="lane-info"><span class="av" style="background:#fdeceb;color:#c62828">!</span><div style="min-width:0">' +
+             '<div class="li-name">Unassigned queue</div><div class="li-sub">1 emergency · 1 on hold</div>' +
+             '<div class="li-sub2">Needs technician + window</div></div></div>';
+    } else {
+      info = '<div class="lane-info"><span class="av" style="background:' + lane.color + '1f;color:' + lane.color + '">' + lane.init + '</span>' +
+             '<div style="min-width:0"><div class="li-name">' + lane.name + '</div>' +
+             '<div class="li-sub">' + lane.shift + ' · ' + lane.terr + '</div>' +
+             '<div class="li-sub2">' + lane.stat + '</div></div></div>';
+    }
+    var blocks = lane.items.map(itemHTML).join('');
+    return '<div class="lane' + (lane.special ? ' lane-special' : '') + '">' + info + '<div class="track">' + blocks +
+           '<div class="nowline" style="left:' + L(NOW) + '"></div></div></div>';
+  }
+
+  var axis = document.getElementById('axis');
+  var axHTML = '';
+  for(var h = 6; h <= 18; h++){
+    axHTML += '<span class="axl' + (h === 18 ? ' last' : '') + '" style="left:' + L(h * 60) + '">' + fmt(h * 60) + '</span>';
+  }
+  axHTML += '<span class="nowpill" style="left:' + L(NOW) + '">10:42 now</span>';
+  axis.innerHTML = axHTML;
+
+  document.getElementById('lanes').innerHTML = LANES.map(laneHTML).join('');
+
+  /* ------------------------------------------------------------------ table */
+  var rows = VISITS.slice().sort(function(a,b){ return a.s - b.s || a.id.localeCompare(b.id); });
+
+  document.getElementById('vrows').innerHTML = rows.map(function(v){
+    var ps = PSTATE[v.id] || ['In stock','ok'];
+    return '<tr data-visit="' + v.id + '">' +
+      '<td class="mono">' + v.id + '</td>' +
+      '<td><span class="chip ' + PRIOC[v.prio] + '">' + PRIOL[v.prio] + '</span></td>' +
+      '<td class="mono">' + fmt(v.s) + '–' + fmt(v.s + v.d) + (v.over ? '<br><span class="warn" style="font-weight:700">+' + v.over + 'm proj.</span>' : '') + '</td>' +
+      '<td><b>' + v.cust + '</b><div class="tiny">' + v.type + '</div></td>' +
+      '<td class="ell">' + v.equip + '</td>' +
+      '<td class="ell">' + v.prob + '</td>' +
+      '<td class="mono">' + durTxt(v.d) + '</td>' +
+      '<td><span class="pc ' + ps[1] + '">' + ps[0] + '</span></td>' +
+      '<td>' + v.tech + '</td>' +
+      '<td><span class="st ' + stKey(v.status) + '">' + v.status + '</span></td>' +
+    '</tr>';
+  }).join('');
+
+  /* ----------------------------------------------------------------- detail */
+  function showDetail(id){
+    var v = V[id];
+    if(!v) return;
+    var win = fmt(v.s) + ' – ' + fmt(v.s + v.d);
+    var terr = v.terr || TERR[v.tech] || 'Multiple territories';
+    var h = '';
+    h += '<div class="dhead">' +
+         '<span class="chip ' + PRIOC[v.prio] + '">' + PRIOL[v.prio] + '</span>' +
+         '<span class="mono" style="font-size:12px;font-weight:700">' + v.id + '</span>' +
+         '<span class="tiny">' + v.type + '</span>' +
+         '<span class="st ' + stKey(v.status) + '" style="margin-left:auto">' + v.status + '</span></div>';
+    h += '<div class="dtitle">' + v.cust + '</div><div class="daddr">' + v.addr + '</div>';
+    h += '<div class="dstats">' +
+         '<div><span class="l">Service window</span><b>' + win + '</b></div>' +
+         '<div><span class="l">Expected duration</span><b>' + durTxt(v.d) + (v.over ? ' <em>+' + v.over + 'm projected</em>' : '') + '</b></div>' +
+         '<div><span class="l">Technician</span><b>' + v.tech + '</b></div>' +
+         '<div><span class="l">Territory</span><b>' + terr + '</b></div>' +
+         '</div>';
+    h += '<div class="dsec"><h4>Reported problem</h4><p>' + v.prob + '</p></div>';
+    h += '<div class="dsec"><h4>Equipment / system</h4><p>' + v.equip + '</p></div>';
+    h += '<div class="dsec"><h4>Parts required</h4><ul class="mini">' +
+         v.parts.map(function(p){ return '<li>' + p + '</li>'; }).join('') + '</ul></div>';
+    h += '<div class="dsec"><h4>Certifications required</h4><div class="chips">' +
+         v.certs.map(function(c){ return '<span class="chip c-lite' + (/REQUIRED/.test(c) ? ' crit-lite' : '') + '">' + c + '</span>'; }).join('') +
+         '</div></div>';
+    h += '<div class="dsec"><h4>Access &amp; site notes</h4><p>' + v.access + '</p></div>';
+    h += '<div class="dsec"><h4>Onsite contact</h4><p>' + v.contact + '</p></div>';
+    h += '<div class="dsec"><h4>Dispatcher note</h4><p>' + v.notes + '</p></div>';
+    if(v.suggest){
+      h += '<div class="dsec"><h4>Suggested technicians</h4>' + v.suggest.map(function(s){
+        var cls = (s.fit === 'Best match' || s.fit === 'Assigned') ? 'c-med' : (s.fit === 'Ineligible' ? 'c-p1' : 'c-low');
+        return '<div class="sugg"><div><div class="sn">' + s.n + '</div><div class="sc">' + s.c + '</div>' +
+               '<div class="sc" style="color:#41526a">' + s.note + '</div></div>' +
+               '<span class="fit chip ' + cls + '">' + s.fit + '</span></div>';
+      }).join('') + '</div>';
+    }
+    h += '<div class="dactions"><button class="btn sm primary">Reassign technician</button>' +
+         '<button class="btn sm">Adjust window</button><button class="btn sm">Notify customer</button>' +
+         '<button class="btn sm">Add note</button></div>';
+    document.getElementById('detailBody').innerHTML = h;
+  }
+
+  var cur = null;
+  function select(id){
+    cur = id;
+    var els = document.querySelectorAll('[data-visit]');
+    for(var i = 0; i < els.length; i++){
+      els[i].classList.toggle('sel', els[i].getAttribute('data-visit') === id);
+    }
+    showDetail(id);
+  }
+
+  document.addEventListener('click', function(e){
+    var t = e.target.closest ? e.target.closest('[data-visit]') : null;
+    if(t){ e.preventDefault(); select(t.getAttribute('data-visit')); }
+  });
+
+  showDetail('V-2110');
+
+  /* ------------------------------------------------------------------ chart */
+  var CH = [[6,100,1],[7,100,6],[8,100,8],[9,103,9],[10,106,9],[11,109,9],[12,101,9],[13,107,9],[14,105,8],[15,103,6],[16,83,3],[17,45,1]];
+  var bars = document.getElementById('bars');
+  var bh = '';
+  /* 100% reference line */
+  var y100 = (100 - 30) / 85 * 100;
+  bh += '<div class="cap100" style="bottom:' + (y100 / 100 * 100) + '%"><span>100% crew threshold</span></div>';
+  CH.forEach(function(r){
+    var pct = r[1], crew = r[2];
+    var height = (pct - 30) / 85 * 100;
+    var cls = pct > 105 ? ' red' : (pct > 100 ? ' amber' : '');
+    bh += '<div class="barc' + cls + '">' +
+          '<span class="bv">' + pct + '%</span>' +
+          '<i style="height:' + height.toFixed(1) + '%"></i>' +
+          '<span class="bl">' + (r[0] > 12 ? (r[0] - 12) + 'p' : r[0] + 'a') + '</span>' +
+          '<span class="crewlab">' + crew + ' crew</span></div>';
+  });
+  bars.style.position = 'relative';
+  bars.innerHTML = bh;
+
+  /* ------------------------------------------------------------------ filters */
+  var segBtns = document.querySelectorAll('.seg button');
+  for(var k = 0; k < segBtns.length; k++){
+    segBtns[k].addEventListener('click', function(){
+      for(var j = 0; j < segBtns.length; j++){ segBtns[j].classList.remove('on'); }
+      this.classList.add('on');
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldline Repair · Dispatch Console</title>
+<style>
+:root{
+  --bg:#e9edf3; --panel:#ffffff; --ink:#101828; --muted:#5c6675; --faint:#8a94a6;
+  --line:#e4e8ee; --line2:#eef1f5;
+  --navy:#0d1826; --brand:#34d399; --brand-dk:#10b981;
+  --blue:#2563eb; --blue-d:#1d4ed8; --blue-bg:#eff4ff;
+  --red:#dc2626; --red-bg:#fef1f1;
+  --amber:#d97706; --amber-bg:#fdf3e3;
+  --green:#16a34a; --green-bg:#e9f7ef;
+  --low:#64748b;
+  --sans:"Avenir Next","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code","Segoe UI Mono",Menlo,Consolas,monospace;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.07);
+  --shadow-lg:0 12px 32px -12px rgba(16,24,40,.28);
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+html,body{height:100%}
+body{
+  margin:0;font-family:var(--sans);color:var(--ink);min-width:1280px;
+  background:var(--bg) radial-gradient(rgba(148,163,184,.18) 1px,transparent 1px);
+  background-size:24px 24px;
+  display:flex;flex-direction:column;
+}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--mono)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}}
+@keyframes tin{from{opacity:0;transform:translateX(16px)}}
+@keyframes urg{0%,100%{box-shadow:0 0 0 3px rgba(220,38,38,.06)}50%{box-shadow:0 0 0 6px rgba(220,38,38,.14)}}
+@keyframes act{50%{box-shadow:0 0 0 5px rgba(37,99,235,.12)}}
+@keyframes pulse{50%{opacity:.35}}
+
+/* ---------- TOP BAR ---------- */
+.topbar{
+  height:60px;flex:none;display:flex;align-items:center;gap:20px;padding:0 18px;
+  background:linear-gradient(90deg,#0c1624,#13253d 55%,#0c1624);
+  border-bottom:1px solid #091120;color:#e8eef7;position:relative;z-index:30;
+}
+.topbar::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(115deg,transparent 0 16px,rgba(255,255,255,.025) 16px 17px);}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-name{font-size:17px;font-weight:800;letter-spacing:.02em;color:#fff;line-height:1.1}
+.brand-sub{font-size:9px;font-weight:700;letter-spacing:.26em;color:#6ee7b7;margin-top:1px}
+.date-nav{display:flex;align-items:center;gap:8px}
+.icon-btn{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.06);color:#cfdcec;cursor:pointer;display:grid;place-items:center;transition:.15s}
+.icon-btn:hover{background:rgba(255,255,255,.14)}
+.date-main{text-align:center;min-width:150px}
+.date-main strong{display:block;font-size:13.5px;color:#fff}
+.date-main span{font-size:10px;font-family:var(--mono);color:#8fb0d4}
+.top-search{margin-left:auto;display:flex;align-items:center;gap:8px;width:380px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:7px 11px;color:#9db2cc}
+.top-search input{flex:1;background:none;border:0;outline:0;color:#fff;font-size:12.5px;font-family:var(--sans)}
+.top-search input::placeholder{color:#7f95b1}
+.top-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(52,211,153,.15)}
+.bell-wrap{position:relative}
+.badge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:8px;
+  background:var(--red);color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center;padding:0 4px}
+.badge.zero{display:none}
+.dispatcher{display:flex;align-items:center;gap:9px;padding-left:16px;border-left:1px solid rgba(255,255,255,.12)}
+.d-av{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#34d399,#2563eb);
+  color:#fff;font-size:11.5px;font-weight:800;display:grid;place-items:center}
+.dispatcher b{display:block;font-size:12px;color:#fff}
+.dispatcher span{font-size:10px;color:#8fb0d4}
+
+/* ---------- KPI STRIP ---------- */
+.kpis{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:14px 18px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  display:flex;gap:12px;align-items:center;box-shadow:var(--shadow);animation:rise .45s ease both}
+.kpis .kpi:nth-child(2){animation-delay:.05s}.kpis .kpi:nth-child(3){animation-delay:.1s}
+.kpis .kpi:nth-child(4){animation-delay:.15s}.kpis .kpi:nth-child(5){animation-delay:.2s}
+.kpi .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:none}
+.kpi .ic.blue{background:var(--blue-bg);color:var(--blue)}
+.kpi .ic.teal{background:var(--green-bg);color:var(--green)}
+.kpi .ic.amber{background:var(--amber-bg);color:var(--amber)}
+.kpi .ic.green{background:var(--green-bg);color:var(--green)}
+.kpi .ic.red{background:var(--red-bg);color:var(--red)}
+.kpi .ic.gray{background:#eef1f6;color:#64748b}
+.kpi-txt{flex:1;min-width:0}
+.kpi-label{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.kpi-val{font-size:21px;font-weight:700;font-family:var(--mono);line-height:1.25}
+.kpi-sub{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kbar{height:4px;background:#edf0f4;border-radius:2px;margin-top:5px;overflow:hidden}
+.kbar i{display:block;height:100%;background:var(--blue);border-radius:2px}
+
+/* ---------- LAYOUT ---------- */
+.layout{flex:1;min-height:600px;display:grid;grid-template-columns:294px minmax(640px,1fr) 352px;
+  gap:14px;padding:14px 18px 18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden;animation:rise .5s ease both}
+.layout .panel:nth-child(2){animation-delay:.08s}
+.layout .panel:nth-child(3){animation-delay:.16s}
+.panel-h{flex:none;padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.panel-h h2{margin:0;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.panel-h p{margin:2px 0 0;font-size:10.5px;color:var(--faint)}
+.count-chip{font-size:10px;font-weight:800;font-family:var(--mono);background:var(--red-bg);color:var(--red);
+  border:1px solid #f3caca;padding:3px 8px;border-radius:999px}
+.count-chip.ok{background:var(--green-bg);color:var(--green);border-color:#c4e5d0}
+
+/* ---------- QUEUE ---------- */
+.queue-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+.qcard{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}
+.qcard.urgent{border-color:#f0b9b9;background:linear-gradient(180deg,#fff8f8,#fff);animation:urg 2.4s ease-in-out infinite}
+.qcard.done{border-color:#c4e5d0;background:linear-gradient(180deg,#f6fcf9,#fff)}
+.q-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.qpri{font-size:9px;font-weight:800;letter-spacing:.14em;color:#fff;background:var(--red);padding:3px 7px;border-radius:5px}
+.qpri.flex{background:#8a94a6}
+.qpri.ok{background:var(--green)}
+.q-id{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--muted)}
+.q-wait{margin-left:auto;font-size:9.5px;font-weight:800;color:var(--red);font-family:var(--mono)}
+.q-title{font-size:13px;font-weight:800;margin-bottom:6px}
+.qrow{font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;margin-top:4px;line-height:1.4}
+.qrow svg{flex:none;color:var(--faint)}
+.q-needs{margin-top:9px;display:flex;flex-wrap:wrap;gap:5px}
+.q-hint{margin-top:9px;font-size:10.5px;color:#0f766e;background:#f0fdf9;border:1px dashed #99e0cd;padding:6px 8px;border-radius:8px}
+.q-foot{flex:none;border-top:1px solid var(--line);padding:10px 14px;font-size:10px;color:var(--faint);line-height:1.55;background:#fafbfd}
+
+/* ---------- CHIPS ---------- */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:#eef1f6;color:#475467;line-height:1.4}
+.chip.ok{background:var(--green-bg);color:#15803d}
+.chip.bad{background:var(--red-bg);color:#b91c1c}
+.chip.warn{background:var(--amber-bg);color:#b45309}
+.chip.pri{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800}
+.chip.pri.p-urgent{background:var(--red-bg);color:#b91c1c}
+.chip.pri.p-high{background:var(--amber-bg);color:#b45309}
+.chip.pri.p-standard{background:var(--blue-bg);color:var(--blue-d)}
+.chip.pri.p-low{background:#eef1f6;color:#64748b}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ---------- BOARD ---------- */
+.board-scroll{flex:1;overflow:auto;position:relative}
+.board-inner{position:relative}
+.ruler{display:flex;position:sticky;top:0;z-index:8;background:#fff;border-bottom:1px solid var(--line)}
+.corner{flex:none;width:238px;position:sticky;left:0;z-index:9;background:#fff;border-right:1px solid var(--line);
+  display:flex;align-items:flex-end;padding:0 14px 7px;font-size:8.5px;font-weight:800;letter-spacing:.14em;color:var(--faint)}
+.ruler-track{position:relative;height:32px;flex:none}
+.hour-lab{position:absolute;top:9px;font-family:var(--mono);font-size:9.5px;font-weight:700;color:#7a8494;transform:translateX(5px)}
+.trow{display:flex;border-bottom:1px solid var(--line2)}
+.trow:last-child{border-bottom:0}
+.tlabel{flex:none;width:238px;position:sticky;left:0;z-index:5;background:#fff;border-right:1px solid var(--line);
+  padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+.tavatar{width:34px;height:34px;border-radius:10px;color:#fff;font-weight:800;font-size:11.5px;
+  display:grid;place-items:center;flex:none;background:hsl(var(--h),52%,44%)}
+.tinfo{min-width:0}
+.tname{font-size:12.5px;font-weight:800;line-height:1.2}
+.tmeta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+.tskills{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.skill{font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:5px;background:#f1f4f8;color:#475467;letter-spacing:.02em}
+.skill.cert{background:#f3ecfd;color:#7c3aed}
+.track{flex:none;position:relative;height:104px;
+  background-image:linear-gradient(90deg,var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);
+  background-size:84px 100%,42px 100%}
+.trow:hover .track{background-color:#fafcff}
+.shift-band{position:absolute;top:8px;height:88px;border-radius:10px;background:#f5f7fa;border:1px solid #e7ebf1}
+.gapline{position:absolute;top:50%;border-top:1.5px dashed #c3cad6;z-index:1}
+.travel{position:absolute;top:50%;transform:translate(-50%,-50%);display:inline-flex;gap:4px;align-items:center;
+  background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 7px;
+  font-family:var(--mono);font-size:9px;font-weight:700;color:#667085;z-index:3;white-space:nowrap}
+.travel svg{color:#98a2b3}
+.travel.bad{background:var(--red-bg);border-color:#f0b9b9;color:#b91c1c}
+.travel.bad svg{color:#dc2626}
+.appt{position:absolute;top:17px;height:70px;border-radius:9px;border:1px solid;background:#fff;
+  padding:7px 8px 6px 12px;cursor:pointer;z-index:2;overflow:visible;
+  transition:transform .13s ease,box-shadow .13s ease}
+.appt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:9px 0 0 9px;background:var(--pc)}
+.appt:hover{transform:translateY(-2px);box-shadow:0 10px 20px -8px rgba(16,24,40,.35);z-index:6}
+.appt.sel{outline:2px solid var(--blue);outline-offset:1px;z-index:6}
+.appt.dim{opacity:.16}
+.p-urgent{--pc:#dc2626;background:#fef1f1;border-color:#f4c7c7}
+.p-high{--pc:#d97706;background:#fdf4e5;border-color:#f0dcb2}
+.p-standard{--pc:#2563eb;background:#f2f6ff;border-color:#cfdff8}
+.p-low{--pc:#64748b;background:#f6f8fa;border-color:#dde3ea}
+.st-done{opacity:.5;filter:saturate(.6)}
+.st-active{box-shadow:0 0 0 2px rgba(37,99,235,.35);animation:act 2s ease-in-out infinite}
+.a-top{display:flex;gap:7px;align-items:baseline;font-family:var(--mono);font-size:9px;font-weight:700;color:#667085}
+.a-top .a-id{color:var(--pc);font-size:9.5px}
+.mini-bell{margin-left:auto;color:var(--blue);display:inline-flex}
+.a-title{font-size:11.5px;font-weight:800;margin-top:3px;display:flex;gap:5px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.a-title svg{flex:none;color:var(--pc)}
+.a-addr{font-size:9.5px;color:#667085;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.overrun-tail{position:absolute;left:calc(100% + 1px);top:9px;height:52px;border:1.5px dashed var(--amber);border-left:none;
+  border-radius:0 8px 8px 0;display:flex;align-items:center;justify-content:center;
+  background:repeating-linear-gradient(45deg,rgba(217,119,6,.13) 0 6px,rgba(217,119,6,.03) 6px 12px);
+  font-family:var(--mono);font-size:8.5px;font-weight:800;color:#b45309;white-space:nowrap;padding:0 5px}
+.nowline{position:absolute;top:32px;bottom:0;width:2px;background:#ef4444;z-index:7;pointer-events:none}
+.now-tag{position:absolute;top:6px;left:5px;background:#ef4444;color:#fff;font-family:var(--mono);
+  font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:.05em}
+.legend{flex:none;display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--line);
+  font-size:10px;color:var(--muted);background:#fafbfd}
+.legend .sw{display:inline-flex;align-items:center;gap:6px}
+.swb{width:14px;height:14px;border-radius:4px;border:1px solid;display:inline-block}
+.swb.s-urgent{background:#fef1f1;border-color:#dc2626}
+.swb.s-high{background:#fdf4e5;border-color:#d97706}
+.swb.s-std{background:#f2f6ff;border-color:#2563eb}
+.swb.s-low{background:#f6f8fa;border-color:#98a2b3}
+.swb.s-done{background:#e9edf3;border-color:#c3cad6;opacity:.7}
+.swb.s-act{background:#f2f6ff;border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.25)}
+.swb.s-hatch{background:repeating-linear-gradient(45deg,rgba(217,119,6,.25) 0 4px,transparent 4px 8px);border-color:#d97706}
+.nub{width:3px;height:14px;background:#ef4444;border-radius:2px;display:inline-block}
+.live-chip{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;color:#15803d;
+  background:var(--green-bg);border:1px solid #c4e5d0;padding:4px 10px;border-radius:999px}
+.live-chip .pdot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.6s ease-in-out infinite}
+
+/* ---------- INSPECTOR ---------- */
+.insp-scroll{flex:1;overflow-y:auto;padding:14px 16px 18px}
+.sec{font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin:16px 0 9px;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--line)}
+.issue{border:1px solid var(--line);border-left:4px solid;border-radius:10px;padding:10px 12px;margin-bottom:9px;
+  cursor:pointer;background:#fff;transition:transform .15s ease,box-shadow .15s ease}
+.issue:hover{transform:translateX(3px);box-shadow:var(--shadow)}
+.issue.red{border-color:#f4c7c7;border-left-color:var(--red);background:#fffafa}
+.issue.amber{border-color:#f0dcb2;border-left-color:var(--amber);background:#fffdf7}
+.issue.info{border-color:#cfdff8;border-left-color:var(--blue);background:#fbfdff}
+.issue h4{margin:0 0 4px;font-size:12.5px}
+.issue p{margin:0;font-size:11px;color:var(--muted);line-height:1.5}
+.issue .go{font-size:10.5px;color:var(--blue);font-weight:800;margin-top:7px;display:inline-block}
+.note{display:flex;gap:10px;align-items:flex-start;border:1px dashed #d5dce6;border-radius:10px;
+  padding:9px 10px;background:#fbfcfe;font-size:11px;margin-bottom:8px;line-height:1.5}
+.note-body{flex:1;color:var(--muted)}
+.note-body b{color:var(--ink)}
+.empty{font-size:11px;color:var(--faint);background:#f8fafc;border:1px dashed var(--line);border-radius:10px;
+  padding:12px;line-height:1.55;margin-bottom:8px}
+.next-row{display:flex;gap:10px;align-items:center;font-size:11.5px;padding:7px 0;border-bottom:1px dashed var(--line2)}
+.next-row:last-child{border-bottom:0}
+.next-row .nt{font-family:var(--mono);font-weight:800;width:58px;flex:none;color:var(--blue-d)}
+.d-head{display:flex;align-items:center;gap:8px}
+.dim2{color:#98a2b3}
+.d-title{margin:8px 0 2px;font-size:16.5px}
+.d-prob{margin:0 0 6px;font-size:12px;color:var(--muted);font-style:italic;line-height:1.5}
+.facts{display:grid;gap:8px;margin:12px 0 0}
+.facts>div{display:flex;gap:10px}
+.facts dt{width:78px;flex:none;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding-top:3px}
+.facts dd{margin:0;font-size:12.5px;line-height:1.45}
+.tech-card{display:flex;gap:11px;padding:11px;border:1px solid var(--line);border-radius:11px;background:#fafbfd}
+.fit{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.travel-info{font-size:11.5px;color:var(--muted);line-height:1.8}
+.travel-info b{color:var(--ink)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.hint{font-size:10px;color:#98a2b3;margin:8px 0 0;line-height:1.55}
+
+/* ---------- BUTTONS ---------- */
+.btn{font-size:12px;font-weight:700;border-radius:8px;border:1px solid transparent;padding:8px 13px;cursor:pointer;
+  transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1.3}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:7px}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-d);box-shadow:0 6px 14px -6px rgba(37,99,235,.6)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#b91c1c;box-shadow:0 6px 14px -6px rgba(220,38,38,.55)}
+.btn-ghost{background:#fff;border-color:#d5dbe4;color:var(--ink)}
+.btn-ghost:hover{background:#f4f6f9}
+.btn-block{width:100%;margin-bottom:8px}
+.btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+
+/* ---------- MODAL ---------- */
+.overlay{position:fixed;inset:0;background:rgba(13,21,35,.55);display:grid;place-items:center;z-index:80;
+  animation:fade .18s ease;padding:20px}
+.modal{width:680px;max-width:94vw;max-height:88vh;overflow-y:auto;background:#fff;border-radius:16px;
+  box-shadow:var(--shadow-lg);animation:pop .24s cubic-bezier(.2,.9,.3,1.15)}
+.modal-h{padding:16px 20px 14px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.modal-h h3{margin:0;font-size:15.5px}
+.modal-h p{margin:4px 0 0;font-size:11.5px;color:var(--muted)}
+.modal-x{border:0;background:#f1f4f8;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;color:#475467;flex:none}
+.modal-x:hover{background:#e4e8ee}
+.req-strip{margin:14px 20px 4px;background:#fff8f8;border:1px solid #f4c7c7;border-radius:10px;padding:10px 12px;
+  font-size:11.5px;color:#7f1d1d;line-height:1.6}
+.req-strip b{font-size:12px}
+.cand{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;
+  margin:10px 20px;background:#fff;transition:.15s}
+.cand.best{border-color:#86d9bd;background:#f6fcf9;box-shadow:0 0 0 3px rgba(16,185,129,.08)}
+.cand.off{opacity:.62;background:#f8f9fb}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:13px;font-weight:800;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.cslot{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue-d);margin-top:4px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.ctags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.creason{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+.modal-foot{padding:12px 20px 16px;font-size:10.5px;color:var(--faint);border-top:1px solid var(--line);line-height:1.55}
+
+/* ---------- TOASTS ---------- */
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:10px;z-index:100}
+.toast{background:#0f1b2d;color:#e8eef7;padding:11px 15px;border-radius:10px;font-size:12px;max-width:360px;
+  box-shadow:var(--shadow-lg);animation:tin .25s ease;border-left:4px solid var(--brand);line-height:1.5}
+.toast.warn{border-left-color:#f59e0b}
+.toast.info{border-left-color:#60a5fa}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="27" height="27" viewBox="0 0 26 26" aria-hidden="true"><path d="M2.5 7.5h21M2.5 13h14.5M2.5 18.5h8.5" stroke="#34d399" stroke-width="3" stroke-linecap="round"/><circle cx="20" cy="18.5" r="3.1" fill="#fbbf24"/></svg>
+    <div>
+      <div class="brand-name">Fieldline</div>
+      <div class="brand-sub">REPAIR · DISPATCH</div>
+    </div>
+  </div>
+  <div class="date-nav">
+    <button class="icon-btn" data-act="demo" data-msg="Only Tuesday Jun 10 route data is loaded in this preview." aria-label="Previous day">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="date-main"><strong>Tuesday, June 10</strong><span>9:42 AM · live feed</span></div>
+    <button class="icon-btn" data-act="demo" data-msg="Only Tuesday Jun 10 route data is loaded in this preview." aria-label="Next day">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div class="top-search">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.7"/><path d="m10.6 10.6 3.4 3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    <input id="search" type="text" placeholder="Filter board — id, customer, address, appliance…  ( / )" autocomplete="off">
+  </div>
+  <div class="bell-wrap">
+    <button class="icon-btn" data-act="bell" aria-label="Notifications">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1.8A4.2 4.2 0 0 0 3.8 6v2.8L2.3 11h11.4L12.2 8.8V6A4.2 4.2 0 0 0 8 1.8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.5 13.4a1.6 1.6 0 0 0 3 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <span class="badge zero" id="bellBadge">0</span>
+  </div>
+  <div class="dispatcher">
+    <div class="d-av">RT</div>
+    <div><b>R. Torres</b><span>Dispatcher · Shift A</span></div>
+  </div>
+</header>
+
+<section class="kpis" id="kpiRow" aria-label="Key metrics"></section>
+
+<main class="layout">
+  <aside class="panel">
+    <header class="panel-h">
+      <div><h2>Unassigned queue</h2><p>Requests waiting for a technician</p></div>
+      <span class="count-chip" id="queueCount">1 urgent</span>
+    </header>
+    <div class="queue-body" id="queueBody"></div>
+    <div class="q-foot">Auto-assignment checks skills, brand coverage, certifications, service zone and real drive time before suggesting a technician.</div>
+  </aside>
+
+  <section class="panel">
+    <header class="panel-h">
+      <div><h2>Dispatch board — Tue Jun 10</h2><p>Technician timelines · travel gaps checked automatically</p></div>
+      <span class="live-chip"><span class="pdot"></span>Live · 6 techs</span>
+    </header>
+    <div class="board-scroll"><div class="board-inner" id="board"></div></div>
+    <footer class="legend">
+      <span class="sw"><i class="swb s-urgent"></i>Urgent</span>
+      <span class="sw"><i class="swb s-high"></i>High</span>
+      <span class="sw"><i class="swb s-std"></i>Standard</span>
+      <span class="sw"><i class="swb s-low"></i>Low</span>
+      <span class="sw"><i class="swb s-act"></i>In progress</span>
+      <span class="sw"><i class="swb s-done"></i>Completed</span>
+      <span class="sw"><i class="swb s-hatch"></i>Overrun risk</span>
+      <span class="sw"><i class="nub"></i>Now</span>
+    </footer>
+  </section>
+
+  <aside class="panel" id="inspector"></aside>
+</main>
+
+<div id="modalRoot"></div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+'use strict';
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const DAY_START=7,DAY_END=19,HOUR_W=84,LABEL_W=238,SPAN_W=(DAY_END-DAY_START)*HOUR_W;
+const NOW=9+42/60;
+const x=t=>Math.round((t-DAY_START)*HOUR_W);
+const round5=t=>Math.ceil(t*12-1e-9)/12;
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function fmtT(t){let h=Math.floor(t+1e-9),m=Math.round((t-h)*60);if(m===60){h++;m=0;}const ap=h>=12?'p':'a';let hh=h%12;if(hh===0)hh=12;return hh+(m?':'+String(m).padStart(2,'0'):'')+ap;}
+function fmtTL(t){let h=Math.floor(t+1e-9),m=Math.round((t-h)*60);if(m===60){h++;m=0;}const ap=h>=12?'PM':'AM';let hh=h%12;if(hh===0)hh=12;return hh+':'+String(m).padStart(2,'0')+' '+ap;}
+function fmtDur(d){const h=Math.floor(d+1e-9),m=Math.round((d-h)*60);return h?(m?h+'h '+m+'m':h+'h'):m+'m';}
+
+/* ================= icons ================= */
+const I={
+  fridge:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="4.2" y="1.6" width="7.6" height="12.8" rx="1.6"/><path d="M4.2 6.4h7.6M10 3.4v1.3M10 8.4v2.4"/></svg>',
+  washer:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2.6" y="1.6" width="10.8" height="12.8" rx="1.8"/><circle cx="8" cy="9.2" r="3.1"/><path d="M4.6 3.9h.01M6.6 3.9h.01"/></svg>',
+  dryer:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2.6" y="1.6" width="10.8" height="12.8" rx="1.8"/><circle cx="8" cy="9.2" r="3.1"/><path d="M6.2 8.6c.9.9 2.7.9 3.6 0"/></svg>',
+  range:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2.4" y="6.6" width="11.2" height="7.8" rx="1.4"/><circle cx="5.6" cy="3.4" r="1.5"/><circle cx="10.4" cy="3.4" r="1.5"/><path d="M5 9.4h6"/></svg>',
+  dish:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2.8" y="1.6" width="10.4" height="12.8" rx="1.6"/><path d="M2.8 5h10.4"/><circle cx="8" cy="9.9" r="2.6"/></svg>',
+  disp:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5.2 1.8h5.6v2.8L9.4 6.8v6.6H6.6V6.8L5.2 4.6z"/><path d="M6.6 13.4v1M9.4 13.4v1"/></svg>',
+  car:'<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9.6 1.4-3.7A1.6 1.6 0 0 1 5.9 4.8h4.2a1.6 1.6 0 0 1 1.5 1.1L13 9.6"/><rect x="2.4" y="9.4" width="11.2" height="3.2" rx="1.1"/><path d="M5 12.6v1.2M11 12.6v1.2"/></svg>',
+  warn:'<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.2 14.7 13.6H1.3L8 2.2Z"/><path d="M8 6.4v3M8 11.6v.01"/></svg>',
+  cal:'<svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.6h12M5.4 1.6v2.8M10.6 1.6v2.8"/></svg>',
+  user:'<svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="5.4" r="2.9"/><path d="M2.6 14.2a5.4 5.4 0 0 1 10.8 0"/></svg>',
+  gauge:'<svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.2 12.6a6.4 6.4 0 1 1 11.6 0"/><path d="m8 10 2.8-3.6"/><circle cx="8" cy="10.4" r="1.1"/></svg>',
+  bell:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 1.8A4.2 4.2 0 0 0 3.8 6v2.8L2.3 11h11.4L12.2 8.8V6A4.2 4.2 0 0 0 8 1.8Z"/><path d="M6.5 13.4a1.6 1.6 0 0 0 3 0" stroke-linecap="round"/></svg>',
+  pin:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14.4S3.2 9.9 3.2 6.6a4.8 4.8 0 0 1 9.6 0c0 3.3-4.8 7.8-4.8 7.8Z"/><circle cx="8" cy="6.6" r="1.7"/></svg>',
+  phone:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.4h2.6l1.2 3-1.7 1.3a9 9 0 0 0 4.2 4.2l1.3-1.7 3 1.2V13a1 1 0 0 1-1.1 1A11.8 11.8 0 0 1 2 3.5 1 1 0 0 1 3 2.4Z"/></svg>',
+  clock:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="5.8"/><path d="M8 4.8V8l2.2 1.6"/></svg>',
+  box:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="m8 1.8 6 2.6v7.2L8 14.2l-6-2.6V4.4l6-2.6Z"/><path d="M2 4.4 8 7l6-2.6M8 7v7.2"/></svg>'
+};
+function iconFor(ap){const m={'Refrigerator':I.fridge,'Washer':I.washer,'Dryer':I.dryer,'Range/Oven':I.range,'Dishwasher':I.dish,'Disposal':I.disp};return m[ap]||I.box;}
+
+/* ================= data ================= */
+const techs=[
+  {id:'t1',name:'Marcus Webb',ini:'MW',hue:212,shift:[7,15],zone:'North',skills:['Refrigerator','Washer','Dryer'],brands:['Whirlpool','Samsung','LG'],certs:['EPA 608']},
+  {id:'t2',name:'Priya Raman',ini:'PR',hue:262,shift:[8,16],zone:'Central',skills:['Range/Oven','Dishwasher','Disposal'],brands:['GE','Bosch','KitchenAid','InSinkErator'],certs:['Gas line cert']},
+  {id:'t3',name:'Diego Fuentes',ini:'DF',hue:152,shift:[9,17],zone:'South',skills:['Washer','Dryer','Refrigerator'],brands:['Maytag','Frigidaire','Samsung'],certs:[]},
+  {id:'t4',name:'Aisha Coleman',ini:'AC',hue:16,shift:[10,18],zone:'North/Central',skills:['Refrigerator','Dishwasher'],brands:['Samsung','LG','GE'],certs:['EPA 608','Master tech']},
+  {id:'t5',name:'Tom Okafor',ini:'TO',hue:196,shift:[7,15],zone:'East',skills:['Dishwasher','Disposal','Range/Oven'],brands:['Bosch','Whirlpool','InSinkErator'],certs:[]},
+  {id:'t6',name:'Lena Petrov',ini:'LP',hue:322,shift:[12,19],zone:'West',skills:['Washer','Dryer','Range/Oven'],brands:['LG','Samsung','Miele'],certs:[]}
+];
+const appts=[
+  {id:'1031',tech:'t1',start:7.5,dur:1.5,priority:'high',appliance:'Refrigerator',brand:'Whirlpool',problem:'Not cooling — fresh food at 55°F',customer:'Bea Okonkwo',phone:'(555) 014-2231',address:'412 Birchwood Ln',zone:'North',needs:['Start relay — on van'],drive:0},
+  {id:'1032',tech:'t1',start:9.5,dur:1.5,priority:'standard',appliance:'Washer',brand:'Samsung',problem:'Front-load leaking on spin cycle',customer:'Sam Torres',phone:'(555) 016-8802',address:'88 Alder Ct',zone:'North',needs:['Drain hose kit — on van'],drive:18},
+  {id:'1033',tech:'t1',start:11.5,dur:1,priority:'standard',appliance:'Dryer',brand:'LG',problem:'No heat — vent clear, suspect element',customer:'R. Whitcomb',phone:'(555) 012-4415',address:'1509 Northgate Blvd',zone:'North',needs:['Thermal fuse — on van'],drive:20},
+  {id:'1034',tech:'t1',start:13,dur:1.5,priority:'standard',appliance:'Refrigerator',brand:'Whirlpool',problem:'Freezer icing over, fan loud',customer:'Mina Park',phone:'(555) 018-3364',address:'77 Crescent Ridge Rd',zone:'North',needs:['Defrost thermostat — depot pick-up'],drive:15},
+  {id:'1035',tech:'t2',start:8.25,dur:1.5,priority:'high',appliance:'Range/Oven',brand:'GE',problem:'Gas oven will not ignite — dinner event 6 PM',customer:'Carol Diaz',phone:'(555) 019-2210',address:'2210 Juniper St',zone:'Central',needs:['Igniter WB2X100 — on van'],cert:'Gas line cert',drive:0},
+  {id:'1036',tech:'t2',start:10.25,dur:1,priority:'standard',appliance:'Dishwasher',brand:'Bosch',problem:'Not draining — E15 error',customer:'Devon Ellis',phone:'(555) 013-7781',address:'340 Maple Row',zone:'Central',needs:[],drive:12},
+  {id:'1042',tech:'t2',start:11.5,dur:1.5,priority:'high',appliance:'Range/Oven',brand:'KitchenAid',problem:'Double wall oven F7 — door locked after self-clean',customer:'Joan Mercer',phone:'(555) 019-7736',address:'518 Harborview Dr',zone:'Central',needs:['Control board WPW1032 — on van','Insulated gloves — standard kit'],drive:14,overrun:45},
+  {id:'1037',tech:'t2',start:13.5,dur:1,priority:'standard',appliance:'Disposal',brand:'InSinkErator',problem:'Hums but will not grind',customer:'R. Alvarez',phone:'(555) 017-9042',address:'912 Larkspur Ave',zone:'Central',needs:['Hex wrench kit — standard'],drive:25},
+  {id:'1038',tech:'t3',start:9.5,dur:1,priority:'standard',appliance:'Washer',brand:'Maytag',problem:'Will not spin — lid lock suspect',customer:'H. Bell',phone:'(555) 011-3028',address:'66 Southbridge Rd',zone:'South',needs:['Lid lock WPW10761028 — on van'],drive:0},
+  {id:'1039',tech:'t3',start:11,dur:1,priority:'standard',appliance:'Refrigerator',brand:'Frigidaire',problem:'Loud rattle from freezer section',customer:'Gus Tanaka',phone:'(555) 015-6620',address:'1420 Riverbend Ter',zone:'South',needs:['Evap fan motor — 1 left at depot ⚠'],drive:15},
+  {id:'1040',tech:'t3',start:13.5,dur:1.5,priority:'low',appliance:'Dryer',brand:'Maytag',problem:'Squealing at high spin',customer:'Fran Moore',phone:'(555) 012-8874',address:'205 Quarry Hill Rd',zone:'South',needs:['Idler pulley — on van'],drive:15},
+  {id:'1041',tech:'t4',start:10,dur:1.5,priority:'high',appliance:'Refrigerator',brand:'Samsung',problem:'Not cooling — compressor silent',customer:'P. Nwosu',phone:'(555) 018-1109',address:'730 Summit Ave',zone:'North',needs:['Sealed-system diag kit — on van'],cert:'EPA 608',drive:0},
+  {id:'1043',tech:'t4',start:12,dur:1.5,priority:'standard',appliance:'Dishwasher',brand:'GE',problem:'Leaking under door — suspect gasket',customer:'K. Osei',phone:'(555) 016-4437',address:'41 Commerce Ct',zone:'Central',needs:['Door gasket — on van'],drive:22},
+  {id:'1044',tech:'t4',start:14,dur:1.5,priority:'standard',appliance:'Refrigerator',brand:'LG',problem:'Ice maker not filling',customer:'T. Larsen',phone:'(555) 014-9925',address:'128 Northview Loop',zone:'North',needs:['Fill valve 4681JA2001 — on van'],drive:40},
+  {id:'1046',tech:'t5',start:7.75,dur:1,priority:'standard',appliance:'Dishwasher',brand:'Bosch',problem:'Leaking from vent during cycle',customer:'S. Novak',phone:'(555) 011-2280',address:'310 Eastbank Dr',zone:'East',needs:[],drive:0},
+  {id:'1047',tech:'t5',start:9.5,dur:1.5,priority:'standard',appliance:'Range/Oven',brand:'Whirlpool',problem:'Front-left burner dead',customer:'D. Kim',phone:'(555) 013-5518',address:'74 Quail Ridge Rd',zone:'East',needs:['Element W10823601 — on van'],drive:25},
+  {id:'1048',tech:'t5',start:11.75,dur:1,priority:'low',appliance:'Disposal',brand:'InSinkErator',problem:'Humming — likely jam',customer:'B. Field',phone:'(555) 010-7743',address:'59 Eastbank Ct',zone:'East',needs:['Jam kit — standard'],drive:12},
+  {id:'1049',tech:'t5',start:13.25,dur:1.5,priority:'standard',appliance:'Dishwasher',brand:'Whirlpool',problem:'Will not start — no power at panel',customer:'L. Marsh',phone:'(555) 017-6612',address:'808 Meadowlark Way',zone:'East',needs:['Multimeter diag — standard kit'],drive:18},
+  {id:'1050',tech:'t6',start:12.5,dur:1.5,priority:'standard',appliance:'Washer',brand:'LG',problem:'Roaring in spin — suspect bearing',customer:'C. Duarte',phone:'(555) 019-3388',address:'22 Westfield Cir',zone:'West',needs:['Bearing kit — on van (job may extend)'],drive:0},
+  {id:'1051',tech:'t6',start:14.75,dur:1,priority:'high',appliance:'Dryer',brand:'Samsung',problem:'No heat — household of five, backlog',customer:'N. Adeyemi',phone:'(555) 015-0092',address:'1304 Westfield Commons',zone:'West',needs:['Thermal fuse — on van'],drive:18},
+  {id:'1052',tech:'t6',start:16.5,dur:1.5,priority:'standard',appliance:'Washer',brand:'Miele',problem:'F11 drain fault recurring',customer:'E. Varga',phone:'(555) 018-8471',address:'17 Bluffside Way',zone:'West',needs:['Drain pump — confirm depot order ⚠'],drive:22}
+];
+const urgentReq={id:'REQ-2209',customer:'Dana Whitfield',phone:'(555) 013-8842',address:'1425 Riverbend Ter',zone:'South',appliance:'Refrigerator',brand:'Samsung',problem:'Warm — freezer at 50°F, food at risk',window:[12,16],dur:1.5};
+
+const state={selected:null,query:'',urgentAssigned:false,overrunResolved:false,notifications:[],urgentPlaced:null};
+let nid=0;
+const byId=id=>appts.find(a=>a.id===id);
+const byTech=tid=>appts.filter(a=>a.tech===tid).sort((a,b)=>a.start-b.start);
+const techOf=a=>techs.find(t=>t.id===a.tech);
+function statusOf(a){if(NOW>=a.start+a.dur-1e-9)return 'done';if(NOW<a.start)return 'up';return 'active';}
+function addNotice(a,msg){state.notifications.push({id:++nid,appt:a.id,customer:a.customer,msg});}
+function pendingNotice(a){return state.notifications.some(n=>n.appt===a.id);}
+
+/* ================= scheduling engine ================= */
+function slotWithPush(t,dur,minStart,winEnd){
+  const list=byTech(t.id).filter(a=>a.end>NOW);
+  let s=Math.max(t.shift[0],minStart||0,Math.ceil((NOW+0.15)*4)/4);
+  for(let k=0;k<3;k++){
+    for(const a of list){if(s>a.start-1e-9&&s<a.end)s=a.end+0.25;}
+    for(const a of list){if(a.end<=s+1e-9)s=Math.max(s,a.end+0.25);}
+  }
+  const fail=r=>({feasible:false,reason:r,s,pushed:[]});
+  if(s+dur>t.shift[1]+1e-9)return fail('No '+Math.round(dur*60)+'-min opening — shift ends '+fmtT(t.shift[1]));
+  const pushed=[];let cur=s+dur;
+  for(const a of list){
+    if(a.start>=s-1e-9&&a.start<cur+0.2){
+      const ns=round5(cur+(a.drive||10)/60);
+      pushed.push({id:a.id,at:ns});cur=ns+a.dur;
+    }
+  }
+  if(cur>t.shift[1]+1e-9)return fail('Any slot would cascade past shift end ('+fmtT(t.shift[1])+')');
+  if(pushed.length>1)return fail('Only option cascades '+pushed.length+' appointments');
+  const inWindow=(minStart==null)||(s>=minStart-1e-9&&s+dur<=(winEnd||24)+1e-9);
+  return{feasible:true,s,end:s+dur,pushed,inWindow};
+}
+function resolvePushes(tid){
+  const list=byTech(tid),changed=[];
+  for(let i=1;i<list.length;i++){
+    const p=list[i-1],a=list[i];
+    const min=p.end+(a.drive||10)/60;
+    if(a.start<min-1e-9){const ns=round5(min);if(Math.abs(ns-a.start)>1e-9){a.start=ns;changed.push(a);}}
+  }
+  return changed;
+}
+function detectIssues(){
+  const out=[];
+  if(!state.urgentAssigned)out.push({tone:'red',key:'urgent',title:'Urgent request unassigned',desc:'REQ-2209 — refrigerator warming at 1425 Riverbend Ter. Customer window 12:00–4:00 PM today; waiting since 7:42 AM.',cta:'Find a technician →'});
+  const o=byId('1042');
+  if(o&&!state.overrunResolved){
+    const nxt=byTech(o.tech).find(a=>a.start>=o.start+o.dur-1e-9);
+    if(nxt){out.push({tone:'amber',key:'overrun',appt:'1042',title:'Overrun likely → cascade risk',desc:'#1042 flagged +45m (control-board swap; last 3 similar jobs averaged 2h 15m). Only '+Math.round((nxt.start-o.start-o.dur)*60)+'m slack before #'+nxt.id+' at '+fmtT(nxt.start)+' with a '+nxt.drive+'m drive.',cta:'Review #1042 →'});}
+  }
+  techs.forEach(t=>{
+    const list=byTech(t.id);
+    for(let i=1;i<list.length;i++){
+      const p=list[i-1],a=list[i];
+      if(statusOf(a)==='done')continue;
+      const gap=(a.start-p.end)*60;
+      if(gap+1e-9<a.drive)out.push({tone:'amber',key:'tr'+a.id,appt:a.id,title:'Travel time too short — '+t.name.split(' ')[0],desc:'#'+p.id+' → #'+a.id+' has a '+Math.round(gap)+'m gap; the drive is ~'+a.drive+'m. Push start to '+fmtTL(round5(p.end+a.drive/60))+' to cover it.',cta:'Review #'+a.id+' →'});
+    }
+  });
+  out.push({tone:'info',key:'part',appt:'1039',title:'Part watch — evap fan motor',desc:'#1039 needs the last evap fan motor at the depot. Confirm pick-up before Diego leaves the area at 11:00 AM.',cta:'Review #1039 →'});
+  return out;
+}
+
+/* ================= renderers ================= */
+function renderKPIs(){
+  const booked=appts.length,un=state.urgentAssigned?0:1;
+  const issues=detectIssues().filter(i=>i.tone!=='info').length;
+  const active=appts.filter(a=>statusOf(a)==='active').length;
+  const avail=techs.reduce((s,t)=>s+(t.shift[1]-t.shift[0]),0);
+  const load=appts.reduce((s,a)=>s+a.dur,0);
+  const pct=Math.round(load/avail*100),pend=state.notifications.length;
+  const cards=[
+    {ic:I.cal,tone:'blue',label:'Appointments today',val:booked,sub:un?un+' urgent unassigned':'all assigned ✓'},
+    {ic:I.user,tone:'teal',label:'Technicians on duty',val:techs.length,sub:active+' on a job right now'},
+    {ic:I.warn,tone:issues?'amber':'green',label:'Open issues',val:issues,sub:issues?'needs dispatcher action':'all clear ✓'},
+    {ic:I.gauge,tone:'blue',label:'Capacity booked',val:pct+'%',sub:fmtDur(load)+' of '+avail+'h · '+fmtDur(avail-load)+' free',bar:pct},
+    {ic:I.bell,tone:pend?'red':'gray',label:'Customer notices',val:pend,sub:pend?'waiting for approval':'nothing pending'}
+  ];
+  $('#kpiRow').innerHTML=cards.map(c=>'<div class="kpi"><div class="ic '+c.tone+'">'+c.ic+'</div><div class="kpi-txt"><div class="kpi-label">'+c.label+'</div><div class="kpi-val">'+c.val+'</div><div class="kpi-sub">'+c.sub+'</div>'+(c.bar?'<div class="kbar"><i style="width:'+c.bar+'%"></i></div>':'')+'</div></div>').join('');
+}
+function renderQueue(){
+  const body=$('#queueBody'),cnt=$('#queueCount');
+  let h='';
+  if(!state.urgentAssigned){
+    cnt.textContent='1 urgent';cnt.classList.remove('ok');
+    h+='<div class="qcard urgent"><div class="q-top"><span class="qpri">URGENT</span><span class="q-id">'+urgentReq.id+'</span><span class="q-wait">waiting 2h 00m</span></div>'
+      +'<div class="q-title">Refrigerator warming — '+urgentReq.brand+'</div>'
+      +'<div class="qrow">'+I.pin+urgentReq.customer+' · '+urgentReq.address+' · '+urgentReq.zone+'</div>'
+      +'<div class="qrow">'+I.phone+urgentReq.phone+'</div>'
+      +'<div class="qrow">'+I.clock+'Window today '+fmtTL(urgentReq.window[0])+'–'+fmtTL(urgentReq.window[1])+' · est '+fmtDur(urgentReq.dur)+'</div>'
+      +'<div class="qrow">'+I.warn+urgentReq.problem+'</div>'
+      +'<div class="q-needs"><span class="chip">Needs: Refrigeration skill</span><span class="chip">Samsung experience</span></div>'
+      +'<button class="btn btn-danger btn-block" style="margin-top:11px" data-act="assign-urgent">Find a technician…</button></div>';
+  }else{
+    cnt.textContent='0 urgent';cnt.classList.add('ok');
+    const p=state.urgentPlaced;
+    h+='<div class="qcard done"><div class="q-top"><span class="qpri ok">ASSIGNED ✓</span><span class="q-id">'+urgentReq.id+' → #1053</span></div>'
+      +'<div class="q-title">Refrigerator warming — '+urgentReq.brand+'</div>'
+      +'<div class="qrow">'+I.user+'Now '+p.tname+' · '+fmtTL(p.start)+'–'+fmtTL(p.end)+'</div>'
+      +'<div class="qrow">'+I.bell+'Confirmation SMS queued for '+urgentReq.customer+'</div></div>';
+  }
+  h+='<div class="qcard"><div class="q-top"><span class="qpri flex">FLEXIBLE</span><span class="q-id">REQ-2211</span></div>'
+    +'<div class="q-title">Dishwasher install — Bosch</div>'
+    +'<div class="qrow">'+I.pin+'Pat Ellery · 902 Meadowlark Way · East</div>'
+    +'<div class="qrow">'+I.clock+'Any weekday this week · est 2h</div>'
+    +'<div class="q-hint">Earliest fit: Thu 9:00 AM · Tom Okafor (East zone, install-certified)</div>'
+    +'<button class="btn btn-ghost btn-sm" style="margin-top:9px" data-act="demo" data-msg="REQ-2211 parked in the planning backlog — slotting opens for later this week.">Park for planning</button></div>';
+  body.innerHTML=h;
+}
+function matchQ(a){
+  const q=state.query.trim().toLowerCase();
+  if(!q)return true;
+  return (a.id+' '+a.customer+' '+a.address+' '+a.appliance+' '+a.brand+' '+a.problem+' '+techOf(a).name).toLowerCase().includes(q);
+}
+function blockHTML(a){
+  const st=statusOf(a),sel=state.selected===a.id,pend=pendingNotice(a);
+  let h='<div class="appt p-'+a.priority+' st-'+st+(sel?' sel':'')+(matchQ(a)?'':' dim')+'" data-act="select-appt" data-id="'+a.id+'" style="left:'+(x(a.start)+2)+'px;width:'+(a.dur*HOUR_W-6)+'px" title="'+a.customer+' — '+a.problem+'">';
+  h+='<div class="a-top"><span class="a-id">#'+a.id+'</span><span>'+fmtT(a.start)+'–'+fmtT(a.start+a.dur)+'</span>'+(pend?'<span class="mini-bell">'+I.bell+'</span>':'')+'</div>';
+  h+='<div class="a-title">'+iconFor(a.appliance)+a.appliance+' · '+a.brand+'</div>';
+  h+='<div class="a-addr">'+a.address+'</div>';
+  if(a.overrun&&!state.overrunResolved)h+='<div class="overrun-tail" style="width:'+(a.overrun/60*HOUR_W)+'px">+'+a.overrun+'m risk</div>';
+  return h+'</div>';
+}
+function rowHTML(t){
+  const list=byTech(t.id);
+  let h='<div class="trow"><div class="tlabel"><div class="tavatar" style="--h:'+t.hue+'">'+t.ini+'</div><div class="tinfo"><div class="tname">'+t.name+'</div><div class="tmeta">'+fmtT(t.shift[0])+'–'+fmtT(t.shift[1])+' · '+t.zone+'</div><div class="tskills">'+t.skills.map(s=>'<span class="skill">'+s+'</span>').join('')+t.certs.map(c=>'<span class="skill cert">'+c+'</span>').join('')+'</div></div></div>';
+  h+='<div class="track" style="width:'+SPAN_W+'px"><div class="shift-band" style="left:'+x(t.shift[0])+'px;width:'+((t.shift[1]-t.shift[0])*HOUR_W)+'px"></div>';
+  for(let i=1;i<list.length;i++){
+    const p=list[i-1],a=list[i],gap=(a.start-p.end)*60;
+    if(gap>=10){
+      const l=x(p.end),w=x(a.start)-l,bad=gap+1e-9<a.drive;
+      h+='<div class="gapline" style="left:'+l+'px;width:'+w+'px"></div>';
+      h+='<div class="travel'+(bad?' bad':'')+'" style="left:'+(l+w/2)+'px">'+I.car+Math.round(gap)+'m'+(bad?' · need '+a.drive:'')+'</div>';
+    }
+  }
+  list.forEach(a=>{h+=blockHTML(a);});
+  return h+'</div></div>';
+}
+function renderBoard(){
+  let h='<div class="board-inner" style="width:'+(LABEL_W+SPAN_W)+'px">';
+  h+='<div class="ruler"><div class="corner">TECHNICIAN · SHIFT · ZONE</div><div class="ruler-track" style="width:'+SPAN_W+'px">';
+  for(let hr=DAY_START;hr<=DAY_END;hr++)h+='<span class="hour-lab" style="left:'+((hr-DAY_START)*HOUR_W)+'px">'+fmtT(hr)+'</span>';
+  h+='</div></div>';
+  techs.forEach(t=>{h+=rowHTML(t);});
+  h+='<div class="nowline" style="left:'+(LABEL_W+x(NOW))+'px"><span class="now-tag">NOW '+fmtT(NOW)+'</span></div></div>';
+  $('#board').innerHTML=h;
+}
+function fact(dt,dd){return '<div><dt>'+dt+'</dt><dd>'+dd+'</dd></div>';}
+function fitChips(a,t){
+  const skill=t.skills.includes(a.appliance);
+  const brand=t.brands.includes(a.brand);
+  const zone=t.zone.includes(a.zone);
+  const cert=!a.cert||t.certs.includes(a.cert);
+  let h='<span class="chip '+(skill?'ok':'bad')+'">'+(skill?'✓':'✗')+' '+a.appliance+' skill</span>'
+    +'<span class="chip '+(brand?'ok':'bad')+'">'+(brand?'✓':'✗')+' '+a.brand+'</span>'
+    +'<span class="chip '+(zone?'ok':'warn')+'">'+(zone?'✓':'~')+' '+a.zone+' zone</span>';
+  if(a.cert)h+='<span class="chip '+(cert?'ok':'bad')+'">'+(cert?'✓':'✗')+' '+a.cert+'</span>';
+  return h;
+}
+function detailActions(a){
+  const t=techOf(a);let h='';
+  if(a.id==='1042'&&!state.overrunResolved){
+    const nxt=byTech(t.id).find(n=>n.start>=a.start+a.dur-1e-9);
+    h+='<button class="btn btn-primary btn-block" data-act="resolve-overrun">Resolve: extend to '+fmtTL(a.start+2.25)+' &amp; push #'+nxt.id+' to '+fmtTL(round5(a.start+2.25+nxt.drive/60))+' — notify both</button>';
+  }
+  const list=byTech(t.id),idx=list.findIndex(q=>q.id===a.id),prev=list[idx-1];
+  if(prev&&statusOf(a)!=='done'&&(a.start-prev.end)*60+1e-9<a.drive){
+    h+='<button class="btn btn-primary btn-block" data-act="fix-travel" data-id="'+a.id+'">Shift start to '+fmtTL(round5(prev.end+a.drive/60))+' to cover the '+a.drive+'m drive — notify customer</button>';
+  }
+  h+='<div class="btn-row">';
+  if(statusOf(a)==='up'){
+    const canDelay=a.start+a.dur+0.5<=t.shift[1]+1e-9;
+    h+='<button class="btn btn-ghost" data-act="delay" data-id="'+a.id+'" '+(canDelay?'':'disabled title="Would pass shift end"')+'>Delay 30m</button>';
+    h+='<button class="btn btn-ghost" data-act="reassign" data-id="'+a.id+'">Reassign…</button>';
+  }
+  if(statusOf(a)!=='done'){
+    h+=pendingNotice(a)?'<button class="btn btn-ghost" disabled>Notice queued ✓</button>':'<button class="btn btn-ghost" data-act="notify" data-id="'+a.id+'">Queue customer notice</button>';
+  }
+  h+='</div><p class="hint">Any time or technician change automatically queues an SMS here for the dispatcher to approve before it goes out.</p>';
+  return h;
+}
+function detailHTML(a){
+  const t=techOf(a),list=byTech(t.id),idx=list.findIndex(q=>q.id===a.id);
+  const prev=list[idx-1],next=list[idx+1],st=statusOf(a);
+  const stLab=st==='done'?'Completed':st==='active'?'In progress':'Confirmed';
+  let h='<header class="panel-h"><button class="btn btn-sm btn-ghost" data-act="overview">← Day overview</button><span class="chip '+(st==='active'?'ok':'')+'">'+stLab+'</span></header><div class="insp-scroll">';
+  h+='<div class="d-head"><span class="chip pri p-'+a.priority+'">'+cap(a.priority)+'</span><span class="mono dim2">#'+a.id+'</span>'+(a.overrun&&!state.overrunResolved?'<span class="chip warn">⚠ likely to run long</span>':'')+'</div>';
+  h+='<h3 class="d-title">'+a.appliance+' · '+a.brand+'</h3>';
+  h+='<p class="d-prob">“'+a.problem+'”</p>';
+  h+='<dl class="facts">';
+  h+=fact('Window',fmtTL(a.start)+' – '+fmtTL(a.start+a.dur));
+  h+=fact('Duration',fmtDur(a.dur)+(a.overrun&&!state.overrunResolved?' <span class="chip warn">history avg '+fmtDur(a.dur+a.overrun/60)+'</span>':''));
+  h+=fact('Customer',a.customer+' · '+a.phone);
+  h+=fact('Address',a.address+' · '+a.zone+' zone');
+  h+='</dl>';
+  h+='<div class="sec">Parts &amp; equipment</div><div class="chips-wrap">'+(a.needs.length?a.needs.map(n=>'<span class="chip '+(n.includes('⚠')?'warn':'ok')+'">'+n+'</span>').join(''):'<span class="chip">No special parts</span>')+(a.cert?'<span class="chip warn">Requires: '+a.cert+'</span>':'')+'</div>';
+  h+='<div class="sec">Assigned technician</div><div class="tech-card"><div class="tavatar" style="--h:'+t.hue+'">'+t.ini+'</div><div><div class="tname">'+t.name+'</div><div class="tmeta">'+fmtT(t.shift[0])+'–'+fmtT(t.shift[1])+' · '+t.zone+' · '+t.brands.join(', ')+'</div><div class="fit">'+fitChips(a,t)+'</div></div></div>';
+  h+='<div class="sec">Travel</div><div class="travel-info">';
+  h+=prev?'<div>'+I.car+' From <b>#'+prev.id+'</b> '+prev.address+' — '+a.drive+'m drive (prev. finishes '+fmtTL(prev.end)+')</div>':'<div>First stop of the day — leaves shop at '+fmtTL(Math.max(t.shift[0],a.start-a.drive/60-0.25))+'</div>';
+  if(next){const tight=(next.start-(a.start+a.dur))*60+1e-9<next.drive;h+='<div>'+I.car+' To <b>#'+next.id+'</b> — '+next.drive+'m drive, next start '+fmtTL(next.start)+(tight?' <span class="chip warn">tight</span>':'')+'</div>';}
+  else h+='<div>Last stop of the day — back at shop by '+fmtTL(a.start+a.dur+0.4)+'</div>';
+  h+='</div><div class="sec">Actions</div>'+detailActions(a);
+  h+='</div>';
+  return h;
+}
+function noticesSection(){
+  const n=state.notifications;
+  let h='<div class="sec">Customer notices · '+n.length+'</div>';
+  if(!n.length)h+='<div class="empty">No pending notices. When you change a time or technician, the customer message appears here for approval.</div>';
+  else{
+    n.forEach(x=>{h+='<div class="note"><div class="note-body"><b>'+x.customer+'</b> <span class="mono">#'+x.appt+'</span><br>'+x.msg+'</div><button class="btn btn-sm btn-ghost" data-act="send-note" data-nid="'+x.id+'">Send</button></div>';});
+    h+='<button class="btn btn-primary btn-sm" data-act="send-all">Send all ('+n.length+')</button>';
+  }
+  return h;
+}
+function nextSection(){
+  const res=[];
+  techs.forEach(t=>{const n=byTech(t.id).find(a=>a.start>NOW);if(n)res.push({t,a:n});});
+  res.sort((a,b)=>a.a.start-b.a.start);
+  let h='<div class="sec">Up next</div>';
+  if(!res.length)h+='<div class="empty">No upcoming stops.</div>';
+  res.slice(0,4).forEach(r=>{h+='<div class="next-row"><span class="nt">'+fmtT(r.a.start)+'</span><span><b>#'+r.a.id+'</b> '+r.a.appliance+' · '+r.a.address+'</span><span class="chip" style="margin-left:auto">'+r.t.name.split(' ')[0]+'</span></div>';});
+  return h;
+}
+function overviewHTML(){
+  const issues=detectIssues();
+  let h='<header class="panel-h"><div><h2>Day control</h2><p>Issues · notices · what’s next</p></div><span class="chip mono">'+fmtT(NOW)+' now</span></header><div class="insp-scroll">';
+  h+='<div class="sec">Attention needed · '+issues.filter(i=>i.tone!=='info').length+'</div>';
+  issues.forEach(i=>{h+='<div class="issue '+i.tone+'" data-act="issue" data-key="'+i.key+'" data-appt="'+(i.appt||'')+'"><h4>'+i.title+'</h4><p>'+i.desc+'</p><span class="go">'+i.cta+'</span></div>';});
+  h+=noticesSection()+nextSection()+'</div>';
+  return h;
+}
+function renderInspector(){
+  const a=state.selected?byId(state.selected):null;
+  $('#inspector').innerHTML=a?detailHTML(a):overviewHTML();
+}
+function updateBell(){
+  const n=state.notifications.length,b=$('#bellBadge');
+  b.textContent=n;b.classList.toggle('zero',n===0);
+}
+function renderAll(){renderKPIs();renderQueue();renderBoard();renderInspector();updateBell();}
+
+/* ================= modals ================= */
+function closeModal(){$('#modalRoot').innerHTML='';}
+function candRow(c,act,extraData){
+  const t=c.t;
+  let tags='<span class="chip '+(c.fits.skill?'ok':'bad')+'">'+(c.fits.skill?'✓':'✗')+' Refrigeration skill</span>'
+    +'<span class="chip '+(c.fits.brand?'ok':'bad')+'">'+(c.fits.brand?'✓':'✗')+' '+urgentReq.brand+'</span>'
+    +'<span class="chip '+(c.fits.zone?'ok':'warn')+'">'+(c.fits.zone?'✓':'~')+' '+urgentReq.zone+' zone</span>';
+  c.sim.pushed.forEach(p=>{tags+='<span class="chip warn">pushes #'+p.id+' → '+fmtT(p.at)+'</span>';});
+  const cls=!c.sim.feasible?'off':(c.best?'best':'');
+  const btn=c.sim.feasible?'<button class="btn '+(c.best?'btn-primary':'btn-ghost')+' btn-sm" data-act="'+act+'" data-tid="'+t.id+'"'+extraData+'>'+(c.sim.inWindow?'Assign':'Assign anyway')+'</button>':'';
+  const slot=c.sim.feasible
+    ?'<div class="cslot">'+fmtTL(c.sim.s)+' – '+fmtTL(c.sim.end)+(c.sim.inWindow?'<span class="chip ok">inside window</span>':'<span class="chip warn">outside customer window — confirm call</span>')+'</div>'
+    :'<div class="creason">'+c.sim.reason+'</div>';
+  return '<div class="cand '+cls+'"><div class="tavatar" style="--h:'+t.hue+'">'+t.ini+'</div><div class="cinfo"><div class="cname">'+t.name+(c.best&&c.sim.feasible?'<span class="chip ok">Best match</span>':'')+'<span class="chip">'+t.zone+'</span></div>'+slot+'<div class="ctags">'+tags+'</div></div>'+btn+'</div>';
+}
+function openAssignModal(){
+  const cands=techs.map(t=>{
+    const sim=slotWithPush(t,urgentReq.dur,urgentReq.window[0],urgentReq.window[1]);
+    const fits={skill:t.skills.includes('Refrigerator'),brand:t.brands.includes('Samsung'),zone:t.zone.includes('South')};
+    const score=(sim.feasible?4:0)+(sim.inWindow?2:-1)+(fits.skill?1:0)+(fits.brand?1:0)+(fits.zone?2:0)-sim.pushed.length*0.5;
+    return{t,sim,fits,score};
+  }).sort((a,b)=>b.score-a.score);
+  if(cands.length&&cands[0].sim.feasible)cands[0].best=true;
+  let h='<div class="overlay" data-act="close-modal-bg"><div class="modal"><div class="modal-h"><div><h3>Assign '+urgentReq.id+' — '+urgentReq.appliance+' warming</h3><p>'+urgentReq.customer+' · '+urgentReq.address+' · '+urgentReq.zone+' zone · est '+fmtDur(urgentReq.dur)+'</p></div><button class="modal-x" data-act="close-modal">✕</button></div>';
+  h+='<div class="req-strip"><b>Customer window today: '+fmtTL(urgentReq.window[0])+' – '+fmtTL(urgentReq.window[1])+'</b> · submitted 7:42 AM · freezer at 50°F — food spoilage risk. Skill check: refrigeration + Samsung. Candidates are ranked by fit, drive time and schedule impact.</div>';
+  cands.forEach(c=>{h+=candRow(c,'pick-tech','');});
+  h+='<div class="modal-foot">Assigning automatically adjusts any knocked-on appointments and queues customer SMS messages for approval. Escalation policy: urgent requests unanswered for 2h alert the on-call lead.</div></div></div>';
+  $('#modalRoot').innerHTML=h;
+}
+function openReassignModal(id){
+  const a=byId(id),dur=a.dur;
+  const cands=techs.filter(t=>t.id!==a.tech).map(t=>{
+    const sim=slotWithPush(t,dur,null);
+    const fits={skill:t.skills.includes(a.appliance),brand:t.brands.includes(a.brand),zone:t.zone.includes(a.zone)};
+    const certOk=!a.cert||t.certs.includes(a.cert);
+    const score=(sim.feasible?4:0)+(fits.skill?1:0)+(fits.brand?1:0)+(fits.zone?2:0)+(certOk?1:-2)-sim.pushed.length*0.5;
+    return{t,sim,fits:{...fits,certOk,cert:a.cert},score};
+  }).sort((x,y)=>y.score-x.score);
+  if(cands.length&&cands[0].sim.feasible)cands[0].best=true;
+  let h='<div class="overlay" data-act="close-modal-bg"><div class="modal"><div class="modal-h"><div><h3>Reassign #'+id+' — '+a.appliance+' · '+a.brand+'</h3><p>'+a.customer+' · '+a.address+' · needs '+fmtDur(dur)+' · currently with '+techOf(a).name+'</p></div><button class="modal-x" data-act="close-modal">✕</button></div>';
+  cands.forEach(c=>{
+    const tags='<span class="chip '+(c.fits.skill?'ok':'bad')+'">'+(c.fits.skill?'✓':'✗')+' '+a.appliance+'</span>'
+      +'<span class="chip '+(c.fits.brand?'ok':'bad')+'">'+(c.fits.brand?'✓':'✗')+' '+a.brand+'</span>'
+      +'<span class="chip '+(c.fits.zone?'ok':'warn')+'">'+(c.fits.zone?'✓':'~')+' '+a.zone+' zone</span>'
+      +(a.cert?'<span class="chip '+(c.fits.certOk?'ok':'bad')+'">'+(c.fits.certOk?'✓':'✗')+' '+a.cert+'</span>':'');
+    const slotHtml=c.sim.feasible
+      ?'<div class="cslot">Earliest: '+fmtTL(c.sim.s)+' – '+fmtTL(c.sim.end)+(c.sim.pushed.length?'<span class="chip warn">pushes #'+c.sim.pushed[0].id+'</span>':'')+'</div>'
+      :'<div class="creason">'+c.sim.reason+'</div>';
+    const cls=!c.sim.feasible?'off':(c.best?'best':'');
+    const btn=c.sim.feasible?'<button class="btn '+(c.best?'btn-primary':'btn-ghost')+' btn-sm" data-act="pick-reassign" data-tid="'+c.t.id+'" data-appt="'+a.id+'">Move here</button>':'';
+    h+='<div class="cand '+cls+'"><div class="tavatar" style="--h:'+c.t.hue+'">'+c.t.ini+'</div><div class="cinfo"><div class="cname">'+c.t.name+(c.best&&c.sim.feasible?'<span class="chip ok">Best match</span>':'')+'<span class="chip">'+c.t.zone+'</span></div>'+slotHtml+'<div class="ctags">'+tags+'</div></div>'+btn+'</div>';
+  });
+  h+='<div class="modal-foot">Moving an appointment queues a customer SMS about the technician change.</div></div></div>';
+  $('#modalRoot').innerHTML=h;
+}
+
+/* ================= actions ================= */
+function assignUrgent(tid){
+  const t=techs.find(q=>q.id===tid);
+  const sim=slotWithPush(t,urgentReq.dur,urgentReq.window[0],urgentReq.window[1]);
+  if(!sim.feasible){toast('No feasible slot for '+t.name+'.','warn');return;}
+  const a={id:'1053',tech:tid,start:sim.s,dur:urgentReq.dur,priority:'urgent',appliance:'Refrigerator',brand:'Samsung',problem:urgentReq.problem,customer:urgentReq.customer,phone:urgentReq.phone,address:urgentReq.address,zone:'South',needs:['Sealed-system diag kit — on van'],drive:15};
+  appts.push(a);
+  const pushed=resolvePushes(tid);
+  state.urgentAssigned=true;
+  state.urgentPlaced={tname:t.name,start:a.start,end:a.start+a.dur};
+  addNotice(a,'Confirming your urgent visit today '+fmtTL(a.start)+'–'+fmtTL(a.start+a.dur)+', technician '+t.name+'. Reply 1 to confirm.');
+  pushed.forEach(p=>addNotice(p,'Your appointment moved to '+fmtTL(p.start)+' today to fit an urgent call ahead of it.'));
+  closeModal();
+  state.selected='1053';
+  toast(urgentReq.id+' assigned to '+t.name+' · '+fmtTL(a.start)+'–'+fmtTL(a.start+a.dur)+(pushed.length?' · #'+pushed[0].id+' shifted to '+fmtTL(pushed[0].start):''),'good');
+  renderAll();
+}
+function resolveOverrun(){
+  const o=byId('1042');if(!o||state.overrunResolved)return;
+  o.dur=2.25;state.overrunResolved=true;
+  const pushed=resolvePushes(o.tech);
+  addNotice(o,'Your technician expects the repair to run longer — still on track for today.');
+  pushed.forEach(p=>addNotice(p,'Your appointment moved to '+fmtTL(p.start)+' today due to the job ahead of it.'));
+  toast('#1042 extended to '+fmtTL(o.start+o.dur)+(pushed.length?' · #'+pushed[0].id+' pushed to '+fmtTL(pushed[0].start):'')+' — notices queued.','good');
+  renderAll();
+}
+function fixTravel(id){
+  const a=byId(id);if(!a)return;
+  const list=byTech(a.tech),i=list.findIndex(q=>q.id===id),p=list[i-1];
+  if(!p)return;
+  a.start=round5(p.end+a.drive/60);
+  addNotice(a,'Your arrival window shifted to '+fmtTL(a.start)+' to cover technician travel time.');
+  toast('#'+id+' now starts '+fmtTL(a.start)+' — travel conflict cleared.','good');
+  renderAll();
+}
+function delayAppt(id){
+  const a=byId(id);if(!a)return;
+  a.start=round5(a.start+0.5);
+  const pushed=resolvePushes(a.tech);
+  addNotice(a,'Your appointment start moved to '+fmtTL(a.start)+' today.');
+  pushed.forEach(p=>addNotice(p,'Your appointment moved to '+fmtTL(p.start)+' today.'));
+  toast('#'+id+' delayed to '+fmtTL(a.start)+(pushed.length?' · '+pushed.length+' following stop shifted':''),'good');
+  renderAll();
+}
+function doReassign(apptId,tid){
+  const a=byId(apptId),t=techs.find(q=>q.id===tid);
+  const sim=slotWithPush(t,a.dur,null);
+  if(!sim.feasible){toast('No feasible slot.','warn');return;}
+  a.tech=tid;a.start=sim.s;
+  const pushed=resolvePushes(tid);
+  addNotice(a,'Your technician is now '+t.name+', arriving '+fmtTL(a.start)+'.');
+  pushed.forEach(p=>addNotice(p,'Your appointment moved to '+fmtTL(p.start)+' today.'));
+  closeModal();
+  toast('#'+apptId+' reassigned to '+t.name+' at '+fmtTL(a.start)+' — customer notice queued.','good');
+  renderAll();
+}
+function queueNotice(id){
+  const a=byId(id);if(!a||pendingNotice(a))return;
+  addNotice(a,'Heads-up from Fieldline: your appointment details may change shortly — we will confirm by text.');
+  toast('Notice queued for '+a.customer+'.','info');
+  renderAll();
+}
+function sendNote(n){
+  const i=state.notifications.findIndex(q=>q.id===n);
+  if(i<0)return;
+  const c=state.notifications[i].customer;
+  state.notifications.splice(i,1);
+  toast('SMS sent to '+c+'.','good');
+  renderAll();
+}
+function sendAll(){
+  const n=state.notifications.length;
+  if(!n)return;
+  state.notifications=[];
+  toast(n+' SMS notification'+(n>1?'s':'')+' sent to customers.','good');
+  renderAll();
+}
+function toast(msg,tone){
+  const d=document.createElement('div');
+  d.className='toast '+(tone||'');
+  d.textContent=msg;
+  $('#toasts').appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .3s';setTimeout(()=>d.remove(),320);},4200);
+}
+
+/* ================= events ================= */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');
+  if(!el)return;
+  const act=el.dataset.act;
+  if(act==='close-modal-bg'&&e.target!==el)return;
+  switch(act){
+    case 'select-appt':state.selected=el.dataset.id;renderBoard();renderInspector();break;
+    case 'overview':state.selected=null;renderInspector();break;
+    case 'bell':state.selected=null;renderInspector();break;
+    case 'issue':
+      if(el.dataset.key==='urgent')openAssignModal();
+      else{state.selected=el.dataset.appt;renderBoard();renderInspector();}
+      break;
+    case 'assign-urgent':openAssignModal();break;
+    case 'pick-tech':assignUrgent(el.dataset.tid);break;
+    case 'reassign':openReassignModal(el.dataset.id);break;
+    case 'pick-reassign':doReassign(el.dataset.appt,el.dataset.tid);break;
+    case 'delay':delayAppt(el.dataset.id);break;
+    case 'fix-travel':fixTravel(el.dataset.id);break;
+    case 'resolve-overrun':resolveOverrun();break;
+    case 'notify':queueNotice(el.dataset.id);break;
+    case 'send-note':sendNote(+el.dataset.nid);break;
+    case 'send-all':sendAll();break;
+    case 'demo':toast(el.dataset.msg||'This area is part of the full product.','info');break;
+    case 'close-modal':closeModal();break;
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeModal();
+  if(e.key==='/'&&document.activeElement!==$('#search')){e.preventDefault();$('#search').focus();}
+});
+$('#search').addEventListener('input',e=>{state.query=e.target.value;renderBoard();});
+
+renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIRA | Public Information Response Analytics</title>
+    <style>
+        :root {
+            /* Colors - Watery & Tactile Theme */
+            --bg-primary: #f4f7f9;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e1e8ed;
+            --bg-success: #ecfdf5;
+            --bg-accent: #0c4a6e;
+            
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-tertiary: #94a3b8;
+            --text-on-accent: #f8fafc;
+            --text-success: #065f46;
+            
+            --border-subtle: #cbd5e1;
+            --border-focus: #38bdf8;
+            --border-success: #6ee7b7;
+            
+            --status-active: #10b981;
+            --status-pending: #f59e0b;
+            --status-stale: #ef4444;
+            --status-neutral: #64748b;
+
+            /* Spacing */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+
+            /* Typography */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --size-xs: 0.7rem;
+            --size-sm: 0.8rem;
+            --size-md: 0.95rem;
+            --size-lg: 1.1rem;
+            --size-xl: 1.4rem;
+            --weight-normal: 400;
+            --weight-bold: 600;
+
+            /* Effects */
+            --radius-sm: 3px;
+            --radius-md: 6px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            font-size: var(--size-md);
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Layout */
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            width: 1280px;
+            margin: 0 auto;
+            flex-grow: 1;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-subtle);
+            border-right: 1px solid var(--border-subtle);
+        }
+
+        header {
+            padding: var(--space-md) var(--space-lg);
+            background: var(--bg-accent);
+            color: var(--text-on-accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand h1 {
+            font-size: var(--size-lg);
+            font-weight: var(--weight-bold);
+            letter-spacing: 0.05em;
+        }
+
+        .brand p {
+            font-size: var(--size-xs);
+            opacity: 0.8;
+        }
+
+        /* Tabs */
+        nav[role="tablist"] {
+            display: flex;
+            background: var(--bg-accent);
+            padding: 0 var(--space-lg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        [role="tab"] {
+            padding: var(--space-md) var(--space-lg);
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-on-accent);
+            opacity: 0.6;
+            font-size: var(--size-sm);
+            font-weight: var(--weight-bold);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        [role="tab"][aria-selected="true"] {
+            opacity: 1;
+            border-bottom-color: var(--border-focus);
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: var(--space-lg);
+            right: var(--space-lg);
+            z-index: 1000;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            background: var(--bg-success);
+            border: 1px solid var(--border-success);
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            color: var(--text-success);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast-icon {
+            margin-right: var(--space-md);
+            background: var(--status-active);
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* Main Content Grid */
+        main {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 1px;
+            background: var(--border-subtle);
+            flex-grow: 1;
+        }
+
+        section {
+            background: var(--bg-secondary);
+            padding: var(--space-md);
+        }
+
+        h2 {
+            font-size: var(--size-xs);
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            letter-spacing: 0.1em;
+            margin-bottom: var(--space-md);
+            border-bottom: 1px solid var(--bg-tertiary);
+            padding-bottom: var(--space-xs);
+        }
+
+        /* Components */
+        .slicer-panel {
+            grid-column: 1;
+            border-right: 1px solid var(--border-subtle);
+        }
+
+        .dashboard-center {
+            grid-column: 2;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-md);
+            overflow-y: auto;
+            max-height: calc(100vh - 120px);
+            padding: var(--space-lg);
+        }
+
+        .inspector-panel {
+            grid-column: 3;
+            border-left: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: var(--space-md);
+        }
+
+        .card-full {
+            grid-column: span 2;
+        }
+
+        /* Status Pills */
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: var(--size-xs);
+            font-weight: var(--weight-bold);
+            text-transform: uppercase;
+        }
+
+        .pill-active { background: var(--bg-success); color: var(--text-success); }
+        .pill-neutral { background: var(--bg-tertiary); color: var(--text-secondary); }
+
+        /* Slicing Controls */
+        .filter-group {
+            margin-bottom: var(--space-lg);
+        }
+
+        .filter-label {
+            display: block;
+            font-size: var(--size-xs);
+            font-weight: var(--weight-bold);
+            margin-bottom: var(--space-xs);
+        }
+
+        .filter-item {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--space-xs) 0;
+            font-size: var(--size-sm);
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .filter-item:hover { color: var(--text-primary); }
+        .filter-item.selected { color: var(--bg-accent); font-weight: var(--weight-bold); }
+
+        /* Table Design */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--size-sm);
+        }
+
+        th {
+            text-align: left;
+            padding: var(--space-sm);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            font-weight: var(--weight-bold);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        td {
+            padding: var(--space-sm);
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        /* Metric Grid */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-sm);
+        }
+
+        .metric-box {
+            padding: var(--space-sm);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+        }
+
+        .metric-val {
+            font-size: var(--size-lg);
+            font-weight: var(--weight-bold);
+            display: block;
+        }
+
+        .metric-label {
+            font-size: var(--size-xs);
+            color: var(--text-tertiary);
+        }
+
+        .indicator-dot {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: var(--space-xs);
+        }
+
+        .bg-active { background-color: var(--status-active); }
+        .bg-pending { background-color: var(--status-pending); }
+        .bg-stale { background-color: var(--status-stale); }
+
+    </style>
+</head>
+<body>
+
+    <div class="toast-container" role="alert">
+        <div class="toast">
+            <span class="toast-icon">✓</span>
+            <div>
+                <strong>Action Confirmed</strong>
+                <p style="font-size: var(--size-xs)">Profile 'Regional Parish Outreach' has been synchronized with Papeete Central.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="workspace">
+        <header>
+            <div class="brand">
+                <h1>PIRA SYSTEM</h1>
+                <p>Public Information & Response Analytics // Sector: Civil Comms</p>
+            </div>
+            <div style="font-size: var(--size-xs); text-align: right;">
+                <div>Terminal: 44.1.0-STABLE</div>
+                <div>User: A. Whitethorn (Admin)</div>
+            </div>
+        </header>
+
+        <nav role="tablist" aria-label="Main Navigation">
+            <button role="tab" aria-selected="false" aria-controls="panel-summary" id="tab-summary">Operational Summary</button>
+            <button role="tab" aria-selected="true" aria-controls="panel-slicing" id="tab-slicing">Response Analysis</button>
+            <button role="tab" aria-selected="false" aria-controls="panel-geo" id="tab-geo">Geographic Saturation</button>
+            <button role="tab" aria-selected="false" aria-controls="panel-dem" id="tab-dem">Demographic Flux</button>
+            <button role="tab" aria-selected="false" aria-controls="panel-archive" id="tab-archive">Historical Archive</button>
+        </nav>
+
+        <main role="tabpanel" id="panel-slicing" aria-labelledby="tab-slicing">
+            <!-- Section 1: Data Slicing -->
+            <section class="slicer-panel">
+                <h2>Dimensions</h2>
+                <div class="filter-group">
+                    <span class="filter-label">Jurisdictional Level</span>
+                    <div class="filter-item selected"><span>National Hub</span><span>4,201</span></div>
+                    <div class="filter-item"><span>Regional Parish</span><span>1,822</span></div>
+                    <div class="filter-item"><span>District Proxy</span><span>409</span></div>
+                </div>
+
+                <div class="filter-group">
+                    <span class="filter-label">Communication Vector</span>
+                    <div class="filter-item"><span>Air-Freight Notices</span><span>12</span></div>
+                    <div class="filter-item selected"><span>Digital Broadcast</span><span>844</span></div>
+                    <div class="filter-item"><span>Physical Print</span><span>2,109</span></div>
+                    <div class="filter-item"><span>Direct Liaison</span><span>94</span></div>
+                </div>
+
+                <div class="filter-group">
+                    <span class="filter-label">Resource Allocation</span>
+                    <div class="filter-item"><span>Fully Staffed</span><span>28</span></div>
+                    <div class="filter-item selected"><span>Understaffed</span><span>142</span></div>
+                    <div class="filter-item"><span>Crisis Deployment</span><span>06</span></div>
+                </div>
+
+                <div class="filter-group">
+                    <span class="filter-label">Time Horizon</span>
+                    <div class="filter-item"><span>Tebet Framework</span><span>2023</span></div>
+                    <div class="filter-item"><span>Current Cycle</span><span>2024</span></div>
+                </div>
+            </section>
+
+            <div class="dashboard-center">
+                <!-- Section 2: Audience Status -->
+                <div class="card">
+                    <h2>Audience Saturation</h2>
+                    <div class="metric-grid">
+                        <div class="metric-box">
+                            <span class="metric-val">88.4%</span>
+                            <span class="metric-label">Categorical Reach</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-val">+4.1%</span>
+                            <span class="metric-label">Velocity Δ</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: var(--space-md); height: 60px; background: var(--bg-tertiary); display: flex; align-items: flex-end; gap: 2px; padding: 2px;">
+                        <div style="height: 40%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 60%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 55%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 80%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 90%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 75%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 85%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 60%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 45%; width: 10%; background: var(--bg-accent);"></div>
+                        <div style="height: 50%; width: 10%; background: var(--bg-accent);"></div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Sentiment Trends -->
+                <div class="card">
+                    <h2>Node Reliability</h2>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: var(--size-sm);">Pistia Hub - North</span>
+                            <span class="pill pill-active">Nominal</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: var(--size-sm);">Halide Relay - West</span>
+                            <span class="pill pill-active">Nominal</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: var(--size-sm);">Ferrocyanide Gate</span>
+                            <span class="pill pill-neutral">Syncing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Narrative Saturation -->
+                <div class="card card-full">
+                    <h2>Active Communication Threads</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ref ID</th>
+                                <th>Subject Matter</th>
+                                <th>Parish Origin</th>
+                                <th>Sentiment Index</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-family: monospace;">#CX-902</td>
+                                <td>Rosefish Infrastructure Levy</td>
+                                <td>Eastern Seaboard</td>
+                                <td>0.72 (Stable)</td>
+                                <td><span class="indicator-dot bg-active"></span> Disseminating</td>
+                            </tr>
+                            <tr>
+                                <td style="font-family: monospace;">#CX-881</td>
+                                <td>Cellulosid Waste Protocol</td>
+                                <td>Central Valley</td>
+                                <td>0.44 (Volatile)</td>
+                                <td><span class="indicator-dot bg-pending"></span> Under Review</td>
+                            </tr>
+                            <tr>
+                                <td style="font-family: monospace;">#CX-762</td>
+                                <td>Whitethorn Preservation Act</td>
+                                <td>Northern Highlands</td>
+                                <td>0.91 (Positive)</td>
+                                <td><span class="indicator-dot bg-active"></span> Completed</td>
+                            </tr>
+                            <tr>
+                                <td style="font-family: monospace;">#CX-604</td>
+                                <td>Bootboys Urban Renewal</td>
+                                <td>South District</td>
+                                <td>0.12 (Rejected)</td>
+                                <td><span class="indicator-dot bg-stale"></span> Terminated</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Section 5: Trial-and-Error Analysis -->
+                <div class="card">
+                    <h2>Model Convergence</h2>
+                    <p style="font-size: var(--size-xs); color: var(--text-secondary); margin-bottom: var(--space-sm);">
+                        Categorical analysis of response patterns following "Trial-and-Error" messaging shift.
+                    </p>
+                    <div style="height: 100px; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--border-subtle); background: var(--bg-primary);">
+                        <svg width="150" height="80" viewBox="0 0 150 80">
+                            <path d="M0,70 Q30,10 75,40 T150,20" fill="none" stroke="var(--bg-accent)" stroke-width="2" />
+                            <circle cx="75" cy="40" r="4" fill="var(--status-active)" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Section 6: Regional Density -->
+                <div class="card">
+                    <h2>Channel Weighting</h2>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-xs); font-size: var(--size-sm);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Proxy Requests</span>
+                            <span>42%</span>
+                        </div>
+                        <div style="width: 100%; height: 6px; background: var(--bg-tertiary); border-radius: 3px;">
+                            <div style="width: 42%; height: 100%; background: var(--bg-accent); border-radius: 3px;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: var(--space-xs);">
+                            <span>Direct Inquiries</span>
+                            <span>18%</span>
+                        </div>
+                        <div style="width: 100%; height: 6px; background: var(--bg-tertiary); border-radius: 3px;">
+                            <div style="width: 18%; height: 100%; background: var(--bg-accent); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 7: System Diagnostics -->
+            <section class="inspector-panel">
+                <div class="card">
+                    <h2>System Pulse</h2>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <div class="indicator-dot bg-active"></div>
+                            <span style="font-size: var(--size-sm);">Primary Uplink: UNAMBIGUITY</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <div class="indicator-dot bg-active"></div>
+                            <span style="font-size: var(--size-sm);">Integrity Hash: Categorical</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <div class="indicator-dot bg-pending"></div>
+                            <span style="font-size: var(--size-sm);">Buffer Status: 82% Capacity</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="flex-grow: 1;">
+                    <h2>Audit Trail</h2>
+                    <div style="font-size: var(--size-xs); line-height: 1.6;">
+                        <div style="border-left: 2px solid var(--border-subtle); padding-left: var(--space-sm); margin-bottom: var(--space-sm);">
+                            <span style="color: var(--text-tertiary);">14:02:11</span><br>
+                            Commited slice 'Coastal Parish' to Papeete central DB. Success response received.
+                        </div>
+                        <div style="border-left: 2px solid var(--border-subtle); padding-left: var(--space-sm); margin-bottom: var(--space-sm);">
+                            <span style="color: var(--text-tertiary);">13:58:45</span><br>
+                            Adjusted 'Rosefish' campaign weight to +0.15 for understaffed sectors.
+                        </div>
+                        <div style="border-left: 2px solid var(--border-subtle); padding-left: var(--space-sm); margin-bottom: var(--space-sm);">
+                            <span style="color: var(--text-tertiary);">13:44:20</span><br>
+                            Proxy node 09-Halide flagged for sorry-state maintenance delay.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card" style="background: var(--bg-accent); color: var(--text-on-accent);">
+                    <h2 style="color: var(--text-on-accent); border-bottom-color: rgba(255,255,255,0.2);">Quick Action</h2>
+                    <button style="width: 100%; padding: var(--space-sm); background: var(--border-focus); border: none; color: white; border-radius: var(--radius-sm); font-weight: var(--weight-bold); cursor: pointer;">
+                        Broadcast Delta Map
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Tab switching logic
+        const tabs = document.querySelectorAll('[role="tab"]');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.setAttribute('aria-selected', 'false'));
+                tab.setAttribute('aria-selected', 'true');
+            });
+        });
+
+        // Auto-hide toast after 8 seconds
+        setTimeout(() => {
+            const toast = document.querySelector('.toast-container');
+            if (toast) {
+                toast.style.transition = 'opacity 1s ease-out';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 1000);
+            }
+        }, 8000);
+    </script>
+</body>
+</html>
+

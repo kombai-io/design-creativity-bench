@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexiGuard Audit Engine | Aetheria World Shards</title>
+    <style>
+        :root {
+            /* Colors */
+            --bg-deep: #0f1115;
+            --bg-surface: #1a1d23;
+            --bg-elevated: #242931;
+            --bg-hover: #2d333d;
+            --border-muted: #333a45;
+            --border-bright: #4a5464;
+            --text-primary: #e1e4e8;
+            --text-muted: #9ba3af;
+            --text-dim: #636e7b;
+            --accent-tangerine: #ff8c42;
+            --accent-tangerine-dim: #8b4d24;
+            --accent-sapphire: #3b82f6;
+            --accent-danger: #ef4444;
+            --accent-danger-bg: #450a0a;
+            --accent-success: #10b981;
+            --skeleton-base: #1e232b;
+            --skeleton-shimmer: #2c323c;
+            --overlay-backdrop: rgba(0, 0, 0, 0.85);
+
+            /* Spacing */
+            --space-0: 0px;
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+
+            /* Typography */
+            --font-size-xs: 11px;
+            --font-size-sm: 12px;
+            --font-size-md: 13px;
+            --font-size-lg: 16px;
+            --font-mono: 'Monaco', 'Consolas', 'Ubuntu Mono', monospace;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+            /* Components */
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.6);
+            --transition-speed: 0.15s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: var(--space-0);
+            padding: var(--space-0);
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: var(--font-size-md);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Layout Grid */
+        .app-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr 340px;
+            grid-template-rows: 48px 1fr 240px;
+            grid-template-areas: 
+                "header header header"
+                "sidebar main actions"
+                "sidebar audit-trail actions";
+            height: 100vh;
+            width: 100%;
+            gap: var(--space-1);
+            background-color: var(--border-muted);
+        }
+
+        header {
+            grid-area: header;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-muted);
+            display: flex;
+            align-items: center;
+            padding: var(--space-0) var(--space-4);
+            justify-content: space-between;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            font-weight: 700;
+            color: var(--accent-tangerine);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-size: var(--font-size-sm);
+        }
+
+        .status-badge {
+            background-color: var(--accent-sapphire);
+            color: white;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            text-transform: uppercase;
+        }
+
+        /* Sidebar Section */
+        .sidebar {
+            grid-area: sidebar;
+            background-color: var(--bg-surface);
+            overflow-y: auto;
+            padding: var(--space-4);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-5);
+        }
+
+        .section-title {
+            color: var(--text-muted);
+            font-size: var(--font-size-xs);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: var(--space-3);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .metadata-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-2);
+            font-size: var(--font-size-sm);
+        }
+
+        .metadata-label { color: var(--text-dim); }
+        .metadata-value { color: var(--text-primary); font-family: var(--font-mono); }
+
+        /* Main Log Table */
+        .main-viewport {
+            grid-area: main;
+            background-color: var(--bg-surface);
+            overflow: auto;
+            position: relative;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+        }
+
+        .data-table thead {
+            position: sticky;
+            top: var(--space-0);
+            background-color: var(--bg-elevated);
+            z-index: 10;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--border-bright);
+            color: var(--text-muted);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--border-muted);
+            vertical-align: top;
+        }
+
+        .data-table tr:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .provenance-tag {
+            display: inline-block;
+            padding: 2px var(--space-2);
+            border: 1px solid var(--border-bright);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            background: var(--bg-deep);
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .flag-high { color: var(--accent-danger); font-weight: bold; }
+        .flag-medium { color: var(--accent-tangerine); }
+
+        /* Audit Trail (Skeletons) */
+        .audit-trail {
+            grid-area: audit-trail;
+            background-color: var(--bg-surface);
+            border-top: 1px solid var(--border-muted);
+            padding: var(--space-4);
+            overflow-y: hidden;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shimmer) 50%, var(--skeleton-base) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-sm);
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-text { height: var(--space-3); width: 100%; margin-bottom: var(--space-2); }
+        .skeleton-block { height: var(--space-8); width: 100%; margin-bottom: var(--space-4); }
+
+        /* Actions Panel */
+        .actions-panel {
+            grid-area: actions;
+            background-color: var(--bg-surface);
+            padding: var(--space-4);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+            border-left: 1px solid var(--border-muted);
+        }
+
+        .btn {
+            padding: var(--space-3);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-family: var(--font-sans);
+            transition: background var(--transition-speed);
+            text-align: center;
+        }
+
+        .btn-primary { background: var(--accent-tangerine); color: var(--bg-deep); }
+        .btn-primary:hover { background: #ff9d61; }
+        .btn-danger { background: var(--accent-danger-bg); color: var(--accent-danger); border: 1px solid var(--accent-danger); }
+        .btn-danger:hover { background: var(--accent-danger); color: white; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        .form-label { font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; }
+        .form-textarea {
+            background: var(--bg-deep);
+            border: 1px solid var(--border-muted);
+            color: var(--text-primary);
+            padding: var(--space-3);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            resize: none;
+            height: 120px;
+        }
+
+        /* Dialog */
+        .overlay {
+            position: fixed;
+            inset: var(--space-0);
+            background: var(--overlay-backdrop);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-elevated);
+            width: 400px;
+            padding: var(--space-6);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--accent-danger);
+        }
+
+        .modal-title { font-size: var(--font-size-lg); margin-bottom: var(--space-4); color: var(--accent-danger); }
+        .modal-body { margin-bottom: var(--space-6); line-height: 1.5; color: var(--text-muted); }
+        .modal-actions { display: flex; gap: var(--space-3); justify-content: flex-end; }
+
+        .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border-muted); }
+        .btn-ghost:hover { background: var(--bg-hover); }
+
+    </style>
+</head>
+<body>
+
+<div class="app-grid" role="main">
+    <header>
+        <div class="header-brand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            LexiGuard // Audit Console
+        </div>
+        <div style="display: flex; gap: var(--space-4); align-items: center;">
+            <span class="metadata-label">Case:</span>
+            <span class="metadata-value">#AUD-9921-X</span>
+            <span class="status-badge">In Review</span>
+        </div>
+    </header>
+
+    <aside class="sidebar">
+        <section>
+            <div class="section-title">Subject Profile</div>
+            <div class="metadata-row">
+                <span class="metadata-label">Player Name</span>
+                <span class="metadata-value">Vaelin_Shadow</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Account ID</span>
+                <span class="metadata-value">99283-8821</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Region</span>
+                <span class="metadata-value">US-EAST-1</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Trust Score</span>
+                <span class="metadata-value" style="color: var(--accent-danger)">14 / 100</span>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">Contextual Signals</div>
+            <div class="metadata-row">
+                <span class="metadata-label">RMT Pattern Match</span>
+                <span class="metadata-value">92.4%</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Report Volume (24h)</span>
+                <span class="metadata-value">18 Flags</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Login IP Affinity</span>
+                <span class="metadata-value">VPN Detected</span>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">Related Assets</div>
+            <div class="skeleton-block skeleton"></div>
+            <div class="skeleton-text skeleton"></div>
+            <div class="skeleton-text skeleton"></div>
+        </section>
+    </aside>
+
+    <div class="main-viewport">
+        <table class="data-table" role="table">
+            <thead>
+                <tr>
+                    <th style="width: 140px;">Timestamp</th>
+                    <th style="width: 100px;">Channel</th>
+                    <th>Message Content</th>
+                    <th style="width: 150px;">Provenance</th>
+                    <th style="width: 80px;">Risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2023-11-24 14:22:01</td>
+                    <td>Global_EN</td>
+                    <td>"selling 50k gold for $20 paypal, fast delivery whisper me"</td>
+                    <td><span class="provenance-tag">HEURISTIC_V4</span></td>
+                    <td><span class="flag-high">CRITICAL</span></td>
+                </tr>
+                <tr>
+                    <td>2023-11-24 14:22:15</td>
+                    <td>Whisper_Out</td>
+                    <td>"hey check site mmotrade.net for cheaper rates"</td>
+                    <td><span class="provenance-tag">LINK_SCANNER</span></td>
+                    <td><span class="flag-high">CRITICAL</span></td>
+                </tr>
+                <tr>
+                    <td>2023-11-24 14:23:44</td>
+                    <td>Global_EN</td>
+                    <td>"you guys are such losers, get better at the game"</td>
+                    <td><span class="provenance-tag">NLP_TOXICITY</span></td>
+                    <td><span class="flag-medium">LOW</span></td>
+                </tr>
+                <tr>
+                    <td>2023-11-24 14:25:10</td>
+                    <td>Whisper_Out</td>
+                    <td>"ignore the mod alerts, its a bot"</td>
+                    <td><span class="provenance-tag">RECOGNITION</span></td>
+                    <td><span class="flag-medium">MEDIUM</span></td>
+                </tr>
+                <!-- Simulated Density -->
+                <tr><td>2023-11-24 14:26:00</td><td>Trade</td><td>"WTS Dragon Bone x400"</td><td><span class="provenance-tag">PASSTHROUGH</span></td><td>-</td></tr>
+                <tr><td>2023-11-24 14:26:05</td><td>Trade</td><td>"WTS Dragon Bone x400"</td><td><span class="provenance-tag">DEDUP_V2</span></td><td>-</td></tr>
+                <tr><td>2023-11-24 14:26:10</td><td>Trade</td><td>"WTS Dragon Bone x400"</td><td><span class="provenance-tag">DEDUP_V2</span></td><td>-</td></tr>
+                <tr><td>2023-11-24 14:26:15</td><td>Trade</td><td>"WTS Dragon Bone x400"</td><td><span class="provenance-tag">DEDUP_V2</span></td><td>-</td></tr>
+                <tr><td>2023-11-24 14:26:20</td><td>Trade</td><td>"WTS Dragon Bone x400"</td><td><span class="provenance-tag">DEDUP_V2</span></td><td>-</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <section class="audit-trail">
+        <div class="section-title">Audit Log & State Persistence</div>
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+            <div style="display: flex; gap: var(--space-4);">
+                <div class="skeleton-block skeleton" style="width: 240px; height: 100px;"></div>
+                <div class="skeleton-block skeleton" style="flex: 1; height: 100px;"></div>
+            </div>
+            <div class="skeleton-text skeleton" style="width: 60%;"></div>
+            <div class="skeleton-text skeleton" style="width: 40%;"></div>
+        </div>
+    </section>
+
+    <aside class="actions-panel">
+        <div class="section-title">Auditor Verdict</div>
+        
+        <div class="form-group">
+            <label class="form-label">Internal Audit Notes</label>
+            <textarea class="form-textarea" placeholder="Enter justification for the auditor-of-record..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Infraction Category</label>
+            <select class="form-textarea" style="height: auto;">
+                <option>Real Money Trading (RMT)</option>
+                <option>Severe Toxicity</option>
+                <option>Account Compromise</option>
+                <option>False Positive</option>
+            </select>
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: var(--space-3);">
+            <button class="btn btn-primary">SUBMIT VERDICT</button>
+            <button class="btn btn-ghost">REQUEST PEER REVIEW</button>
+            <button class="btn btn-danger" onclick="toggleModal(true)">PERMANENT TERMINATION</button>
+        </div>
+
+        <div style="padding: var(--space-4); background: var(--bg-deep); border-radius: var(--radius-md); border: 1px solid var(--border-muted);">
+            <div class="section-title" style="margin-bottom: var(--space-2);">Provenance Hash</div>
+            <div class="metadata-value" style="font-size: var(--font-size-xs); overflow-wrap: break-word;">
+                sha256:8f44c6e8e82d8d8f44c6e8e82d8d...
+            </div>
+        </div>
+    </aside>
+</div>
+
+<div class="overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+        <h2 class="modal-title" id="modalTitle">Destructive Action</h2>
+        <div class="modal-body">
+            You are about to <strong>permanently terminate</strong> the account for <strong>Vaelin_Shadow</strong>. This will revoke all digital assets and is irreversible across all shards.
+            <br><br>
+            Are you sure you wish to proceed with this enforcement?
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="toggleModal(false)">CANCEL</button>
+            <button class="btn btn-danger" onclick="executeDestruction()">CONFIRM TERMINATION</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleModal(show) {
+        const overlay = document.getElementById('confirmOverlay');
+        if (show) {
+            overlay.classList.add('active');
+        } else {
+            overlay.classList.remove('active');
+        }
+    }
+
+    function executeDestruction() {
+        const btn = document.querySelector('.modal .btn-danger');
+        btn.innerText = "EXECUTING...";
+        btn.disabled = true;
+        
+        setTimeout(() => {
+            alert('Account termination sequence complete. Auditor logs updated.');
+            toggleModal(false);
+            window.location.reload();
+        }, 1200);
+    }
+
+    // Escape key closes modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') toggleModal(false);
+    });
+</script>
+
+</body>
+</html>
+

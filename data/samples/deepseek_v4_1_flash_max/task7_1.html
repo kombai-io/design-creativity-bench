@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works · Branchglass — production-like preview environments for every pull request</title>
+<meta name="description" content="Branchglass connects to your repo and cloud account, spins up an isolated production-like environment on every pull request, and tears it down on merge.">
+<style>
+  :root{
+    --bg:#070911;
+    --surface:rgba(255,255,255,.035);
+    --surface-2:rgba(255,255,255,.065);
+    --line:rgba(255,255,255,.09);
+    --line-strong:rgba(255,255,255,.17);
+    --text:#eef2fb;
+    --muted:#98a3bd;
+    --muted-2:#6d7a97;
+    --accent:#5b8cff;
+    --accent-2:#22d3ee;
+    --violet:#a78bfa;
+    --green:#37d99a;
+    --amber:#fbbf24;
+    --radius:18px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--text);
+    line-height:1.55;
+    background:
+      radial-gradient(900px 620px at 10% -6%,rgba(91,140,255,.20),transparent 62%),
+      radial-gradient(820px 520px at 90% 2%,rgba(167,139,250,.15),transparent 62%),
+      radial-gradient(1100px 780px at 50% 108%,rgba(34,211,238,.10),transparent 60%),
+      #070911;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(1000px 660px at 50% 0,#000,transparent 78%);
+    mask-image:radial-gradient(1000px 660px at 50% 0,#000,transparent 78%);
+  }
+  header,main,footer{position:relative;z-index:1}
+  a{color:inherit}
+  .wrap{width:100%;max-width:1180px;margin:0 auto;padding:0 24px}
+  .ico{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+  /* ---------- top bar ---------- */
+  .topbar{position:sticky;top:0;z-index:60;border-bottom:1px solid var(--line);background:rgba(7,9,17,.74);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .topbar .wrap{display:flex;align-items:center;gap:26px;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:660;font-size:16px;letter-spacing:-.015em;white-space:nowrap}
+  .mark{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(140deg,#5b8cff,#22d3ee);box-shadow:0 8px 20px -6px rgba(91,140,255,.75);color:#04121a}
+  .mark svg{width:16px;height:16px}
+  .nav{display:flex;gap:22px;align-items:center}
+  .nav a{font-size:14px;color:var(--muted);text-decoration:none;transition:color .16s}
+  .nav a:hover{color:var(--text)}
+  .nav a[aria-current="page"]{color:var(--text)}
+  .top-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:14px;font-weight:560;padding:9px 15px;border-radius:11px;border:1px solid var(--line-strong);background:var(--surface);color:var(--text);cursor:pointer;text-decoration:none;transition:background .16s,border-color .16s,transform .16s,filter .16s;white-space:nowrap}
+  .btn:hover{background:var(--surface-2);border-color:rgba(255,255,255,.26)}
+  .btn-primary{border-color:transparent;color:#06080f;font-weight:660;background:linear-gradient(135deg,#6f9bff,#8b7bff 55%,#38d9f0);box-shadow:0 14px 30px -14px rgba(91,140,255,.95)}
+  .btn-primary:hover{filter:brightness(1.07);border-color:transparent}
+  .btn-ghost{background:transparent}
+
+  /* ---------- section head ---------- */
+  .section{padding:76px 0 0}
+  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#a6b9ff;padding:7px 13px;border-radius:999px;border:1px solid rgba(91,140,255,.3);background:rgba(91,140,255,.10)}
+  .ping{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(55,217,154,.16)}
+  h1{font-size:clamp(33px,5vw,54px);line-height:1.04;letter-spacing:-.032em;font-weight:670;margin:22px 0 0;max-width:19ch}
+  h1 .grad{background:linear-gradient(100deg,#9dc0ff,#c3b3ff 45%,#6fe6f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{margin:20px 0 0;max-width:66ch;font-size:clamp(15px,1.55vw,17.5px);color:var(--muted);line-height:1.62}
+  .quickfact{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:26px}
+  .quickfact span{display:inline-flex;align-items:center;gap:9px;font-size:13.5px;color:#c2cde5}
+  .quickfact .tick{width:19px;height:19px;border-radius:6px;display:grid;place-items:center;color:#5ce0a8;background:rgba(55,217,154,.13);border:1px solid rgba(55,217,154,.3);flex:0 0 auto}
+  .quickfact .tick .ico{width:11px;height:11px;stroke-width:2.6}
+
+  .h2{font-size:clamp(23px,2.6vw,32px);letter-spacing:-.026em;font-weight:655;margin:0;line-height:1.2}
+  .h2 + .sub{margin:12px 0 0;color:var(--muted);font-size:15.5px;max-width:64ch}
+  .block{margin-top:64px}
+  .block-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);margin:0 0 12px}
+
+  /* ---------- pipeline ---------- */
+  .pipeline-wrap{margin-top:26px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));padding:24px;overflow-x:auto;scrollbar-width:thin}
+  .pipeline{display:flex;list-style:none;margin:0;padding:0;min-width:840px}
+  .pipe{position:relative;flex:1 1 0;min-width:168px;padding-top:58px}
+  .pipe + .pipe{padding-left:22px}
+  .pb{position:absolute;top:0;left:0;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:700;color:#dbe6ff;background:linear-gradient(150deg,rgba(91,140,255,.32),rgba(91,140,255,.07));border:1px solid rgba(91,140,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+  .pipe + .pipe .pb{left:22px}
+  .pipe:not(:last-child)::after{content:"";position:absolute;top:19px;left:50px;right:12px;height:1px;background:linear-gradient(90deg,rgba(91,140,255,.55),rgba(91,140,255,.12))}
+  .pipe + .pipe:not(:last-child)::after{left:72px}
+  .pipe .pt{display:block;font-size:14.5px;font-weight:620;letter-spacing:-.01em}
+  .pipe .ps{display:block;font-size:12.5px;color:var(--muted-2);margin-top:4px}
+  .pipe .pd{display:inline-block;margin-top:9px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:#8fb0ff;background:rgba(91,140,255,.12);border:1px solid rgba(91,140,255,.22);border-radius:999px;padding:2px 8px}
+
+  /* ---------- step cards ---------- */
+  .steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px;margin-top:26px}
+  .step{grid-column:span 2;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:14px;padding:22px;border-radius:var(--radius);border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));transition:transform .22s,border-color .22s,box-shadow .22s}
+  .step:nth-child(4),.step:nth-child(5){grid-column:span 3}
+  .step::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(420px 220px at 100% 0,rgba(91,140,255,.16),transparent 70%)}
+  .step:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.2);box-shadow:0 30px 60px -34px rgba(0,0,0,.95)}
+  .step:hover::before{opacity:1}
+  .step-top{display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative}
+  .step-num{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;color:var(--muted-2)}
+  .step-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#9dbcff;background:rgba(91,140,255,.12);border:1px solid rgba(91,140,255,.26)}
+  .step:nth-child(4) .step-icon,.step:nth-child(5) .step-icon{color:#7ee3f5;background:rgba(34,211,238,.11);border-color:rgba(34,211,238,.26)}
+  .step h3{margin:0;font-size:17px;font-weight:625;letter-spacing:-.014em;line-height:1.32;position:relative}
+  .step p{margin:0;font-size:14px;color:var(--muted);line-height:1.6;position:relative}
+  .dl{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);position:relative}
+  .dl li{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:8px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.055)}
+  .dl li:last-child{border-bottom:0;padding-bottom:2px}
+  .dl .k{color:var(--muted-2);white-space:nowrap}
+  .dl .v{font-family:var(--mono);color:#d2dcf2;text-align:right}
+  .dl .v.ok{color:#6ee6ae}
+  .dl .v.warn{color:#fcd34d}
+  .step-foot{margin-top:auto;display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted-2);position:relative}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:0 0 auto;box-shadow:0 0 0 3px rgba(55,217,154,.14)}
+
+  /* ---------- environment panel ---------- */
+  .panel-grid{display:grid;grid-template-columns:1.06fr .94fr;gap:18px;margin-top:26px;align-items:start}
+  .card{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018));overflow:hidden}
+  .env-head{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.022)}
+  .env-avatar{width:36px;height:36px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:14px;color:#04121a;background:linear-gradient(140deg,#38d9f0,#6f9bff)}
+  .env-name{font-family:var(--mono);font-size:13.5px;color:#e9efff}
+  .env-meta{font-size:11.8px;color:var(--muted-2);margin-top:3px;font-family:var(--mono)}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:650;padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge .bd{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .badge-ok{color:#6ee6ae;background:rgba(55,217,154,.12);border:1px solid rgba(55,217,154,.3)}
+  .badge-warn{color:#fcd34d;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3)}
+  .badge-muted{color:#a8b4cd;background:rgba(255,255,255,.06);border:1px solid var(--line-strong)}
+  .urlbar{display:flex;align-items:center;gap:10px;margin:16px 18px 6px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(4,7,14,.62)}
+  .urlbar .ico{width:15px;height:15px;color:#7fb2ff;flex:0 0 auto}
+  .url-text{font-family:var(--mono);font-size:12.6px;color:#cfdcff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .copy{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font:inherit;font-family:var(--sans);font-size:11.5px;font-weight:600;color:#c8d4ee;background:rgba(255,255,255,.07);border:1px solid var(--line-strong);border-radius:9px;padding:5px 10px;cursor:pointer;flex:0 0 auto;transition:background .16s}
+  .copy:hover{background:rgba(255,255,255,.13)}
+  .copy .ico{width:12px;height:12px;color:inherit}
+  .statgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:16px}
+  .statgrid > div{padding:13px 16px;border-right:1px solid var(--line)}
+  .statgrid > div:last-child{border-right:0}
+  .statgrid .sl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2);font-weight:600}
+  .statgrid .sv{font-family:var(--mono);font-size:15.5px;color:#e6ecff;margin-top:6px}
+  .statgrid .sv small{font-size:11px;color:var(--muted-2);margin-left:3px}
+  .checks{padding:6px 18px 4px}
+  .checks .cl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);font-weight:600;padding:12px 0 6px}
+  .check{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.052);font-size:13.4px}
+  .check:last-child{border-bottom:0}
+  .ci{width:20px;height:20px;border-radius:7px;display:grid;place-items:center;flex:0 0 auto}
+  .ci .ico{width:11px;height:11px;stroke-width:2.5}
+  .ci.ok{color:#4ade9e;background:rgba(55,217,154,.14);border:1px solid rgba(55,217,154,.3)}
+  .ci.pend{color:#fcd34d;background:rgba(251,191,36,.13);border:1px solid rgba(251,191,36,.3)}
+  .ci.err{color:#fb8aa5;background:rgba(244,114,182,.13);border:1px solid rgba(244,114,182,.3)}
+  .check .cl-t{color:#dae3f6}
+  .check .cl-t small{display:block;color:var(--muted-2);font-size:11.5px;margin-top:2px}
+  .check .time{margin-left:auto;font-family:var(--mono);font-size:11.8px;color:var(--muted-2);flex:0 0 auto}
+  .term{border-top:1px solid var(--line);background:rgba(3,6,12,.72);padding:14px 18px 18px;font-family:var(--mono);font-size:12.1px;line-height:1.95;color:#8e9fbe;overflow-x:auto}
+  .term .t{color:#5a688a}
+  .term .ok{color:#4ade9e}
+  .term .u{color:#82b4ff}
+  .term .w{color:#fcd34d}
+  .env-foot{display:flex;align-items:center;gap:14px;padding:14px 18px;border-top:1px solid var(--line);background:rgba(255,255,255,.022);flex-wrap:wrap}
+  .avs{display:flex}
+  .avs span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:700;font-family:var(--mono);color:#0a0f1c;border:2px solid #0a0e1a;margin-left:-8px}
+  .avs span:first-child{margin-left:0}
+  .env-foot .ft{font-size:12.5px;color:var(--muted)}
+  .env-foot .ft b{color:#e6ecff;font-weight:640}
+  .env-foot .ago{margin-left:auto;font-size:12px;color:var(--muted-2);font-family:var(--mono)}
+
+  .side-stack{display:flex;flex-direction:column;gap:18px}
+  .code-head{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.022);font-family:var(--mono);font-size:12.2px;color:var(--muted)}
+  .dots{display:flex;gap:6px}
+  .dots i{width:9px;height:9px;border-radius:50%;background:#26304a}
+  .dots i:first-child{background:#3b2b46}
+  .dots i:nth-child(2){background:#3a3a26}
+  .code-head .src{margin-left:auto;font-size:11.5px;color:var(--muted-2);display:inline-flex;align-items:center;gap:6px}
+  .code-head .src .ico{width:12px;height:12px}
+  pre{margin:0;padding:16px 18px;font-family:var(--mono);font-size:12.1px;line-height:1.8;color:#c7d2ea;overflow-x:auto}
+  .c-c{color:#54608a}
+  .c-k{color:#82b4ff}
+  .c-s{color:#8ee6b8}
+  .c-n{color:#d9b0ff}
+  .feed-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.022)}
+  .feed-head h3{margin:0;font-size:14px;font-weight:620;letter-spacing:-.01em}
+  .feed ul{list-style:none;margin:0;padding:4px 18px 12px}
+  .feed li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.052);font-size:13px;align-items:flex-start}
+  .feed li:last-child{border-bottom:0}
+  .feed time{font-family:var(--mono);font-size:11.8px;color:var(--muted-2);flex:0 0 58px;padding-top:1px}
+  .feed .txt{color:#c6d0e8}
+  .feed .txt b{color:#fff;font-weight:630}
+  .feed .txt code{font-family:var(--mono);font-size:12px;color:#a9c3ff;background:rgba(91,140,255,.12);padding:1px 6px;border-radius:6px}
+  .feed .ed{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:0 0 auto}
+
+  /* ---------- metrics ---------- */
+  .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:26px}
+  .metric{padding:20px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016))}
+  .metric .num{font-size:clamp(26px,2.9vw,32px);font-weight:670;letter-spacing:-.035em;line-height:1.1;background:linear-gradient(120deg,#ffffff,#a9c4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .metric .lbl{margin-top:9px;font-size:13.5px;color:#c6d0e8;line-height:1.45}
+  .metric .sub{margin-top:6px;font-size:12px;color:var(--muted-2)}
+  .metric.chart{display:flex;flex-direction:column}
+  .chart{display:flex;align-items:flex-end;gap:7px;height:104px;margin-top:16px}
+  .col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:5px}
+  .col .bv{font-family:var(--mono);font-size:9.5px;color:var(--muted-2);white-space:nowrap}
+  .col .bar{width:100%;max-width:26px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,rgba(91,140,255,.85),rgba(91,140,255,.28))}
+  .col:last-child .bv{color:#9fc0ff}
+  .col:last-child .bar{background:linear-gradient(180deg,#39d9f0,#5b8cff);box-shadow:0 0 22px -4px rgba(34,211,238,.65)}
+  .col .bl{font-family:var(--mono);font-size:9.5px;color:var(--muted-2)}
+
+  /* ---------- integrations ---------- */
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+  .chip{display:inline-flex;align-items:center;gap:10px;padding:9px 15px 9px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.032);font-size:13.5px;color:#ccd6ec}
+  .gl{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:-.02em;flex:0 0 auto}
+
+  /* ---------- faq ---------- */
+  .faq{margin-top:26px}
+  details{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);overflow:hidden}
+  details + details{margin-top:10px}
+  summary{cursor:pointer;list-style:none;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:18px;font-size:15px;font-weight:575;letter-spacing:-.01em}
+  summary::-webkit-details-marker{display:none}
+  summary:hover{background:rgba(255,255,255,.03)}
+  summary .chev{color:var(--muted);transition:transform .2s;flex:0 0 auto}
+  details[open] summary .chev{transform:rotate(180deg)}
+  .faq-a{padding:0 18px 18px;color:var(--muted);font-size:14px;line-height:1.68;max-width:88ch}
+  .faq-a code{font-family:var(--mono);font-size:12.5px;color:#a9c3ff}
+
+  /* ---------- cta + footer ---------- */
+  .cta{margin-top:72px;position:relative;overflow:hidden;border-radius:24px;border:1px solid rgba(91,140,255,.26);padding:42px;display:grid;grid-template-columns:1.25fr .75fr;gap:34px;align-items:center;background:radial-gradient(720px 320px at 12% 0,rgba(91,140,255,.24),transparent 66%),radial-gradient(640px 340px at 88% 110%,rgba(34,211,238,.17),transparent 62%),rgba(255,255,255,.028)}
+  .cta h2{margin:0;font-size:clamp(22px,2.7vw,32px);letter-spacing:-.028em;font-weight:665;line-height:1.16}
+  .cta p{margin:13px 0 0;color:var(--muted);font-size:15px;max-width:56ch}
+  .cta-actions{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+  .cta-actions .btn{justify-content:center;padding:13px 18px;font-size:14.5px}
+  .cta-note{margin-top:4px;font-size:12px;color:var(--muted-2);text-align:center}
+  footer{margin-top:56px;border-top:1px solid var(--line);padding:28px 0 48px}
+  footer .wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  footer .cp{font-size:12.8px;color:var(--muted-2)}
+  footer .links{margin-left:auto;display:flex;gap:20px;flex-wrap:wrap}
+  footer .links a{font-size:12.8px;color:var(--muted);text-decoration:none}
+  footer .links a:hover{color:var(--text)}
+
+  @media (max-width:1080px){
+    .panel-grid{grid-template-columns:1fr}
+    .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .step,.step:nth-child(4),.step:nth-child(5){grid-column:span 1}
+    .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .cta{grid-template-columns:1fr;padding:34px}
+    .cta-actions{flex-direction:row;flex-wrap:wrap}
+    .cta-actions .btn{flex:1 1 220px}
+  }
+  @media (max-width:860px){
+    .nav{display:none}
+    h1{max-width:26ch}
+  }
+  @media (max-width:720px){
+    .section{padding-top:56px}
+    .block{margin-top:48px}
+    .steps{grid-template-columns:1fr}
+    .metrics{grid-template-columns:1fr}
+    .statgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .statgrid > div:nth-child(2){border-right:0}
+    .statgrid > div:nth-child(1),.statgrid > div:nth-child(2){border-bottom:1px solid var(--line)}
+    .top-actions .btn-ghost{display:none}
+    .cta{padding:26px}
+  }
+</style>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
+  <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6.5" cy="6" r="2.4"/><circle cx="6.5" cy="18" r="2.4"/><circle cx="17.5" cy="9.5" r="2.4"/><path d="M6.5 8.4v7.2"/><path d="M15.1 9.5H12a4 4 0 0 0-4 4v-1"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h9.4a3.6 3.6 0 0 0 .4-7.18A5.1 5.1 0 0 0 7.1 9.9A3.8 3.8 0 0 0 7 18.5Z"/><path d="M12 15.5h4.5"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.2 2.5 5 13.4h6.1L10.6 21.5 19 10.6h-6.2l.4-8.1Z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9.2" cy="8" r="3.2"/><path d="M3.4 20a5.8 5.8 0 0 1 11.6 0"/><path d="M16.1 5.2a3.2 3.2 0 0 1 0 5.6"/><path d="M17.6 14.5A6 6 0 0 1 20.8 20"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9.2 7V4.9A1.9 1.9 0 0 1 11.1 3h1.8A1.9 1.9 0 0 1 14.8 4.9V7"/><path d="M6.6 7l.9 11.3A2 2 0 0 0 9.5 20.2h5a2 2 0 0 0 2-1.9L17.4 7"/><path d="M10.2 11v5.2M13.8 11v5.2"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.2 13.8a3.6 3.6 0 0 0 5.1 0l3-3a3.6 3.6 0 0 0-5.1-5.1l-1 1"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.1 0l-3 3a3.6 3.6 0 0 0 5.1 5.1l1-1"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.8 12.6 9.6 17.4 19.2 6.8"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3.1 2"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 8.4v4.4"/><path d="M12 16.6h.01"/><circle cx="12" cy="12" r="8.4"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.9"/><path d="M19.3 14.2a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.9 1.2v.17a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-3-1.1l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0-1.2-2.9H2.7a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.1-3l-.06-.06A2 2 0 1 1 6.66 3.5l.06.06a1.7 1.7 0 0 0 2.9-1.2V2.2a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 3 1.1l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0 1.2 2.9h.17a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.53 1.1Z"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8.6 7.6 4.2 12l4.4 4.4"/><path d="M15.4 7.6 19.8 12l-4.4 4.4"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6.6" rx="7.4" ry="3"/><path d="M4.6 6.6v10.8c0 1.66 3.31 3 7.4 3s7.4-1.34 7.4-3V6.6"/><path d="M4.6 12c0 1.66 3.31 3 7.4 3s7.4-1.34 7.4-3"/></symbol>
+  <symbol id="i-chevd" viewBox="0 0 24 24"><path d="M6.5 9.5 12 15l5.5-5.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.6" y="8.6" width="11" height="11" rx="2.2"/><path d="M15.4 8.6V5.6a2 2 0 0 0-2-2H5.6a2 2 0 0 0-2 2v7.8a2 2 0 0 0 2 2h3"/></symbol>
+  <symbol id="i-glass" viewBox="0 0 24 24"><path d="M12 3 6 7.2v9.6L12 21l6-4.2V7.2L12 3Z"/><path d="M12 3v18"/><path d="M6 7.2l12 9.6"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4.6 12h14.8"/><path d="M13.4 6l6 6-6 6"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-glass"/></svg></span>
+      Branchglass
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#product">Product</a>
+      <a href="#how" aria-current="page">How it works</a>
+      <a href="#integrations">Integrations</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#docs">Docs</a>
+    </nav>
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="#signin">Sign in</a>
+      <a class="btn btn-primary" href="#start">Start free</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ SECTION HEAD ============ -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <span class="eyebrow"><span class="ping"></span>How it works</span>
+      <h1>Every pull request gets its own <span class="grad">production-like environment</span>.</h1>
+      <p class="lede">
+        Branchglass connects to your repository and your cloud account, then provisions an isolated, fully
+        configured copy of your stack the moment a PR opens — real services, real migrations, safe synthetic
+        data. Reviewers get a shareable URL instead of a five-page local setup guide, and the whole thing
+        deletes itself when the branch lands.
+      </p>
+      <div class="quickfact">
+        <span><i class="tick"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></i>15-minute setup, no agents to install</span>
+        <span><i class="tick"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></i>Runs inside your own AWS, GCP or Azure account</span>
+        <span><i class="tick"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></i>Zero orphaned infrastructure after merge</span>
+      </div>
+
+      <!-- pipeline -->
+      <div class="pipeline-wrap">
+        <ol class="pipeline">
+          <li class="pipe">
+            <span class="pb">1</span>
+            <span class="pt">Connect</span>
+            <span class="ps">Repository + cloud role</span>
+            <span class="pd">once per repo</span>
+          </li>
+          <li class="pipe">
+            <span class="pb">2</span>
+            <span class="pt">Pull request opens</span>
+            <span class="ps">Webhook fires on the new branch</span>
+            <span class="pd">1.8s to detect</span>
+          </li>
+          <li class="pipe">
+            <span class="pb">3</span>
+            <span class="pt">Environment builds</span>
+            <span class="ps">Prod config, synthetic data</span>
+            <span class="pd">41s median</span>
+          </li>
+          <li class="pipe">
+            <span class="pb">4</span>
+            <span class="pt">Test &amp; review</span>
+            <span class="ps">One shareable URL for everyone</span>
+            <span class="pd">updates on push</span>
+          </li>
+          <li class="pipe">
+            <span class="pb">5</span>
+            <span class="pt">Merge or close</span>
+            <span class="ps">Everything is destroyed</span>
+            <span class="pd">6s teardown</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP CARDS ============ -->
+  <section class="section block" id="product">
+    <div class="wrap">
+      <div class="block-head">
+        <div>
+          <p class="kicker">What happens at each step</p>
+          <h2 class="h2">From <code style="font-family:var(--mono);font-size:.86em;color:#a9c3ff">git push</code> to a URL your designer can open</h2>
+          <p class="sub">Five steps, no YAML required to get started. The example below follows a real PR through the pipeline — <span style="font-family:var(--mono);color:#cfdcff">acme/billing-api #4821</span>.</p>
+        </div>
+      </div>
+
+      <div class="steps">
+
+        <article class="step">
+          <div class="step-top">
+            <span class="step-num">STEP 01</span>
+            <span class="step-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-branch"/></svg></span>
+          </div>
+          <h3>Connect your repository and your cloud account</h3>
+          <p>Install the Branchglass app on a repo and grant one scoped cloud role. We read your services and
+             Terraform modules, then mirror production settings inside a sandbox boundary you control.</p>
+          <ul class="dl">
+            <li><span class="k">Repository</span><span class="v">github.com/acme/billing-api</span></li>
+            <li><span class="k">Cloud</span><span class="v">aws / acme-sandbox / us-east-1</span></li>
+            <li><span class="k">Access</span><span class="v">read prod schema, write sandbox</span></li>
+            <li><span class="k">Setup time</span><span class="v ok">14m 20s</span></li>
+          </ul>
+          <div class="step-foot"><span class="dot"></span>Connected 14 Mar 2024 · 3 repos, 2 clouds</div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <span class="step-num">STEP 02</span>
+            <span class="step-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-bolt"/></svg></span>
+          </div>
+          <h3>Opening a pull request triggers a build</h3>
+          <p>Branchglass watches every branch. As soon as a PR opens it diffs the change, works out which
+             services and infrastructure are affected, and queues exactly those resources.</p>
+          <ul class="dl">
+            <li><span class="k">Pull request</span><span class="v">#4821 · feat/usage-based-invoicing</span></li>
+            <li><span class="k">Diff</span><span class="v">14 files · 3 services</span></li>
+            <li><span class="k">Detected</span><span class="v warn">+postgres migration, +redis, +cron</span></li>
+            <li><span class="k">Detection latency</span><span class="v ok">1.8s</span></li>
+          </ul>
+          <div class="step-foot"><span class="dot"></span>Opened by maya.okafor · 09:41:04 UTC</div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <span class="step-num">STEP 03</span>
+            <span class="step-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cloud"/></svg></span>
+          </div>
+          <h3>Production-like config, safe test data</h3>
+          <p>Each environment is built from the same image, infrastructure modules, feature flags and secrets
+             policy as production — but seeded with synthetic records instead of customer data.</p>
+          <ul class="dl">
+            <li><span class="k">Config parity</span><span class="v ok">96%</span></li>
+            <li><span class="k">Data</span><span class="v">18,204 synthetic rows</span></li>
+            <li><span class="k">Base snapshot</span><span class="v">prod-snapshot-2024-06</span></li>
+            <li><span class="k">Budget cap</span><span class="v">$2.40 / hour · auto-pause</span></li>
+          </ul>
+          <div class="step-foot"><span class="dot"></span>Ready in 41s · median across 240 repos</div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <span class="step-num">STEP 04</span>
+            <span class="step-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-users"/></svg></span>
+          </div>
+          <h3>Everyone gets the same shareable URL</h3>
+          <p>Engineers, designers, QA and product reviewers open the same link — no local setup, no VPN, no
+             stale staging branch. New commits rebuild the environment automatically, so testers never look at
+             yesterday's code. Comments and smoke-test results post straight back to the pull request.</p>
+          <ul class="dl">
+            <li><span class="k">Preview URL</span><span class="v">preview-4821.branchglass.dev</span></li>
+            <li><span class="k">Viewers</span><span class="v">9 people · 4 comments</span></li>
+            <li><span class="k">Rebuild on push</span><span class="v ok">22s incremental</span></li>
+            <li><span class="k">Smoke suite</span><span class="v ok">128 / 128 passed</span></li>
+          </ul>
+          <div class="step-foot"><span class="dot"></span>Last rebuild 11:03:52 · commit a91f3c2</div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <span class="step-num">STEP 05</span>
+            <span class="step-icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"/></svg></span>
+          </div>
+          <h3>Merge or close, and it cleans itself up</h3>
+          <p>The moment the pull request merges or closes, Branchglass destroys every resource it created,
+             revokes the temporary credentials and posts a cost summary back to the PR thread. Nothing is left
+             running in your cloud, and nothing shows up on next month's invoice.</p>
+          <ul class="dl">
+            <li><span class="k">Teardown time</span><span class="v ok">6s</span></li>
+            <li><span class="k">Resources removed</span><span class="v">23 of 23</span></li>
+            <li><span class="k">Total PR cost</span><span class="v">$0.94</span></li>
+            <li><span class="k">Orphaned resources</span><span class="v ok">0</span></li>
+          </ul>
+          <div class="step-foot"><span class="dot"></span>Avg. environment lifetime: 3d 7h</div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ENVIRONMENT PANEL ============ -->
+  <section class="section block" id="inside">
+    <div class="wrap">
+      <p class="kicker">Inside a preview environment</p>
+      <h2 class="h2">Everything about the environment, in one place</h2>
+      <p class="sub">Live view of <span style="font-family:var(--mono);color:#cfdcff">br-4821-usage-invoicing</span> — provisioned 09:41:45, still under review, scheduled for teardown on merge.</p>
+
+      <div class="panel-grid">
+
+        <!-- environment detail -->
+        <div class="card">
+          <div class="env-head">
+            <span class="env-avatar">b</span>
+            <div style="flex:1 1 auto;min-width:0">
+              <div class="env-name">br-4821-usage-invoicing</div>
+              <div class="env-meta">aws/us-east-1 · prod-snapshot-2024-06 · expires in 6d 4h</div>
+            </div>
+            <span class="badge badge-ok"><span class="bd"></span>Ready</span>
+          </div>
+
+          <div class="urlbar">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-link"/></svg>
+            <span class="url-text">https://preview-4821.branchglass.dev</span>
+            <button class="copy" id="copy-url" type="button">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+
+          <div class="statgrid">
+            <div><div class="sl">Spin-up</div><div class="sv">41<small>s</small></div></div>
+            <div><div class="sl">Uptime</div><div class="sv">6d 4h</div></div>
+            <div><div class="sl">Requests</div><div class="sv">2,417</div></div>
+            <div><div class="sl">Spend</div><div class="sv">$0.94</div></div>
+          </div>
+
+          <div class="checks">
+            <div class="cl">Pre-flight checks</div>
+            <div class="check">
+              <span class="ci ok"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></span>
+              <span class="cl-t">Build &amp; image scan<small>3 services · 0 critical CVEs</small></span>
+              <span class="time">2m 14s</span>
+            </div>
+            <div class="check">
+              <span class="ci ok"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></span>
+              <span class="cl-t">Migrations applied<small>0031_add_usage_meters, 0032_invoice_lines, 0033_usage_index</small></span>
+              <span class="time">3 of 3</span>
+            </div>
+            <div class="check">
+              <span class="ci ok"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></span>
+              <span class="cl-t">Synthetic data seeded<small>18,204 rows · pii + payments scrubbed</small></span>
+              <span class="time">12.6s</span>
+            </div>
+            <div class="check">
+              <span class="ci ok"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg></span>
+              <span class="cl-t">Smoke suite<small>128 of 128 passed · 0 flaky</small></span>
+              <span class="time">48.1s</span>
+            </div>
+            <div class="check">
+              <span class="ci pend"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg></span>
+              <span class="cl-t">Visual diff review<small>2 snapshots awaiting approval from @dan.reyes</small></span>
+              <span class="time">pending</span>
+            </div>
+            <div class="check">
+              <span class="ci err"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-alert"/></svg></span>
+              <span class="cl-t">Lighthouse budget<small>LCP 2.9s on /invoices/new — threshold 2.5s</small></span>
+              <span class="time">1 regression</span>
+            </div>
+          </div>
+
+          <div class="term">
+            <div><span class="t">09:41:04</span> <span class="ok">→</span> detected <span class="u">PR #4821</span> feat/usage-based-invoicing</div>
+            <div><span class="t">09:41:07</span> <span class="ok">→</span> provisioning 3 services in aws/us-east-1</div>
+            <div><span class="t">09:41:31</span> <span class="ok">→</span> migrations applied (0031, 0032, 0033)</div>
+            <div><span class="t">09:41:44</span> <span class="ok">→</span> seeded 18,204 synthetic rows</div>
+            <div><span class="t">09:41:45</span> <span class="ok">→</span> ready · https://preview-4821.branchglass.dev</div>
+            <div><span class="t">11:03:52</span> <span class="w">↻</span> rebuild finished in 22s (commit a91f3c2)</div>
+          </div>
+
+          <div class="env-foot">
+            <div class="avs" aria-hidden="true">
+              <span style="background:#8fb4ff">MO</span>
+              <span style="background:#6ee6ae">DR</span>
+              <span style="background:#f9c96b">JK</span>
+              <span style="background:#c9a6ff">LP</span>
+              <span style="background:#7fe0f2">+5</span>
+            </div>
+            <span class="ft"><b>9 people</b> have opened this preview</span>
+            <span class="ago">last activity 12m ago</span>
+          </div>
+        </div>
+
+        <!-- config + activity -->
+        <div class="side-stack">
+
+          <div class="card">
+            <div class="code-head">
+              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              .branchglass.yml
+              <span class="src"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-code"/></svg>optional — defaults are fine</span>
+            </div>
+<pre><code><span class="c-c"># .branchglass.yml</span>
+<span class="c-k">version</span>: <span class="c-n">2</span>
+
+<span class="c-k">trigger</span>:
+  <span class="c-k">events</span>: [<span class="c-s">pull_request.opened</span>, <span class="c-s">pull_request.synchronize</span>]
+  <span class="c-k">paths</span>: [<span class="c-s">apps/**</span>, <span class="c-s">packages/**</span>]
+
+<span class="c-k">environment</span>:
+  <span class="c-k">base</span>: <span class="c-s">prod-snapshot-2024-06</span>
+  <span class="c-k">region</span>: <span class="c-s">aws/us-east-1</span>
+  <span class="c-k">services</span>: [<span class="c-s">api</span>, <span class="c-s">worker</span>, <span class="c-s">dashboard</span>]
+
+<span class="c-k">data</span>:
+  <span class="c-k">seed</span>: <span class="c-s">synthetic</span>
+  <span class="c-k">volume</span>: <span class="c-s">25% of production</span>
+  <span class="c-k">scrub</span>: [<span class="c-s">pii</span>, <span class="c-s">payments</span>]
+
+<span class="c-k">lifecycle</span>:
+  <span class="c-k">idle_timeout</span>: <span class="c-n">45m</span>
+  <span class="c-k">ttl</span>: <span class="c-n">7d</span>
+  <span class="c-k">teardown_on</span>: [<span class="c-s">merged</span>, <span class="c-s">closed</span>]</code></pre>
+          </div>
+
+          <div class="card feed">
+            <div class="feed-head">
+              <h3>Activity on #4821</h3>
+              <span class="badge badge-muted"><span class="bd"></span>Open</span>
+            </div>
+            <ul>
+              <li>
+                <time>09:41</time>
+                <span class="ed" style="background:#8fb4ff"></span>
+                <span class="txt"><b>@maya.okafor</b> opened the pull request · <code>feat/usage-based-invoicing</code></span>
+              </li>
+              <li>
+                <time>09:41</time>
+                <span class="ed" style="background:#7fe0f2"></span>
+                <span class="txt">Environment <b>br-4821-usage-invoicing</b> provisioned in 41s</span>
+              </li>
+              <li>
+                <time>10:12</time>
+                <span class="ed" style="background:#f9c96b"></span>
+                <span class="txt"><b>@dan.reyes</b> commented on <code>/invoices/:id</code> — “meter totals look off for proration”</span>
+              </li>
+              <li>
+                <time>11:03</time>
+                <span class="ed" style="background:#8fb4ff"></span>
+                <span class="txt">Commit <code>a91f3c2</code> pushed · environment rebuilt in 22s</span>
+              </li>
+              <li>
+                <time>11:47</time>
+                <span class="ed" style="background:#6ee6ae"></span>
+                <span class="txt">Smoke suite passed <b>128 / 128</b> · visual diff waiting on review</span>
+              </li>
+              <li>
+                <time>12:05</time>
+                <span class="ed" style="background:#c9a6ff"></span>
+                <span class="txt"><b>@priya.n</b> opened the preview URL on mobile Safari</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ METRICS ============ -->
+  <section class="section block">
+    <div class="wrap">
+      <p class="kicker">How teams use it</p>
+      <h2 class="h2">Numbers from the last eight weeks</h2>
+      <div class="metrics">
+        <div class="metric">
+          <div class="num">41s</div>
+          <div class="lbl">Median time to first preview</div>
+          <div class="sub">Down from 118s in January · p95 is 63s</div>
+        </div>
+        <div class="metric">
+          <div class="num">96%</div>
+          <div class="lbl">Production config parity</div>
+          <div class="sub">Same images, modules, flags and policies</div>
+        </div>
+        <div class="metric">
+          <div class="num">12,961</div>
+          <div class="lbl">Preview environments created</div>
+          <div class="sub">Across 240 repositories · 3,182 last week</div>
+        </div>
+        <div class="metric chart">
+          <div class="lbl" style="margin-top:0;font-size:12.5px">Environments created per week</div>
+          <div class="chart" role="img" aria-label="Bar chart of preview environments created per week over the last eight weeks, rising from 412 to 3,182.">
+            <div class="col"><span class="bv">412</span><span class="bar" style="height:11px"></span><span class="bl">W1</span></div>
+            <div class="col"><span class="bv">688</span><span class="bar" style="height:18px"></span><span class="bl">W2</span></div>
+            <div class="col"><span class="bv">940</span><span class="bar" style="height:25px"></span><span class="bl">W3</span></div>
+            <div class="col"><span class="bv">1.3k</span><span class="bar" style="height:34px"></span><span class="bl">W4</span></div>
+            <div class="col"><span class="bv">1.6k</span><span class="bar" style="height:43px"></span><span class="bl">W5</span></div>
+            <div class="col"><span class="bv">2.1k</span><span class="bar" style="height:56px"></span><span class="bl">W6</span></div>
+            <div class="col"><span class="bv">2.7k</span><span class="bar" style="height:73px"></span><span class="bl">W7</span></div>
+            <div class="col"><span class="bv">3.2k</span><span class="bar" style="height:84px"></span><span class="bl">W8</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INTEGRATIONS ============ -->
+  <section class="section block" id="integrations">
+    <div class="wrap">
+      <p class="kicker">Fits your workflow</p>
+      <h2 class="h2">Works with the tools you already run</h2>
+      <p class="sub">Branchglass plugs into your source control, your cloud provider and the rest of the review loop — nothing new for your team to learn.</p>
+      <div class="chips">
+        <span class="chip"><span class="gl" style="background:rgba(91,140,255,.17);color:#9dbcff">GH</span>GitHub</span>
+        <span class="chip"><span class="gl" style="background:rgba(255,140,60,.17);color:#ffb27a">GL</span>GitLab</span>
+        <span class="chip"><span class="gl" style="background:rgba(34,211,238,.17);color:#7fe0f2">BB</span>Bitbucket</span>
+        <span class="chip"><span class="gl" style="background:rgba(251,191,36,.17);color:#fcd34d">AWS</span>Amazon Web Services</span>
+        <span class="chip"><span class="gl" style="background:rgba(167,139,250,.17);color:#c4b0ff">GC</span>Google Cloud</span>
+        <span class="chip"><span class="gl" style="background:rgba(56,160,255,.17);color:#8fc7ff">AZ</span>Microsoft Azure</span>
+        <span class="chip"><span class="gl" style="background:rgba(167,139,250,.17);color:#c4b0ff">TF</span>Terraform</span>
+        <span class="chip"><span class="gl" style="background:rgba(99,120,255,.17);color:#a3b1ff">K8</span>Kubernetes</span>
+        <span class="chip"><span class="gl" style="background:rgba(244,114,182,.17);color:#f9a8d4">SL</span>Slack</span>
+        <span class="chip"><span class="gl" style="background:rgba(167,139,250,.17);color:#c4b0ff">DD</span>Datadog</span>
+        <span class="chip"><span class="gl" style="background:rgba(251,191,36,.17);color:#fcd34d">SN</span>Sentry</span>
+        <span class="chip"><span class="gl" style="background:rgba(55,217,154,.17);color:#6ee6ae">PD</span>PagerDuty</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section block" id="docs">
+    <div class="wrap">
+      <p class="kicker">Questions teams ask</p>
+      <h2 class="h2">Before you connect a repo</h2>
+      <div class="faq">
+        <details open>
+          <summary>Does Branchglass run in our cloud or yours?<svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevd"/></svg></summary>
+          <div class="faq-a">In yours. Branchglass deploys into a role you create in your own AWS, GCP or Azure account, inside a sandbox boundary with a hard spend cap. We never copy your production data out of your account, and you can revoke the role at any time from your own console.</div>
+        </details>
+        <details>
+          <summary>What data ends up in a preview environment?<svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevd"/></svg></summary>
+          <div class="faq-a">Synthetic data, generated from your schema and column statistics. Customer records, payment details and anything tagged as PII are never copied. A typical environment seeds 18,204 rows — roughly 25% of production volume — which is enough to reproduce realistic list, pagination and edge-case behaviour.</div>
+        </details>
+        <details>
+          <summary>How long does the initial setup take?<svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevd"/></svg></summary>
+          <div class="faq-a">Around 15 minutes for the first repository: one OAuth grant, one cloud role, and we generate a <code>.branchglass.yml</code> from what we find in your infrastructure. The median team that finished onboarding on 14 March had its first preview environment running in <code>14m 20s</code>. Managed Kubernetes and multi-cloud setups usually take a bit longer.</div>
+        </details>
+        <details>
+          <summary>What happens when someone pushes a new commit mid-review?<svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevd"/></svg></summary>
+          <div class="faq-a">The environment updates in place. Branchglass only rebuilds the services touched by the diff, so an incremental update averages 22 seconds instead of a full 41-second provision — and the same URL keeps working, so reviewers never lose their place. Test data is preserved unless the migration changes the schema, in which case we re-seed and post a note on the PR.</div>
+        </details>
+        <details>
+          <summary>How do you keep costs predictable?<svg class="ico chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevd"/></svg></summary>
+          <div class="faq-a">Every environment has an hourly budget cap and pauses itself after 45 minutes idle. A preview lives for a maximum of 7 days, and is destroyed within seconds of a merge or close. Each pull request gets a cost summary posted back to the thread — this example came in at $0.94.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA ============ -->
+  <section class="section block" id="start">
+    <div class="wrap">
+      <div class="cta">
+        <div>
+          <h2>See it on your next pull request</h2>
+          <p>Connect one repository and Branchglass will build a preview environment for the next PR your team opens. Free for three concurrent environments, no credit card, cancel in a click.</p>
+        </div>
+        <div>
+          <div class="cta-actions">
+            <a class="btn btn-primary" href="#start">Start free <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><use href="#i-arrow"/></svg></a>
+            <a class="btn" href="#demo">Book a 20-min walkthrough</a>
+          </div>
+          <p class="cta-note">SOC 2 Type II · self-hosted runners available</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top" style="font-size:14.5px">
+      <span class="mark" style="width:24px;height:24px;border-radius:8px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px"><use href="#i-glass"/></svg></span>
+      Branchglass
+    </a>
+    <span class="cp">© 2024 Branchglass Inc. · San Francisco &amp; Lisbon</span>
+    <div class="links">
+      <a href="#status">Status: all systems normal</a>
+      <a href="#security">Security</a>
+      <a href="#docs">Docs</a>
+      <a href="#pricing">Pricing</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.getElementById('copy-url');
+    if (!btn) return;
+    var label = btn.querySelector('.copy-label');
+    var url = 'https://preview-4821.branchglass.dev';
+    function done() {
+      label.textContent = 'Copied';
+      window.setTimeout(function () { label.textContent = 'Copy'; }, 1600);
+    }
+    btn.addEventListener('click', function () {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done, done);
+          return;
+        }
+      } catch (e) {}
+      done();
+    });
+  })();
+</script>
+</body>
+</html>

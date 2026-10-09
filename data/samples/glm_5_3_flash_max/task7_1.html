@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Branchglass — a production-like preview environment for every pull request. See how it works.">
+<title>Branchglass — How it works</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230b101d'/%3E%3Cpath d='M9 5v11' stroke='%235eead4' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='18' r='2.4' fill='%235eead4'/%3E%3Ccircle cx='16.5' cy='7' r='2.4' fill='%23a78bfa'/%3E%3Cpath d='M16.5 9.4c0 4.2-3.8 5.2-6.4 5.9' stroke='%2360a5fa' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#070b14;
+    --panel:rgba(255,255,255,.035);
+    --line:rgba(148,163,184,.16);
+    --line-soft:rgba(148,163,184,.10);
+    --text:#e8edf6;
+    --muted:#9aa7bd;
+    --dim:#6b7a94;
+    --cyan:#5eead4;
+    --blue:#60a5fa;
+    --violet:#a78bfa;
+    --green:#34d399;
+    --amber:#fbbf24;
+    --red:#f87171;
+    --grad:linear-gradient(90deg,#5eead4,#60a5fa 55%,#a78bfa);
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    color-scheme:dark;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  ::selection{background:rgba(94,234,212,.25)}
+  :focus-visible{outline:2px solid rgba(94,234,212,.6);outline-offset:2px;border-radius:6px}
+  button{font-family:inherit}
+
+  /* ---------- background ---------- */
+  .bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .glow{position:absolute;border-radius:50%;filter:blur(100px)}
+  .g1{width:560px;height:560px;left:-140px;top:-180px;background:rgba(94,234,212,.12)}
+  .g2{width:640px;height:640px;right:-200px;top:120px;background:rgba(167,139,250,.11)}
+  .bg .grid{
+    position:absolute;inset:0;
+    background-image:linear-gradient(rgba(148,163,184,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.055) 1px,transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(ellipse 90% 55% at 50% 0%,#000 25%,transparent 75%);
+    mask-image:radial-gradient(ellipse 90% 55% at 50% 0%,#000 25%,transparent 75%);
+  }
+  header,main,footer{position:relative;z-index:1}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+  /* ---------- nav ---------- */
+  .nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(7,11,20,.72);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .nav-inner{max-width:1160px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;gap:28px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;letter-spacing:-.01em;color:var(--text);text-decoration:none}
+  .brand .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .nav-links{display:flex;gap:22px;margin-left:6px}
+  .nav-links a{color:var(--muted);text-decoration:none;font-size:13.5px;transition:color .2s}
+  .nav-links a:hover{color:var(--text)}
+  .nav-cta{margin-left:auto;display:flex;align-items:center;gap:16px}
+  .signin{color:var(--muted);font-size:13.5px;text-decoration:none;transition:color .2s}
+  .signin:hover{color:var(--text)}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;padding:10px 18px;border-radius:10px;text-decoration:none;transition:transform .25s,box-shadow .25s,border-color .25s,color .25s;border:1px solid transparent;cursor:pointer}
+  .btn-primary{background:linear-gradient(135deg,#5eead4,#60a5fa 55%,#a78bfa);color:#071018;box-shadow:0 8px 30px -10px rgba(96,165,250,.55)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 34px -10px rgba(96,165,250,.7)}
+  .btn-ghost{border-color:var(--line);color:var(--text)}
+  .btn-ghost:hover{border-color:rgba(94,234,212,.45);color:var(--cyan)}
+
+  /* ---------- icons ---------- */
+  .ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+  /* ---------- section header ---------- */
+  .section{max-width:1160px;margin:0 auto;padding:96px 24px 84px;scroll-margin-top:70px}
+  .sec-head{text-align:center;max-width:780px;margin:0 auto 64px}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:9px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);
+    border:1px solid rgba(94,234,212,.28);background:rgba(94,234,212,.06);
+    padding:6px 15px;border-radius:999px;
+  }
+  .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--grad)}
+  .headline{font-size:clamp(30px,4.6vw,52px);line-height:1.08;letter-spacing:-.025em;font-weight:700;margin:24px 0 18px}
+  .headline .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sec-sub{color:var(--muted);font-size:16.5px;line-height:1.68;max-width:660px;margin:0 auto}
+
+  .kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .kicker::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+
+  /* ---------- layout ---------- */
+  .hiw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:52px;align-items:start}
+
+  /* ---------- steps ---------- */
+  .steps{display:flex;flex-direction:column;gap:10px;position:relative}
+  .steps::before{
+    content:"";position:absolute;left:33px;top:34px;bottom:46px;width:1px;
+    background:linear-gradient(180deg,rgba(94,234,212,.4),rgba(167,139,250,.4));
+  }
+  .step{
+    display:grid;grid-template-columns:34px 1fr;gap:16px;align-items:start;
+    padding:14px 16px 15px;border:1px solid transparent;border-radius:14px;cursor:pointer;
+    transition:background .3s,border-color .3s,box-shadow .3s;position:relative;
+  }
+  .step:hover:not(.is-active){background:rgba(255,255,255,.02);border-color:var(--line-soft)}
+  .step.is-active{
+    background:rgba(94,234,212,.045);
+    border-color:rgba(94,234,212,.28);
+    box-shadow:0 14px 44px -22px rgba(94,234,212,.4);
+  }
+  .step-num{
+    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+    font-family:var(--mono);font-size:12px;color:var(--dim);
+    border:1px solid var(--line-soft);background:var(--bg);
+    position:relative;z-index:1;transition:all .3s;
+  }
+  .step.is-done .step-num{color:var(--cyan);border-color:rgba(94,234,212,.35);background:rgba(94,234,212,.06)}
+  .step.is-active .step-num{
+    background:linear-gradient(135deg,#5eead4,#60a5fa);color:#071018;border-color:transparent;font-weight:700;
+    box-shadow:0 6px 18px -6px rgba(94,234,212,.6);
+  }
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .step-head .ic{width:17px;height:17px;color:var(--cyan)}
+  .step-head h3{font-size:15.5px;font-weight:640;letter-spacing:-.01em}
+  .step-body p{font-size:13.5px;line-height:1.62;color:var(--muted)}
+
+  /* ---------- demo ---------- */
+  .demo{position:sticky;top:96px}
+  .window{
+    border-radius:18px;border:1px solid var(--line);overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+    box-shadow:0 30px 80px -30px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.02) inset;
+  }
+  .win-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line-soft)}
+  .win-dots{display:flex;gap:6px}
+  .win-dots i{width:10px;height:10px;border-radius:50%;background:rgba(148,163,184,.22)}
+  .win-title{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pill{
+    margin-left:auto;display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    padding:5px 11px;border-radius:999px;border:1px solid;transition:all .3s;
+  }
+  .pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .pill.pulse i{animation:pulse 1.1s infinite}
+  .s-blue{color:#7dd3fc;border-color:rgba(125,211,252,.3);background:rgba(125,211,252,.07)}
+  .s-amber{color:#fbbf24;border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.07)}
+  .s-green{color:#34d399;border-color:rgba(52,211,153,.32);background:rgba(52,211,153,.07)}
+  .s-gray{color:#8fa0b8;border-color:rgba(148,163,184,.25);background:rgba(148,163,184,.06)}
+
+  .term{
+    height:280px;overflow-y:auto;padding:14px 16px;
+    font-family:var(--mono);font-size:12.3px;line-height:1.8;
+    background:rgba(3,7,17,.5);border-bottom:1px solid var(--line-soft);
+    scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.25) transparent;
+  }
+  .term::-webkit-scrollbar{width:8px}
+  .term::-webkit-scrollbar-thumb{background:rgba(148,163,184,.2);border-radius:4px}
+  .tline{display:flex;gap:9px;opacity:0;transform:translateY(4px);animation:tlIn .3s ease forwards;white-space:pre-wrap;word-break:break-word}
+  .tline .sym{flex:0 0 13px;text-align:center}
+  .k-cmd{color:#e7eef8}.k-cmd .sym{color:#5eead4}
+  .k-ok{color:#a9b8ce}.k-ok .sym{color:#34d399}
+  .k-info{color:#a7c7e8}.k-info .sym{color:#60a5fa}
+  .k-work{color:#cbd5e1}.k-work .sym{color:#fbbf24}
+  .k-clean{color:#8494ab}.k-clean .sym{color:#94a3b8}
+  .k-idle{color:var(--dim)}.k-idle .sym{color:var(--dim)}
+  .caretline{padding:2px 0 0 22px}
+  .caret{display:inline-block;width:8px;height:14px;border-radius:1px;background:#5eead4;animation:blink 1.1s steps(1) infinite}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 2px}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--dim);
+    border:1px solid var(--line-soft);border-radius:7px;padding:4px 9px;
+    opacity:.25;transform:translateY(3px);transition:all .45s;
+  }
+  .chip i{width:6px;height:6px;border-radius:2px;background:var(--c)}
+  .chip.on{opacity:1;transform:none;color:#c3cfe2;border-color:var(--line)}
+
+  .preview-row{display:flex;align-items:stretch;gap:10px;padding:12px 16px 12px}
+  .url{
+    flex:1;display:flex;align-items:center;gap:9px;min-width:0;
+    font-family:var(--mono);font-size:12px;padding:10px 13px;border-radius:11px;
+    border:1px solid var(--line-soft);background:rgba(3,7,17,.45);color:var(--dim);transition:all .4s;
+  }
+  .url .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .url .ic-lock,.url .ic-dead{width:14px;height:14px}
+  .url .tag{
+    display:none;margin-left:auto;flex:0 0 auto;
+    font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    padding:3px 8px;border-radius:6px;border:1px solid;
+  }
+  .tag-live{color:#34d399;border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+  .tag-dead{color:#f87171;border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.07)}
+  .url.live{color:#7ee7d4;border-color:rgba(94,234,212,.35);background:rgba(94,234,212,.05);box-shadow:0 0 24px -10px rgba(94,234,212,.5)}
+  .url.live .tag-live{display:inline-block}
+  .url.dead{color:#77879f}
+  .url.dead .txt{text-decoration:line-through;text-decoration-color:rgba(248,113,113,.5)}
+  .url.dead .ic-lock,.url.dead .tag-live{display:none}
+  .url.dead .ic-dead{display:block;color:#f87171}
+  .url.dead .tag-dead{display:inline-block}
+  .url .ic-dead{display:none}
+
+  .copy{
+    display:inline-flex;align-items:center;gap:7px;padding:0 14px;border-radius:11px;
+    border:1px solid var(--line-soft);background:rgba(255,255,255,.03);color:var(--muted);
+    font-size:12px;font-weight:550;cursor:pointer;transition:all .25s;
+  }
+  .copy .ic{width:15px;height:15px}
+  .copy:hover:not(:disabled){color:var(--text);border-color:var(--line)}
+  .copy:disabled{opacity:.35;cursor:not-allowed}
+  .copy.copied{color:#34d399;border-color:rgba(52,211,153,.4)}
+
+  .team-row{display:flex;align-items:center;gap:12px;padding:2px 16px 16px;font-size:12px;color:var(--dim);transition:opacity .5s}
+  .team-row.off{opacity:.35}
+  .team-label{flex:0 0 auto}
+  .avatars{display:flex;padding-left:7px}
+  .av{
+    width:26px;height:26px;border-radius:50%;display:grid;place-items:center;margin-left:-7px;
+    font-size:9.5px;font-weight:700;color:#0a1220;background:var(--a);
+    border:2px solid #0d1322;transition:all .4s;transform:scale(.5);opacity:0;
+  }
+  .av.on{transform:none;opacity:1}
+  .team-hint{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim);text-align:right}
+
+  .demo-foot{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line-soft);background:rgba(255,255,255,.015)}
+  .foot-label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .stage-dots{display:flex;gap:6px;align-items:center}
+  .stage-dots button{width:8px;height:8px;border-radius:999px;border:0;padding:0;background:rgba(148,163,184,.28);cursor:pointer;transition:all .3s}
+  .stage-dots button:hover{background:rgba(148,163,184,.5)}
+  .stage-dots button.on{width:22px;background:linear-gradient(90deg,#5eead4,#a78bfa)}
+  .replay{
+    margin-left:auto;display:inline-flex;align-items:center;gap:7px;
+    font-size:12px;font-weight:550;color:var(--muted);background:transparent;
+    border:1px solid var(--line);border-radius:9px;padding:7px 13px;cursor:pointer;transition:all .25s;
+  }
+  .replay .ic{width:13px;height:13px}
+  .replay:hover{color:var(--text);border-color:rgba(94,234,212,.4)}
+  .replay.hint{color:var(--cyan);border-color:rgba(94,234,212,.45);box-shadow:0 0 24px -8px rgba(94,234,212,.5)}
+  .demo-note{margin-top:14px;font-size:12px;color:var(--dim);text-align:center;line-height:1.6}
+
+  /* ---------- integrations ---------- */
+  .integrations{margin-top:76px;padding-top:38px;border-top:1px solid var(--line-soft);text-align:center}
+  .int-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+  .int-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:20px}
+  .int-chip{
+    display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line-soft);background:rgba(255,255,255,.02);border-radius:999px;
+    padding:7px 15px;transition:all .25s;
+  }
+  .int-chip i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+  .int-chip:hover{color:var(--text);border-color:var(--line)}
+
+  /* ---------- CTA ---------- */
+  .cta{
+    margin-top:72px;border-radius:20px;border:1px solid var(--line);padding:40px;
+    display:flex;align-items:center;justify-content:space-between;gap:28px;flex-wrap:wrap;
+    background:
+      radial-gradient(120% 200% at 0% 0%,rgba(94,234,212,.08),transparent 50%),
+      radial-gradient(120% 200% at 100% 100%,rgba(167,139,250,.1),transparent 50%),
+      rgba(255,255,255,.02);
+  }
+  .cta h3{font-size:24px;letter-spacing:-.02em;font-weight:680}
+  .cta p{color:var(--muted);margin-top:9px;font-size:14px;line-height:1.6;max-width:480px}
+  .cta-actions{display:flex;gap:12px;flex-wrap:wrap}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line-soft);padding:26px 24px}
+  .foot-inner{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:14px;color:var(--dim);font-size:12.5px;flex-wrap:wrap}
+  .foot-brand{display:flex;align-items:center;gap:8px;color:var(--muted)}
+  .foot-links{margin-left:auto;display:flex;gap:20px}
+  .foot-links a{color:var(--dim);text-decoration:none;transition:color .2s}
+  .foot-links a:hover{color:var(--text)}
+
+  /* ---------- animation ---------- */
+  @keyframes tlIn{to{opacity:1;transform:none}}
+  @keyframes blink{50%{opacity:0}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: no-preference){
+    .sec-head{animation:rise .7s .05s ease both}
+    .steps-col{animation:rise .7s .15s ease both}
+    .demo-col{animation:rise .7s .28s ease both}
+    .integrations,.cta{animation:rise .7s .4s ease both}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+    .tline{opacity:1;transform:none;animation:none}
+    html{scroll-behavior:auto}
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1020px){
+    .hiw{grid-template-columns:1fr;gap:44px}
+    .demo{position:static}
+  }
+  @media (max-width:860px){
+    .nav-links{display:none}
+  }
+  @media (max-width:720px){
+    .section{padding:72px 18px 64px}
+    .term{height:236px}
+    .team-hint{display:none}
+    .cta{padding:28px}
+  }
+  @media (max-width:560px){
+    .signin{display:none}
+    .win-title{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- inline SVG sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset=".55" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <symbol id="i-link" viewBox="0 0 24 24">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </symbol>
+    <symbol id="i-pr" viewBox="0 0 24 24">
+      <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/>
+      <path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/>
+    </symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>
+    </symbol>
+    <symbol id="i-share" viewBox="0 0 24 24">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+    </symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </symbol>
+    <symbol id="i-slash" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </symbol>
+    <symbol id="i-replay" viewBox="0 0 24 24">
+      <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="bg" aria-hidden="true">
+  <i class="glow g1"></i>
+  <i class="glow g2"></i>
+  <i class="grid"></i>
+</div>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#">
+      <svg class="mark" width="27" height="27" viewBox="0 0 27 27" aria-hidden="true">
+        <rect x="1" y="1" width="25" height="25" rx="7.5" fill="rgba(255,255,255,.03)" stroke="url(#bg-grad)" stroke-width="1.4"/>
+        <line x1="9.7" y1="7.2" x2="9.7" y2="15.6" stroke="#e8edf6" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="9.7" cy="18.6" r="2.1" fill="none" stroke="#5eead4" stroke-width="1.6"/>
+        <circle cx="17.6" cy="7.4" r="2.1" fill="none" stroke="#a78bfa" stroke-width="1.6"/>
+        <path d="M17.6 9.5a8 8 0 0 1-8 8" fill="none" stroke="#60a5fa" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <span>Branch<span class="g">glass</span></span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#">Product</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#">Docs</a>
+      <a href="#">Pricing</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Start free</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <h1 class="sr-only">Branchglass — How it works</h1>
+
+  <section class="section" id="how-it-works">
+
+    <div class="sec-head">
+      <span class="eyebrow">How it works</span>
+      <h2 class="headline">A <span class="grad">production-like environment</span> for every pull request.</h2>
+      <p class="sec-sub">Branchglass connects to your repository and your cloud account, then runs the entire preview lifecycle for you — spinning up an isolated environment when a PR opens, keeping it in sync with every commit, and tearing it down the moment the branch is merged or closed.</p>
+    </div>
+
+    <div class="hiw">
+
+      <!-- ======== steps ======== -->
+      <div class="steps-col">
+        <p class="kicker">The lifecycle of a preview environment</p>
+        <div class="steps" id="steps">
+
+          <div class="step" tabindex="0" role="button" aria-label="Play the simulation from step 1: Connect your repo and cloud">
+            <div class="step-rail"><span class="step-num">01</span></div>
+            <div class="step-body">
+              <div class="step-head">
+                <svg class="ic" aria-hidden="true"><use href="#i-link"/></svg>
+                <h3>Connect your repo and cloud</h3>
+              </div>
+              <p>One-time setup: authorize your Git provider and cloud account. Branchglass deploys with scoped, least-privilege credentials — no agents to install, no pipeline YAML to maintain.</p>
+            </div>
+          </div>
+
+          <div class="step" tabindex="0" role="button" aria-label="Play the simulation from step 2: Open a pull request">
+            <div class="step-rail"><span class="step-num">02</span></div>
+            <div class="step-body">
+              <div class="step-head">
+                <svg class="ic" aria-hidden="true"><use href="#i-pr"/></svg>
+                <h3>Open a pull request</h3>
+              </div>
+              <p>A webhook fires and Branchglass provisions an isolated environment for the branch — built in parallel with CI, without touching a single line of your existing setup.</p>
+            </div>
+          </div>
+
+          <div class="step" tabindex="0" role="button" aria-label="Play the simulation from step 3: Production-like, but safe">
+            <div class="step-rail"><span class="step-num">03</span></div>
+            <div class="step-body">
+              <div class="step-head">
+                <svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>
+                <h3>Production-like, but safe</h3>
+              </div>
+              <p>Each environment mirrors your production configuration — same service topology and settings — seeded with masked, disposable test data instead of real customer records.</p>
+            </div>
+          </div>
+
+          <div class="step" tabindex="0" role="button" aria-label="Play the simulation from step 4: Share one URL">
+            <div class="step-rail"><span class="step-num">04</span></div>
+            <div class="step-body">
+              <div class="step-head">
+                <svg class="ic" aria-hidden="true"><use href="#i-share"/></svg>
+                <h3>Share one URL</h3>
+              </div>
+              <p>Every environment gets a stable preview URL. Drop it on the PR so engineers, designers, and reviewers can click through the real change — not a screenshot or a staging queue.</p>
+            </div>
+          </div>
+
+          <div class="step" tabindex="0" role="button" aria-label="Play the simulation from step 5: Every commit, same URL">
+            <div class="step-rail"><span class="step-num">05</span></div>
+            <div class="step-body">
+              <div class="step-head">
+                <svg class="ic" aria-hidden="true"><use href="#i-sync"/></svg>
+                <h3>Every commit, same URL</h3>
+              </div>
+              <p>Push again and the environment updates itself — new build, same link. Reviewers always see the latest code, with no manual redeploys and no stale previews.</p>
+            </div>
+          </div>
+
+          <div class="step" tabindex="0" role="button" aria-label="Play the simulation from step 6: Merged or closed, it's gone">
+            <div class="step-rail"><span class="step-num">06</span></div>
+            <div class="step-body">
+              <div class="step-head">
+                <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+                <h3>Merged or closed? It&rsquo;s gone</h3>
+              </div>
+              <p>The moment the PR is merged or closed, Branchglass destroys the environment and releases its cloud resources. Nothing lingers to surprise your next invoice.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ======== demo ======== -->
+      <div class="demo-col">
+        <p class="kicker">Watch it happen</p>
+        <div class="demo" id="demo">
+          <div class="window" role="region" aria-label="Branchglass lifecycle simulation">
+
+            <div class="win-bar">
+              <span class="win-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="win-title">branchglass · acme/api · pr-142</span>
+              <span class="pill s-blue" id="status-pill"><i aria-hidden="true"></i><span id="status-txt">Connected</span></span>
+            </div>
+
+            <div class="term" id="term" role="log" aria-live="polite">
+              <div class="tline k-idle"><span class="sym">&#8226;</span><span class="tx">connected — watching github.com/acme/api for pull requests</span></div>
+            </div>
+
+            <div class="chips" id="chips" aria-label="Services running in the preview environment">
+              <span class="chip" style="--c:#5eead4"><i></i>web</span>
+              <span class="chip" style="--c:#a78bfa"><i></i>api</span>
+              <span class="chip" style="--c:#60a5fa"><i></i>worker</span>
+              <span class="chip" style="--c:#fbbf24"><i></i>postgres</span>
+              <span class="chip" style="--c:#f87171"><i></i>redis</span>
+            </div>
+
+            <div class="preview-row">
+              <div class="url pending" id="url-box">
+                <svg class="ic ic-lock" aria-hidden="true"><use href="#i-lock"/></svg>
+                <svg class="ic ic-dead" aria-hidden="true"><use href="#i-slash"/></svg>
+                <span class="txt" id="url-txt">preview URL appears here</span>
+                <span class="tag tag-live">Live</span>
+                <span class="tag tag-dead">Removed</span>
+              </div>
+              <button class="copy" id="copy-btn" type="button" disabled>
+                <svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span id="copy-txt">Copy</span>
+              </button>
+            </div>
+
+            <div class="team-row" id="team-row">
+              <span class="team-label">Shared with</span>
+              <span class="avatars">
+                <span class="av" style="--a:#7dd3fc" title="Priya — Engineer">PR</span>
+                <span class="av" style="--a:#c4b5fd" title="Sam — Designer">SO</span>
+                <span class="av" style="--a:#6ee7b7" title="Alex — QA">AK</span>
+                <span class="av" style="--a:#fda4af" title="Mara — PM">MK</span>
+              </span>
+              <span class="team-hint">eng · design · QA — one link, no accounts</span>
+            </div>
+
+            <div class="demo-foot">
+              <span class="foot-label">Lifecycle</span>
+              <div class="stage-dots" id="stage-dots"></div>
+              <button class="replay" id="replay-btn" type="button">
+                <svg class="ic" aria-hidden="true"><use href="#i-replay"/></svg>Replay
+              </button>
+            </div>
+
+          </div>
+          <p class="demo-note">Interactive simulation — it plays on its own. Click a stage dot, hit Replay, or select any numbered step to jump around.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======== integrations ======== -->
+    <div class="integrations">
+      <p class="int-label">Plugs into the stack you already run</p>
+      <div class="int-chips">
+        <span class="int-chip"><i style="--c:#e8edf6"></i>GitHub</span>
+        <span class="int-chip"><i style="--c:#fc6d26"></i>GitLab</span>
+        <span class="int-chip"><i style="--c:#2684ff"></i>Bitbucket</span>
+        <span class="int-chip"><i style="--c:#ff9900"></i>AWS</span>
+        <span class="int-chip"><i style="--c:#ea4335"></i>Google Cloud</span>
+        <span class="int-chip"><i style="--c:#38b6ff"></i>Azure</span>
+        <span class="int-chip"><i style="--c:#326ce5"></i>Kubernetes</span>
+      </div>
+    </div>
+
+    <!-- ======== CTA ======== -->
+    <div class="cta">
+      <div>
+        <h3>See it on your next pull request.</h3>
+        <p>Connect a repo, open a PR — your first five preview environments are free. No credit card, no YAML.</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="#">Get started free</a>
+        <a class="btn btn-ghost" href="#">Read the docs <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<footer>
+  <div class="foot-inner">
+    <span class="foot-brand">
+      <svg width="18" height="18" viewBox="0 0 27 27" aria-hidden="true">
+        <rect x="1" y="1" width="25" height="25" rx="7.5" fill="rgba(255,255,255,.03)" stroke="url(#bg-grad)" stroke-width="1.6"/>
+        <line x1="9.7" y1="7.2" x2="9.7" y2="15.6" stroke="#e8edf6" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="9.7" cy="18.6" r="2.1" fill="none" stroke="#5eead4" stroke-width="1.8"/>
+        <circle cx="17.6" cy="7.4" r="2.1" fill="none" stroke="#a78bfa" stroke-width="1.8"/>
+        <path d="M17.6 9.5a8 8 0 0 1-8 8" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      Branchglass
+    </span>
+    <span>&copy; 2025 Branchglass, Inc.</span>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="#">Docs</a>
+      <a href="#">Changelog</a>
+      <a href="#">Status</a>
+      <a href="#">Privacy</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  var PREVIEW_URL = 'https://pr-142.preview.branchglass.dev';
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var term      = document.getElementById('term');
+  var pill      = document.getElementById('status-pill');
+  var pillTxt   = document.getElementById('status-txt');
+  var urlBox    = document.getElementById('url-box');
+  var urlTxt    = document.getElementById('url-txt');
+  var copyBtn   = document.getElementById('copy-btn');
+  var copyTxt   = document.getElementById('copy-txt');
+  var teamRow   = document.getElementById('team-row');
+  var chipsEls  = Array.prototype.slice.call(document.querySelectorAll('#chips .chip'));
+  var avEls     = Array.prototype.slice.call(document.querySelectorAll('#team-row .av'));
+  var stepEls   = Array.prototype.slice.call(document.querySelectorAll('#steps .step'));
+  var dotsWrap  = document.getElementById('stage-dots');
+  var replayBtn = document.getElementById('replay-btn');
+
+  /* ---------- terminal primitives ---------- */
+  var caretEl = null;
+  function wait(ms){ return new Promise(function(r){ setTimeout(r, reduced ? 0 : ms); }); }
+
+  function makeCaret(){
+    caretEl = document.createElement('div');
+    caretEl.className = 'tline caretline';
+    caretEl.innerHTML = '<span class="caret"></span>';
+  }
+  function resetTerm(){
+    term.innerHTML = '';
+    makeCaret();
+    term.appendChild(caretEl);
+  }
+  function scrollTerm(){ term.scrollTop = term.scrollHeight; }
+
+  var SYM = { cmd:'$', ok:'\u2713', info:'\u2192', work:'\u25CF', clean:'\u2713', idle:'\u2022' };
+  function addLine(kind, text){
+    var l = document.createElement('div');
+    l.className = 'tline k-' + kind;
+    var s = document.createElement('span'); s.className = 'sym'; s.textContent = SYM[kind] || ' ';
+    var t = document.createElement('span'); t.className = 'tx';  t.textContent = text;
+    l.appendChild(s); l.appendChild(t);
+    term.insertBefore(l, caretEl);
+    scrollTerm();
+    return wait(180);
+  }
+
+  /* ---------- state setters ---------- */
+  function setPill(st){ /* st = [color, label, pulse] */
+    pill.className = 'pill s-' + st[0] + (st[2] ? ' pulse' : '');
+    pillTxt.textContent = st[1];
+  }
+
+  function setChips(n, instant){
+    if (n == null) n = chipsEls.length;
+    if (instant || reduced){
+      chipsEls.forEach(function(c, i){ c.classList.toggle('on', i < n); });
+      return Promise.resolve();
+    }
+    return chipsEls.slice(0, n).reduce(function(p, c){
+      return p.then(function(){ c.classList.add('on'); return wait(240); });
+    }, Promise.resolve());
+  }
+
+  function setTeam(on, instant){
+    if (!on) teamRow.classList.add('off');
+    if (instant || reduced){
+      avEls.forEach(function(a){ a.classList.toggle('on', on); });
+      if (on) teamRow.classList.remove('off');
+      return Promise.resolve();
+    }
+    return avEls.reduce(function(p, a){
+      return p.then(function(){ a.classList.toggle('on', on); return wait(110); });
+    }, Promise.resolve()).then(function(){ if (on) teamRow.classList.remove('off'); });
+  }
+
+  var copyOK = false;
+  function setUrl(mode){
+    urlBox.classList.remove('live', 'dead', 'pending');
+    copyOK = false;
+    if (mode === 'live'){
+      urlBox.classList.add('live');
+      urlTxt.textContent = 'pr-142.preview.branchglass.dev';
+      copyOK = true;
+    } else if (mode === 'dead'){
+      urlBox.classList.add('dead');
+      urlTxt.textContent = 'pr-142.preview.branchglass.dev';
+    } else {
+      urlBox.classList.add('pending');
+      urlTxt.textContent = 'preview URL appears here';
+    }
+    copyBtn.disabled = !copyOK;
+  }
+
+  var dotEls = [];
+  function setStage(i){
+    stepEls.forEach(function(s, idx){
+      s.classList.toggle('is-active', idx === i);
+      s.classList.toggle('is-done', idx < i);
+    });
+    dotEls.forEach(function(d, idx){ d.classList.toggle('on', idx === i); });
+  }
+
+  /* ---------- the script ---------- */
+  var STAGES = [
+    { start:['blue','Connected',false], end:['blue','Connected',false], ops:[
+      ['cmd','branchglass connect --repo acme/api --cloud aws'],
+      ['ok','Repo linked \u2192 github.com/acme/api (webhooks on)'],
+      ['ok','Cloud linked \u2192 AWS 4421 \u00b7 role bg-deploy (least-privilege)']
+    ]},
+    { start:['amber','Provisioning',true], end:['amber','Provisioning',true], ops:[
+      ['cmd','git push origin feat/rate-limits'],
+      ['info','PR #142 opened \u2014 \u201cAdd per-tenant rate limits\u201d'],
+      ['work','Provisioning isolated preview environment\u2026']
+    ]},
+    { start:['amber','Building',true], end:['amber','Building',true], ops:[
+      ['ok','Mirrored production config \u00b7 secrets injected, masked'],
+      ['ok','Seeded postgres \u00b7 1,204 rows \u00b7 PII anonymized'],
+      ['chips', null]
+    ]},
+    { start:['green','Ready',false], end:['green','Ready',false], ops:[
+      ['ok','Ready in 41s \u2192 ' + PREVIEW_URL],
+      ['url','live'],
+      ['team', true]
+    ]},
+    { start:['amber','Updating',true], end:['green','Ready',false], ops:[
+      ['cmd','git push 8f3c1e9 \u2192 feat/rate-limits'],
+      ['work','Diff detected \u00b7 rebuilding 2 of 5 services\u2026'],
+      ['ok','pr-142 updated \u00b7 same URL \u00b7 12s']
+    ]},
+    { start:['amber','Tearing down',true], end:['gray','Removed',false], ops:[
+      ['ok','PR #142 merged \u2192 main'],
+      ['clean','Environment pr-142 destroyed \u00b7 resources released'],
+      ['url','dead'],
+      ['chips', 0],
+      ['team', false]
+    ]}
+  ];
+
+  var DOT_LABELS = [
+    'Connect repo & cloud',
+    'Open a pull request',
+    'Production-like setup',
+    'Preview URL shared',
+    'Commit auto-update',
+    'Merged \u2192 removed'
+  ];
+
+  DOT_LABELS.forEach(function(lbl, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.title = lbl;
+    b.setAttribute('aria-label', 'Jump to stage ' + (i + 1) + ': ' + lbl);
+    b.addEventListener('click', function(){ play(i); });
+    dotsWrap.appendChild(b);
+  });
+  dotEls = Array.prototype.slice.call(dotsWrap.children);
+
+  function applyBaseline(i){
+    setStage(i);
+    setChips(i > 2 ? null : 0, true);
+    setUrl(i === 3 || i === 4 ? 'live' : (i === 5 ? 'dead' : 'pending'));
+    setTeam(i >= 3, true);
+    setPill(STAGES[i].end);
+  }
+
+  var runId = 0, hasRun = false;
+
+  function play(from){
+    from = from || 0;
+    var id = ++runId;
+    hasRun = true;
+    replayBtn.classList.remove('hint');
+    resetTerm();
+    applyBaseline(from);
+
+    var chain = Promise.resolve();
+    for (var s = from; s < STAGES.length; s++){
+      (function(s){
+        chain = chain.then(function(){
+          if (id !== runId) return;
+          setStage(s);
+          setPill(STAGES[s].start);
+          var p = wait(s === from ? 250 : 750);
+          STAGES[s].ops.forEach(function(op){
+            p = p.then(function(){
+              if (id !== runId) return;
+              var t = op[0];
+              if (t === 'chips') return setChips(op[1], false).then(function(){ return wait(420); });
+              if (t === 'url'){ setUrl(op[1]); return wait(600); }
+              if (t === 'team') return setTeam(op[1], false).then(function(){ return wait(300); });
+              return addLine(t, op[1]).then(function(){ return wait(300 + Math.random() * 140); });
+            });
+          });
+          p = p.then(function(){ if (id === runId) setPill(STAGES[s].end); });
+          return p.then(function(){ return wait((s === 3 || s === 4) ? 1400 : 850); });
+        });
+      })(s);
+    }
+    return chain.then(function(){
+      if (id === runId) replayBtn.classList.add('hint');
+    });
+  }
+
+  /* ---------- controls ---------- */
+  replayBtn.addEventListener('click', function(){ play(0); });
+
+  stepEls.forEach(function(s, i){
+    s.addEventListener('click', function(){ play(i); });
+    s.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); play(i); }
+    });
+  });
+
+  copyBtn.addEventListener('click', function(){
+    if (!copyOK) return;
+    function done(){
+      copyBtn.classList.add('copied');
+      copyTxt.textContent = 'Copied';
+      setTimeout(function(){
+        copyBtn.classList.remove('copied');
+        copyTxt.textContent = 'Copy';
+      }, 1500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(PREVIEW_URL).then(done, done);
+    } else { done(); }
+  });
+
+  /* ---------- autoplay ---------- */
+  var demo = document.getElementById('demo');
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting && !hasRun){ play(0); io.disconnect(); }
+      });
+    }, { threshold: 0.35 });
+    io.observe(demo);
+  }
+  setTimeout(function(){ if (!hasRun) play(0); }, 8000);
+})();
+</script>
+
+</body>
+</html>

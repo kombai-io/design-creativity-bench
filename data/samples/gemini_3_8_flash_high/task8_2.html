@@ -1,0 +1,3197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patchbay Cloud — The Pre-Production Webhook Testing Platform</title>
+  <meta name="description" content="Test, inspect, replay, and debug webhook integrations in isolated ephemeral sandboxes before touching production systems. Join the private beta." />
+  
+  <style>
+    /* ==========================================================================
+       RESET & BASE STYLES
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-main: #06090e;
+      --bg-surface: #0c1018;
+      --bg-surface-elevated: #131926;
+      --bg-surface-highlight: #1b2336;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.16);
+      --border-accent: rgba(56, 189, 248, 0.35);
+
+      --cyan-400: #38bdf8;
+      --cyan-500: #0ea5e9;
+      --indigo-500: #6366f1;
+      --violet-500: #8b5cf6;
+      --emerald-400: #34d399;
+      --emerald-500: #10b981;
+      --amber-400: #fbbf24;
+      --rose-400: #fb7185;
+      --rose-500: #f43f5e;
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --text-on-accent: #04131d;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "JetBrains Mono", monospace;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-pill: 9999px;
+
+      --shadow-glow: 0 0 45px -10px rgba(56, 189, 248, 0.25);
+      --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      selection-background-color: var(--cyan-500);
+      selection-color: #000;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    /* Ambient gradient background */
+    .ambient-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .ambient-glow-1 {
+      position: absolute;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(99, 102, 241, 0.08) 40%, rgba(6, 9, 14, 0) 70%);
+      filter: blur(60px);
+    }
+
+    .ambient-glow-2 {
+      position: absolute;
+      top: 40%;
+      right: -10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, rgba(6, 9, 14, 0) 70%);
+      filter: blur(80px);
+    }
+
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at center top, black 30%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse at center top, black 30%, transparent 80%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ==========================================================================
+       HEADER & NAVIGATION
+       ========================================================================== */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(6, 9, 14, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      transition: all 0.2s ease;
+    }
+
+    .nav-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-icon-box {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+    }
+
+    .badge-beta {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-pill);
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--cyan-400);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-link {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border-medium);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan-400), #2563eb);
+      color: #ffffff;
+      padding: 9px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    /* ==========================================================================
+       HERO SECTION
+       ========================================================================== */
+    .hero-section {
+      padding: 80px 0 60px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: var(--radius-pill);
+      font-size: 0.82rem;
+      color: var(--cyan-400);
+      margin-bottom: 28px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-pill-ping {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald-400);
+      box-shadow: 0 0 8px var(--emerald-400);
+      animation: pulsePing 2s infinite;
+    }
+
+    @keyframes pulsePing {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+      100% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+      max-width: 960px;
+      margin: 0 auto 24px;
+    }
+
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #ffffff 30%, #38bdf8 75%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--text-secondary);
+      max-width: 740px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+      line-height: 1.55;
+    }
+
+    /* Waitlist Quick Form */
+    .hero-form-container {
+      max-width: 580px;
+      margin: 0 auto 20px;
+      position: relative;
+    }
+
+    .hero-form {
+      display: flex;
+      gap: 8px;
+      background: rgba(18, 25, 38, 0.85);
+      padding: 6px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-medium);
+      box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(12px);
+      transition: border-color 0.2s;
+    }
+
+    .hero-form:focus-within {
+      border-color: var(--cyan-400);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+
+    .hero-form input[type="email"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 0.96rem;
+      outline: none;
+    }
+
+    .hero-form input[type="email"]::placeholder {
+      color: var(--text-muted);
+    }
+
+    .hero-form .btn-submit {
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+
+    .form-guarantee {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .form-guarantee span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ==========================================================================
+       INTERACTIVE WORKBENCH DEMO
+       ========================================================================== */
+    .demo-section {
+      padding: 30px 0 90px;
+      position: relative;
+    }
+
+    .demo-window {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card), var(--shadow-glow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Window Titlebar */
+    .demo-titlebar {
+      background: var(--bg-surface-elevated);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .win-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    .win-dot-close { background: #ef4444; }
+    .win-dot-min { background: #f59e0b; }
+    .win-dot-max { background: #10b981; }
+
+    .ephemeral-endpoint-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-pill);
+      padding: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--cyan-400);
+      max-width: 520px;
+      width: 100%;
+      position: relative;
+    }
+
+    .ep-tag {
+      font-size: 0.68rem;
+      padding: 2px 6px;
+      background: rgba(14, 165, 233, 0.15);
+      border-radius: var(--radius-sm);
+      color: var(--cyan-400);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .ep-url {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #e2e8f0;
+    }
+
+    .btn-copy-ep {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      margin-left: auto;
+      transition: all 0.15s;
+    }
+
+    .btn-copy-ep:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .demo-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-send-ping {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--cyan-400);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-send-ping:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--cyan-400);
+    }
+
+    /* Demo Body: Two-column master/detail */
+    .demo-body {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: 520px;
+    }
+
+    /* Left Sidebar: Event Stream */
+    .event-stream-sidebar {
+      border-right: 1px solid var(--border-subtle);
+      background: rgba(10, 14, 22, 0.6);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stream-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--emerald-400);
+      font-size: 0.72rem;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--emerald-400);
+      animation: pulsePing 1.8s infinite;
+    }
+
+    .event-list {
+      list-style: none;
+      overflow-y: auto;
+      max-height: 460px;
+    }
+
+    .event-item {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      position: relative;
+    }
+
+    .event-item:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .event-item.active {
+      background: rgba(56, 189, 248, 0.08);
+      border-left: 3px solid var(--cyan-400);
+    }
+
+    .event-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+    }
+
+    .event-provider {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-badge {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .status-200 { background: rgba(16, 185, 129, 0.15); color: var(--emerald-400); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-400 { background: rgba(251, 191, 36, 0.15); color: var(--amber-400); border: 1px solid rgba(251, 191, 36, 0.3); }
+    .status-500 { background: rgba(244, 63, 94, 0.15); color: var(--rose-400); border: 1px solid rgba(244, 63, 94, 0.3); }
+
+    .event-name {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .event-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* Right Main Inspector Pane */
+    .inspector-pane {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+    }
+
+    .inspector-nav {
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(19, 25, 38, 0.4);
+    }
+
+    .inspector-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 14px 16px;
+      color: var(--text-secondary);
+      font-size: 0.84rem;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      color: var(--cyan-400);
+      font-weight: 600;
+    }
+
+    .tab-btn.active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--cyan-400);
+      box-shadow: 0 0 10px var(--cyan-400);
+    }
+
+    .inspector-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-tool {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-tool:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    /* Tab Content Areas */
+    .tab-content {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Raw Payload View */
+    .code-view-container {
+      position: relative;
+      background: #080c14;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .code-view-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .code-editor-area {
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .json-key { color: #38bdf8; }
+    .json-str { color: #34d399; }
+    .json-num { color: #f59e0b; }
+    .json-bool { color: #c084fc; }
+
+    /* Headers & Signature Tab */
+    .signature-card {
+      background: rgba(56, 189, 248, 0.04);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .sig-status-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--emerald-400);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .sig-details h4 {
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+
+    .sig-details p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .headers-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .headers-table th, .headers-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .headers-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .headers-table td:first-child {
+      color: var(--cyan-400);
+      font-weight: 600;
+      width: 260px;
+    }
+
+    .headers-table td:last-child {
+      color: #cbd5e1;
+      word-break: break-all;
+    }
+
+    /* Replay & Chaos Tab */
+    .replay-controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .input-control {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-control:focus {
+      border-color: var(--cyan-400);
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--cyan-400);
+    }
+
+    .slider-val {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--cyan-400);
+      min-width: 60px;
+    }
+
+    .replay-action-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .replay-status-box {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Code Generator Tab */
+    .lang-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .lang-pill {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 0.78rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+
+    .lang-pill.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--cyan-400);
+      color: var(--cyan-400);
+      font-weight: 600;
+    }
+
+    /* ==========================================================================
+       PRODUCT VALUE PILLARS (THE WHY)
+       ========================================================================== */
+    .section-py {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 64px;
+    }
+
+    .section-tag {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cyan-400);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 3.5vw, 2.7rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 28px;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-medium);
+      box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--cyan-400);
+      margin-bottom: 22px;
+    }
+
+    .feature-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .feature-text {
+      color: var(--text-secondary);
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
+
+    .feature-badge-sub {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--cyan-400);
+      background: rgba(56, 189, 248, 0.08);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* ==========================================================================
+       BEFORE VS AFTER (THE PROBLEM & SOLUTION)
+       ========================================================================== */
+    .comparison-wrapper {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .comp-col {
+      padding: 40px;
+    }
+
+    .comp-col-bad {
+      background: rgba(244, 63, 94, 0.03);
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    .comp-col-good {
+      background: rgba(16, 185, 129, 0.03);
+    }
+
+    .comp-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .comp-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .comp-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .comp-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .comp-item strong {
+      color: var(--text-primary);
+    }
+
+    .comp-bullet-bad {
+      color: var(--rose-400);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .comp-bullet-good {
+      color: var(--emerald-400);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       SUPPORTED SIGNATURE METHODS & INTEGRATIONS
+       ========================================================================== */
+    .providers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+
+    .provider-pill-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .provider-pill-box:hover {
+      border-color: var(--cyan-400);
+      transform: translateY(-2px);
+      background: var(--bg-surface-elevated);
+    }
+
+    .provider-icon-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: #fff;
+    }
+
+    .provider-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .provider-sig-type {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* ==========================================================================
+       TEAM COLLABORATION SPOTLIGHT (ENGINEERING & SUPPORT)
+       ========================================================================== */
+    .collab-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      padding: 48px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .share-mockup-window {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .mockup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 16px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .comment-bubble {
+      background: var(--bg-surface-elevated);
+      border-left: 3px solid var(--cyan-400);
+      padding: 12px 14px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+    }
+
+    .comment-bubble.reply {
+      border-left-color: var(--indigo-500);
+      margin-left: 20px;
+    }
+
+    .comment-author {
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ==========================================================================
+       BETA REGISTRATION / WAITLIST FORM SECTION
+       ========================================================================== */
+    .waitlist-section {
+      padding: 90px 0 110px;
+      position: relative;
+    }
+
+    .waitlist-card {
+      max-width: 760px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, rgba(19, 25, 38, 0.95), rgba(12, 16, 24, 0.98));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: var(--radius-xl);
+      padding: 48px;
+      box-shadow: var(--shadow-glow), 0 30px 60px -20px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+
+    .waitlist-card::after {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: 15%;
+      right: 15%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan-400), transparent);
+    }
+
+    .waitlist-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .waitlist-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+
+    .waitlist-subtitle {
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+
+    .full-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .full-form-grid .full-span {
+      grid-column: span 2;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-field label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    .form-field input,
+    .form-field select {
+      background: var(--bg-main);
+      border: 1px solid var(--border-medium);
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 0.92rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .form-field input:focus,
+    .form-field select:focus {
+      border-color: var(--cyan-400);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+
+    .checkbox-pill-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .pill-checkbox {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .pill-checkbox input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .pill-label {
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-main);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .pill-checkbox input:checked + .pill-label {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--cyan-400);
+      color: var(--cyan-400);
+      font-weight: 600;
+    }
+
+    .btn-submit-large {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--cyan-400), #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-submit-large:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(14, 165, 233, 0.6);
+    }
+
+    /* Success State: Interactive Beta Ticket */
+    .ticket-confirmation {
+      display: none;
+      text-align: center;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .ticket-card {
+      background: linear-gradient(145deg, #0f172a, #1e293b);
+      border: 1px dashed var(--cyan-400);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin: 24px auto;
+      max-width: 480px;
+      position: relative;
+    }
+
+    .ticket-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--cyan-400);
+      color: #04131d;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 3px 14px;
+      border-radius: var(--radius-pill);
+    }
+
+    .ticket-number {
+      font-family: var(--font-mono);
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.05em;
+      margin: 12px 0 4px;
+    }
+
+    .ticket-user-email {
+      font-family: var(--font-mono);
+      color: var(--cyan-400);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+
+    .ticket-perks {
+      text-align: left;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 16px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .referral-box {
+      margin-top: 24px;
+      display: flex;
+      gap: 8px;
+      background: var(--bg-main);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-medium);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      align-items: center;
+    }
+
+    /* ==========================================================================
+       FAQ ACCORDION
+       ========================================================================== */
+    .faq-wrapper {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .faq-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .faq-item:hover {
+      border-color: var(--border-medium);
+    }
+
+    .faq-question {
+      padding: 20px 24px;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .faq-chevron {
+      color: var(--text-muted);
+      transition: transform 0.25s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-chevron {
+      transform: rotate(180deg);
+      color: var(--cyan-400);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0, 1, 0, 1), padding 0.25s ease;
+      color: var(--text-secondary);
+      font-size: 0.94rem;
+      line-height: 1.65;
+      padding: 0 24px;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 500px;
+      padding: 0 24px 22px;
+    }
+
+    /* ==========================================================================
+       FOOTER
+       ========================================================================== */
+    .footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 60px 0 36px;
+      background: rgba(8, 11, 18, 0.95);
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+
+    .footer-brand p {
+      margin-top: 12px;
+      max-width: 320px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .footer-col h5 {
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    .footer-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.82rem;
+    }
+
+    .system-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--emerald-400);
+      background: rgba(16, 185, 129, 0.1);
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #1e293b;
+      border: 1px solid var(--cyan-400);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Modal for Sharing */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 520px;
+      padding: 28px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      color: #fff;
+    }
+
+    /* ==========================================================================
+       RESPONSIVE BREAKPOINTS
+       ========================================================================== */
+    @media (max-width: 1024px) {
+      .demo-body {
+        grid-template-columns: 1fr;
+      }
+      .event-stream-sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .event-list {
+        max-height: 220px;
+      }
+      .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .collab-banner {
+        grid-template-columns: 1fr;
+      }
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+      .grid-3, .grid-2, .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      .full-form-grid {
+        grid-template-columns: 1fr;
+      }
+      .full-form-grid .full-span {
+        grid-column: span 1;
+      }
+      .comp-col-bad {
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .hero-form {
+        flex-direction: column;
+      }
+      .replay-controls-grid {
+        grid-template-columns: 1fr;
+      }
+      .waitlist-card {
+        padding: 28px 20px;
+      }
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+      .footer-bottom {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient lighting backgrounds -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
+  <!-- STICKY NAVIGATION -->
+  <header class="header">
+    <div class="container">
+      <div class="nav-wrapper">
+        <a href="#" class="brand-logo">
+          <div class="logo-icon-box">
+            <!-- Patchbay plug icon -->
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v6" />
+              <path d="m4.93 10.93 4.24 4.24" />
+              <path d="M2 18h6" />
+              <circle cx="12" cy="14" r="4" />
+              <path d="M16 14h6" />
+              <path d="m14.83 9.17 4.24-4.24" />
+            </svg>
+          </div>
+          <span>Patchbay<span style="color: var(--cyan-400);">Cloud</span></span>
+          <span class="badge-beta">Private Beta</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#workbench" class="nav-link">Simulator</a></li>
+          <li><a href="#features" class="nav-link">Capabilities</a></li>
+          <li><a href="#supported" class="nav-link">Integrations</a></li>
+          <li><a href="#collaboration" class="nav-link">Team Triage</a></li>
+          <li><a href="#faq" class="nav-link">FAQ</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <button class="btn-ghost" onclick="scrollToForm()">Request Beta</button>
+          <a href="#workbench" class="btn-primary">
+            <span>Try Sandbox</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO SECTION -->
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-pill">
+          <span class="hero-pill-ping"></span>
+          <span>Private Beta Opening for HTTP Webhooks &amp; Signature Verification</span>
+        </div>
+
+        <h1 class="hero-title">
+          Stop debugging webhooks <br />
+          <span class="gradient-text">directly in production.</span>
+        </h1>
+
+        <p class="hero-subtitle">
+          Patchbay Cloud generates instant ephemeral endpoints that capture, verify, and inspect webhook payloads. Mutate bodies, simulate upstream outages, and replay failure scenarios with your team before connecting to production services.
+        </p>
+
+        <!-- Primary Form -->
+        <div class="hero-form-container">
+          <form class="hero-form" onsubmit="handleHeroSubmit(event)">
+            <input 
+              type="email" 
+              id="heroEmailInput" 
+              placeholder="Enter your work email (e.g. alex@company.com)" 
+              required 
+            />
+            <button type="submit" class="btn-primary btn-submit">
+              Join Private Beta
+            </button>
+          </form>
+          <div class="form-guarantee">
+            <span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Zero local daemons or open ports
+            </span>
+            <span>•</span>
+            <span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 13 4 4L19 7"/></svg>
+              Standard HMAC &amp; Ed25519 support
+            </span>
+            <span>•</span>
+            <span>SOC2 Type II in progress</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE WORKBENCH DEMO -->
+    <section class="demo-section" id="workbench">
+      <div class="container">
+        <div class="demo-window">
+          <!-- Window Header / Titlebar -->
+          <div class="demo-titlebar">
+            <div class="window-controls">
+              <span class="win-dot win-dot-close"></span>
+              <span class="win-dot win-dot-min"></span>
+              <span class="win-dot win-dot-max"></span>
+            </div>
+
+            <!-- Ephemeral URL Box -->
+            <div class="ephemeral-endpoint-bar">
+              <span class="ep-tag">EPHEMERAL</span>
+              <span class="ep-url" id="activeEndpointUrl">https://in.patchbay.cloud/ep_live_9f82d1a04</span>
+              <button class="btn-copy-ep" onclick="copyActiveEndpoint()" title="Copy temporary webhook URL">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>Copy</span>
+              </button>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="demo-header-actions">
+              <button class="btn-send-ping" onclick="triggerSimulatedPing()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Simulate Inbound Event</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Master-Detail Body -->
+          <div class="demo-body">
+            <!-- Left: Inbound Event Feed -->
+            <aside class="event-stream-sidebar">
+              <div class="stream-header">
+                <span>Inbound Event Log</span>
+                <div class="live-indicator">
+                  <span class="live-dot"></span>
+                  <span>LISTENING</span>
+                </div>
+              </div>
+
+              <ul class="event-list" id="eventListContainer">
+                <!-- Items populated via JS -->
+              </ul>
+            </aside>
+
+            <!-- Right: Event Deep Inspector -->
+            <div class="inspector-pane">
+              <div class="inspector-nav">
+                <div class="inspector-tabs">
+                  <button class="tab-btn active" data-tab="tab-payload" onclick="switchTab('tab-payload')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Parsed Payload</span>
+                  </button>
+                  <button class="tab-btn" data-tab="tab-headers" onclick="switchTab('tab-headers')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    <span>Headers &amp; Signature</span>
+                  </button>
+                  <button class="tab-btn" data-tab="tab-replay" onclick="switchTab('tab-replay')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span>Replay &amp; Chaos</span>
+                  </button>
+                  <button class="tab-btn" data-tab="tab-codegen" onclick="switchTab('tab-codegen')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>Generated Handler</span>
+                  </button>
+                </div>
+
+                <div class="inspector-tools">
+                  <button class="btn-tool" onclick="openShareModal()" title="Share snapshot link with team">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    <span>Share Session</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- TAB 1: PARSED PAYLOAD -->
+              <div class="tab-content active" id="tab-payload">
+                <div class="code-view-container">
+                  <div class="code-view-bar">
+                    <span id="payloadEventId">evt_stripe_98a4f210d</span>
+                    <span>application/json • utf-8</span>
+                  </div>
+                  <pre class="code-editor-area" id="payloadJsonDisplay"></pre>
+                </div>
+              </div>
+
+              <!-- TAB 2: HEADERS & SIGNATURES -->
+              <div class="tab-content" id="tab-headers">
+                <div class="signature-card">
+                  <div class="sig-status-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="sig-details">
+                    <h4 id="sigVerificationTitle">Cryptographic Signature Validated</h4>
+                    <p id="sigVerificationDesc">Verified via HMAC-SHA256 signature using provider secret. Timestamp drift is within nominal bounds (0.42s difference).</p>
+                  </div>
+                </div>
+
+                <table class="headers-table">
+                  <thead>
+                    <tr>
+                      <th>Header Key</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="headersTableBody">
+                    <!-- Dynamic headers -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- TAB 3: REPLAY & CHAOS ENGINE -->
+              <div class="tab-content" id="tab-replay">
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 20px;">
+                  Test how your downstream backend handles edge cases by mutating payloads, injecting network latency, and triggering failure codes before deployment.
+                </p>
+
+                <div class="replay-controls-grid">
+                  <div class="form-group">
+                    <label>Forward Target Destination</label>
+                    <input type="text" class="input-control" id="replayTargetUrl" value="http://localhost:3000/api/webhooks" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Simulated Upstream Latency</label>
+                    <div class="slider-row">
+                      <input type="range" id="latencySlider" min="0" max="3000" step="100" value="250" oninput="updateLatencyLabel(this.value)" />
+                      <span class="slider-val" id="latencyValLabel">250ms</span>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Inject Failure Scenario</label>
+                    <select class="input-control" id="chaosScenarioSelect">
+                      <option value="none">None (Standard Forward 200 OK)</option>
+                      <option value="timeout">Simulate 504 Gateway Timeout</option>
+                      <option value="rate_limit">Simulate 429 Rate Limit Exceeded</option>
+                      <option value="corrupted_sig">Tamper Webhook Signature (Invalid Hash)</option>
+                      <option value="server_error">Simulate 500 Uncaught Exception</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Payload Modification</label>
+                    <select class="input-control" id="payloadMutateSelect">
+                      <option value="asis">Send Original Captured Payload</option>
+                      <option value="missing_id">Strip Top-level ID field (Missing Key)</option>
+                      <option value="negative_amount">Inject Negative Currency Amount</option>
+                      <option value="large_blob">Append 2MB Metadata Blob (Payload Bloat)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="replay-action-card">
+                  <div class="replay-status-box" id="replayResultBox">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                    <span>Ready to dispatch replay event</span>
+                  </div>
+                  <button class="btn-primary" onclick="executeReplaySim()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span>Execute Replay</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- TAB 4: GENERATED CODE -->
+              <div class="tab-content" id="tab-codegen">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                  <div class="lang-tabs">
+                    <button class="lang-pill active" onclick="switchLang('node')">Node.js / Express</button>
+                    <button class="lang-pill" onclick="switchLang('python')">Python / FastAPI</button>
+                    <button class="lang-pill" onclick="switchLang('go')">Go</button>
+                    <button class="lang-pill" onclick="switchLang('curl')">cURL</button>
+                  </div>
+                  <button class="btn-tool" onclick="copySnippet()">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span>Copy Handler</span>
+                  </button>
+                </div>
+
+                <div class="code-view-container">
+                  <pre class="code-editor-area" id="codeSnippetBox" style="font-size: 0.8rem;"></pre>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROBLEM VS SOLUTION (THE GAP) -->
+    <section class="section-py" style="background: rgba(10, 14, 22, 0.4);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Architecture Contrast</span>
+          <h2 class="section-title">Why local tunnels and live production testing always break</h2>
+          <p class="section-desc">
+            Modern event-driven architectures demand robust testing. Traditional tools weren't built for stateful, asynchronous, signature-verified webhooks.
+          </p>
+        </div>
+
+        <div class="comparison-wrapper">
+          <div class="comparison-grid">
+            <!-- Left: Old way -->
+            <div class="comp-col comp-col-bad">
+              <div class="comp-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                <div class="comp-title">The Painful Status Quo</div>
+              </div>
+              <ul class="comp-list">
+                <li class="comp-item">
+                  <span class="comp-bullet-bad">✕</span>
+                  <div><strong>Tunnels disconnect mid-debug:</strong> Local CLI tunnels timeout, rotate URLs unpredictably, and break webhook provider configs.</div>
+                </li>
+                <li class="comp-item">
+                  <span class="comp-bullet-bad">✕</span>
+                  <div><strong>Signature failures in staging:</strong> Missing raw request bodies and flawed signature computations take days to diagnose.</div>
+                </li>
+                <li class="comp-item">
+                  <span class="comp-bullet-bad">✕</span>
+                  <div><strong>Blind production triage:</strong> Support tickets lack reproducible event payloads; developers guess based on partial logs.</div>
+                </li>
+                <li class="comp-item">
+                  <span class="comp-bullet-bad">✕</span>
+                  <div><strong>Zero chaos testing:</strong> Teams only test the "happy path," leaving rate-limits, duplicate deliveries, and 500 crashes unhandled.</div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Right: Patchbay Cloud way -->
+            <div class="comp-col comp-col-good">
+              <div class="comp-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 16 10"/></svg>
+                <div class="comp-title">The Patchbay Cloud Standard</div>
+              </div>
+              <ul class="comp-list">
+                <li class="comp-item">
+                  <span class="comp-bullet-good">✓</span>
+                  <div><strong>Stateless Ephemeral Endpoints:</strong> Instant URLs provisioned in the cloud that never collapse when your laptop closes.</div>
+                </li>
+                <li class="comp-item">
+                  <span class="comp-bullet-good">✓</span>
+                  <div><strong>Built-in Signature Diagnostics:</strong> Auto-extracts headers, tests HMAC secret matches, and warns of timestamp expiration.</div>
+                </li>
+                <li class="comp-item">
+                  <span class="comp-bullet-good">✓</span>
+                  <div><strong>Multiplayer Debug Sessions:</strong> One-click permanent debug snapshots allow support and engineering to collaborate instantly.</div>
+                </li>
+                <li class="comp-item">
+                  <span class="comp-bullet-good">✓</span>
+                  <div><strong>Payload Mutation &amp; Chaos Engine:</strong> Replay any event with injected latency, modified JSON keys, and synthetic server codes.</div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CORE PLATFORM FEATURES -->
+    <section class="section-py" id="features">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Developer Platform</span>
+          <h2 class="section-title">Everything software teams need to master webhook integrations</h2>
+          <p class="section-desc">
+            Built from the ground up for software engineering, platform infrastructure, and developer operations teams.
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <!-- Feature 1 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            </div>
+            <h3 class="feature-title">Ephemeral Endpoints</h3>
+            <p class="feature-text">
+              Spin up sandboxed HTTP endpoints in under 200ms. Keep them alive for 15 minutes of rapid debugging or persist them throughout your sprint testing cycle.
+            </p>
+            <span class="feature-badge-sub">Auto-TLS • Zero Local Port Mapping</span>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3 class="feature-title">Payload Replay &amp; Mutation</h3>
+            <p class="feature-text">
+              Did your order sync fail because of an unexpected null value? Modify JSON keys in-place and replay directly to your staging service with identical signing headers.
+            </p>
+            <span class="feature-badge-sub">Deterministic Idempotency Testing</span>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h3 class="feature-title">Team War-Room History</h3>
+            <p class="feature-text">
+              Stop pasting mangled JSON into Slack. Share unified session links with support specialists and backend developers with complete request/response traces.
+            </p>
+            <span class="feature-badge-sub">Shareable Debug Sessions • PII Safe</span>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </div>
+            <h3 class="feature-title">Code Snippet Generation</h3>
+            <p class="feature-text">
+              Instant verification snippets generated automatically based on your actual received payloads. Supports Node.js, Python, Go, and cURL with idiomatic error handling.
+            </p>
+            <span class="feature-badge-sub">Auto Header &amp; Secret Extraction</span>
+          </div>
+
+          <!-- Feature 5 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3 class="feature-title">Signature Verification Engine</h3>
+            <p class="feature-text">
+              Detects standard signing patterns: Stripe, GitHub HMAC-SHA256, Svix/Standard Webhooks, Shopify Base64, and Twilio tokens. Highlights clock-skew issues automatically.
+            </p>
+            <span class="feature-badge-sub">Raw Body Byte-Level Validation</span>
+          </div>
+
+          <!-- Feature 6 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </div>
+            <h3 class="feature-title">Failure Chaos Simulator</h3>
+            <p class="feature-text">
+              Ensure your system survives reality. Simulate upstream retries, exponential backoffs, 502 Bad Gateways, 429 throttling limits, and network connection resets.
+            </p>
+            <span class="feature-badge-sub">Configurable Latency 0-5000ms</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUPPORTED PROVIDERS & SIGNING METHODS -->
+    <section class="section-py" id="supported" style="background: rgba(10, 14, 22, 0.4);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Broad Compatibility</span>
+          <h2 class="section-title">Built for the modern webhook ecosystem</h2>
+          <p class="section-desc">
+            The private beta supports HTTP/HTTPS-based webhooks, raw body capture, and all common cryptographic signing methods out of the box.
+          </p>
+        </div>
+
+        <div class="providers-grid">
+          <div class="provider-pill-box">
+            <div class="provider-icon-badge" style="background: rgba(99, 91, 255, 0.2); color: #818cf8;">S</div>
+            <div class="provider-name">Stripe</div>
+            <div class="provider-sig-type">Stripe-Signature (v1)</div>
+          </div>
+
+          <div class="provider-pill-box">
+            <div class="provider-icon-badge" style="background: rgba(255, 255, 255, 0.15); color: #fff;">GH</div>
+            <div class="provider-name">GitHub</div>
+            <div class="provider-sig-type">X-Hub-Signature-256</div>
+          </div>
+
+          <div class="provider-pill-box">
+            <div class="provider-icon-badge" style="background: rgba(150, 191, 66, 0.2); color: #96bf42;">SH</div>
+            <div class="provider-name">Shopify</div>
+            <div class="provider-sig-type">X-Shopify-Hmac-Sha256</div>
+          </div>
+
+          <div class="provider-pill-box">
+            <div class="provider-icon-badge" style="background: rgba(242, 47, 70, 0.2); color: #f22f46;">TW</div>
+            <div class="provider-name">Twilio</div>
+            <div class="provider-sig-type">X-Twilio-Signature</div>
+          </div>
+
+          <div class="provider-pill-box">
+            <div class="provider-icon-badge" style="background: rgba(251, 146, 60, 0.2); color: #fb923c;">SV</div>
+            <div class="provider-name">Svix / Clerk</div>
+            <div class="provider-sig-type">Standard Webhooks v1</div>
+          </div>
+
+          <div class="provider-pill-box">
+            <div class="provider-icon-badge" style="background: rgba(56, 189, 248, 0.2); color: var(--cyan-400);">HTTP</div>
+            <div class="provider-name">Custom REST</div>
+            <div class="provider-sig-type">Bearer / API Key / HMAC</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEAM COLLABORATION SHOWCASE -->
+    <section class="section-py" id="collaboration">
+      <div class="container">
+        <div class="collab-banner">
+          <div>
+            <span class="section-tag">Cross-Functional Debugging</span>
+            <h2 class="section-title" style="font-size: 2.1rem;">Bridge the gap between Customer Support &amp; Engineering</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 1rem; line-height: 1.6;">
+              When an enterprise customer says "your webhook never updated my subscription," your team shouldn't have to query database replicas or search through terabytes of CloudWatch streams.
+            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 28px; font-size: 1rem; line-height: 1.6;">
+              Send an ephemeral Patchbay Cloud URL. When the event lands, support captures the exact failure snapshot and shares an immutable link with engineering.
+            </p>
+            <div style="display: flex; gap: 16px;">
+              <button class="btn-primary" onclick="scrollToForm()">Get Team Invite</button>
+            </div>
+          </div>
+
+          <!-- Interactive Mockup of a shared ticket session -->
+          <div class="share-mockup-window">
+            <div class="mockup-header">
+              <span style="font-family: var(--font-mono); color: var(--cyan-400);">patchbay.cloud/share/sess_902bf</span>
+              <span style="background: rgba(16, 185, 129, 0.15); color: var(--emerald-400); padding: 2px 6px; border-radius: 4px;">ACTIVE SESSION</span>
+            </div>
+
+            <div class="comment-bubble">
+              <div class="comment-author">
+                <span>Maya (Tier 2 Support)</span>
+                <span style="color: var(--text-muted); font-size: 0.72rem;">11:42 AM</span>
+              </div>
+              <div>Customer reported their Stripe <code>invoice.payment_failed</code> event didn't downgrade their account. Captured in this session snapshot.</div>
+            </div>
+
+            <div class="comment-bubble reply">
+              <div class="comment-author">
+                <span>Kavita (Platform Tech Lead)</span>
+                <span style="color: var(--text-muted); font-size: 0.72rem;">11:44 AM</span>
+              </div>
+              <div>I see the trace! Their custom metadata sent <code>null</code> instead of an empty array. Replayed payload with fix; backend now parses 200 OK. Deploying patch.</div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+              <span>🔒 2 engineers &amp; 1 support member in session</span>
+              <span style="color: var(--cyan-400); cursor: pointer;" onclick="showToast('Snapshot exported to linear ticket!')">Export to Linear →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WAITLIST REGISTRATION / CONVERSION SECTION -->
+    <section class="waitlist-section" id="waitlist">
+      <div class="container">
+        <div class="waitlist-card">
+          
+          <!-- Normal Form State -->
+          <div id="waitlistFormContainer">
+            <div class="waitlist-header">
+              <span class="badge-beta" style="margin-bottom: 12px; display: inline-block;">Limited Beta Cohort</span>
+              <h2 class="waitlist-title">Join the Patchbay Cloud Waitlist</h2>
+              <p class="waitlist-subtitle">
+                We are onboarding software engineering teams weekly. Request early access to start testing webhooks before your next major release.
+              </p>
+            </div>
+
+            <form onsubmit="handleWaitlistSubmit(event)">
+              <div class="full-form-grid">
+                <div class="form-field">
+                  <label for="wlName">Your Name</label>
+                  <input type="text" id="wlName" placeholder="Elena Rostova" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="wlEmail">Work Email</label>
+                  <input type="email" id="wlEmail" placeholder="elena@company.com" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="wlRole">Role</label>
+                  <select id="wlRole" required>
+                    <option value="" disabled selected>Select your role</option>
+                    <option value="backend">Backend / Platform Engineer</option>
+                    <option value="fullstack">Full-stack Developer</option>
+                    <option value="tech_lead">Engineering Manager / Tech Lead</option>
+                    <option value="solutions">Solutions Architect / Integration Engineer</option>
+                    <option value="support">Technical Support Engineer</option>
+                  </select>
+                </div>
+
+                <div class="form-field">
+                  <label for="wlTeamSize">Team Size</label>
+                  <select id="wlTeamSize" required>
+                    <option value="" disabled selected>Select company / team size</option>
+                    <option value="1-10">1 - 10 engineers</option>
+                    <option value="11-50">11 - 50 engineers</option>
+                    <option value="51-250">51 - 250 engineers</option>
+                    <option value="250+">250+ enterprise</option>
+                  </select>
+                </div>
+
+                <div class="form-field full-span">
+                  <label>Primary Webhook Providers You Test</label>
+                  <div class="checkbox-pill-grid">
+                    <label class="pill-checkbox">
+                      <input type="checkbox" name="provider" value="Stripe" checked />
+                      <span class="pill-label">Stripe</span>
+                    </label>
+                    <label class="pill-checkbox">
+                      <input type="checkbox" name="provider" value="GitHub" checked />
+                      <span class="pill-label">GitHub</span>
+                    </label>
+                    <label class="pill-checkbox">
+                      <input type="checkbox" name="provider" value="Shopify" />
+                      <span class="pill-label">Shopify</span>
+                    </label>
+                    <label class="pill-checkbox">
+                      <input type="checkbox" name="provider" value="Clerk/Svix" />
+                      <span class="pill-label">Clerk / Svix</span>
+                    </label>
+                    <label class="pill-checkbox">
+                      <input type="checkbox" name="provider" value="Twilio" />
+                      <span class="pill-label">Twilio</span>
+                    </label>
+                    <label class="pill-checkbox">
+                      <input type="checkbox" name="provider" value="Custom" />
+                      <span class="pill-label">Custom In-House APIs</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-field full-span">
+                  <label for="wlPrimaryLanguage">Primary Backend Stack</label>
+                  <input type="text" id="wlPrimaryLanguage" placeholder="e.g. Node.js (TypeScript), Python (FastAPI), Go, Rails" />
+                </div>
+              </div>
+
+              <button type="submit" class="btn-submit-large">
+                <span>Request Private Beta Access</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+
+              <div style="text-align: center; margin-top: 14px; font-size: 0.8rem; color: var(--text-muted);">
+                🔒 No credit card required. Private beta participants receive lifetime discounted tier status.
+              </div>
+            </form>
+          </div>
+
+          <!-- Ticket Success State (Dynamically Shown) -->
+          <div class="ticket-confirmation" id="ticketConfirmation">
+            <div class="ticket-card">
+              <span class="ticket-badge">VIP Beta Pass</span>
+              <div style="font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.08em; margin-top: 8px;">
+                Patchbay Cloud Beta Access Ticket
+              </div>
+              <div class="ticket-number" id="issuedTicketNumber">#PB-348</div>
+              <div class="ticket-user-email" id="confirmedEmailDisplay">engineer@company.com</div>
+
+              <div class="ticket-perks">
+                <div>✓ Initial cohort priority queue confirmed</div>
+                <div>✓ Ephemeral endpoint concurrency quota: 50 sandboxes</div>
+                <div>✓ Dedicated Slack connect triage channel with founders</div>
+              </div>
+
+              <!-- Barcode aesthetic SVG -->
+              <svg width="100%" height="34" style="margin: 20px 0 10px; opacity: 0.7;">
+                <rect x="5%" y="0" width="3" height="34" fill="#38bdf8" />
+                <rect x="9%" y="0" width="6" height="34" fill="#38bdf8" />
+                <rect x="16%" y="0" width="2" height="34" fill="#38bdf8" />
+                <rect x="20%" y="0" width="7" height="34" fill="#38bdf8" />
+                <rect x="29%" y="0" width="3" height="34" fill="#38bdf8" />
+                <rect x="34%" y="0" width="2" height="34" fill="#38bdf8" />
+                <rect x="38%" y="0" width="5" height="34" fill="#38bdf8" />
+                <rect x="45%" y="0" width="2" height="34" fill="#38bdf8" />
+                <rect x="49%" y="0" width="8" height="34" fill="#38bdf8" />
+                <rect x="60%" y="0" width="3" height="34" fill="#38bdf8" />
+                <rect x="65%" y="0" width="6" height="34" fill="#38bdf8" />
+                <rect x="73%" y="0" width="2" height="34" fill="#38bdf8" />
+                <rect x="77%" y="0" width="5" height="34" fill="#38bdf8" />
+                <rect x="85%" y="0" width="4" height="34" fill="#38bdf8" />
+                <rect x="91%" y="0" width="2" height="34" fill="#38bdf8" />
+              </svg>
+
+              <div style="font-size: 0.75rem; color: var(--text-muted);">
+                Pass generated &amp; encrypted. Check your inbox for verification.
+              </div>
+            </div>
+
+            <div style="max-width: 480px; margin: 0 auto; text-align: center;">
+              <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px;">
+                Move up 10 spots on the waitlist for every team member you invite:
+              </p>
+              <div class="referral-box">
+                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="referralUrl">https://patchbay.cloud/join?ref=PB348</span>
+                <button class="btn-ghost" style="padding: 4px 10px; font-size: 0.75rem;" onclick="copyReferralLink()">Copy Link</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- FREQUENTLY ASKED QUESTIONS (FAQ) -->
+    <section class="section-py" id="faq" style="background: rgba(10, 14, 22, 0.4);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Got Questions?</span>
+          <h2 class="section-title">Frequently Asked Questions</h2>
+          <p class="section-desc">
+            Everything you need to know about the Patchbay Cloud private beta, security architecture, and rollout roadmap.
+          </p>
+        </div>
+
+        <div class="faq-wrapper">
+          <!-- FAQ 1 -->
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>How is Patchbay Cloud different from Ngrok or local tunnel daemons?</span>
+              <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              Tunnel tools only pipe raw network bytes to a single running terminal process. If your computer sleeps or you share a test with a colleague, the tunnel drops. Patchbay Cloud provisions dedicated, cloud-hosted endpoints that retain event history, evaluate cryptographic signatures, permit payload mutations, and provide shareable session URLs for cross-functional team triage.
+            </div>
+          </div>
+
+          <!-- FAQ 2 -->
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>What webhook signing methods are supported in the private beta?</span>
+              <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              The private beta natively verifies HMAC-SHA256 (Stripe, GitHub, Shopify), standard timestamped signatures (Svix / Standard Webhooks), and custom secret token headers. It preserves exact raw bytes without re-serializing, ensuring signature hashes match down to the exact byte.
+            </div>
+          </div>
+
+          <!-- FAQ 3 -->
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>How does Patchbay handle sensitive PII and customer data?</span>
+              <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              Patchbay Cloud includes automatic client-side and edge PII masking (credit card PANs, SSNs, and OAuth tokens). Endpoints can be set to ephemeral self-destruct mode (wiped completely upon session close) or zero-retention forward mode where payloads are processed entirely in-memory.
+            </div>
+          </div>
+
+          <!-- FAQ 4 -->
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>Can I replay captured webhooks against my localhost?</span>
+              <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              Yes! You can replay directly to publicly accessible staging/preview environments (e.g. Vercel, Railway, AWS ECS) or use the optional lightweight Patchbay Relay CLI to dispatch replay events straight into your <code>localhost:3000</code> development server.
+            </div>
+          </div>
+
+          <!-- FAQ 5 -->
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>When does private beta access start and what are the limits?</span>
+              <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              Beta invitations roll out in weekly cohorts starting Q3. Beta teams receive unlimited ephemeral endpoints, 10,000 monthly captured events, and unlimited team seat invitations during the evaluation period.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="brand-logo">
+            <div class="logo-icon-box" style="width: 32px; height: 32px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="14" r="4" />
+                <path d="M12 2v6" />
+                <path d="M2 18h6" />
+                <path d="M16 14h6" />
+              </svg>
+            </div>
+            <span>Patchbay<span style="color: var(--cyan-400);">Cloud</span></span>
+          </div>
+          <p>
+            The developer platform for testing, inspecting, and replaying webhooks in secure ephemeral environments before production deployment.
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h5>Product</h5>
+          <ul class="footer-links">
+            <li><a href="#workbench">Interactive Simulator</a></li>
+            <li><a href="#features">Feature Suite</a></li>
+            <li><a href="#supported">Signing Algorithms</a></li>
+            <li><a href="#waitlist">Private Beta Waitlist</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Use Cases</h5>
+          <ul class="footer-links">
+            <li><a href="#workbench">Payment Verification</a></li>
+            <li><a href="#collaboration">Support &amp; Eng Triage</a></li>
+            <li><a href="#features">Chaos &amp; Retry Testing</a></li>
+            <li><a href="#features">Staging Sandbox Isolation</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Security &amp; Trust</h5>
+          <ul class="footer-links">
+            <li><a href="#faq">PII Redaction Engine</a></li>
+            <li><a href="#faq">Ephemeral Data TTL</a></li>
+            <li><a href="#faq">SOC2 Type II Roadmap</a></li>
+            <li><a href="#faq">Terms &amp; Beta Agreement</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          © <span id="currentYear"></span> Patchbay Cloud Technologies Inc. All rights reserved.
+        </div>
+        <div class="system-status">
+          <span class="live-dot"></span>
+          <span>Patchbay Cloud Ingestion Engine: Operational (Global)</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SHARE SESSION MODAL -->
+  <div class="modal-backdrop" id="shareModal" onclick="closeShareModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeShareModal()">✕</button>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <div class="logo-icon-box" style="width: 32px; height: 32px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </div>
+        <h3 style="font-size: 1.15rem;">Share Debugging Session</h3>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 20px;">
+        Generate an immutable snapshot of this event trace, headers, and replay results for engineering bug reports or Zendesk/Linear tickets.
+      </p>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label>Snapshot Permalink</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" class="input-control" id="shareSnapshotLink" value="https://patchbay.cloud/s/sess_9f82d1a04_trace" readonly style="font-family: var(--font-mono); font-size: 0.82rem;" />
+          <button class="btn-primary" onclick="copyShareSnapshotLink()">Copy</button>
+        </div>
+      </div>
+
+      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Sensitive authentication tokens and cardholder numbers are automatically redacted in public links.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT LOGIC & INTERACTIVE ENGINE
+       ========================================================================== -->
+  <script>
+    // State management for Mock Webhook Events
+    const mockEvents = [
+      {
+        id: "evt_stripe_98a4f210d",
+        provider: "Stripe",
+        providerIcon: "S",
+        name: "payment_intent.succeeded",
+        status: 200,
+        time: "Just now",
+        verified: true,
+        sigHeader: "Stripe-Signature",
+        sigAlgo: "t=1698249120,v1=9b6fd78e88e2c07ba83c21a41...",
+        headers: [
+          { key: "Host", val: "in.patchbay.cloud" },
+          { key: "Stripe-Signature", val: "t=1698249120,v1=9b6fd78e88e2c07ba83c21a41d7dcf392f4c9b9148" },
+          { key: "Content-Type", val: "application/json; charset=utf-8" },
+          { key: "User-Agent", val: "Stripe/1.0 (+https://stripe.com/docs/webhooks)" },
+          { key: "X-Request-Id", val: "req_st_01HBZ2349XZ" }
+        ],
+        payload: {
+          id: "evt_stripe_98a4f210d",
+          object: "event",
+          api_version: "2023-10-16",
+          type: "payment_intent.succeeded",
+          data: {
+            object: {
+              id: "pi_3O0HqKLkj619",
+              amount: 14900,
+              currency: "usd",
+              customer: "cus_PW82194mN",
+              status: "succeeded",
+              payment_method_types: ["card"],
+              metadata: {
+                organization_id: "org_alpha_99",
+                plan_tier: "enterprise_annual"
+              }
+            }
+          }
+        },
+        snippets: {
+          node: `// Verify & handle Stripe webhook event
+const express = require('express');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const app = express();
+
+app.post('/api/webhooks', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error(\`⚠️ Webhook signature verification failed: \${err.message}\`);
+    return res.status(400).send(\`Webhook Error: \${err.message}\`);
+  }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object;
+    console.log(\`✅ Payment \${paymentIntent.id} for $\${paymentIntent.amount / 100} succeeded!\`);
+    // Fulfill customer subscription
+  }
+
+  res.json({ received: true });
+});`,
+          python: `# Python / FastAPI webhook handler
+from fastapi import FastAPI, Request, HTTPException, Header
+import stripe
+import os
+
+app = FastAPI()
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+@app.post("/api/webhooks")
+async def handle_webhook(request: Request, stripe_signature: str = Header(None)):
+    payload = await request.body()
+    try:
+        event = stripe.Webhook.construct_event(payload, stripe_signature, webhook_secret)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Signature verification failed: {e}")
+
+    if event["type"] == "payment_intent.succeeded":
+        pi = event["data"]["object"]
+        print(f"✅ Success: {pi['id']} received for {pi['amount']}")
+    return {"status": "success"}`,
+          go: `// Go standard http webhook handler
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"github.com/stripe/stripe-go/v74/webhook"
+)
+
+func webhookHandler(w http.ResponseWriter, req *http.Request) {
+	payload, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusBadRequest)
+		return
+	}
+
+	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
+	event, err := webhook.ConstructEvent(payload, req.Header.Get("Stripe-Signature"), endpointSecret)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Verification failed: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	if event.Type == "payment_intent.succeeded" {
+		fmt.Printf("✅ Payment succeeded: %s\\n", event.ID)
+	}
+	w.WriteHeader(http.StatusOK)
+}`,
+          curl: `# Replay event via cURL with original payload and signature
+curl -X POST https://in.patchbay.cloud/ep_live_9f82d1a04 \\
+  -H "Content-Type: application/json" \\
+  -H "Stripe-Signature: t=1698249120,v1=9b6fd78e88e2c07ba83c21a41d7dcf392f4c9b9148" \\
+  -d '{"id":"evt_stripe_98a4f210d","type":"payment_intent.succeeded","data":{"object":{"id":"pi_3O0HqKLkj619","amount":14900,"currency":"usd"}}}'`
+        }
+      },
+      {
+        id: "evt_gh_77b3109a",
+        provider: "GitHub",
+        providerIcon: "GH",
+        name: "pull_request.opened",
+        status: 200,
+        time: "2m ago",
+        verified: true,
+        sigHeader: "X-Hub-Signature-256",
+        sigAlgo: "sha256=5f4dcc3b5aa765d61d8327deb882cf99...",
+        headers: [
+          { key: "Host", val: "in.patchbay.cloud" },
+          { key: "X-Hub-Signature-256", val: "sha256=5f4dcc3b5aa765d61d8327deb882cf9912bc0981" },
+          { key: "X-GitHub-Event", val: "pull_request" },
+          { key: "Content-Type", val: "application/json" }
+        ],
+        payload: {
+          action: "opened",
+          number: 142,
+          pull_request: {
+            id: 1548921,
+            title: "feat(auth): Add WebAuthn Passkey Support",
+            user: { login: "alex-dev", id: 8912 },
+            state: "open",
+            draft: false,
+            head: { ref: "feature/passkeys" },
+            base: { ref: "main" }
+          },
+          repository: {
+            full_name: "patchbay-cloud/core-gateway",
+            private: true
+          }
+        },
+        snippets: {
+          node: `// GitHub Webhook verification in Node.js with crypto
+const crypto = require('crypto');
+
+function verifyGitHubSignature(req, secret) {
+  const sig = req.headers['x-hub-signature-256'];
+  const hmac = crypto.createHmac('sha256', secret);
+  const digest = 'sha256=' + hmac.update(req.body).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(digest));
+}`,
+          python: `# GitHub Webhook verification in Python
+import hmac
+import hashlib
+
+def verify_github_signature(payload_bytes, secret_key, expected_header):
+    mac = hmac.new(secret_key.encode(), msg=payload_bytes, digestmod=hashlib.sha256)
+    return hmac.compare_digest('sha256=' + mac.hexdigest(), expected_header)`,
+          go: `// GitHub Webhook verification in Go
+package main
+import (
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+)
+func verify(payload []byte, secret, header string) bool {
+    mac := hmac.New(sha256.New, []byte(secret))
+    mac.Write(payload)
+    expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+    return hmac.Equal([]byte(expected), []byte(header))
+}`,
+          curl: `curl -X POST https://in.patchbay.cloud/ep_live_9f82d1a04 \\
+  -H "X-GitHub-Event: pull_request" \\
+  -H "X-Hub-Signature-256: sha256=5f4dcc3b5aa765d61d8327deb882cf9912bc0981" \\
+  -d '{"action":"opened","number":142}'`
+        }
+      },
+      {
+        id: "evt_shopify_44e9912",
+        provider: "Shopify",
+        providerIcon: "SH",
+        name: "orders/create",
+        status: 500,
+        time: "6m ago",
+        verified: true,
+        sigHeader: "X-Shopify-Hmac-Sha256",
+        sigAlgo: "HMAC-SHA256 Base64 Encoded",
+        headers: [
+          { key: "Host", val: "in.patchbay.cloud" },
+          { key: "X-Shopify-Topic", val: "orders/create" },
+          { key: "X-Shopify-Hmac-Sha256", val: "Wl7Y0kF3+Z2jS81fM0e4wP==" },
+          { key: "X-Shopify-Shop-Domain", val: "acme-apparel.myshopify.com" }
+        ],
+        payload: {
+          id: 541098293,
+          email: "customer@retail.com",
+          currency: "USD",
+          total_price: "248.50",
+          subtotal_price: "230.00",
+          line_items: [
+            { id: 98124, title: "Merino Wool Hoodie - Charcoal / L", quantity: 2, price: "115.00" }
+          ],
+          financial_status: "paid"
+        },
+        snippets: {
+          node: `// Shopify Webhook Verification (Base64 HMAC)
+const crypto = require('crypto');
+function verifyShopify(rawBody, secret, hmacHeader) {
+  const hash = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('base64');
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hmacHeader));
+}`,
+          python: `import hmac, hashlib, base64
+def verify_shopify(raw_body: bytes, secret: str, hmac_header: str) -> bool:
+    digest = hmac.new(secret.encode('utf-8'), raw_body, hashlib.sha256).digest()
+    computed = base64.b64encode(digest).decode('utf-8')
+    return hmac.compare_digest(computed, hmac_header)`,
+          go: `package main
+import (
+  "crypto/hmac"
+  "crypto/sha256"
+  "encoding/base64"
+)
+func verifyShopify(body []byte, secret, header string) bool {
+  mac := hmac.New(sha256.New, []byte(secret))
+  mac.Write(body)
+  computed := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+  return hmac.Equal([]byte(computed), []byte(header))
+}`,
+          curl: `curl -X POST https://in.patchbay.cloud/ep_live_9f82d1a04 \\
+  -H "X-Shopify-Topic: orders/create" \\
+  -H "X-Shopify-Hmac-Sha256: Wl7Y0kF3+Z2jS81fM0e4wP==" \\
+  -d '{"id":541098293,"total_price":"248.50"}'`
+        }
+      },
+      {
+        id: "evt_svix_clerk_1029",
+        provider: "Clerk",
+        providerIcon: "SV",
+        name: "user.created",
+        status: 200,
+        time: "14m ago",
+        verified: true,
+        sigHeader: "svix-signature",
+        sigAlgo: "Standard Webhooks v1 (Svix specification)",
+        headers: [
+          { key: "Host", val: "in.patchbay.cloud" },
+          { key: "svix-id", val: "msg_2X80eP2109" },
+          { key: "svix-timestamp", val: "1698248102" },
+          { key: "svix-signature", val: "v1,g0hM9SsE+OTPJspdHeKEvgljd+ptW3U80NUUpGRIW84=" }
+        ],
+        payload: {
+          data: {
+            id: "user_29AkjLq194",
+            first_name: "Devon",
+            last_name: "Vance",
+            email_addresses: [{ email_address: "devon.vance@acme.inc" }]
+          },
+          object: "event",
+          type: "user.created"
+        },
+        snippets: {
+          node: `// Svix / Standard Webhooks verification
+const { Webhook } = require('svix');
+const wh = new Webhook(process.env.SVIX_WEBHOOK_SECRET);
+const payload = wh.verify(rawBody, req.headers);`,
+          python: `from svix.webhooks import Webhook
+wh = Webhook(os.getenv("SVIX_WEBHOOK_SECRET"))
+msg = wh.verify(payload_bytes, headers)`,
+          go: `import svix "github.com/svix/svix-webhooks/go"
+wh, _ := svix.NewWebhook(secret)
+err := wh.Verify(payload, headers)`,
+          curl: `curl -X POST https://in.patchbay.cloud/ep_live_9f82d1a04 \\
+  -H "svix-id: msg_2X80eP2109" \\
+  -H "svix-timestamp: 1698248102" \\
+  -d '{"type":"user.created"}'`
+        }
+      }
+    ];
+
+    let currentSelectedEvent = mockEvents[0];
+    let currentActiveLang = 'node';
+
+    // Initialize UI on DOM load
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('currentYear').textContent = new Date().getFullYear();
+      renderEventList();
+      renderActiveEventDetails();
+    });
+
+    // Render left event feed
+    function renderEventList() {
+      const container = document.getElementById('eventListContainer');
+      container.innerHTML = '';
+
+      mockEvents.forEach(evt => {
+        const li = document.createElement('li');
+        li.className = `event-item ${evt.id === currentSelectedEvent.id ? 'active' : ''}`;
+        li.onclick = () => selectEvent(evt.id);
+
+        let statusClass = 'status-200';
+        if (evt.status >= 400 && evt.status < 500) statusClass = 'status-400';
+        if (evt.status >= 500) statusClass = 'status-500';
+
+        li.innerHTML = `
+          <div class="event-top-row">
+            <span class="event-provider">
+              <span style="display:inline-flex; width:18px; height:18px; border-radius:4px; background:rgba(255,255,255,0.08); align-items:center; justify-content:center; font-size:0.68rem;">${evt.providerIcon}</span>
+              ${evt.provider}
+            </span>
+            <span class="status-badge ${statusClass}">${evt.status}</span>
+          </div>
+          <div class="event-name">${evt.name}</div>
+          <div class="event-meta-row">
+            <span>${evt.id.substring(0, 18)}...</span>
+            <span>${evt.time}</span>
+          </div>
+        `;
+        container.appendChild(li);
+      });
+    }
+
+    // Select an event from the log
+    function selectEvent(eventId) {
+      const found = mockEvents.find(e => e.id === eventId);
+      if (found) {
+        currentSelectedEvent = found;
+        renderEventList();
+        renderActiveEventDetails();
+      }
+    }
+
+    // Populate active event in inspector
+    function renderActiveEventDetails() {
+      const evt = currentSelectedEvent;
+
+      // Update ID tag
+      document.getElementById('payloadEventId').textContent = evt.id;
+
+      // Update formatted JSON
+      const jsonContainer = document.getElementById('payloadJsonDisplay');
+      jsonContainer.innerHTML = syntaxHighlightJson(evt.payload);
+
+      // Update Headers Table
+      const headersTbody = document.getElementById('headersTableBody');
+      headersTbody.innerHTML = '';
+      evt.headers.forEach(h => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(h.key)}</td><td>${escapeHtml(h.val)}</td>`;
+        headersTbody.appendChild(tr);
+      });
+
+      // Update Signature Card
+      document.getElementById('sigVerificationTitle').textContent = `Cryptographic Signature Validated (${evt.provider})`;
+      document.getElementById('sigVerificationDesc').textContent = `Matched via algorithm "${evt.sigAlgo}". Header key "${evt.sigHeader}" properly evaluated without payload mutation.`;
+
+      // Update Code Snippet
+      renderSnippet();
+    }
+
+    // Syntax colorizer for JSON
+    function syntaxHighlightJson(json) {
+      if (typeof json !== 'string') {
+        json = JSON.stringify(json, null, 2);
+      }
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+        let cls = 'json-num';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-str';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-bool';
+        } else if (/null/.test(match)) {
+          cls = 'json-bool';
+        }
+        return `<span class="${cls}">${match}</span>`;
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Switch inspector tab
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const targetContent = document.getElementById(tabId);
+      if (targetContent) targetContent.classList.add('active');
+    }
+
+    // Switch code generator language
+    function switchLang(lang) {
+      currentActiveLang = lang;
+      document.querySelectorAll('.lang-pill').forEach(pill => {
+        pill.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      renderSnippet();
+    }
+
+    function renderSnippet() {
+      const box = document.getElementById('codeSnippetBox');
+      const snippet = currentSelectedEvent.snippets[currentActiveLang] || currentSelectedEvent.snippets['node'];
+      box.textContent = snippet;
+    }
+
+    // Simulate inbound webhook ping
+    function triggerSimulatedPing() {
+      const providers = [
+        { name: "Stripe", icon: "S", evt: "charge.captured", status: 200 },
+        { name: "GitHub", icon: "GH", evt: "workflow_run.completed", status: 200 },
+        { name: "Shopify", icon: "SH", evt: "fulfillments/create", status: 200 },
+        { name: "Clerk", icon: "SV", evt: "session.revoked", status: 200 }
+      ];
+      const randomP = providers[Math.floor(Math.random() * providers.length)];
+      const randomId = 'evt_' + Math.random().toString(36).substr(2, 9);
+
+      const newEvent = {
+        id: randomId,
+        provider: randomP.name,
+        providerIcon: randomP.icon,
+        name: randomP.evt,
+        status: randomP.status,
+        time: "Just now",
+        verified: true,
+        sigHeader: "X-Signature-Sha256",
+        sigAlgo: "HMAC-SHA256",
+        headers: [
+          { key: "Host", val: "in.patchbay.cloud" },
+          { key: "X-Signature-Sha256", val: "sha256=d3b07384d113edec49eaa6238ad5ff00" },
+          { key: "Content-Type", val: "application/json" }
+        ],
+        payload: {
+          id: randomId,
+          event_type: randomP.evt,
+          timestamp: Math.floor(Date.now() / 1000),
+          synthetic: true,
+          details: {
+            dispatched_by: "Simulated Webhook Emitter",
+            route: "/ep_live_9f82d1a04",
+            environment: "patchbay_sandbox"
+          }
+        },
+        snippets: currentSelectedEvent.snippets
+      };
+
+      mockEvents.unshift(newEvent);
+      currentSelectedEvent = newEvent;
+      renderEventList();
+      renderActiveEventDetails();
+      showToast(`⚡ Captured live event "${randomP.evt}" from ${randomP.name}!`);
+    }
+
+    // Latency slider label update
+    function updateLatencyLabel(val) {
+      document.getElementById('latencyValLabel').textContent = val + 'ms';
+    }
+
+    // Execute Replay & Chaos Sim
+    function executeReplaySim() {
+      const resultBox = document.getElementById('replayResultBox');
+      const latency = parseInt(document.getElementById('latencySlider').value, 10);
+      const scenario = document.getElementById('chaosScenarioSelect').value;
+      const target = document.getElementById('replayTargetUrl').value;
+
+      resultBox.innerHTML = `
+        <span style="color: var(--cyan-400); animation: pulsePing 1s infinite; display: inline-block;">●</span>
+        <span>Replaying to <code>${escapeHtml(target)}</code> with ${latency}ms latency...</span>
+      `;
+
+      setTimeout(() => {
+        if (scenario === 'timeout') {
+          resultBox.innerHTML = `
+            <span style="color: var(--rose-400); font-weight: 700;">[504 Gateway Timeout]</span>
+            <span style="color: var(--text-secondary);">Target exceeded maximum 5000ms SLA without responding.</span>
+          `;
+          showToast("❌ Replay returned 504 Gateway Timeout (Chaos test passed)");
+        } else if (scenario === 'rate_limit') {
+          resultBox.innerHTML = `
+            <span style="color: var(--amber-400); font-weight: 700;">[429 Too Many Requests]</span>
+            <span style="color: var(--text-secondary);">Target hit retry backoff quota. Retry-After: 30s.</span>
+          `;
+          showToast("⚠️ Replay returned 429 Rate Limit (Retry logic verified)");
+        } else if (scenario === 'corrupted_sig') {
+          resultBox.innerHTML = `
+            <span style="color: var(--rose-400); font-weight: 700;">[401 Signature Invalid]</span>
+            <span style="color: var(--text-secondary);">Tampered secret hash correctly rejected by target security layer.</span>
+          `;
+          showToast("🛡️ Signature tampering was properly caught and rejected");
+        } else if (scenario === 'server_error') {
+          resultBox.innerHTML = `
+            <span style="color: var(--rose-400); font-weight: 700;">[500 Internal Server Error]</span>
+            <span style="color: var(--text-secondary);">Uncaught crash reported. Snapshot logged for engineering.</span>
+          `;
+          showToast("💥 Upstream 500 crash recorded in Patchbay debugger");
+        } else {
+          resultBox.innerHTML = `
+            <span style="color: var(--emerald-400); font-weight: 700;">[200 OK — ${latency}ms]</span>
+            <span style="color: var(--text-secondary);">Event successfully delivered and acknowledged.</span>
+          `;
+          showToast(`✅ Delivered to ${target} (${latency}ms round-trip)`);
+        }
+      }, Math.min(latency + 100, 1200));
+    }
+
+    // Copy endpoint helper
+    function copyActiveEndpoint() {
+      const url = document.getElementById('activeEndpointUrl').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast("Copied ephemeral endpoint to clipboard!");
+      }).catch(() => {
+        showToast("Endpoint URL copied: " + url);
+      });
+    }
+
+    // Copy snippet helper
+    function copySnippet() {
+      const snippet = document.getElementById('codeSnippetBox').textContent;
+      navigator.clipboard.writeText(snippet).then(() => {
+        showToast("Copied webhook verification code!");
+      });
+    }
+
+    // Share Modal
+    function openShareModal() {
+      document.getElementById('shareModal').classList.add('open');
+    }
+
+    function closeShareModal() {
+      document.getElementById('shareModal').classList.remove('open');
+    }
+
+    function copyShareSnapshotLink() {
+      const link = document.getElementById('shareSnapshotLink').value;
+      navigator.clipboard.writeText(link).then(() => {
+        showToast("Shareable debug link copied!");
+        closeShareModal();
+      });
+    }
+
+    // FAQ Accordion
+    function toggleFaq(btn) {
+      const item = btn.parentElement;
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+      if (!isOpen) {
+        item.classList.add('open');
+      }
+    }
+
+    // Scroll to waitlist form
+    function scrollToForm() {
+      const el = document.getElementById('waitlist');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // Hero quick form submit
+    function handleHeroSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('heroEmailInput').value;
+      document.getElementById('wlEmail').value = email;
+      scrollToForm();
+      showToast("Almost there! Complete your team details below.");
+    }
+
+    // Waitlist Form Submission
+    function handleWaitlistSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('wlEmail').value;
+      const name = document.getElementById('wlName').value;
+
+      // Hide form, reveal ticket
+      document.getElementById('waitlistFormContainer').style.display = 'none';
+      const ticketEl = document.getElementById('ticketConfirmation');
+      ticketEl.style.display = 'block';
+
+      // Generate random ticket # between 300 and 999
+      const randomTicket = '#PB-' + Math.floor(300 + Math.random() * 699);
+      document.getElementById('issuedTicketNumber').textContent = randomTicket;
+      document.getElementById('confirmedEmailDisplay').textContent = `${email} (${name})`;
+      document.getElementById('referralUrl').textContent = `https://patchbay.cloud/join?ref=${randomTicket.replace('#', '')}`;
+
+      showToast(`🎉 Priority beta ticket ${randomTicket} issued!`);
+      ticketEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Copy referral link
+    function copyReferralLink() {
+      const ref = document.getElementById('referralUrl').textContent;
+      navigator.clipboard.writeText(ref).then(() => {
+        showToast("Referral URL copied! Share to leapfrog the waitlist.");
+      });
+    }
+
+    // Toast notification utility
+    function showToast(message) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+        <span>${escapeHtml(message)}</span>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

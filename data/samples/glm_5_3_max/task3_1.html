@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CloudLayer — Invite Developer to Production</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #111832;
+    --panel-2: #0e1528;
+    --border: #232f52;
+    --border-strong: #2f3d६6;
+    --text: #e7ecf7;
+    --muted: #8d99b8;
+    --accent: #4f7cff;
+    --accent-hover: #3f6bf5;
+    --danger: #ff5d6c;
+    --warn-bg: rgba(255, 184, 61, 0.08);
+    --warn-border: #a97a2a;
+    --ok: #34d399;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, #1a2650 0%, var(--bg) 55%);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    background: rgba(10, 15, 30, 0.85);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: blur(6px);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .3px; }
+  .logo {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, #6ea8ff, #4f7cff 60%, #8a5cff);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; font-weight: 800;
+  }
+  .brand span.env-pill {
+    font-size: 11px; font-weight: 700; color: #ffd2d6;
+    background: rgba(255, 93, 108, 0.15);
+    border: 1px solid rgba(255, 93, 108, 0.45);
+    padding: 3px 9px; border-radius: 999px; margin-left: 6px;
+    letter-spacing: .6px;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: 13px; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, #35d0a5, #1d7fae);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #04121c;
+  }
+
+  .layout { display: flex; max-width: 1180px; margin: 0 auto; gap: 28px; padding: 28px 24px 64px; }
+
+  /* Main card */
+  .main { flex: 1 1 auto; min-width: 0; }
+  .breadcrumb { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .breadcrumb b { color: var(--text); font-weight: 600; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+  }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13.5px; margin-bottom: 20px; }
+
+  .env-banner {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 22px;
+  }
+  .env-banner .icon { font-size: 16px; line-height: 1.3; }
+  .env-banner strong { display: block; margin-bottom: 3px; font-size: 13.5px; color: #ffcf8a; }
+  .env-banner p { font-size: 13px; color: #d9c7a6; line-height: 1.5; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 20px; }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: 13px; font-weight: 600; color: #c4cee6; }
+  label .req { color: var(--danger); margin-left: 2px; }
+  .hint { font-size: 12px; color: var(--muted); }
+  input[type="text"], input[type="email"], select, textarea {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.22);
+  }
+  select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+  textarea { resize: vertical; min-height: 74px; }
+
+  /* Permissions */
+  .perm-group { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .perm-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .perm-row:last-child { border-bottom: none; }
+  .perm-row:hover { background: #14203f; }
+  .perm-row input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; flex: none; }
+  .perm-info { flex: 1; min-width: 0; }
+  .perm-name { font-size: 13.5px; font-weight: 600; }
+  .perm-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .tag-risk {
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; flex: none;
+  }
+  .tag-risk.high { color: #ffb3bb; background: rgba(255,93,108,.14); border: 1px solid rgba(255,93,108,.45); }
+  .tag-risk.med  { color: #ffe0a8; background: rgba(255,184,61,.12); border: 1px solid rgba(255,184,61,.4); }
+  .tag-risk.low  { color: #b7f2dd; background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.4); }
+
+  /* Toggles */
+  .switch-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 13px 14px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--panel-2);
+  }
+  .switch-row + .switch-row { margin-top: 10px; }
+  .switch { position: relative; width: 42px; height: 24px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; cursor: pointer;
+    background: #2a3560; border: 1px solid var(--border);
+    border-radius: 999px; transition: .18s;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 16px; width: 16px;
+    left: 3px; top: 3px; background: #9aa7c9; border-radius: 50%;
+    transition: .18s;
+  }
+  .switch input:checked + .slider { background: rgba(79,124,255,.35); border-color: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(18px); background: #fff; }
+
+  .actions {
+    display: flex; align-items: center; gap: 12px; justify-content: flex-end;
+    margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .btn {
+    font: inherit; font-weight: 600; font-size: 14px;
+    border-radius: 8px; padding: 10px 20px; cursor: pointer;
+    border: 1px solid transparent; transition: .15s;
+  }
+  .btn-secondary { background: transparent; color: var(--muted); border-color: var(--border); }
+  .btn-secondary:hover { color: var(--text); border-color: #3b4a7d; }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(79,124,255,.28); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+
+  /* Sidebar */
+  .sidebar { flex: 0 0 320px; display: flex; flex-direction: column; gap: 20px; }
+  .side-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    font-size: 13px;
+  }
+  .side-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
+  .kv { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px dashed rgba(35,47,82,.7); }
+  .kv:last-child { border-bottom: none; }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-weight: 600; }
+  .v.danger { color: #ff8f9a; }
+  .v.ok { color: var(--ok); }
+  .member { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .member .avatar { width: 28px; height: 28px; font-size: 11px; }
+  .member .m-name { font-weight: 600; font-size: 13px; }
+  .member .m-role { font-size: 11.5px; color: var(--muted); }
+  .policy-note { line-height: 1.6; color: var(--muted); }
+  .policy-note b { color: #c4cee6; }
+  .checklist { list-style: none; }
+  .checklist li { display: flex; gap: 9px; align-items: flex-start; padding: 5px 0; color: var(--muted); line-height: 1.45; }
+  .checklist li.valid { color: var(--ok); }
+  .checklist .bullet { flex: none; width: 15px; text-align: center; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translate(-50%, 20px);
+    background: #0f3a2c; color: #c8f5e2; border: 1px solid #1f8f66;
+    padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: .3s;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 900px) {
+    .layout { flex-direction: column; }
+    .sidebar { flex: 1 1 auto; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">CL</span>
+    CloudLayer
+    <span class="env-pill">PRODUCTION</span>
+  </div>
+  <div class="topbar-right">
+    <span>Project: <b style="color:#e7ecf7;">atlas-core</b></span>
+    <span>Region: eu-central-1</span>
+    <div class="avatar">SR</div>
+  </div>
+</header>
+
+<div class="layout">
+  <main class="main">
+    <div class="breadcrumb">Access Control &nbsp;/&nbsp; Environments &nbsp;/&nbsp; <b>Production · Invite developer</b></div>
+
+    <section class="card">
+      <h1>Invite developer to Production</h1>
+      <p class="subtitle">Grant scoped access to the <b>production</b> environment of <b>atlas-core</b>. Invitations expire after 7 days if not accepted.</p>
+
+      <div class="env-banner" role="alert">
+        <span class="icon">⚠️</span>
+        <div>
+          <strong>You are granting access to a live production environment</strong>
+          <p>This environment serves live customer traffic. All actions taken here are logged to the immutable audit trail, and deploy operations may trigger customer-facing changes. Please confirm the permissions below carefully.</p>
+        </div>
+      </div>
+
+      <form id="invite-form" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="email">Work email <span class="req">*</span></label>
+            <input type="email" id="email" placeholder="dev@company.com" autocomplete="off" required />
+            <span class="hint">Must match a verified domain in your organization.</span>
+          </div>
+
+          <div class="field">
+            <label for="role">Role <span class="req">*</span></label>
+            <select id="role">
+              <option value="viewer">Viewer — read-only access</option>
+              <option value="developer">Developer — build &amp; deploy services</option>
+              <option value="operator">Operator — deploy, scale &amp; roll back</option>
+              <option value="admin">Environment Admin — full control</option>
+            </select>
+            <span class="hint">Roles map to the IAM policy set defined for production.</span>
+          </div>
+
+          <div class="field">
+            <label for="expiry">Access expires on <span class="req">*</span></label>
+            <select id="expiry">
+              <option value="7">In 7 days</option>
+              <option value="30">In 30 days</option>
+              <option value="90">In 90 days</option>
+              <option value="never">Never (requires approval)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="team">Team</label>
+            <select id="team">
+              <option>Platform Engineering</option>
+              <option>Backend Services</option>
+              <option>Frontend</option>
+              <option>Site Reliability</option>
+              <option>Security</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label>Additional permissions</label>
+            <div class="perm-group">
+              <label class="perm-row">
+                <input type="checkbox" name="perm" value="deploy" />
+                <span class="perm-info">
+                  <span class="perm-name">Trigger deployments</span>
+                  <span class="perm-desc">Run pipelines and promote builds to production services.</span>
+                </span>
+                <span class="tag-risk high">HIGH RISK</span>
+              </label>
+              <label class="perm-row">
+                <input type="checkbox" name="perm" value="rollback" />
+                <span class="perm-info">
+                  <span class="perm-name">Rollback releases</span>
+                  <span class="perm-desc">Revert a service to its previous stable release.</span>
+                </span>
+                <span class="tag-risk high">HIGH RISK</span>
+              </label>
+              <label class="perm-row">
+                <input type="checkbox" name="perm" value="secrets" />
+                <span class="perm-info">
+                  <span class="perm-name">Read runtime secrets</span>
+                  <span class="perm-desc">View environment variables marked as secret. Recorded in audit log.</span>
+                </span>
+                <span class="tag-risk med">MEDIUM</span>
+              </label>
+              <label class="perm-row">
+                <input type="checkbox" name="perm" value="logs" />
+                <span class="perm-info">
+                  <span class="perm-name">Stream logs &amp; metrics</span>
+                  <span class="perm-desc">Access observability dashboards and live log streams.</span>
+                </span>
+                <span class="tag-risk low">LOW</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field full">
+            <label>Access controls</label>
+            <div class="switch-row">
+              <div>
+                <div class="perm-name">Require MFA for every session</div>
+                <div class="perm-desc hint">Enforced per organization security policy — cannot be disabled.</div>
+              </div>
+              <span class="switch">
+                <input type="checkbox" id="mfa" checked disabled />
+                <span class="slider"></span>
+              </span>
+            </div>
+            <div class="switch-row">
+              <div>
+                <div class="perm-name">Require approval by a second operator</div>
+                <div class="perm-desc hint">Recommended for production deploy permissions.</div>
+              </div>
+              <span class="switch">
+                <input type="checkbox" id="approval" checked />
+                <span class="slider"></span>
+              </span>
+            </div>
+            <div class="switch-row">
+              <div>
+                <div class="perm-name">Notify #prod-access Slack channel</div>
+                <div class="perm-desc hint">Sends a summary of this invitation to the security channel.</div>
+              </div>
+              <span class="switch">
+                <input type="checkbox" id="notify" checked />
+                <span class="slider"></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="field full">
+            <label for="reason">Justification note <span class="req">*</span></label>
+            <textarea id="reason" placeholder="Why does this developer need production access? (visible in the audit log)"></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn" disabled>Send invitation</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <aside class="sidebar">
+    <div class="side-card">
+      <h3>Environment</h3>
+      <div class="kv"><span class="k">Environment</span><span class="v danger">Production</span></div>
+      <div class="kv"><span class="k">Cluster</span><span class="v">atlas-prod-euc1</span></div>
+      <div class="kv"><span class="k">Live services</span><span class="v">24</span></div>
+      <div class="kv"><span class="k">Audit logging</span><span class="v ok">Enabled</span></div>
+      <div class="kv"><span class="k">Break-glass</span><span class="v">Disabled</span></div>
+    </div>
+
+    <div class="side-card">
+      <h3>Current production members</h3>
+      <div class="member"><div class="avatar" style="background:linear-gradient(135deg,#6ea8ff,#4f7cff);color:#fff;">MK</div><div><div class="m-name">Maya Kovač</div><div class="m-role">Environment Admin · SRE</div></div></div>
+      <div class="member"><div class="avatar" style="background:linear-gradient(135deg,#f7b955,#e0822c);color:#231403;">JT</div><div><div class="m-name">Jonas Thiel</div><div class="m-role">Operator · Platform</div></div></div>
+      <div class="member"><div class="avatar" style="background:linear-gradient(135deg,#c58cff,#8a5cff);color:#fff;">AN</div><div><div class="m-name">Ana Núñez</div><div class="m-role">Developer · Backend</div></div></div>
+    </div>
+
+    <div class="side-card">
+      <h3>Before you send</h3>
+      <ul class="checklist" id="checklist">
+        <li data-check="email"><span class="bullet">•</span><span>Valid work email entered</span></li>
+        <li data-check="role"><span class="bullet">•</span><span>Least-privilege role selected</span></li>
+        <li data-check="reason"><span class="bullet">•</span><span>Justification note provided</span></li>
+        <li data-check="expiry"><span class="bullet">•</span><span>Expiry date is not "Never"</span></li>
+      </ul>
+    </div>
+
+    <div class="side-card">
+      <h3>Policy</h3>
+      <p class="policy-note">Production invitations are governed by the <b>PROD-ACCESS-01</b> policy. High-risk permissions require a second approver and are reviewed every 30 days. Read the <a href="#">access policy</a>.</p>
+    </div>
+  </aside>
+</main>
+</div>
+
+<div class="toast" id="toast">✓ Invitation sent — pending acceptance</div>
+
+<script>
+  (function () {
+    var form = document.getElementById('invite-form');
+    var email = document.getElementById('email');
+    var role = document.getElementById('role');
+    var expiry = document.getElementById('expiry');
+    var reason = document.getElementById('reason');
+    var submitBtn = document.getElementById('submit-btn');
+    var toast = document.getElementById('toast');
+    var items = {};
+    document.querySelectorAll('#checklist li').forEach(function (li) {
+      items[li.getAttribute('data-check')] = li;
+    });
+
+    function validate() {
+      var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+      var roleOk = !!role.value;
+      var reasonOk = reason.value.trim().length >= 10;
+      var expiryOk = expiry.value !== 'never';
+
+      items.email.classList.toggle('valid', emailOk);
+      items.role.classList.toggle('valid', roleOk);
+      items.reason.classList.toggle('valid', reasonOk);
+      items.expiry.classList.toggle('valid', expiryOk);
+
+      var all = emailOk && roleOk && reasonOk && expiryOk;
+      submitBtn.disabled = !all;
+      return { emailOk: emailOk, reasonOk: reasonOk, expiryOk: expiryOk };
+    }
+
+    [email, role, expiry, reason].forEach(function (el) {
+      el.addEventListener('input', validate);
+      el.addEventListener('change', validate);
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = validate();
+      if (submitBtn.disabled) {
+        if (!v.emailOk) { email.focus(); }
+        else if (!v.reasonOk) { reason.focus(); }
+        return;
+      }
+      submitBtn.textContent = 'Sending…';
+      setTimeout(function () {
+        submitBtn.textContent = 'Send invitation';
+        toast.classList.add('show');
+        setTimeout(function () { toast.classList.remove('show'); }, 3200);
+        form.reset();
+        document.getElementById('mfa').checked = true;
+        document.getElementById('approval').checked = true;
+        document.getElementById('notify').checked = true;
+        validate();
+      }, 700);
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', function () {
+      form.reset();
+      document.getElementById('mfa').checked = true;
+      document.getElementById('approval').checked = true;
+      document.getElementById('notify').checked = true;
+      validate();
+    });
+
+    validate();
+  })();
+</script>
+</body>
+</html>

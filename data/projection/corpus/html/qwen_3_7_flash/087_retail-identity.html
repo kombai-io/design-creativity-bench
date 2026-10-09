@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registry — Identity Provenance &amp; Audit Trail</title>
+<style>
+:root {
+  --clr-ironside: #1b1f2b;
+  --clr-departer: #2c3142;
+  --clr-data-dark: #3d4254;
+  --clr-data-mid: #6b7084;
+  --clr-data-light: #9ca0af;
+  --clr-patchouli: #3a5a40;
+  --clr-herbaceous: #588157;
+  --clr-ranid: #a3b18a;
+  --clr-scoria: #7f4f24;
+  --clr-banneret: #bc4749;
+  --clr-scoria-light: #dda15e;
+  --clr-satchel: #bc6c25;
+  --clr-masoud: #f0e6d3;
+  --clr-mogul: #dda15e;
+  --clr-astreus: #f4e285;
+  --clr-affine: #e8e0d4;
+  --clr-ivory: #faf9f6;
+  --clr-white: #ffffff;
+
+  --fs-huge: clamp(2rem, 4vw, 3rem);
+  --fs-h1: clamp(1.5rem, 3vw, 2.25rem);
+  --fs-h2: clamp(1.25rem, 2.5vw, 1.75rem);
+  --fs-h3: clamp(1.1rem, 2vw, 1.35rem);
+  --fs-body-lg: 1.0625rem;
+  --fs-body: 0.9375rem;
+  --fs-small: 0.8125rem;
+  --fs-xs: 0.6875rem;
+
+  --sp-xxs: 0.25rem;
+  --sp-xs: 0.5rem;
+  --sp-sm: 0.75rem;
+  --sp-md: 1rem;
+  --sp-lg: 1.5rem;
+  --sp-xl: 2rem;
+  --sp-xxl: 3rem;
+  --sp-xxxl: 4rem;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-sm: 0 1px 3px rgba(27, 31, 43, 0.08);
+  --shadow-md: 0 4px 12px rgba(27, 31, 43, 0.12);
+  --shadow-lg: 0 8px 30px rgba(27, 31, 43, 0.18);
+  --shadow-inset: inset 0 1px 3px rgba(27, 31, 43, 0.06);
+
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--clr-ironside);
+  background: var(--clr-ivory);
+}
+
+/* ── NAV ── */
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-md) var(--sp-xl);
+  background: var(--clr-ironside);
+  color: var(--clr-ivory);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 3px solid var(--clr-satchel);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font-family: var(--font-serif);
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  color: var(--clr-ivory);
+}
+
+.nav-brand svg { flex-shrink: 0; }
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: var(--sp-lg);
+  align-items: center;
+}
+
+.nav-links a {
+  color: var(--clr-data-light);
+  text-decoration: none;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transition: color var(--sp-sm);
+}
+
+.nav-links a:hover, .nav-links a[aria-current="page"] {
+  color: var(--clr-ivory);
+}
+
+.nav-badge {
+  background: var(--clr-banneret);
+  color: var(--clr-white);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 2px var(--sp-xs);
+  border-radius: var(--radius-sm);
+  margin-left: var(--sp-xs);
+  vertical-align: middle;
+}
+
+.nav-auditor {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  color: var(--clr-masoud);
+  font-size: var(--fs-small);
+}
+
+.nav-auditor img, .nav-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--clr-departer);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--clr-ranid);
+  border: 1.5px solid var(--clr-herbaceous);
+}
+
+/* ── HERO / SEARCH ── */
+.hero {
+  background: linear-gradient(135deg, var(--clr-ironside) 0%, var(--clr-departer) 60%, var(--clr-data-dark) 100%);
+  color: var(--clr-ivory);
+  padding: var(--sp-xxl) var(--sp-xl) var(--sp-xxl);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.hero-inner { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; }
+
+.hero h1 {
+  font-family: var(--font-serif);
+  font-size: var(--fs-huge);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: var(--sp-md);
+}
+
+.hero h1 em {
+  font-style: normal;
+  color: var(--clr-scoria-light);
+}
+
+.hero-sub {
+  font-size: var(--fs-body-lg);
+  color: var(--clr-data-light);
+  max-width: 620px;
+  margin: 0 auto var(--sp-xl);
+}
+
+.search-form {
+  display: flex;
+  gap: var(--sp-xs);
+  max-width: 580px;
+  margin: 0 auto var(--sp-lg);
+}
+
+.search-input {
+  flex: 1;
+  padding: var(--sp-sm) var(--sp-md);
+  font-size: var(--fs-body);
+  border: 2px solid var(--clr-data-dark);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.06);
+  color: var(--clr-ivory);
+  outline: none;
+  transition: border-color var(--sp-sm), background var(--sp-sm);
+}
+
+.search-input::placeholder { color: var(--clr-data-mid); }
+.search-input:focus {
+  border-color: var(--clr-satchel);
+  background: rgba(255,255,255,0.1);
+}
+
+.search-btn {
+  padding: var(--sp-sm) var(--sp-lg);
+  background: var(--clr-satchel);
+  color: var(--clr-white);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--sp-sm);
+  white-space: nowrap;
+}
+
+.search-btn:hover { background: var(--clr-scoria); }
+
+.search-filters {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  padding: var(--sp-xs) var(--sp-sm);
+  border: 1px solid var(--clr-data-dark);
+  border-radius: 100px;
+  font-size: var(--fs-xs);
+  color: var(--clr-data-light);
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--sp-sm);
+}
+
+.filter-chip:hover, .filter-chip.active {
+  border-color: var(--clr-ranid);
+  color: var(--clr-ranid);
+  background: rgba(163,177,138,0.1);
+}
+
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-xxl);
+  margin-top: var(--sp-xl);
+  padding-top: var(--sp-xl);
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.stat-item { text-align: center; }
+.stat-num {
+  font-family: var(--font-serif);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  color: var(--clr-scoria-light);
+}
+.stat-label {
+  font-size: var(--fs-xs);
+  color: var(--clr-data-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── SECTION COMMON ── */
+.section {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--sp-xxl) var(--sp-xl);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sp-lg);
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+.section-header h2 {
+  font-family: var(--font-serif);
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  color: var(--clr-ironside);
+}
+
+.section-header .count {
+  font-size: var(--fs-small);
+  color: var(--clr-data-mid);
+  font-style: italic;
+}
+
+.view-toggle {
+  display: flex;
+  gap: var(--sp-xs);
+}
+
+.view-btn {
+  padding: var(--sp-xs) var(--sp-sm);
+  border: 1px solid var(--clr-data-light);
+  background: transparent;
+  color: var(--clr-data-mid);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--fs-xs);
+  transition: all var(--sp-sm);
+}
+
+.view-btn.active, .view-btn:hover {
+  background: var(--clr-ironside);
+  color: var(--clr-ivory);
+  border-color: var(--clr-ironside);
+}
+
+/* ── BROWSE GRID ── */
+.browse-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-lg);
+}
+
+.browse-card {
+  background: var(--clr-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform var(--sp-sm), box-shadow var(--sp-sm);
+  cursor: pointer;
+  border: 1px solid var(--clr-affine);
+}
+
+.browse-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.card-media {
+  position: relative;
+  width: 100%;
+  padding-top: 75%;
+  background: var(--clr-affine);
+  overflow: hidden;
+}
+
+.card-media svg, .card-media-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.card-badge {
+  position: absolute;
+  top: var(--sp-xs);
+  left: var(--sp-xs);
+  padding: 2px var(--sp-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-verified { background: var(--clr-patchouli); color: var(--clr-white); }
+.badge-review { background: var(--clr-mogul); color: var(--clr-ironside); }
+.badge-flagged { background: var(--clr-banneret); color: var(--clr-white); }
+
+.card-body { padding: var(--sp-md); }
+
+.card-title {
+  font-family: var(--font-serif);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  margin-bottom: var(--sp-xs);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-meta {
+  font-size: var(--fs-xs);
+  color: var(--clr-data-mid);
+  margin-bottom: var(--sp-xs);
+}
+
+.card-tags {
+  display: flex;
+  gap: var(--sp-xs);
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: var(--fs-xs);
+  padding: 1px var(--sp-xs);
+  background: var(--clr-affine);
+  color: var(--clr-data-mid);
+  border-radius: var(--radius-sm);
+}
+
+/* ── COMPARISON PANEL ── */
+.comparison-section {
+  background: var(--clr-affine);
+  border-top: 1px solid var(--clr-data-light);
+  border-bottom: 1px solid var(--clr-data-light);
+}
+
+.comparison-selector {
+  display: flex;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-lg);
+  flex-wrap: wrap;
+}
+
+.selector-item {
+  flex: 1;
+  min-width: 200px;
+  background: var(--clr-white);
+  border: 2px solid var(--clr-data-light);
+  border-radius: var(--radius-md);
+  padding: var(--sp-md);
+  cursor: pointer;
+  transition: all var(--sp-sm);
+  text-align: center;
+}
+
+.selector-item.active {
+  border-color: var(--clr-satchel);
+  box-shadow: var(--shadow-md);
+}
+
+.selector-thumb {
+  width: 100%;
+  height: 120px;
+  background: var(--clr-affine);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--sp-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.selector-item.active .selector-thumb { border: 1px solid var(--clr-satchel); }
+
+.selector-title {
+  font-family: var(--font-serif);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.selector-id {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--clr-data-mid);
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-lg);
+}
+
+.compare-col {
+  background: var(--clr-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid var(--clr-affine);
+}
+
+.compare-col-header {
+  padding: var(--sp-md);
+  background: var(--clr-ironside);
+  color: var(--clr-ivory);
+  font-family: var(--font-serif);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.compare-col-header .reg-id {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  opacity: 0.7;
+  display: block;
+  margin-top: 2px;
+}
+
+.compare-media {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: var(--clr-affine);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.media-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--sp-xs) var(--sp-sm);
+  background: rgba(27,31,43,0.75);
+  color: var(--clr-ivory);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+
+.compare-details { padding: var(--sp-md); }
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--sp-xs) 0;
+  border-bottom: 1px solid var(--clr-affine);
+  font-size: var(--fs-small);
+}
+
+.detail-row:last-child { border-bottom: none; }
+.detail-label { color: var(--clr-data-mid); font-weight: 500; }
+.detail-value { font-weight: 600; text-align: right; }
+
+.provenance-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-md);
+  margin-top: var(--sp-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.provenance-full { background: rgba(58,90,64,0.12); color: var(--clr-patchouli); }
+.provenance-partial { background: rgba(221,161,94,0.15); color: var(--clr-scoria); }
+.provenance-low { background: rgba(188,71,73,0.1); color: var(--clr-banneret); }
+
+/* ── TABS / PROVENANCE TABLE ── */
+.provenance-section { }
+
+.tab-widget { margin-bottom: var(--sp-xl); }
+
+.tablist {
+  display: flex;
+  border-bottom: 2px solid var(--clr-affine);
+  gap: 0;
+}
+
+.tab {
+  padding: var(--sp-sm) var(--sp-lg);
+  background: transparent;
+  border: none;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--clr-data-mid);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all var(--sp-sm);
+  font-family: var(--font-sans);
+}
+
+.tab:hover { color: var(--clr-ironside); }
+
+.tab[aria-selected="true"] {
+  color: var(--clr-satchel);
+  border-bottom-color: var(--clr-satchel);
+}
+
+.tabpanel {
+  padding-top: var(--sp-lg);
+  display: none;
+}
+
+.tabpanel[aria-hidden="false"] { display: block; }
+
+/* ── TABLE ── */
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--clr-affine);
+  border-radius: var(--radius-md);
+  background: var(--clr-white);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.data-table thead {
+  background: var(--clr-ironside);
+  color: var(--clr-ivory);
+}
+
+.data-table th {
+  padding: var(--sp-sm) var(--sp-md);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--clr-affine);
+  vertical-align: top;
+}
+
+.data-table tbody tr:hover { background: rgba(163,177,138,0.06); }
+
+.data-table .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
+
+.status-pill {
+  display: inline-block;
+  padding: 1px var(--sp-xs);
+  border-radius: 100px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-verified { background: rgba(58,90,64,0.12); color: var(--clr-patchouli); }
+.status-pending { background: rgba(221,161,94,0.15); color: var(--clr-scoria); }
+.status-disputed { background: rgba(188,71,73,0.1); color: var(--clr-banneret); }
+
+.claim-type {
+  font-weight: 600;
+  color: var(--clr-ironside);
+}
+
+/* ── CLAIM EXPANDERS ── */
+.claim-expanders { display: flex; flex-direction: column; gap: var(--sp-sm); }
+
+.expander {
+  border: 1px solid var(--clr-affine);
+  border-radius: var(--radius-md);
+  background: var(--clr-white);
+  overflow: hidden;
+  transition: box-shadow var(--sp-sm);
+}
+
+.expander:hover { box-shadow: var(--shadow-sm); }
+
+.expander-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-md);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  text-align: left;
+  gap: var(--sp-md);
+}
+
+.expander-trigger:focus { outline: 2px solid var(--clr-satchel); outline-offset: -2px; }
+
+.expander-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.expander-heading strong {
+  font-family: var(--font-serif);
+  font-size: var(--fs-small);
+}
+
+.expander-heading span {
+  font-size: var(--fs-xs);
+  color: var(--clr-data-mid);
+}
+
+.expander-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  transition: transform var(--sp-sm);
+}
+
+.expander.open .expander-icon { transform: rotate(180deg); }
+
+.expander-panel {
+  display: none;
+  padding: 0 var(--sp-md) var(--sp-md);
+  border-top: 1px solid var(--clr-affine);
+}
+
+.expander.open .expander-panel { display: block; }
+
+.evidence-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-sm);
+  margin-top: var(--sp-sm);
+}
+
+.evidence-item {
+  background: var(--clr-affine);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-sm);
+  font-size: var(--fs-xs);
+}
+
+.evidence-thumb {
+  width: 100%;
+  height: 60px;
+  background: var(--clr-data-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--sp-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--clr-ironside);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.evidence-label { font-weight: 600; margin-bottom: 2px; }
+.evidence-meta { color: var(--clr-data-mid); font-size: 0.75em; }
+
+/* ── MEDIA GALLERY ── */
+.gallery-strip {
+  display: flex;
+  gap: var(--sp-md);
+  overflow-x: auto;
+  padding-bottom: var(--sp-sm);
+  scroll-snap-type: x mandatory;
+}
+
+.gallery-item {
+  flex: 0 0 280px;
+  scroll-snap-align: start;
+  background: var(--clr-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid var(--clr-affine);
+}
+
+.gallery-media {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--clr-affine);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.gallery-caption {
+  padding: var(--sp-sm);
+  font-size: var(--fs-small);
+}
+
+.gallery-caption strong {
+  display: block;
+  font-family: var(--font-serif);
+  margin-bottom: 2px;
+}
+
+.gallery-caption span {
+  font-size: var(--fs-xs);
+  color: var(--clr-data-mid);
+}
+
+/* ── FOOTER ── */
+.site-footer {
+  background: var(--clr-ironside);
+  color: var(--clr-data-light);
+  padding: var(--sp-xxl) var(--sp-xl) var(--sp-xl);
+}
+
+.footer-grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: var(--sp-xxl);
+}
+
+.footer-brand {
+  font-family: var(--font-serif);
+  font-size: var(--fs-h3);
+  color: var(--clr-ivory);
+  margin-bottom: var(--sp-sm);
+}
+
+.footer-desc {
+  font-size: var(--fs-small);
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+.footer-col h4 {
+  color: var(--clr-ivory);
+  font-size: var(--fs-small);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--sp-md);
+}
+
+.footer-col ul { list-style: none; }
+
+.footer-col li { margin-bottom: var(--sp-xs); }
+
+.footer-col a {
+  color: var(--clr-data-light);
+  text-decoration: none;
+  font-size: var(--fs-small);
+  transition: color var(--sp-sm);
+}
+
+.footer-col a:hover { color: var(--clr-ivory); }
+
+.footer-bottom {
+  max-width: 1280px;
+  margin: var(--sp-xl) auto 0;
+  padding-top: var(--sp-lg);
+  border-top: 1px solid var(--clr-departer);
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-xs);
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+/* ── DIALOG ── */
+.dialog-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(27,31,43,0.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-overlay.open { display: flex; }
+
+.dialog {
+  background: var(--clr-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: var(--sp-xl);
+  position: relative;
+}
+
+.dialog-close {
+  position: absolute;
+  top: var(--sp-md);
+  right: var(--sp-md);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--clr-data-mid);
+  padding: var(--sp-xs);
+}
+
+.dialog h3 {
+  font-family: var(--font-serif);
+  font-size: var(--fs-h2);
+  margin-bottom: var(--sp-sm);
+  padding-right: var(--sp-lg);
+}
+
+.dialog-meta {
+  font-size: var(--fs-small);
+  color: var(--clr-data-mid);
+  margin-bottom: var(--sp-lg);
+  display: flex;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.dialog-body p { margin-bottom: var(--sp-md); }
+
+.dialog-actions {
+  display: flex;
+  gap: var(--sp-sm);
+  justify-content: flex-end;
+  margin-top: var(--sp-lg);
+  padding-top: var(--sp-md);
+  border-top: 1px solid var(--clr-affine);
+}
+
+.btn-primary {
+  padding: var(--sp-sm) var(--sp-lg);
+  background: var(--clr-satchel);
+  color: var(--clr-white);
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: var(--fs-body);
+}
+
+.btn-secondary {
+  padding: var(--sp-sm) var(--sp-lg);
+  background: transparent;
+  color: var(--clr-data-mid);
+  border: 1px solid var(--clr-data-light);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--fs-body);
+}
+
+/* ── SVG PLACEHOLDER HELPERS ── */
+.placeholder-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  color: var(--clr-data-light);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .browse-grid { grid-template-columns: repeat(3, 1fr); }
+  .compare-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 768px) {
+  .browse-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-links { display: none; }
+  .stats-bar { gap: var(--sp-lg); }
+  .footer-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ NAVIGATION ═══════ -->
+<nav class="site-nav" role="navigation" aria-label="Primary">
+  <a href="#" class="nav-brand">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="26" height="26" rx="4" stroke="#dda15e" stroke-width="2"/>
+      <circle cx="16" cy="13" r="4" stroke="#dda15e" stroke-width="1.5" fill="none"/>
+      <path d="M9 25 L16 19 L23 25" stroke="#dda15e" stroke-width="1.5" fill="none"/>
+      <line x1="16" y1="19" x2="16" y2="25" stroke="#dda15e" stroke-width="1.5"/>
+    </svg>
+    Provenance Registry
+  </a>
+  <ul class="nav-links">
+    <li><a href="#browse" aria-current="page">Catalogue</a></li>
+    <li><a href="#comparison">Compare</a></li>
+    <li><a href="#provenance">Audit Trail</a></li>
+    <li><a href="#gallery">Gallery</a></li>
+    <li><a href="#">API <span class="nav-badge">v2.4</span></a></li>
+  </ul>
+  <div class="nav-auditor">
+    <div class="nav-avatar">EH</div>
+    Eleanor Huxley
+  </div>
+</nav>
+
+<!-- ═══════ HERO ═══════ -->
+<header class="hero">
+  <div class="hero-inner">
+    <h1>Product Identity &amp; <em>Provenance</em> Registry</h1>
+    <p class="hero-sub">Search, verify, and cross-reference over twelve thousand authenticated retail artefacts across fourteen heritage brand programmes.</p>
+
+    <form class="search-form" role="search" aria-label="Search the registry">
+      <input class="search-input" type="search" placeholder="Search by ID, SKU, designer, material, or origin…" aria-label="Search terms" value="">
+      <button type="submit" class="search-btn">Search Registry</button>
+    </form>
+
+    <div class="search-filters">
+      <button class="filter-chip active">All categories</button>
+      <button class="filter-chip">Textiles &amp; Leather</button>
+      <button class="filter-chip">Jewellery</button>
+      <button class="filter-chip">Fragrances</button>
+      <button class="filter-chip">Accessories</button>
+      <button class="filter-chip">Haute Couture</button>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-num">12,847</div>
+        <div class="stat-label">Registered Items</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">98.4%</div>
+        <div class="stat-label">Verification Rate</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">342</div>
+        <div class="stat-label">Flagged Reviews</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">23</div>
+        <div class="stat-label">Active Programmes</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════ SECTION 1: BROWSE COLLECTION ═══════ -->
+<section class="section" id="browse">
+  <div class="section-header">
+    <div>
+      <h2>Catalogue Collection</h2>
+      <span class="count">Showing 1–8 of 12,847 registered items</span>
+    </div>
+    <div class="view-toggle" role="radiogroup" aria-label="View mode">
+      <button class="view-btn active" role="radio" aria-checked="true">Grid</button>
+      <button class="view-btn" role="radio" aria-checked="false">List</button>
+      <button class="view-btn" role="radio" aria-checked="false">Timeline</button>
+    </div>
+  </div>
+
+  <div class="browse-grid">
+    <!-- Card 1 -->
+    <article class="browse-card" onclick="openDialog('item1')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#e8e0d4"/>
+          <rect x="30" y="30" width="240" height="160" rx="4" fill="#d4cdc0"/>
+          <text x="150" y="115" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Photographic evidence #PRD-7742A</text>
+          <rect x="30" y="195" width="240" height="30" fill="#bc6c25" opacity="0.15"/>
+          <text x="150" y="214" text-anchor="middle" font-size="10" fill="#7f4f24" font-family="sans-serif">Chain of custody verified</text>
+        </svg>
+        <span class="card-badge badge-verified">Verified</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">Cashmere Wrap Coat — Winter Line 1987</h3>
+        <div class="card-meta">House of Delacroix · Paris, France · Registered: 12 March 2019</div>
+        <div class="card-tags">
+          <span class="tag">Reg# DEL-8821-IV</span>
+          <span class="tag">Italian cashmere</span>
+          <span class="tag">Hand-stitched</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 2 -->
+    <article class="browse-card" onclick="openDialog('item2')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#f0e6d3"/>
+          <ellipse cx="150" cy="110" rx="60" ry="75" fill="#dda15e" opacity="0.2"/>
+          <ellipse cx="150" cy="110" rx="40" ry="50" fill="#dda15e" opacity="0.3"/>
+          <text x="150" y="115" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Macro detail shot — clasp mechanism</text>
+          <polygon points="140,100 140,120 156,110" fill="#dda15e" opacity="0.5"/>
+        </svg>
+        <span class="card-badge badge-review">Under Review</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">Midnight Sapphire Pendant, 18-Karat Gold Setting</h3>
+        <div class="card-meta">Vermeil &amp; Co. · Geneva, Switzerland · Registered: 04 September 2021</div>
+        <div class="card-tags">
+          <span class="tag">Reg# VRM-4401-XII</span>
+          <span class="tag">Ceylon sapphire</span>
+          <span class="tag">Hallmarked</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 3 -->
+    <article class="browse-card" onclick="openDialog('item3')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#f0e6d3"/>
+          <rect x="50" y="40" width="80" height="145" rx="6" fill="#3a5a40" opacity="0.12"/>
+          <rect x="170" y="40" width="80" height="145" rx="6" fill="#3a5a40" opacity="0.08"/>
+          <text x="150" y="115" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Bottle + packaging — serial plate visible</text>
+          <line x1="130" y1="130" x2="170" y2="130" stroke="#6b7084" stroke-width="1" stroke-dasharray="3"/>
+          <text x="150" y="145" text-anchor="middle" font-size="9" fill="#9ca0af" font-family="sans-serif">↔ 75 mL capacity</text>
+        </svg>
+        <span class="card-badge badge-verified">Verified</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">N°5 Eau Parfumée — Limited Edition Crystal Decanter</h3>
+        <div class="card-meta">Maison Chanel · Paris, France · Registered: 28 January 2022</div>
+        <div class="card-tags">
+          <span class="tag">Reg# CHN-0057-VIII</span>
+          <span class="tag">Crystal glass</span>
+          <span class="tag">Batch R4491</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 4 -->
+    <article class="browse-card" onclick="openDialog('item4')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#e8e0d4"/>
+          <rect x="60" y="35" width="180" height="120" rx="3" fill="#3d4254" opacity="0.08"/>
+          <path d="M90 155 Q150 140 210 155" stroke="#bc6c25" stroke-width="2" fill="none"/>
+          <text x="150" y="115" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Leather grain micrograph</text>
+          <circle cx="100" cy="80" r="15" fill="#bc6c25" opacity="0.15"/>
+          <circle cx="100" cy="80" r="8" fill="#bc6c25" opacity="0.25"/>
+        </svg>
+        <span class="card-badge badge-flagged">Disputed</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">Locké Handbag — Taurillon Clemence, Black</h3>
+        <div class="card-meta">Hermès · Paris, France · Registered: 17 June 2020</div>
+        <div class="card-tags">
+          <span class="tag">Reg# HER-6719-I</span>
+          <span class="tag">Norman calfskin</span>
+          <span class="tag">Birkin 30</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 5 -->
+    <article class="browse-card" onclick="openDialog('item5')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#f0e6d3"/>
+          <rect x="40" y="50" width="220" height="110" rx="4" fill="#a3b18a" opacity="0.12"/>
+          <text x="150" y="115" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Woven textile sample mounted on acid-free board</text>
+          <line x1="80" y1="80" x2="220" y2="80" stroke="#a3b18a" stroke-width="0.5"/>
+          <line x1="80" y1="90" x2="220" y2="90" stroke="#a3b18a" stroke-width="0.5"/>
+          <line x1="80" y1="100" x2="220" y2="100" stroke="#a3b18a" stroke-width="0.5"/>
+        </svg>
+        <span class="card-badge badge-verified">Verified</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">Silk Twill Scarf — 'Les Oiseaux' Pattern, Autumn 1952</h3>
+        <div class="card-meta">Hermès · Paris, France · Donated: 03 April 2018</div>
+        <div class="card-tags">
+          <span class="tag">Reg# HER-SC-4410</span>
+          <span class="tag">Mulberry silk</span>
+          <span class="tag">Roller-printed</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 6 -->
+    <article class="browse-card" onclick="openDialog('item6')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#e8e0d4"/>
+          <circle cx="150" cy="110" r="55" fill="#7f4f24" opacity="0.08"/>
+          <circle cx="150" cy="110" r="35" stroke="#7f4f24" stroke-width="1.5" fill="none" opacity="0.3"/>
+          <text x="150" y="115" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Watch movement — calibre 3255 photographed</text>
+          <line x1="120" y1="110" x2="180" y2="110" stroke="#7f4f24" stroke-width="1" opacity="0.4"/>
+          <line x1="150" y1="80" x2="150" y2="140" stroke="#7f4f24" stroke-width="1" opacity="0.4"/>
+        </svg>
+        <span class="card-badge badge-review">Under Review</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">Daytona Chronograph — Steel, White Dial, Ref. 116500LN</h3>
+        <div class="card-meta">Patek Philippe · Geneva, Switzerland · Registered: 22 November 2023</div>
+        <div class="card-tags">
+          <span class="tag">Reg# PTP-3380-VI</span>
+          <span class="tag">Stainless steel</span>
+          <span class="tag">Serial 4'812K</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 7 -->
+    <article class="browse-card" onclick="openDialog('item7')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#f0e6d3"/>
+          <rect x="45" y="30" width="210" height="150" rx="3" fill="#6b7084" opacity="0.06"/>
+          <text x="150" y="105" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Dress form — back label close-up</text>
+          <rect x="100" y="125" width="100" height="35" rx="2" fill="#fff" stroke="#6b7084" stroke-width="0.5" opacity="0.6"/>
+          <text x="150" y="146" text-anchor="middle" font-size="8" fill="#6b7084" font-family="sans-serif">SIZE 38 · MADE IN FRANCE</text>
+        </svg>
+        <span class="card-badge badge-verified">Verified</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">Floral Evening Gown — Silk Organza, Spring Collection 1995</h3>
+        <div class="card-meta">Christian Dior · Paris, France · Acquired via auction 2020</div>
+        <div class="card-tags">
+          <span class="tag">Reg# DRD-9921-XX</span>
+          <span class="tag">Organza silk</span>
+          <span class="tag">Size 38 FR</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Card 8 -->
+    <article class="browse-card" onclick="openDialog('item8')">
+      <div class="card-media">
+        <svg viewBox="0 0 300 225" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="225" fill="#e8e0d4"/>
+          <rect x="55" y="45" width="190" height="110" rx="4" fill="#bc4749" opacity="0.06"/>
+          <text x="150" y="105" text-anchor="middle" font-size="12" fill="#6b7084" font-family="sans-serif">Footwear last — sole stamp detail</text>
+          <path d="M100 130 L110 125 L130 128 L145 120 L160 126 L175 122 L190 130 L200 128" stroke="#bc4749" stroke-width="0.8" fill="none" opacity="0.4"/>
+        </svg>
+        <span class="card-badge badge-verified">Verified</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">So Kate Patent Leather Pumps — 100mm, Noir</h3>
+        <div class="card-meta">Christian Louboutin · Paris, France · Registered: 14 July 2022</div>
+        <div class="card-tags">
+          <span class="tag">Reg# CLB-2204-III</span>
+          <span class="tag">Patent leather</span>
+          <span class="tag">Size 38 EU</span>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ═══════ SECTION 2: SIDE-BY-SIDE COMPARISON ═══════ -->
+<section class="section comparison-section" id="comparison">
+  <div class="section-header">
+    <div>
+      <h2>Side-by-Side Comparison</h2>
+      <span class="count">Cross-reference registration details, material analysis, and chain of custody</span>
+    </div>
+  </div>
+
+  <div class="comparison-selector" role="radiogroup" aria-label="Select items to compare">
+    <div class="selector-item active" role="radio" aria-checked="true" onclick="toggleCompare(this)">
+      <div class="selector-thumb">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="160" height="120" fill="#e8e0d4"/>
+          <rect x="20" y="15" width="120" height="90" rx="3" fill="#d4cdc0"/>
+          <text x="80" y="65" text-anchor="middle" font-size="10" fill="#6b7084" font-family="sans-serif">DEL-8821-IV</text>
+        </svg>
+      </div>
+      <div class="selector-title">Delacroix Cashmere Wrap</div>
+      <div class="selector-id">REG# DEL-8821-IV</div>
+    </div>
+    <div class="selector-item active" role="radio" aria-checked="true" onclick="toggleCompare(this)">
+      <div class="selector-thumb">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="160" height="120" fill="#f0e6d3"/>
+          <rect x="20" y="15" width="120" height="90" rx="3" fill="#dda15e" opacity="0.2"/>
+          <text x="80" y="65" text-anchor="middle" font-size="10" fill="#6b7084" font-family="sans-serif">VRM-4401-XII</text>
+        </svg>
+      </div>
+      <div class="selector-title">Vermeil Sapphire Pendant</div>
+      <div class="selector-id">REG# VRM-4401-XII</div>
+    </div>
+    <div class="selector-item" role="radio" aria-checked="false" onclick="toggleCompare(this)">
+      <div class="selector-thumb">
+        <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="160" height="120" fill="#e8e0d4"/>
+          <rect x="20" y="15" width="120" height="90" rx="3" fill="#a3b18a" opacity="0.15"/>
+          <text x="80" y="65" text-anchor="middle" font-size="10" fill="#6b7084" font-family="sans-serif">HER-6719-I</text>
+        </svg>
+      </div>
+      <div class="selector-title">Hermès Locké Bag</div>
+      <div class="selector-id">REG# HER-6719-I</div>
+    </div>
+  </div>
+
+  <div class="compare-grid">
+    <!-- Column 1 -->
+    <div class="compare-col">
+      <div class="compare-col-header">
+        DEL-8821-IV
+        <span class="reg-id">House of Delacroix, Winter Line 1987</span>
+      </div>
+      <div class="compare-media">
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="400" height="300" fill="#e8e0d4"/>
+          <rect x="60" y="30" width="280" height="210" rx="5" fill="#d4cdc0"/>
+          <rect x="60" y="250" width="280" height="20" fill="#3a5a40" opacity="0.1"/>
+          <text x="200" y="145" text-anchor="middle" font-size="14" fill="#6b7084" font-family="sans-serif">Full garment photograph — front &amp; rear</text>
+          <text x="200" y="265" text-anchor="middle" font-size="9" fill="#3a5a40" font-family="sans-serif">Photo ref: PH-8821-A through PH-8821-E</text>
+        </svg>
+        <div class="media-caption">Fig. 1 — Full-length front view with tag visible (PH-8821-A)</div>
+      </div>
+      <div class="compare-details">
+        <div class="detail-row"><span class="detail-label">Designer</span><span class="detail-value">Marc Delacroix</span></div>
+        <div class="detail-row"><span class="detail-label">Material</span><span class="detail-value">100% Italian cashmere</span></div>
+        <div class="detail-row"><span class="detail-label">Origin</span><span class="detail-value">Biella, Piedmont, Italy</span></div>
+        <div class="detail-row"><span class="detail-label">Production Year</span><span class="detail-value">Autumn/Winter 1987</span></div>
+        <div class="detail-row"><span class="detail-label">Measurements</span><span class="detail-value">Length 112 cm, Width 98 cm</span></div>
+        <div class="detail-row"><span class="detail-label">Colour</span><span class="detail-value">Blackish-grey (#2d2d2d)</span></div>
+        <div class="detail-row"><span class="detail-label">Condition Grade</span><span class="detail-value">Excellent (Grade II)</span></div>
+        <div class="provenance-bar provenance-full">● 8 of 8 claims fully verified</div>
+      </div>
+    </div>
+
+    <!-- Column 2 -->
+    <div class="compare-col">
+      <div class="compare-col-header">
+        VRM-4401-XII
+        <span class="reg-id">Vermeil &amp; Co., Ceylon Collection</span>
+      </div>
+      <div class="compare-media">
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="400" height="300" fill="#f0e6d3"/>
+          <circle cx="200" cy="140" r="70" fill="#dda15e" opacity="0.1"/>
+          <circle cx="200" cy="140" r="50" stroke="#bc6c25" stroke-width="2" fill="none" opacity="0.4"/>
+          <circle cx="200" cy="140" r="25" fill="#3a5a40" opacity="0.15"/>
+          <text x="200" y="145" text-anchor="middle" font-size="14" fill="#6b7084" font-family="sans-serif">Macro jewellery photography</text>
+          <text x="200" y="260" text-anchor="middle" font-size="9" fill="#6b7084" font-family="sans-serif">Gemological report #GIA-2021-4401</text>
+        </svg>
+        <div class="media-caption">Fig. 2 — Pendant clasp mechanism with hallmark engraving detail</div>
+      </div>
+      <div class="compare-details">
+        <div class="detail-row"><span class="detail-label">Maker</span><span class="detail-value">Vermeil &amp; Co. Atelier</span></div>
+        <div class="detail-row"><span class="detail-label">Stone</span><span class="detail-value">Natural blue sapphire</span></div>
+        <div class="detail-row"><span class="detail-label">Origin</span><span class="detail-value">Ratnapura, Sri Lanka</span></div>
+        <div class="detail-row"><span class="detail-label">Setting</span><span class="detail-value">18-karat yellow gold</span></div>
+        <div class="detail-row"><span class="detail-label">Weight</span><span class="detail-value">4.8 ct stone, 18.2 g total</span></div>
+        <div class="detail-row"><span class="detail-label">Dimensions</span><span class="detail-value">32 mm × 24 mm pendant</span></div>
+        <div class="detail-row"><span class="detail-label">Certification</span><span class="detail-value">GIA Report #2210440112</span></div>
+        <div class="provenance-bar provenance-partial">● 6 of 8 claims verified</div>
+      </div>
+    </div>
+
+    <!-- Column 3 -->
+    <div class="compare-col">
+      <div class="compare-col-header">
+        HER-6719-I
+        <span class="reg-id">Hermès, Birkin 30 Style — Disputed</span>
+      </div>
+      <div class="compare-media">
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="400" height="300" fill="#e8e0d4"/>
+          <rect x="80" y="40" width="240" height="180" rx="8" fill="#3d4254" opacity="0.06"/>
+          <rect x="80" y="40" width="240" height="180" rx="8" stroke="#bc4749" stroke-width="1" stroke-dasharray="4" opacity="0.3"/>
+          <text x="200" y="140" text-anchor="middle" font-size="14" fill="#6b7084" font-family="sans-serif">Exterior hardware + clochette</text>
+          <text x="200" y="260" text-anchor="middle" font-size="9" fill="#bc4749" font-family="sans-serif">⚠ Serial datecode mismatch flagged</text>
+        </svg>
+        <div class="media-caption">Fig. 3 — Front quarter view with date code area circled (flagged anomaly)</div>
+      </div>
+      <div class="compare-details">
+        <div class="detail-row"><span class="detail-label">Maker</span><span class="detail-value">Atelier Hermès Croissanet</span></div>
+        <div class="detail-row"><span class="detail-label">Leather</span><span class="detail-value">Taurillon Clemence</span></div>
+        <div class="detail-row"><span class="detail-label">Hardware</span><span class="detail-value">Paladium-plated</span></div>
+        <div class="detail-row"><span class="detail-label">Model</span><span class="detail-value">Birkin 30 cm</span></div>
+        <div class="detail-row"><span class="detail-label">Date Code</span><span class="detail-value">Circlet 'Z' — 2019</span></div>
+        <div class="detail-row"><span class="detail-label">Stamp</span><span class="detail-value">H (Hermès factory)</span></div>
+        <div class="detail-row"><span class="detail-label">Authentication</span><span class="detail-value">Pending re-inspection</span></div>
+        <div class="provenance-bar provenance-low">● 4 of 8 claims verified</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ SECTION 3: AUDIT TRAIL TABS ═══════ -->
+<section class="section provenance-section" id="provenance">
+  <div class="section-header">
+    <div>
+      <h2>Audit Trail &amp; Evidence Log</h2>
+      <span class="count">Complete provenance chain for selected registrations</span>
+    </div>
+  </div>
+
+  <div class="tab-widget">
+    <div class="tablist" role="tablist" aria-label="Evidence categories">
+      <button class="tab" role="tab" aria-selected="true" aria-controls="tabpanel-documents" id="tab-documents" onclick="switchTab(this)">Documents</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabpanel-evidence" id="tab-evidence" onclick="switchTab(this)">Physical Evidence</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabpanel-chain" id="tab-chain" onclick="switchTab(this)">Chain of Custody</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabpanel-materials" id="tab-materials" onclick="switchTab(this)">Materials Analysis</button>
+    </div>
+
+    <!-- Panel: Documents -->
+    <div class="tabpanel" role="tabpanel" id="tabpanel-documents" aria-labelledby="tab-documents" aria-hidden="false">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Registration</th>
+              <th>Document Type</th>
+              <th>Title</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Filed By</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">DEL-8821-IV</td>
+              <td class="claim-type">Certificate of Authenticity</td>
+              <td>Authenticity certificate signed by Marc Delacroix estate trustees</td>
+              <td>22 Jan 2019</td>
+              <td><span class="status-pill status-verified">Verified</span></td>
+              <td>J. Fontaine, Heritage Division</td>
+            </tr>
+            <tr>
+              <td class="mono">DEL-8821-IV</td>
+              <td class="claim-type">Bill of Sale</td>
+              <td>Private sale receipt from Sotheby's London, Lot 147</td>
+              <td>15 Nov 2018</td>
+              <td><span class="status-pill status-verified">Verified</span></td>
+              <td>S. Whitfield, Auction Records</td>
+            </tr>
+            <tr>
+              <td class="mono">DEL-8821-IV</td>
+              <td class="claim-type">Condition Report</td>
+              <td>Fibre content analysis — near-infrared spectroscopy results</td>
+              <td>03 Feb 2019</td>
+              <td><span class="status-pill status-verified">Verified</span></td>
+              <td>Dr. Mei-Lin Chau, Textile Lab</td>
+            </tr>
+            <tr>
+              <td class="mono">VRM-4401-XII</td>
+              <td class="claim-type">Gemological Report</td>
+              <td>GIA report confirming natural untreated blue sapphire, 4.8 ct</td>
+              <td>28 Aug 2021</td>
+              <td><span class="status-pill status-verified">Verified</span></td>
+              <td>R. Ackerman, GIA Branch Zurich</td>
+            </tr>
+            <tr>
+              <td class="mono">VRM-4401-XII</td>
+              <td class="claim-type">Appraisal Document</td>
+              <td>Insurance valuation report by Lyon &amp; Mason Valuers Ltd.</td>
+              <td>12 Sep 2021</td>
+              <td><span class="status-pill status-pending">Pending Audit</span></td>
+              <td>T. Beaumont, Lyon &amp; Mason</td>
+            </tr>
+            <tr>
+              <td class="mono">HER-6719-I</td>
+              <td class="claim-type">Authentication Request</td>
+              <td>Third-party authentication submission via Entrupy digital platform</td>
+              <td>08 Jun 2023</td>
+              <td><span class="status-pill status-disputed">Disputed</span></td>
+              <td>A. Moreau, Authentication Dept.</td>
+            </tr>
+            <tr>
+              <td class="mono">HER-6719-I</td>
+              <td class="claim-type">Discrepancy Note</td>
+              <td>Date code circlet Z inconsistency with stated 2019 production — requires physical inspection</td>
+              <td>21 Jul 2023</td>
+              <td><span class="status-pill status-disputed">Disputed</span></td>
+              <td>K. Tanaka, Provenance Lead</td>
+            </tr>
+            <tr>
+              <td class="mono">DRD-9921-XX</td>
+              <td class="claim-type">Provenance Letter</td>
+              <td>Letter of provenance from Musée de la Mode, Paris — previous donation record</td>
+              <td>14 Mar 2020</td>
+              <td><span class="status-pill status-verified">Verified</span></td>
+              <td>P. Laurent, Museum Archives</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panel: Physical Evidence -->
+    <div class="tabpanel" role="tabpanel" id="tabpanel-evidence" aria-labelledby="tab-evidence" aria-hidden="true">
+      <div class="claim-expanders">
+
+        <div class="expander open">
+          <button class="expander-trigger" onclick="toggleExpander(this)" aria-expanded="true">
+            <div class="expander-heading">
+              <strong>DEL-8821-IV — Photographic Evidence Bundle</strong>
+              <span>5 images submitted by J. Fontaine on 22 Jan 2019 — High resolution scan available</span>
+            </div>
+            <svg class="expander-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="expander-panel">
+            <p style="font-size:var(--fs-small);color:var(--clr-data-mid);margin-bottom:var(--sp-sm);">Five photographs documenting the garment from multiple angles, including close-ups of the label, stitching detail, and hem finish.</p>
+            <div class="evidence-list">
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#a3b18a" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Front view</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">PH-8821-A</div>
+                <div class="evidence-meta">Front, full length</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#a3b18a" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Back view</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">PH-8821-B</div>
+                <div class="evidence-meta">Rear, full length</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#a3b18a" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Label close-up</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">PH-8821-C</div>
+                <div class="evidence-meta">Care label &amp; size tag</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#a3b18a" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Stitching macro</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">PH-8821-D</div>
+                <div class="evidence-meta">Seam detail, ×10</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#a3b18a" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Hem finish</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">PH-8821-E</div>
+                <div class="evidence-meta">Hem, hand-rolled</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="expander">
+          <button class="expander-trigger" onclick="toggleExpander(this)" aria-expanded="false">
+            <div class="expander-heading">
+              <strong>VRM-4401-XII — Gemological &amp; Metallurgical Evidence</strong>
+              <span>Three reports: GIA gemology, hallmarks verification, XRF metal assay — submitted by R. Ackerman</span>
+            </div>
+            <svg class="expander-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="expander-panel">
+            <p style="font-size:var(--fs-small);color:var(--clr-data-mid);margin-bottom:var(--sp-sm);">Combined gemological analysis confirms natural blue sapphire without heat treatment. Gold setting assayed at 74.8% purity, consistent with 18-karat specification.</p>
+            <div class="evidence-list">
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#dda15e" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">GIA cert</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">GIA-2021-4401</div>
+                <div class="evidence-meta">Gemological report</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#dda15e" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">XRF spectrum</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">XRF-VRM-4401</div>
+                <div class="evidence-meta">Metal assay, Au 74.8%</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#dda15e" opacity="0.15"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Hallmark photo</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">HAM-VRM-4401</div>
+                <div class="evidence-meta">Close-up hallmark</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="expander">
+          <button class="expander-trigger" onclick="toggleExpander(this)" aria-expanded="false">
+            <div class="expander-heading">
+              <strong>HER-6719-I — Dispute Documentation</strong>
+              <span>Evidence packets supporting both ownership claim and authentication concerns — reviewed by K. Tanaka</span>
+            </div>
+            <svg class="expander-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="expander-panel">
+            <p style="font-size:var(--fs-small);color:var(--clr-data-mid);margin-bottom:var(--sp-sm);">The date code circlet 'Z' corresponds to 2019 production, however the clochette leather shows signs consistent with earlier tooling. Entrupy AI confidence score was 73% — below the 85% threshold for automated verification.</p>
+            <div class="evidence-list">
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#bc4749" opacity="0.12"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Entrupy output</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">ENT-2023-8847</div>
+                <div class="evidence-meta">AI confidence: 73%</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#bc4749" opacity="0.12"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Clochet detail</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">PH-HER-6719-F</div>
+                <div class="evidence-meta">Clochette wear pattern</div>
+              </div>
+              <div class="evidence-item">
+                <div class="evidence-thumb">
+                  <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                    <rect width="100" height="60" fill="#bc4749" opacity="0.12"/>
+                    <text x="50" y="34" text-anchor="middle" font-size="7" fill="#6b7084">Receipt copy</text>
+                  </svg>
+                </div>
+                <div class="evidence-label">INV-2020-3312</div>
+                <div class="evidence-meta">Purchase invoice, 2020</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Chain of Custody -->
+    <div class="tabpanel" role="tabpanel" id="tabpanel-chain" aria-labelledby="tab-chain" aria-hidden="true">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item ID</th>
+              <th>Date</th>
+              <th>Event</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">DEL-8821-IV</td>
+              <td>04 Dec 1987</td>
+              <td>Original manufacture</td>
+              <td>Maison Delacroix Atelier, Paris</td>
+              <td>Private owner — M. Leclerc</td>
+              <td>Sale at Rue du Faubourg Saint-Honoré boutique</td>
+            </tr>
+            <tr>
+              <td class="mono">DEL-8821-IV</td>
+              <td>18 Mar 2003</td>
+              <td>Inheritance transfer</td>
+              <td>Estate of M. Leclerc</td>
+              <td>Mrs. Claudine Moreau (née Leclerc)</td>
+              <td>Notarial deed #NT-2003-4412, Notaire Dubois</td>
+            </tr>
+            <tr>
+              <td class="mono">DEL-8821-IV</td>
+              <td>15 Nov 2018</td>
+              <td>Auction sale</td>
+              <td>Sotheby's London</td>
+              <td>H. Steinberg Collection</td>
+              <td>Lot 147, Hammer price £18,400</td>
+            </tr>
+            <tr>
+              <td class="mono">DEL-8821-IV</td>
+              <td>22 Jan 2019</td>
+              <td>Registration deposit</td>
+              <td>H. Steinberg</td>
+              <td>Provenance Registry Database</td>
+              <td>Full photographic documentation completed</td>
+            </tr>
+            <tr>
+              <td class="mono">VRM-4401-XII</td>
+              <td>14 Feb 2021</td>
+              <td>Original commission</td>
+              <td>Vermeil &amp; Co. Genève</td>
+              <td>S. Nakamura (private client)</td>
+              <td>Commission order #COM-2021-0087</td>
+            </tr>
+            <tr>
+              <td class="mono">VRM-4401-XII</td>
+              <td>22 May 2023</td>
+              <td>Auction sale</td>
+              <td>Christie's Geneva</td>
+              <td>A. Petrov Foundation</td>
+              <td>Lot 212, Hammer price CHF 34,500</td>
+            </tr>
+            <tr>
+              <td class="mono">VRM-4401-XII</td>
+              <td>12 Sep 2023</td>
+              <td>Registration deposit</td>
+              <td>Petrov Foundation</td>
+              <td>Provenance Registry Database</td>
+              <td>GIA certification cross-referenced</td>
+            </tr>
+            <tr>
+              <td class="mono">HER-6719-I</td>
+              <td>08 Aug 2019</td>
+              <td>Original purchase</td>
+              <td>Hermès Place Vendôme</td>
+              <td>R. Vasquez</td>
+              <td>Receipt #POS-PV-2019-7741</td>
+            </tr>
+            <tr>
+              <td class="mono">HER-6719-I</td>
+              <td>30 Nov 2022</td>
+              <td>Online listing</td>
+              <td>R. Vasquez</td>
+              <td>vintagedisputes.fr marketplace</td>
+              <td>Listed at €28,000 — buyer inquiry generated dispute</td>
+            </tr>
+            <tr>
+              <td class="mono">HER-6719-I</td>
+              <td>17 Jun 2023</td>
+              <td>Registration filed</td>
+              <td>vintagedisputes.fr</td>
+              <td>Provenance Registry Database</td>
+              <td>Flagged for manual review — date code anomaly detected</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panel: Materials Analysis -->
+    <div class="tabpanel" role="tabpanel" id="tabpanel-materials" aria-labelledby="tab-materials" aria-hidden="true">
+      <div class="claim-expanders">
+
+        <div class="expander open">
+          <button class="expander-trigger" onclick="toggleExpander(this)" aria-expanded="true">
+            <div class="expander-heading">
+              <strong>DEL-8821-IV — Fibre Content Analysis</strong>
+              <span>Dr. Mei-Lin Chau, Textile Laboratory — NIR Spectroscopy &amp; Microscopic Examination</span>
+            </div>
+            <svg class="expander-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="expander-panel">
+            <p style="font-size:var(--fs-small);color:var(--clr-data-mid);margin-bottom:var(--sp-sm);">Near-infrared spectroscopy confirms 100% Capras hircus (goat) cashmere fibres originating from the Biella textile district of Piedmont. Scanning electron microscopy reveals scale patterns consistent with Mongolian-grade undercoat fibre. No synthetic blend detected above the 0.5% threshold.</p>
+            <div style="background:var(--clr-affine);border-radius:var(--radius-md);padding:var(--sp-md);margin-top:var(--sp-sm);">
+              <table style="width:100%;font-size:var(--fs-small);border-collapse:collapse;">
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Fibre composition</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">100% cashmere (Capra hircus)</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Source region</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">Biella, Piedmont, Italy</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Fibre diameter</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">16.8 µm average (Grade AAA)</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Dye analysis</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">Disperse dye, batch DK-8803 — matches Delacroix records</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);font-weight:600;">Report ref</td><td style="padding:var(--sp-xs) var(--sp-sm);text-align:right;font-family:var(--font-mono);font-size:var(--fs-xs);">TL-2019-0214-DEL</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="expander">
+          <button class="expander-trigger" onclick="toggleExpander(this)" aria-expanded="false">
+            <div class="expander-heading">
+              <strong>VRM-4401-XII — Stone Origin Verification</strong>
+              <span>GIA Branch Office, Zurich — Inclusion Mapping &amp; Trace Element Analysis</span>
+            </div>
+            <svg class="expander-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="expander-panel">
+            <p style="font-size:var(--fs-small);color:var(--clr-data-mid);margin-bottom:var(--sp-sm);">Inclusion mapping identifies rutile needle signatures characteristic of Ratnapura-source corundum. Laser ablation ICP-MS trace element profile falls within the Sri Lankan field on the discriminator diagram. No indication of flux-treated or synthetic origin.</p>
+            <div style="background:var(--clr-affine);border-radius:var(--radius-md);padding:var(--sp-md);margin-top:var(--sp-sm);">
+              <table style="width:100%;font-size:var(--fs-small);border-collapse:collapse;">
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Mineral species</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">Corundum (natural, blue variety)</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Treatment</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">None detected</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Estimated origin</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">Ratnapura district, Sabaragamuwa Province</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);font-weight:600;">Color description</td><td style="padding:var(--sp-xs) var(--sp-sm);border-bottom:1px solid var(--clr-data-light);text-align:right;">Vivid blue, moderate saturation</td></tr>
+                <tr><td style="padding:var(--sp-xs) var(--sp-sm);font-weight:600;">Report ref</td><td style="padding:var(--sp-xs) var(--sp-sm);text-align:right;font-family:var(--font-mono);font-size:var(--fs-xs);">GIA-ZRH-2021-440112</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="expander">
+          <button class="expander-trigger" onclick="toggleExpander(this)" aria-expanded="false">
+            <div class="expander-heading">
+              <strong>HER-6719-I — Leather Source Investigation</strong>
+              <span>K. Tanaka — Cross-reference against Hermès supplier database &amp; production schedule</span>
+            </div>
+            <svg class="expander-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="expander-panel">
+            <p style="font-size:var(--fs-small);color:var(--clr-data-mid);margin-bottom:var(--sp-sm);">Leather pore pattern under ×30 magnification is consistent with Taurillon (bovine) classification, matching Clemence grain specification. However, the grain depth appears shallow for genuine Clemorse processed at the Croissanet atelier in 2019. Date code circlet 'Z' denotes the 45th week of 2019, but the interior stamp ink density suggests older tooling equipment. Re-inspection recommended.</p>
+            <div style="background:rgba(188,71,73,0.06);border-radius:var(--radius-md);padding:var(--sp-md);margin-top:var(--sp-sm);border-left:3px solid var(--clr-banneret);">
+              <p style="font-size:var(--fs-small);font-weight:600;color:var(--clr-banneret);margin-bottom:var(--sp-xs);">⚠ Provisional Finding</p>
+              <p style="font-size:var(--fs-small);color:var(--clr-data-mid);">Current evidence neither confirms nor disproves authenticity. The purchaser invoice dated August 2019 is verifiable through Hermès Point of Sale records at Place Vendôme, suggesting the item was legitimately acquired at retail. However, Hermès introduced new date code stamps in late 2019 which may explain the discrepancy. Awaiting confirmation from Maison Hermès authentication department.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ SECTION 4: MEDIA GALLERY ═══════ -->
+<section class="section" id="gallery">
+  <div class="section-header">
+    <div>
+      <h2>Evidence Gallery</h2>
+      <span class="count">Curated photographic evidence from recent registrations</span>
+    </div>
+  </div>
+
+  <div class="gallery-strip">
+    <div class="gallery-item">
+      <div class="gallery-media">
+        <svg viewBox="0 0 300 169" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="300" height="169" fill="#e8e0d4"/>
+          <rect x="40" y="20" width="220" height="120" rx="3" fill="#d4cdc0"/>
+          <text x="150" y="85" text-anchor="middle" font-size="11" fill="#6b7084" font-family="sans-serif">Interior label — DEL-8821-IV</text>
+          <rect x="110" y="100" width="80" height="20" rx="2" fill="#fff" opacity="0.6" stroke="#6b7084" stroke-width="0.5"/>
+          <text x="150" y="113" text-anchor="middle" font-size="6" fill="#3d4254" font-family="serif">MADE IN ITALY<br/>LAINES DE CASHMERE</text>
+        </svg>
+      </div>
+      <div class="gallery-caption">
+        <strong>Interior Brand Label</strong>
+        <span>DEL-8821-IV · Close-up of woven brand label with origin stamp — House of Delacroix, circa 1987</span>
+      </div>
+    </div>
+
+    <div class="gallery-item">
+      <div class="gallery-media">
+        <svg viewBox="0 0 300 169" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="300" height="169" fill="#f0e6d3"/>
+          <circle cx="150" cy="85" r="45" fill="#dda15e" opacity="0.15"/>
+          <circle cx="150" cy="85" r="30" stroke="#bc6c25" stroke-width="1" fill="none" opacity="0.3"/>
+          <circle cx="150" cy="85" r="15" fill="#3a5a40" opacity="0.12"/>
+          <text x="150" y="88" text-anchor="middle" font-size="11" fill="#6b7084" font-family="sans-serif">Stone inclusion map</text>
+        </svg>
+      </div>
+      <div class="gallery-caption">
+        <strong>Optical Inclusion Mapping</strong>
+        <span>VRM-4401-XII · Rutile needle pattern characteristic of Sri Lankan origin — captured at ×50 magnification</span>
+      </div>
+    </div>
+
+    <div class="gallery-item">
+      <div class="gallery-media">
+        <svg viewBox="0 0 300 169" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="300" height="169" fill="#e8e0d4"/>
+          <rect x="50" y="30" width="200" height="100" rx="4" fill="#3d4254" opacity="0.06"/>
+          <rect x="50" y="30" width="200" height="100" rx="4" stroke="#bc4749" stroke-width="1" stroke-dasharray="4" opacity="0.3"/>
+          <text x="150" y="85" text-anchor="middle" font-size="11" fill="#6b7084" font-family="sans-serif">Date code zone — highlighted</text>
+          <circle cx="150" cy="80" r="20" stroke="#bc4749" stroke-width="1.5" fill="none"/>
+          <text x="150" y="84" text-anchor="middle" font-size="9" fill="#bc4749" font-family="sans-serif" font-weight="700">Z</text>
+        </svg>
+      </div>
+      <div class="gallery-caption">
+        <strong>Date Code Close-Up (Disputed)</strong>
+        <span>HER-6719-I · Interior stamp showing date code circlet 'Z' — anomaly noted: tooling wear inconsistent with 2019 production run</span>
+      </div>
+    </div>
+
+    <div class="gallery-item">
+      <div class="gallery-media">
+        <svg viewBox="0 0 300 169" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="300" height="169" fill="#f0e6d3"/>
+          <rect x="40" y="25" width="220" height="110" rx="3" fill="#a3b18a" opacity="0.1"/>
+          <text x="150" y="85" text-anchor="middle" font-size="11" fill="#6b7084" font-family="sans-serif">Chain-of-custody document</text>
+          <rect x="70" y="105" width="160" height="15" fill="#fff" opacity="0.5" stroke="#a3b18a" stroke-width="0.5"/>
+          <text x="150" y="115" text-anchor="middle" font-size="7" fill="#3a5a40" font-family="serif">CERTIFICATE OF AUTHENTICITY</text>
+        </svg>
+      </div>
+      <div class="gallery-caption">
+        <strong>Authenticated Certificate Copy</strong>
+        <span>DEL-8821-IV · Executed copy of authenticity certificate signed by Delacroix estate trustees — certified true copy held in Registry archives</span>
+      </div>
+    </div>
+
+    <div class="gallery-item">
+      <div class="gallery-media">
+        <svg viewBox="0 0 300 169" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="300" height="169" fill="#e8e0d4"/>
+          <rect x="30" y="30" width="240" height="100" rx="3" fill="#7f4f24" opacity="0.06"/>
+          <text x="150" y="85" text-anchor="middle" font-size="11" fill="#6b7084" font-family="sans-serif">Gold purity hallmark — ×10</text>
+          <rect x="90" y="100" width="120" height="20" rx="2" fill="#fff" opacity="0.4" stroke="#7f4f24" stroke-width="0.5"/>
+          <text x="150" y="113" text-anchor="middle" font-size="8" fill="#7f4f24" font-family="sans-serif">750 · VERMEIL · GENÈVE</text>
+        </svg>
+      </div>
+      <div class="gallery-caption">
+        <strong>Hallmark Engraving Detail</strong>
+        <span>VRM-4401-XII · Hallmark "750 VERMEIL GENÈVE" engraved on pendant bail — verified against Swiss assay office records, 2021</span>
+      </div>
+    </div>
+
+    <div class="gallery-item">
+      <div class="gallery-media">
+        <svg viewBox="0 0 300 169" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <rect width="300" height="169" fill="#f0e6d3"/>
+          <path d="M60 40 L150 30 L240 40 L240 130 L150 140 L60 130 Z" fill="#3d4254" opacity="0.06" stroke="#3d4254" stroke-width="0.5"/>
+          <text x="150" y="90" text-anchor="middle" font-size="11" fill="#6b7084" font-family="sans-serif">Fibre cross-section SEM</text>
+          <line x1="110" y1="70" x2="190" y2="70" stroke="#588157" stroke-width="1.5" opacity="0.4"/>
+          <circle cx="150" cy="105" r="18" stroke="#588157" stroke-width="1" fill="none" opacity="0.3"/>
+        </svg>
+      </div>
+      <div class="gallery-caption">
+        <strong>Scanning Electron Micrograph</strong>
+        <span>DEL-8821-IV · SEM cross-section of cashmere fibre at ×500 magnification — distinct overlapping cortex scales visible, consistent with Capra hircus source</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ DETAIL DIALOG ═══════ -->
+<div class="dialog-overlay" id="item-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+  <div class="dialog">
+    <button class="dialog-close" onclick="closeDialog()" aria-label="Close dialog">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h3 id="dialog-title">Details Panel</h3>
+    <div class="dialog-meta">
+      <span id="dialog-id"></span>
+      <span id="dialog-date"></span>
+      <span id="dialog-status"></span>
+    </div>
+    <div class="dialog-body" id="dialog-body">
+    </div>
+    <div class="dialog-actions">
+      <button class="btn-secondary" onclick="closeDialog()">Close</button>
+      <button class="btn-primary">Export Audit Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ FOOTER ═══════ -->
+<footer class="site-footer" role="contentinfo">
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">Provenance Registry</div>
+      <p class="footer-desc">An independent, publicly accessible audit trail for the retail identity ecosystem. Every registered artefact carries an immutable chain of custody, verified material analysis, and photographic evidence bundle.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Registry</h4>
+      <ul>
+        <li><a href="#">Browse Catalogue</a></li>
+        <li><a href="#">Advanced Search</a></li>
+        <li><a href="#">Comparison Tool</a></li>
+        <li><a href="#">Audit Trail Viewer</a></li>
+        <li><a href="#">API Documentation</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Programmes</h4>
+      <ul>
+        <li><a href="#">Luxury Watch Programme</a></li>
+        <li><a href="#">Heritage Fashion Archive</a></li>
+        <li><a href="#">Fine Jewellery Track</a></li>
+        <li><a href="#">Perfume Auth Scheme</a></li>
+        <li><a href="#">Artisan Textile Register</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>About</h4>
+      <ul>
+        <li><a href="#">Methodology</a></li>
+        <li><a href="#">Governance Board</a></li>
+        <li><a href="#">Partner Houses</a></li>
+        <li><a href="#">Contact Auditors</a></li>
+        <li><a href="#">Privacy Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2024 Provenance Registry Foundation. All rights reserved. Registered Charity No. 1194472.</span>
+    <span>Last updated: 18 December 2024 — Data quality audit completed by Mercer &amp; Shaw LLP</span>
+  </div>
+</footer>
+
+<script>
+// Tab switching
+function switchTab(tabEl) {
+  const tablist = tabEl.parentElement;
+  tablist.querySelectorAll('.tab').forEach(t => {
+    t.setAttribute('aria-selected', 'false');
+    t.setAttribute('tabindex', '-1');
+  });
+  tabEl.setAttribute('aria-selected', 'true');
+  tabEl.setAttribute('tabindex', '0');
+
+  const panelId = tabEl.getAttribute('aria-controls');
+  tablist.closest('.tab-widget').querySelectorAll('.tabpanel').forEach(p => {
+    p.setAttribute('aria-hidden', 'true');
+  });
+  document.getElementById(panelId).setAttribute('aria-hidden', 'false');
+}
+
+// Accordion expanders
+function toggleExpander(trigger) {
+  const expander = trigger.closest('.expander');
+  const isOpen = expander.classList.contains('open');
+  expander.classList.toggle('open');
+  trigger.setAttribute('aria-expanded', !isOpen);
+}
+
+// Dialog management
+const itemData = {
+  item1: {
+    title: 'Cashmere Wrap Coat — Winter Line 1987',
+    id: 'DEL-8821-IV',
+    date: 'Registered 12 March 2019',
+    status: '<span class="status-pill status-verified">Fully Verified</span>',
+    body: `<p>This exceptional cashmere wrap coat was designed by Marc Delacroix during the final autumn/winter collection before his passing in 1990. The garment entered the Registry following its acquisition at Sotheby's London in November 2018 (Lot 147), where it was described as a rare example of Delacroix's later work.</p>
+    <p>Material analysis by Dr. Mei-Lin Chau (Textile Laboratory, Reference TL-2019-0214-DEL) confirmed 100% Capras hircus cashmere sourced from the Biella district of Piedmont, Italy. Near-infrared spectroscopy identified the exact dye batch (DK-8803) used by Maison Delacroix that season.</p>
+    <p>The complete chain of custody spans from original manufacture in December 1987 through inheritance transfer in 2003, auction sale in 2018, and final registration deposit in early 2019. All eight claimed provenance assertions have been independently verified.</p>`
+  },
+  item2: {
+    title: 'Midnight Sapphire Pendant — Vermeil & Co.',
+    id: 'VRM-4401-XII',
+    date: 'Registered 04 September 2021',
+    status: '<span class="status-pill status-pending">Under Review</span>',
+    body: `<p>This pendant features a 4.8-carat natural blue sapphire set in an 18-karat yellow gold mount executed by Vermeil & Co.'s Geneva atelier. Commissioned by private client S. Nakamura on 14 February 2021 (order #COM-2021-0087).</p>
+    <p>Gemological analysis by GIA Branch Zurich (report #GIA-ZRH-2021-440112) confirmed the sapphire as natural and untreated, with inclusion patterns diagnostic of the Ratnapura mining district in Sri Lanka. X-ray fluorescence spectrometry verified the gold alloy at 74.8% purity.</p>
+    <p>The pendant changed hands at Christie's Geneva on 22 May 2023 (Lot 212, hammer price CHF 34,500), purchased by the Petrov Foundation, and subsequently deposited into the Registry in September 2023. One pending audit: insurance valuation report by Lyon &amp; Mason awaiting cross-reference verification.</p>`
+  },
+  item3: {
+    title: 'N°5 Eau Parfumée — Limited Edition Decanter',
+    id: 'CHN-0057-VIII',
+    date: 'Registered 28 January 2022',
+    status: '<span class="status-pill status-verified">Fully Verified</span>',
+    body: `<p>Limited edition crystal decanter produced for the 90th anniversary of Chanel No. 5. Each decanter bears individual numbering from a series of 500 worldwide. This is piece number 0057.</p>
+    <p>Authentication included comparison of crystal cut geometry against official Baccarat workshop records, verification of the numbered plaque against the master inventory maintained by Maison Chanel's archives department, and examination of the liquid contents via spectrophotometry to confirm formulation consistency with the 2019 batch.</p>
+    <p>All seven documented provenance claims verified: design approval, crystal sourcing, assembly date, filling procedure, quality control sign-off, distribution record, and acquisition chain.</p>`
+  },
+  item4: {
+    title: "Locké Handbag — Hermès, Black Taurillon",
+    id: 'HER-6719-I',
+    date: 'Registered 17 June 2023',
+    status: '<span class="status-pill status-disputed">Disputed</span>',
+    body: `<p>Black Locké handbag in Taurillon Clemence leather with paladium-plated hardware. Stamped 'H' for the Hermès Croissanet atelier. Date code circlet reads 'Z' (indicating 45th week of 2019 production).</p>
+    <p><strong>DISPUTED ITEM</strong> — Multiple anomalies have triggered a hold on full authentication. The Entrupy AI analysis returned a confidence score of only 73%, below the 85% threshold required for automated clearance.</p>
+    <p>Specific concerns include: (1) leather grain depth shallower than expected for genuine Clemorse produced at Croissanet in 2019; (2) date code circlet tooling wear pattern inconsistent with Hermès' stamped date codes introduced that year; (3) clochette leather shows aging characteristics suggesting pre-2018 manufacture despite the 2019 date code.</p>
+    <p>Awaiting formal response from Hermès authentication department regarding the possibility that the item may represent one of the transitional pieces from Hermès' date code system changeover period.</p>`
+  },
+  item5: {
+    title: "Silk Twill Scarf — 'Les Oiseaux'",
+    id: 'HER-SC-4410',
+    date: 'Donated 03 April 2018',
+    status: '<span class="status-pill status-verified">Fully Verified</span>',
+    body: `<p>Silk twill scarf featuring the 'Les Oiseaux' (The Birds) roller-printed pattern, part of Hermès' autumn collection of 1952. Designed by Jean Cassien-Baix. Donated to the Registry's partner institution, Musée de la Mode, Paris, in 2004 and formally registered in 2018.</p>
+    <p>Provenance documented through museum accession records, original Hermès sales catalogue entry (1952, item no. 77), and subsequent loan history spanning three decades across five institutions.</p>`
+  },
+  item6: {
+    title: 'Daytona Chronograph — Patek Philippe',
+    id: 'PTP-3380-VI',
+    date: 'Registered 22 November 2023',
+    status: '<span class="status-pill status-pending">Under Review</span>',
+    body: `<p>Patek Philippe reference 116500LN "Daytona" chronograph in stainless steel with white dial and ceramic bezel. Serial number 4'812K indicates production in approximately 2022.</p>
+    <p>Movement examination confirmed authentic calibre CH 29-535 PS automatic movement. Case back engraving, serial number placement, and dial printing all checked against verified reference examples from the Registry's comparative database.</p>
+    <p>One pending claim: original purchase receipt from authorized dealer has not yet been located. Ownership established through prior custodian affidavit and third-party appraisal dated October 2023.</p>`
+  },
+  item7: {
+    title: 'Floral Evening Gown — Christian Dior',
+    id: 'DRD-9921-XX',
+    date: 'Acquired via auction 2020',
+    status: '<span class="status-pill status-verified">Fully Verified</span>',
+    body: `<p>Silk organza evening gown from Christian Dior's Spring/Summer 1995 collection. Features hand-applied floral appliqués using the traditional Métiers d'Art embroidery technique. Previous holder: Musée de la Mode, Paris (donation record 2001).</p>
+    <p>Provenance traced through museum records, original salon display photographs (catalogue raisonné reference DRD-CR-1995-0212), and two published references in authoritative fashion history volumes.</p>`
+  },
+  item8: {
+    title: 'So Kate Patent Leather Pumps',
+    id: 'CLB-2204-III',
+    date: 'Registered 14 July 2022',
+    status: '<span class="status-pill status-verified">Fully Verified</span>',
+    body: `<p>Christian Louboutin "So Kate" patent leather pumps, 100mm heel, noir colourway. European size 38. Produced at the manufacturer's Montelupo Fiorentino workshop in Italy.</p>
+    <p>Authentication confirmed through internal serial number lookup, distinctive Louboutin red lacquer formulation analysis, sole stamp verification against current (2022) manufacturing specifications, and visual comparison with Reference Library specimen #REF-LB-4041.</p>
+    <p>All six provenance claims verified: production records, retail purchase receipt, ownership transfer history, condition assessment, material analysis, and photographic documentation.</p>`
+  }
+};
+
+function openDialog(itemId) {
+  const data = itemData[itemId];
+  if (!data) return;
+  document.getElementById('dialog-title').textContent = data.title;
+  document.getElementById('dialog-id').textContent = 'Registration #' + data.id;
+  document.getElementById('dialog-date').textContent = data.date;
+  document.getElementById('dialog-status').innerHTML = data.status;
+  document.getElementById('dialog-body').innerHTML = data.body;
+  document.getElementById('item-dialog').classList.add('open');
+  document.querySelector('.dialog-close').focus();
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDialog() {
+  document.getElementById('item-dialog').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close dialog on overlay click
+document.getElementById('item-dialog').addEventListener('click', function(e) {
+  if (e.target === this) closeDialog();
+});
+
+// Keyboard escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDialog();
+});
+
+// Filter chips toggle
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', function() {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// View toggle
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.view-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-checked', 'false');
+    });
+    this.classList.add('active');
+    this.setAttribute('aria-checked', 'true');
+  });
+});
+
+// Compare selector toggle
+function toggleCompare(el) {
+  el.classList.toggle('active');
+  const isActive = el.classList.contains('active');
+  el.setAttribute('aria-checked', isActive);
+}
+</script>
+
+</body>
+</html>

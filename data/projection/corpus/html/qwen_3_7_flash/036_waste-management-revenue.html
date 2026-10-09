@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CircularLedger — Turn Waste Streams into Revenue</title>
+<style>
+:root {
+  --clr-primary: #0d9488;
+  --clr-primary-light: #ccfbf1;
+  --clr-primary-dark: #0f766e;
+  --clr-secondary: #1e293b;
+  --clr-accent: #f59e0b;
+  --clr-accent-light: #fef3c7;
+  --clr-bg: #f1f5f9;
+  --clr-surface: #ffffff;
+  --clr-surface-hover: #f8fafc;
+  --clr-text: #0f172a;
+  --clr-text-muted: #64748b;
+  --clr-text-inverse: #ffffff;
+  --clr-border: #e2e8f0;
+  --clr-border-strong: #cbd5e1;
+  --clr-success: #16a34a;
+  --clr-success-light: #dcfce7;
+  --clr-warning: #ea580c;
+  --clr-danger: #dc2626;
+  --clr-danger-light: #fee2e2;
+  --clr-canvas: #e8ecf1;
+  --clr-overlay: rgba(15, 23, 42, 0.6);
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: 1.875rem;
+  --fs-3xl: 2.25rem;
+  --fs-hero: 3rem;
+
+  --space-3xs: 0.125rem;
+  --space-xxs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.25rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+  --space-3xl: 3rem;
+  --space-4xl: 4rem;
+  --space-5xl: 6rem;
+
+  --radius-sm: calc(var(--space-3xs));
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-round: 50%;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.06);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: var(--fs-base); scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  color: var(--clr-text);
+  background: var(--clr-bg);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Canvas Background ── */
+.canvas-bg {
+  position: fixed; inset: 0;
+  background: var(--clr-canvas);
+  z-index: 0;
+}
+.canvas-bg::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--clr-border) 1px, transparent 0);
+  background-size: 32px 32px;
+  opacity: 0.5;
+}
+
+/* ── Navigation ── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-sm) var(--space-2xl);
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--clr-border);
+}
+.nav-logo {
+  display: flex; align-items: center; gap: var(--space-xs);
+  font-weight: 700; font-size: var(--fs-lg);
+  color: var(--clr-primary-dark);
+  text-decoration: none;
+}
+.nav-logo svg { flex-shrink: 0; }
+.nav-links { display: flex; align-items: center; gap: var(--space-xl); list-style: none; }
+.nav-links a {
+  text-decoration: none; color: var(--clr-text-muted);
+  font-size: var(--fs-sm); font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--clr-text); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-lg);
+  font-size: var(--fs-sm); font-weight: 600;
+  border: none; border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.btn-primary {
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+}
+.btn-primary:hover { background: var(--clr-primary-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-outline {
+  background: transparent;
+  color: var(--clr-primary);
+  border: 1.5px solid var(--clr-primary);
+}
+.btn-outline:hover { background: var(--clr-primary-light); }
+.btn-ghost {
+  background: transparent;
+  color: var(--clr-text-muted);
+}
+.btn-ghost:hover { background: var(--clr-bg); color: var(--clr-text); }
+.btn-danger {
+  background: var(--clr-danger);
+  color: var(--clr-text-inverse);
+}
+.btn-danger:hover { filter: brightness(0.9); }
+.btn-sm { padding: var(--space-xxs) var(--space-sm); font-size: var(--fs-xs); }
+.btn-lg { padding: var(--space-sm) var(--space-2xl); font-size: var(--fs-base); border-radius: var(--radius-lg); }
+
+/* ── Main Layout ── */
+.main { position: relative; z-index: 1; }
+
+/* ── Hero Section ── */
+.hero {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-5xl) var(--space-2xl) var(--space-4xl);
+  text-align: center;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: var(--space-xs);
+  padding: var(--space-xxs) var(--space-md);
+  background: var(--clr-primary-light);
+  color: var(--clr-primary-dark);
+  font-size: var(--fs-xs); font-weight: 600;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-xl);
+}
+.hero-badge .dot { width: 6px; height: 6px; border-radius: var(--radius-round); background: var(--clr-primary); }
+.hero h1 {
+  font-size: var(--fs-hero);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--clr-secondary);
+  margin-bottom: var(--space-xl);
+  max-width: 52ch;
+  margin-left: auto; margin-right: auto;
+}
+.hero h1 span { color: var(--clr-primary); }
+.hero p {
+  font-size: var(--fs-lg);
+  color: var(--clr-text-muted);
+  max-width: 42ch;
+  margin: 0 auto var(--space-2xl);
+  line-height: 1.5;
+}
+.hero-actions { display: flex; align-items: center; justify-content: center; gap: var(--space-md); }
+.hero-meta {
+  margin-top: var(--space-3xl);
+  display: flex; align-items: center; justify-content: center; gap: var(--space-3xl);
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+}
+.hero-meta strong { color: var(--clr-text); font-size: var(--fs-xl); display: block; text-align: center; }
+
+/* ── Floating Panel Base ── */
+.float-panel {
+  position: absolute;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* ── Workspace Preview ── */
+.workspace-section {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 var(--space-2xl) var(--space-4xl);
+}
+.workspace-container {
+  position: relative;
+  margin-bottom: var(--space-4xl);
+}
+.workspace-frame {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+.workspace-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--clr-surface-hover);
+  border-bottom: 1px solid var(--clr-border);
+}
+.workspace-toolbar-dots { display: flex; gap: var(--space-xs); }
+.workspace-toolbar-dots span {
+  width: 10px; height: 10px; border-radius: var(--radius-round);
+  background: var(--clr-border-strong);
+}
+.workspace-toolbar-dots span:first-child { background: var(--clr-danger); }
+.workspace-toolbar-dots span:nth-child(2) { background: var(--clr-accent); }
+.workspace-toolbar-dots span:last-child { background: var(--clr-success); }
+.workspace-toolbar-title {
+  font-size: var(--fs-xs); font-weight: 500; color: var(--clr-text-muted);
+}
+
+/* ── Tab System ── */
+.tabs-widget { padding: var(--space-md); }
+.tablist {
+  display: flex; gap: 0;
+  border-bottom: 2px solid var(--clr-border);
+  margin-bottom: var(--space-md);
+}
+.tab-btn {
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--fs-sm); font-weight: 500;
+  color: var(--clr-text-muted);
+  background: none; border: none;
+  cursor: pointer;
+  position: relative;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+.tab-btn[aria-selected="true"] {
+  color: var(--clr-primary);
+}
+.tab-btn[aria-selected="true"]::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -2px;
+  height: 2px; background: var(--clr-primary);
+}
+.tab-btn:hover { color: var(--clr-text); }
+.tab-panel { display: none; }
+.tab-panel[aria-hidden="false"] { display: block; }
+
+/* ── Table Styles ── */
+.data-table-wrap { overflow-x: auto; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.data-table thead th {
+  text-align: left;
+  padding: var(--space-xs) var(--space-md);
+  font-weight: 600;
+  color: var(--clr-text-muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--clr-border);
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--clr-border);
+  vertical-align: middle;
+}
+.data-table tbody tr { transition: background 0.15s; }
+.data-table tbody tr:hover { background: var(--clr-surface-hover); }
+.data-table tbody tr.selected { background: var(--clr-primary-light); }
+.checkbox-cell { width: 2rem; padding-left: var(--space-md) !important; }
+.cb-custom {
+  width: 16px; height: 16px;
+  border: 2px solid var(--clr-border-strong);
+  border-radius: 3px;
+  appearance: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.cb-custom:checked {
+  background: var(--clr-primary);
+  border-color: var(--clr-primary);
+}
+.cb-custom:checked::after {
+  content: "";
+  position: absolute;
+  top: 1px; left: 4px;
+  width: 4px; height: 7px;
+  border: solid var(--clr-text-inverse);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.route-name { font-weight: 600; color: var(--clr-text); }
+.status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px var(--space-sm);
+  font-size: var(--fs-xs); font-weight: 600;
+  border-radius: var(--radius-lg);
+  white-space: nowrap;
+}
+.status-active { background: var(--clr-success-light); color: var(--clr-success); }
+.status-pending { background: var(--clr-accent-light); color: var(--clr-warning); }
+.status-review { background: var(--clr-primary-light); color: var(--clr-primary-dark); }
+.amount { font-family: var(--font-mono); font-weight: 600; text-align: right; }
+.unit-label { font-size: var(--fs-xs); color: var(--clr-text-muted); }
+
+/* ── Batch Action Bar ── */
+.batch-bar {
+  position: sticky; bottom: var(--space-md);
+  display: none; align-items: center;
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--clr-secondary);
+  color: var(--clr-text-inverse);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  z-index: 50;
+  gap: var(--space-xl);
+  animation: slideUp 0.3s ease;
+}
+.batch-bar.visible { display: flex; }
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.batch-count {
+  font-size: var(--fs-sm); font-weight: 500;
+  white-space: nowrap;
+}
+.batch-count strong { color: var(--clr-accent); }
+.batch-actions { display: flex; gap: var(--space-xs); margin-left: auto; }
+.batch-actions .btn { background: rgba(255,255,255,0.15); color: var(--clr-text-inverse); border: 1px solid rgba(255,255,255,0.2); }
+.batch-actions .btn:hover { background: rgba(255,255,255,0.25); }
+
+/* ── Feature Cards ── */
+.features-section {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-4xl) var(--space-2xl) var(--space-4xl);
+}
+.section-header {
+  text-align: center;
+  margin-bottom: var(--space-3xl);
+}
+.section-header h2 {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--clr-secondary);
+  margin-bottom: var(--space-sm);
+}
+.section-header p {
+  font-size: var(--fs-md);
+  color: var(--clr-text-muted);
+  max-width: 36ch;
+  margin: 0 auto;
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2xl);
+}
+.feature-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.feature-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.feature-icon {
+  width: 2.5rem; height: 2.5rem;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--clr-primary-light);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+}
+.feature-icon svg { width: 1.25rem; height: 1.25rem; stroke: var(--clr-primary); fill: none; }
+.feature-card h3 {
+  font-size: var(--fs-md); font-weight: 600;
+  margin-bottom: var(--space-xs);
+}
+.feature-card p {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+  line-height: 1.6;
+}
+
+/* ── Metrics Strip ── */
+.metrics-strip {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 var(--space-2xl) var(--space-4xl);
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-xl);
+}
+.metric-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+}
+.metric-value {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  color: var(--clr-primary);
+  margin-bottom: var(--space-xxs);
+}
+.metric-label {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+}
+.metric-change {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: var(--fs-xs); font-weight: 600;
+  margin-top: var(--space-xs);
+  color: var(--clr-success);
+}
+
+/* ── Onboarding Steps ── */
+.onboarding-section {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-4xl) var(--space-2xl) var(--space-4xl);
+}
+.steps-list {
+  display: flex; flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 42ch;
+  margin: 0 auto;
+}
+.step-item {
+  display: flex; align-items: flex-start; gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  transition: box-shadow 0.2s;
+}
+.step-item:hover { box-shadow: var(--shadow-md); }
+.step-num {
+  flex-shrink: 0;
+  width: 2rem; height: 2rem;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+  font-size: var(--fs-sm); font-weight: 700;
+  border-radius: var(--radius-round);
+}
+.step-item h3 { font-size: var(--fs-md); font-weight: 600; margin-bottom: 2px; }
+.step-item p { font-size: var(--fs-sm); color: var(--clr-text-muted); }
+
+/* ── Pricing / CTA ── */
+.cta-section {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-4xl) var(--space-2xl) var(--space-5xl);
+}
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2xl);
+  max-width: 56ch;
+  margin: 0 auto;
+}
+.price-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  text-align: center;
+  position: relative;
+}
+.price-card.featured {
+  border: 2px solid var(--clr-primary);
+  box-shadow: var(--shadow-lg);
+}
+.price-card.featured::before {
+  content: "Most popular";
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+  font-size: var(--fs-xs); font-weight: 600;
+  padding: 2px var(--space-md);
+  border-radius: var(--radius-lg);
+}
+.price-name { font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--space-xs); }
+.price-amount { font-size: var(--fs-3xl); font-weight: 800; color: var(--clr-secondary); }
+.price-amount span { font-size: var(--fs-sm); font-weight: 500; color: var(--clr-text-muted); }
+.price-desc { font-size: var(--fs-sm); color: var(--clr-text-muted); margin: var(--space-xs) 0 var(--space-lg); }
+.price-features { list-style: none; text-align: left; margin-bottom: var(--space-xl); }
+.price-features li {
+  font-size: var(--fs-sm);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--clr-border);
+  display: flex; align-items: center; gap: var(--space-xs);
+  color: var(--clr-text-muted);
+}
+.price-features li svg { width: 14px; height: 14px; stroke: var(--clr-success); fill: none; flex-shrink: 0; }
+
+/* ── Dialog Overlay ── */
+.dialog-overlay {
+  position: fixed; inset: 0;
+  background: var(--clr-overlay);
+  z-index: 200;
+  display: none; align-items: center; justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.dialog-overlay.active { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.dialog {
+  background: var(--clr-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 28rem; width: 90%;
+  padding: var(--space-2xl);
+  animation: dialogIn 0.25s ease;
+}
+@keyframes dialogIn {
+  from { transform: scale(0.95) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.dialog h2 { font-size: var(--fs-xl); font-weight: 700; margin-bottom: var(--space-sm); }
+.dialog p { font-size: var(--fs-sm); color: var(--clr-text-muted); margin-bottom: var(--space-xl); line-height: 1.6; }
+.dialog-actions { display: flex; gap: var(--space-sm); justify-content: flex-end; }
+
+/* ── Footer ── */
+.footer {
+  border-top: 1px solid var(--clr-border);
+  background: var(--clr-surface);
+  padding: var(--space-2xl);
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--clr-text-muted);
+}
+
+/* ── Tooltip / Hint Panel ── */
+.hint-float {
+  position: absolute;
+  background: var(--clr-secondary);
+  color: var(--clr-text-inverse);
+  font-size: var(--fs-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+  max-width: 18ch;
+  line-height: 1.4;
+}
+.hint-float::after {
+  content: "";
+  position: absolute; bottom: -6px; left: 20px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--clr-secondary);
+}
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.mt-xl { margin-top: var(--space-xl); }
+.mb-sm { margin-bottom: var(--space-sm); }
+
+/* Responsive */
+@media (max-width: 960px) {
+  .feature-grid, .pricing-grid { grid-template-columns: 1fr; max-width: 24rem; margin: 0 auto; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero h1 { font-size: var(--fs-3xl); }
+  .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="canvas-bg"></div>
+
+<!-- ═══════ NAVIGATION ═══════ -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <a href="#" class="nav-logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5"/>
+      <path d="M2 12l10 5 10-5"/>
+    </svg>
+    CircularLedger
+  </a>
+  <ul class="nav-links">
+    <li><a href="#workspace">Workspace</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#" class="btn btn-outline btn-sm" id="loginBtn">Log in</a></li>
+    <li><a href="#" class="btn btn-primary btn-sm" id="signupNav">Start free trial</a></li>
+  </ul>
+</nav>
+
+<main class="main">
+
+<!-- ═══════ HERO ═══════ -->
+<section class="hero" aria-labelledby="hero-heading">
+  <div class="hero-badge"><span class="dot"></span> First-release · Now in beta</div>
+  <h1 id="hero-heading">Every ton of waste you <span>forget to track</span> is money leaking away.</h1>
+  <p>CircularLedger gives coordinators like you a clear view of every revenue stream hidden in your waste operations — recyclables, tipping fees, disposal credits, resale contracts.</p>
+  <div class="hero-actions">
+    <a href="#" class="btn btn-primary btn-lg" id="ctaPrimary">Set up your workspace →</a>
+    <a href="#workspace" class="btn btn-ghost btn-lg">See a demo</a>
+  </div>
+  <div class="hero-meta">
+    <div><strong>€2.4M</strong> tracked for clients in year one</div>
+    <div><strong>14-day</strong> average ROI recovery</div>
+    <div><strong>340+</strong> active collections teams</div>
+  </div>
+</section>
+
+<!-- ═══════ WORKSPACE PREVIEW ═══════ -->
+<section class="workspace-section" id="workspace" aria-label="Workspace preview">
+  <div class="workspace-container">
+    <!-- Floating hint panel -->
+    <div class="hint-float" style="top: -40px; right: 40px;">
+      💡 Try selecting multiple rows below — the action bar slides up.
+    </div>
+
+    <div class="workspace-frame">
+      <div class="workspace-toolbar">
+        <div class="workspace-toolbar-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="workspace-toolbar-title">Revenue Dashboard · Q1 2025</div>
+        <button class="btn btn-ghost btn-sm">Customise view ▾</button>
+      </div>
+
+      <div class="tabs-widget">
+        <!-- Tablist -->
+        <div role="tablist" aria-label="Revenue views">
+          <button class="tab-btn" role="tab" aria-selected="true" aria-controls="panel-routes" id="tab-routes">Collection Routes</button>
+          <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-materials" id="tab-materials">Material Sales</button>
+          <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-fees" id="tab-fees">Tipping Fees</button>
+        </div>
+
+        <!-- Panel 1: Routes -->
+        <div class="tab-panel" role="tabpanel" id="panel-routes" aria-labelledby="tab-routes" aria-hidden="false">
+          <div class="mb-sm" style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:var(--fs-sm);color:var(--clr-text-muted);">Showing 8 of 8 routes · last updated 12 min ago</span>
+            <label style="display:flex;align-items:center;gap:var(--space-xs);font-size:var(--fs-xs);cursor:pointer;">
+              <input type="checkbox" class="cb-custom" id="selectAll" title="Select all rows">
+              Select all
+            </label>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="checkbox-cell"><input type="checkbox" class="cb-custom" id="selectAllHeader" title="Select all"></th>
+                  <th>Route</th>
+                  <th>Area</th>
+                  <th>Volume</th>
+                  <th>Material Mix</th>
+                  <th style="text-align:right">Est. Monthly Revenue</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="selected">
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom selected-row" checked></td>
+                  <td><span class="route-name">RT-014 Northgate Express</span></td>
+                  <td>Northgate Industrial Park</td>
+                  <td>42 t/wk</td>
+                  <td>Ferro · HDPE · Cardboard</td>
+                  <td style="text-align:right"><span class="amount">€4,820</span></td>
+                  <td><span class="status-badge status-active"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>Active</span></td>
+                </tr>
+                <tr class="selected">
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom selected-row" checked></td>
+                  <td><span class="route-name">RT-023 Riverside MRF Feed</span></td>
+                  <td>Riverside Waste Facility</td>
+                  <td>68 t/wk</td>
+                  <td>Mixed Plastics · Glass</td>
+                  <td style="text-align:right"><span class="amount">€7,340</span></td>
+                  <td><span class="status-badge status-active"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>Active</span></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom"></td>
+                  <td><span class="route-name">RT-007 South District C&ID</span></td>
+                  <td>South District Commercial</td>
+                  <td>31 t/wk</td>
+                  <td>Organics · Paper</td>
+                  <td style="text-align:right"><span class="amount">€3,150</span></td>
+                  <td><span class="status-badge status-active"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>Active</span></td>
+                </tr>
+                <tr class="selected">
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom selected-row" checked></td>
+                  <td><span class="route-name">RT-031 Harbour Reclaim Line</span></td>
+                  <td>East Harbour Terminal</td>
+                  <td>55 t/wk</td>
+                  <td>Non-ferrous · Copper wiring</td>
+                  <td style="text-align:right"><span class="amount">€11,200</span></td>
+                  <td><span class="status-badge status-review"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>In Review</span></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom"></td>
+                  <td><span class="route-name">RT-019 Westside Organics Split</span></td>
+                  <td>Westside Compost Centre</td>
+                  <td>22 t/wk</td>
+                  <td>Food waste · Green biomass</td>
+                  <td style="text-align:right"><span class="amount">€1,890</span></td>
+                  <td><span class="status-badge status-pending"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>Pending</span></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom"></td>
+                  <td><span class="route-name">RT-044 East End Construction Debris</span></td>
+                  <td>East End Development Zone</td>
+                  <td>38 t/wk</td>
+                  <td>Demolition · Concrete aggregate</td>
+                  <td style="text-align:right"><span class="amount">€2,670</span></td>
+                  <td><span class="status-badge status-active"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>Active</span></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom"></td>
+                  <td><span class="route-name">RT-056 Healthcare Bio-Recovery</span></td>
+                  <td>Central Hospital District</td>
+                  <td>14 t/wk</td>
+                  <td>Bio-waste · Packaging film</td>
+                  <td style="text-align:right"><span class="amount">€1,420</span></td>
+                  <td><span class="status-badge status-active"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>Active</span></td>
+                </tr>
+                <tr>
+                  <td class="checkbox-cell"><input type="checkbox" class="cb-custom"></td>
+                  <td><span class="route-name">RT-062 Retail Hub Sorting Run</span></td>
+                  <td>Central Retail Complex</td>
+                  <td>27 t/wk</td>
+                  <td>Cardboard · Polystyrene</td>
+                  <td style="text-align:right"><span class="amount">€2,980</span></td>
+                  <td><span class="status-badge status-active"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>Active</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 2: Materials -->
+        <div class="tab-panel" role="tabpanel" id="panel-materials" aria-labelledby="tab-materials" aria-hidden="true">
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Material Class</th>
+                  <th>Supplier / Off-taker</th>
+                  <th>Grade</th>
+                  <th style="text-align:right">Avg. Price/t</th>
+                  <th style="text-align:right">Monthly Volume</th>
+                  <th style="text-align:right">Monthly Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Aluminium – Can Stock</strong></td>
+                  <td>EuroMet Recycling GmbH</td>
+                  <td>#8 Mixed Cans</td>
+                  <td style="text-align:right">€1,840/t</td>
+                  <td style="text-align:right">18.2 t</td>
+                  <td style="text-align:right"><span class="amount">€33,488</span></td>
+                </tr>
+                <tr>
+                  <td><strong>HDPE – Bottles &amp; Tubing</strong></td>
+                  <td>PlastiCircle SA</td>
+                  <td>#2 Clear Bales</td>
+                  <td style="text-align:right">€620/t</td>
+                  <td style="text-align:right">34.5 t</td>
+                  <td style="text-align:right"><span class="amount">€21,390</span></td>
+                </tr>
+                <tr>
+                  <td><strong>OCC – Old Corrugated</strong></td>
+                  <td>PaperSource Holdings</td>
+                  <td>Baled #4</td>
+                  <td style="text-align:right">€210/t</td>
+                  <td style="text-align:right">82.0 t</td>
+                  <td style="text-align:right"><span class="amount">€17,220</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Copper Wire – Bare Bright</strong></td>
+                  <td>CopperReclaim Ltd</td>
+                  <td>#1 Bare Bright</td>
+                  <td style="text-align:right">€6,950/t</td>
+                  <td style="text-align:right">2.8 t</td>
+                  <td style="text-align:right"><span class="amount">€19,460</span></td>
+                </tr>
+                <tr>
+                  <td><strong>C&D — Crushed Concrete</strong></td>
+                  <td>AggreTech Solutions</td>
+                  <td>Aggregate Grade A</td>
+                  <td style="text-align:right">€45/t</td>
+                  <td style="text-align:right">120 t</td>
+                  <td style="text-align:right"><span class="amount">€5,400</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 3: Fees -->
+        <div class="tab-panel" role="tabpanel" id="panel-fees" aria-labelledby="tab-fees" aria-hidden="true">
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tipping Fee Agreement</th>
+                  <th>Facility</th>
+                  <th>Type</th>
+                  <th style="text-align:right">Fee Rate</th>
+                  <th style="text-align:right">Monthly Tonnage</th>
+                  <th style="text-align:right">Monthly Savings</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Nationwide Disposal Pact Q2</strong></td>
+                  <td>GreenField Landfill</td>
+                  <td>Avoidance credit</td>
+                  <td style="text-align:right">€62/t</td>
+                  <td style="text-align:right">94 t</td>
+                  <td style="text-align:right"><span class="amount">€5,828</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Municipal Gate Agreement</strong></td>
+                  <td>City Transfer Station 7B</td>
+                  <td>Reduced gate fee</td>
+                  <td style="text-align:right">€38/t</td>
+                  <td style="text-align:right">56 t</td>
+                  <td style="text-align:right"><span class="amount">€2,128</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Hazardous Exemption Programme</strong></td>
+                  <td>HazMat Processing Unit</td>
+                  <td>Subsidised handling</td>
+                  <td style="text-align:right">€120/t</td>
+                  <td style="text-align:right">4.2 t</td>
+                  <td style="text-align:right"><span class="amount">€504</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch action bar -->
+    <div class="batch-bar" id="batchBar" role="toolbar" aria-label="Batch actions">
+      <span class="batch-count"><strong id="selectedCount">3</strong> items selected</span>
+      <div class="batch-actions">
+        <button class="btn btn-sm" onclick="alert('Export triggered for 3 routes')">⬇ Export CSV</button>
+        <button class="btn btn-sm" onclick="openDialog()">✉ Send invoices</button>
+        <button class="btn btn-sm" style="background:rgba(220,38,38,0.3);border-color:rgba(220,38,38,0.5);" onclick="openDialog()">🗑 Remove routes</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ METRICS STRIP ═══════ -->
+<section class="metrics-strip" aria-label="Key metrics">
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-value">€38.6K</div>
+      <div class="metric-label">Identified unrecovered revenue</div>
+      <div class="metric-change">↑ €4,200 vs. last quarter</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">73%</div>
+      <div class="metric-label">Routes with active buyback contracts</div>
+      <div class="metric-change">↑ 12 pts since onboarding</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">11</div>
+      <div class="metric-label">Off-taker relationships linked</div>
+      <div class="metric-change" style="color:var(--clr-text-muted);">— stable</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">2.1 t</div>
+      <div class="metric-label">CO₂e avoided monthly via resale</div>
+      <div class="metric-change">↑ 0.4 t from Jan baseline</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ FEATURES ═══════ -->
+<section class="features-section" id="features" aria-labelledby="features-heading">
+  <div class="section-header">
+    <h2 id="features-heading">Built for the coordinators who keep operations running</h2>
+    <p>You don't have time for spreadsheets. CircularLedger does the legwork so you can focus on the people.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <h3>Live route revenue tracking</h3>
+      <p>Connect your fleet data and watch estimated recoveries update as drivers complete runs. See exactly which routes pay and which bleed money.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <h3>Market-price feeds</h3>
+      <p>We pull spot prices from ICIS, Fastmarkets and local brokers — no more calling four different recyclers just to set a floor price.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <h3>Team accountability logs</h3>
+      <p>Assign ownership per material type and per route. Drivers get credit for quality sorting, supervisors see throughput reports.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <h3>Invoice automation</h3>
+      <p>Generate buyer invoices from logged volumes, apply contract rates, send PDFs or EDI — one click from data to payable.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <h3>Compliance-ready exports</h3>
+      <p>One-click EPR and landfill diversion reports aligned with EU Waste Framework Directive. Auditors asked for details next month? You're covered.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <h3>Onboarding in hours, not weeks</h3>
+      <p>Import your existing routes from CSV or connect FleetFlow or Wasteco in two clicks. Our team handles the rest during business hours.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ ONBOARDING STEPS ═══════ -->
+<section class="onboarding-section" aria-labelledby="steps-heading">
+  <div class="section-header">
+    <h2 id="steps-heading">Go live in three straightforward steps</h2>
+    <p>No consultants required. Your team starts using it the same day.</p>
+  </div>
+  <div class="steps-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div>
+        <h3>Upload your route list</h3>
+        <p>Drop in a spreadsheet — even a messy one. We'll parse stop addresses, vehicle types, and current haul agreements automatically. Takes about seven minutes for a mid-sized fleet.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div>
+        <h3>Match off-takers to materials</h3>
+        <p>Our assistant suggests buyers for each material class based on your location and volume profile. Accept, reject, or swap — you stay in control of pricing relationships.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div>
+        <h3>Start logging &amp; invoice</h3>
+        <p>Drivers submit end-of-shift photos or quantities via the mobile app. You review, approve, and generate invoices within the platform. First payment can land in under ten business days.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ PRICING / SIGNUP ═══════ -->
+<section class="cta-section" id="pricing" aria-labelledby="pricing-heading">
+  <div class="section-header">
+    <h2 id="pricing-heading">Simple pricing, zero surprise fees</h2>
+    <p>Pay per seat. Scale when you're ready. Cancel anytime.</p>
+  </div>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-name">Starter</div>
+      <div class="price-amount">€49<span>/mo</span></div>
+      <div class="price-desc">For independent haulers and small sites</div>
+      <ul class="price-features">
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Up to 5 routes</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>3 material classes tracked</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>CSV import only</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Email support</li>
+      </ul>
+      <a href="#" class="btn btn-outline" style="width:100%" onclick="event.preventDefault();openDialog();">Get started</a>
+    </div>
+    <div class="price-card featured">
+      <div class="price-name">Professional</div>
+      <div class="price-amount">€149<span>/mo</span></div>
+      <div class="price-desc">For municipal departments and mid-size operators</div>
+      <ul class="price-features">
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited routes</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>All material classes + price feeds</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Automated invoicing &amp; EDI</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Mobile driver app</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Priority Slack support</li>
+      </ul>
+      <a href="#" class="btn btn-primary" style="width:100%" onclick="event.preventDefault();openDialog();">Start 14-day trial</a>
+    </div>
+    <div class="price-card">
+      <div class="price-name">Enterprise</div>
+      <div class="price-amount">Custom</div>
+      <div class="price-desc">Regional groups with multi-site operations</div>
+      <ul class="price-features">
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Everything in Professional</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated account manager</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Custom integrations (SAP, Oracle)</li>
+        <li><svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>SLA &amp; data residency guarantees</li>
+      </ul>
+      <a href="#" class="btn btn-outline" style="width:100%" onclick="event.preventDefault();openDialog();">Contact sales</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════ FOOTER ═══════ -->
+<footer class="footer">
+  <p>© 2025 CircularLedger GmbH · Berlin · Registered in HRB 234567 B · VAT DE345678901</p>
+</footer>
+
+<!-- ═══════ DIALOG OVERLAY ═══════ -->
+<div class="dialog-overlay" id="dialogOverlay" role="dialog" aria-modal="true" aria-labelledby="dialog-title" aria-describedby="dialog-desc">
+  <div class="dialog">
+    <h2 id="dialog-title">Create your workspace</h2>
+    <p id="dialog-desc">Enter your email to unlock a fully provisioned trial instance. We'll send your login credentials and schedule a 20-minute onboarding call within two business hours.</p>
+    <form onsubmit="event.preventDefault();closeDialog();alert('Thanks! Check your inbox for your trial link.');">
+      <div style="margin-bottom:var(--space-md);">
+        <label for="emailInput" style="display:block;font-size:var(--fs-sm);font-weight:500;margin-bottom:var(--space-xs);">Work email</label>
+        <input type="email" id="emailInput" required placeholder="you@company.com" style="width:100%;padding:var(--space-sm);border:1.5px solid var(--clr-border);border-radius:var(--radius-md);font-size:var(--fs-sm);font-family:inherit;" />
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeDialog()">Maybe later</button>
+        <button type="submit" class="btn btn-primary">Create workspace</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ── Tab interaction ──
+const tabs = document.querySelectorAll('.tab-btn');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => { t.setAttribute('aria-selected','false'); });
+    const panels = document.querySelectorAll('.tab-panel');
+    panels.forEach(p => { p.setAttribute('aria-hidden','true'); });
+    tab.setAttribute('aria-selected','true');
+    const target = document.getElementById(tab.getAttribute('aria-controls'));
+    target.setAttribute('aria-hidden','false');
+  });
+});
+
+// ── Checkbox bulk selection ──
+const selectAllBox = document.getElementById('selectAll');
+const selectAllHeader = document.getElementById('selectAllHeader');
+const rows = document.querySelectorAll('.data-table tbody tr');
+const selectedRows = document.querySelectorAll('.selected-row');
+const batchBar = document.getElementById('batchBar');
+const countEl = document.getElementById('selectedCount');
+
+function toggleRow(row, cb, checked) {
+  if (checked) { row.classList.add('selected'); } else { row.classList.remove('selected'); }
+}
+
+function updateBatch() {
+  const checked = document.querySelectorAll('.cb-custom:checked').length;
+  countEl.textContent = checked;
+  if (checked > 0) { batchBar.classList.add('visible'); } else { batchBar.classList.remove('visible'); }
+}
+
+document.querySelectorAll('.cb-custom').forEach(cb => {
+  cb.addEventListener('change', function() {
+    const row = this.closest('tr');
+    if (row) toggleRow(row, this, this.checked);
+    updateBatch();
+  });
+});
+
+selectAllBox.addEventListener('change', function() {
+  const val = this.checked;
+  rows.forEach((row, i) => {
+    const cb = row.querySelector(':scope > td.checkbox-cell .cb-custom');
+    if (cb) { cb.checked = val; toggleRow(row, cb, val); }
+  });
+  if (selectAllHeader) selectAllHeader.checked = val;
+  updateBatch();
+});
+
+selectAllHeader.addEventListener('change', function() {
+  const val = this.checked;
+  rows.forEach(row => {
+    const cb = row.querySelector(':scope > td.checkbox-cell .cb-custom');
+    if (cb) { cb.checked = val; toggleRow(row, cb, val); }
+  });
+  if (selectAllBox) selectAllBox.checked = val;
+  updateBatch();
+});
+
+// ── Dialog ──
+function openDialog() {
+  document.getElementById('dialogOverlay').classList.add('active');
+  setTimeout(() => document.getElementById('emailInput').focus(), 100);
+}
+function closeDialog() {
+  document.getElementById('dialogOverlay').classList.remove('active');
+}
+document.getElementById('dialogOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeDialog();
+});
+
+document.getElementById('signupNav').addEventListener('click', function(e) { e.preventDefault(); openDialog(); });
+document.getElementById('loginBtn').addEventListener('click', function(e) { e.preventDefault(); alert('Login flow would appear here.'); });
+document.getElementById('ctaPrimary').addEventListener('click', function(e) { e.preventDefault(); openDialog(); });
+</script>
+
+</body>
+</html>

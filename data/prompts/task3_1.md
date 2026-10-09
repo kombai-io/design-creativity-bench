@@ -1,0 +1,1 @@
+Web app screen to invite a developer to a production environment on automated cloud deployment platform 'CloudLayer'

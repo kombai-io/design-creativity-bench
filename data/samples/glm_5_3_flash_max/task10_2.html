@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldline HVAC · Dispatch Console</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#eef1f5;--panel:#ffffff;--line:#e4e8ee;--line2:#eef1f5;
+    --tx:#0f172a;--tx2:#5b6472;--tx3:#8a93a3;
+    --pri:#2563eb;--pri-soft:#eef4ff;
+    --red:#dc2626;--red-soft:#fdecec;
+    --amber:#d97706;--amber-soft:#fdf3e3;
+    --green:#059669;--green-soft:#e6f6ef;
+    --violet:#7c3aed;--violet-soft:#f3effe;
+    --radius:12px;
+    --shadow:0 1px 2px rgba(15,23,42,.05),0 1px 3px rgba(15,23,42,.08);
+    font-size:13px;
+  }
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);color:var(--tx);min-width:1180px;overflow-x:auto;
+  }
+  body{display:flex;flex-direction:column;height:100vh}
+  .ic{width:14px;height:14px;flex:none;vertical-align:-2px}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select{font:inherit;color:inherit}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    height:56px;flex:none;background:var(--panel);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:14px;padding:0 16px;z-index:20;
+  }
+  .brand{display:flex;align-items:center;gap:9px;min-width:220px}
+  .brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#2563eb,#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff}
+  .brand .mark .ic{width:17px;height:17px}
+  .brand .bt{font-weight:700;font-size:14.5px;letter-spacing:-.2px}
+  .brand .bt span{font-weight:500;color:var(--tx2)}
+  .brand .sub{font-size:10px;color:var(--tx3);letter-spacing:.4px;text-transform:uppercase;margin-top:1px}
+  .datenav{display:flex;align-items:center;gap:8px;margin:0 auto}
+  .datenav .navbtn{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--tx2);background:#fff}
+  .datenav .navbtn[disabled]{opacity:.4;cursor:default}
+  .datenav .dlabel{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+  .pill-tom{font-size:10px;font-weight:700;background:var(--pri-soft);color:var(--pri);padding:3px 8px;border-radius:20px;letter-spacing:.3px}
+  .topright{display:flex;align-items:center;gap:10px;min-width:220px;justify-content:flex-end}
+  .search{display:flex;align-items:center;gap:7px;background:var(--line2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;width:200px;color:var(--tx3)}
+  .search input{border:none;outline:none;background:transparent;width:100%;font-size:12.5px;color:var(--tx)}
+  .btn{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:7px 12px;font-weight:600;font-size:12px;border:1px solid transparent;transition:.15s}
+  .btn.primary{background:var(--pri);color:#fff}
+  .btn.primary:hover{background:#1d4fd8}
+  .btn.primary[disabled]{background:#c7d2e5;cursor:default}
+  .btn.ghost{border-color:var(--line);background:#fff;color:var(--tx2)}
+  .btn.ghost:hover{border-color:#c9d2de;color:var(--tx)}
+  .btn .badge{background:#fff;color:var(--pri);border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700}
+  .iconbtn{position:relative;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;color:var(--tx2)}
+  .iconbtn .dot{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px}
+  .avatar{width:30px;height:30px;border-radius:50%;background:#334155;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .who{line-height:1.2}
+  .who b{font-size:12px;display:block}
+  .who span{font-size:10.5px;color:var(--tx3)}
+
+  /* ---------- Alert strip ---------- */
+  .alertstrip{flex:none;display:flex;gap:10px;padding:10px 16px 4px;overflow-x:auto}
+  .acard{flex:none;width:400px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--tx3);border-radius:10px;box-shadow:var(--shadow);padding:9px 12px;display:flex;flex-direction:column;gap:5px}
+  .acard.crit{border-left-color:var(--red)}
+  .acard.warn{border-left-color:var(--amber)}
+  .acard.info{border-left-color:var(--pri)}
+  .acard.done{border-left-color:var(--green)}
+  .acard .atop{display:flex;align-items:center;gap:7px;font-weight:700;font-size:12px}
+  .acard .atop .ic{width:15px;height:15px}
+  .acard.crit .atop{color:var(--red)}
+  .acard.warn .atop{color:var(--amber)}
+  .acard.info .atop{color:var(--pri)}
+  .acard.done .atop{color:var(--green)}
+  .acard .abody{font-size:11.5px;color:var(--tx2);line-height:1.45}
+  .acard .arow{display:flex;gap:8px;margin-top:2px}
+  .btn.sm{padding:4px 10px;font-size:11px;border-radius:7px}
+  .btn.danger{background:var(--red);color:#fff}
+  .btn.danger:hover{background:#b91c1c}
+  .btn.warnb{background:var(--amber);color:#fff}
+  .btn.warnb:hover{background:#b45309}
+  .btn.blueb{background:var(--pri);color:#fff}
+  .acard.done{opacity:.75}
+
+  /* ---------- Workspace ---------- */
+  .workspace{flex:1;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr) 340px;gap:12px;padding:10px 16px 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .phead{padding:11px 13px 9px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .phead .pt{font-weight:700;font-size:12.5px}
+  .phead .ps{font-size:10.5px;color:var(--tx3)}
+  .panel .scroll{flex:1;overflow-y:auto;min-height:0}
+
+  /* ---------- Roster ---------- */
+  .tcard{margin:8px 10px 0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;cursor:pointer;transition:.15s;background:#fff}
+  .tcard:hover{border-color:#b9c6da}
+  .tcard.sel{border-color:var(--pri);background:var(--pri-soft)}
+  .tcard .trow{display:flex;align-items:center;gap:9px}
+  .tcard .tav{width:32px;height:32px;border-radius:50%;color:#fff;font-weight:700;font-size:11.5px;display:flex;align-items:center;justify-content:center;flex:none}
+  .tcard .tn{font-weight:700;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .tcard .tr{font-size:10.5px;color:var(--tx3);margin-top:1px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+  .dot.ok{background:var(--green)}.dot.warn{background:var(--amber)}.dot.off{background:#cbd5e1}
+  .tcard .tmeta{display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx2);margin-top:7px}
+  .ubar{height:4px;border-radius:2px;background:var(--line2);margin-top:5px;overflow:hidden}
+  .ubar i{display:block;height:100%;border-radius:2px}
+  .tcard .tcerts{margin-top:6px;font-size:10px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .unassignedCard{margin:8px 10px 0;border:1px dashed #f1b3b3;background:#fff7f7;border-radius:10px;padding:9px 10px;cursor:pointer}
+  .unassignedCard:hover{border-color:var(--red)}
+  .unassignedCard .un{display:flex;align-items:center;gap:7px;font-weight:700;font-size:12px;color:var(--red)}
+  .unassignedCard .us{font-size:11px;color:var(--tx2);margin-top:3px;line-height:1.4}
+
+  /* ---------- Board ---------- */
+  .boardwrap{min-width:0}
+  .boardhead{padding:9px 13px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:14px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{padding:6px 12px;font-size:11.5px;font-weight:600;color:var(--tx2);display:flex;align-items:center;gap:6px;background:#fff}
+  .seg button.on{background:var(--pri-soft);color:var(--pri)}
+  .legend{display:flex;align-items:center;gap:11px;font-size:10.5px;color:var(--tx2);flex-wrap:nowrap;overflow:hidden}
+  .lg{display:flex;align-items:center;gap:4px;white-space:nowrap}
+  .sw{width:9px;height:9px;border-radius:3px;flex:none}
+  .bmeta{margin-left:auto;font-size:11px;color:var(--tx3);white-space:nowrap}
+  .bmeta b{color:var(--tx2)}
+  .board-scroll{flex:1;overflow:auto;min-height:0;position:relative}
+  .board-inner{min-width:900px}
+
+  .ruler{display:flex;position:sticky;top:0;z-index:6;background:#fbfcfe;border-bottom:1px solid var(--line)}
+  .ruler .rh{width:210px;flex:none;position:sticky;left:0;z-index:7;background:#fbfcfe;border-right:1px solid var(--line);padding:7px 12px;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px}
+  .ruler .rt{flex:1;display:flex}
+  .ruler .rc{flex:1;border-left:1px solid var(--line2);padding:7px 0 0 6px;font-size:10px;font-weight:600;color:var(--tx3)}
+
+  .brow{display:flex;border-bottom:1px solid var(--line2);min-height:100px}
+  .brow .rhead{width:210px;flex:none;position:sticky;left:0;z-index:5;background:#fff;border-right:1px solid var(--line);padding:8px 10px;display:flex;gap:8px;cursor:pointer}
+  .brow .rhead:hover{background:#fafbfd}
+  .brow .rhead.sel{background:var(--pri-soft)}
+  .brow .rhead .rav{width:30px;height:30px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px}
+  .rname{font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px}
+  .rrole{font-size:10px;color:var(--tx3);margin-top:1px}
+  .rhours{font-size:10px;color:var(--tx2);margin-top:5px}
+  .rhours b{color:var(--tx)}
+  .rhead .mini{height:3px;border-radius:2px;background:var(--line2);margin-top:4px;overflow:hidden}
+  .rhead .mini i{display:block;height:100%}
+  .track{flex:1;position:relative;
+    background-image:linear-gradient(90deg,var(--line2) 1px,transparent 1px),linear-gradient(90deg,#f6f8fb 1px,transparent 1px);
+    background-size:calc(100%/11) 100%,calc(100%/22) 100%;}
+  .track.dropok{background-color:#f4f8ff;box-shadow:inset 0 0 0 2px #bfd4ff}
+  .offshift{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,rgba(15,23,42,.035) 0 6px,transparent 6px 12px);pointer-events:none}
+  .shiftbar{position:absolute;top:0;height:4px;border-radius:0 3px 3px 0;opacity:.85;pointer-events:none}
+  .dropline{position:absolute;top:0;bottom:0;width:2px;background:var(--pri);border-radius:2px;z-index:8;pointer-events:none}
+  .dropline:before{content:"";position:absolute;top:-4px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--pri)}
+
+  .job{position:absolute;border-radius:8px;border:1px solid;padding:4px 7px;overflow:hidden;cursor:grab;transition:box-shadow .15s,transform .15s;z-index:3}
+  .job:hover{box-shadow:0 3px 8px rgba(15,23,42,.15);z-index:4}
+  .job.dragging{opacity:.45}
+  .job.selected{outline:2px solid var(--pri);outline-offset:1px;z-index:5}
+  .job.warnb{border-color:var(--amber)!important;box-shadow:inset 0 0 0 1px var(--amber)}
+  .job.l1{font-size:10px}
+  .b-time{font-size:9.5px;font-weight:700;opacity:.85;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .b-site{font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .b-tags{display:flex;gap:4px;margin-top:3px;align-items:center;white-space:nowrap;overflow:hidden}
+  .fi{display:inline-flex;color:inherit;opacity:.8}
+  .fi .ic{width:11px;height:11px}
+  .pilling{font-size:8.5px;font-weight:800;padding:1px 4px;border-radius:4px;letter-spacing:.4px}
+  .p-emg{background:var(--red);color:#fff}
+  .p-high{background:#ffedd5;color:#c2410c}
+  .p-med{background:#dbeafe;color:#1d4ed8}
+  .p-low{background:#e5e7eb;color:#4b5563}
+
+  .t-emg{background:#fdecec;border-color:#f5c2c2;color:#991b1b}
+  .t-rep{background:#fff3e8;border-color:#f8d5b8;color:#9a3412}
+  .t-pm{background:#eaf2fe;border-color:#c5daf8;color:#1e40af}
+  .t-diag{background:#f3effe;border-color:#ddd0f7;color:#5b21b6}
+  .t-depot{background:#f1f3f6;border-color:#d7dde5;color:#4b5563}
+  .assist{background-image:repeating-linear-gradient(45deg,rgba(220,38,38,.10) 0 6px,rgba(220,38,38,.18) 6px 12px);border-style:dashed;border-color:#f0a8a8}
+  .ext{background:repeating-linear-gradient(45deg,rgba(234,88,12,.13) 0 6px,rgba(234,88,12,.27) 6px 12px);border:1px dashed #ea580c;color:#9a3412;cursor:pointer;font-size:10px;font-weight:700;display:flex;align-items:center;gap:5px;padding:4px 8px;z-index:2}
+  .ext .ic{width:12px;height:12px}
+
+  .tchip{position:absolute;top:47px;transform:translateY(-50%);height:17px;display:inline-flex;align-items:center;gap:4px;padding:0 7px;border-radius:9px;font-size:9.5px;font-weight:700;white-space:nowrap;z-index:2;font-variant-numeric:tabular-nums}
+  .tchip .ic{width:10px;height:10px}
+  .tchip.ok{background:var(--green-soft);color:#047857;border:1px solid #bfe8d4}
+  .tchip.bad{background:var(--red-soft);color:#b91c1c;border:1px solid #f2bdbd}
+
+  .ulane .rhead{background:#fff8f8;border-right-color:#f3d8d8}
+  .ulane .track{background-color:#fffafa}
+  .ucard{width:300px;min-height:72px;border:1px dashed #ef9a9a;background:#fff;border-radius:10px;padding:7px 9px;box-shadow:var(--shadow);cursor:grab}
+  .ucard .u1{display:flex;align-items:center;gap:6px}
+  .ucard .u1 .pulse{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
+  .ucard .uc{font-size:10px;font-weight:700;color:var(--red);letter-spacing:.3px}
+  .ucard .u2{font-weight:700;font-size:12px;margin-top:2px}
+  .ucard .u3{font-size:10.5px;color:var(--tx2);margin-top:2px;line-height:1.35}
+  .ucard .u4{display:flex;gap:6px;margin-top:5px;align-items:center}
+  .slachip{font-size:9.5px;font-weight:800;background:var(--red);color:#fff;border-radius:5px;padding:2px 6px;letter-spacing:.3px}
+  .linkbtn{font-size:10.5px;font-weight:700;color:var(--pri);display:inline-flex;align-items:center;gap:4px}
+  .linkbtn:hover{text-decoration:underline}
+  .draghint{font-size:9.5px;color:var(--tx3);margin-left:auto;display:flex;align-items:center;gap:4px}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}70%{box-shadow:0 0 0 7px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+
+  /* ---------- List view ---------- */
+  .listwrap{padding:6px 13px 14px}
+  .lsec{margin-top:12px}
+  .lsec h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .lrow{display:grid;grid-template-columns:100px minmax(0,1fr) 92px 58px 92px 110px;gap:10px;align-items:center;padding:7px 9px;border:1px solid var(--line);border-radius:9px;margin-bottom:5px;cursor:pointer;background:#fff}
+  .lrow:hover{border-color:#b9c6da}
+  .lrow.sel{border-color:var(--pri);background:var(--pri-soft)}
+  .lrow .lt{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tx2)}
+  .lrow .ls{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .ls span{color:var(--tx3);font-weight:500}
+  .typepill{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;display:inline-block}
+  .lflags{display:flex;gap:5px;color:var(--tx3)}
+  .lwin{font-size:10.5px;color:var(--tx2);font-variant-numeric:tabular-nums;text-align:right}
+
+  /* ---------- Details ---------- */
+  .dhead{padding:12px 14px;border-bottom:1px solid var(--line2);display:flex;align-items:flex-start;gap:9px}
+  .dkick{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--tx3)}
+  .dtitle{font-weight:800;font-size:14.5px;margin-top:2px;letter-spacing:-.2px}
+  .dsub{font-size:11px;color:var(--tx2);margin-top:3px;line-height:1.4}
+  .dbody{padding:12px 14px 18px}
+  .drow{display:flex;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line2);font-size:11.5px;align-items:flex-start}
+  .drow:last-child{border-bottom:none}
+  .drow .dl{width:92px;flex:none;color:var(--tx3);font-weight:600;display:flex;gap:5px;align-items:center;padding-top:1px}
+  .drow .dv{flex:1;color:var(--tx);line-height:1.45}
+  .drow .dv .muted{color:var(--tx3)}
+  .chiprow{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{background:var(--line2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:600;color:var(--tx2);display:inline-flex;align-items:center;gap:4px}
+  .chip .ic{width:11px;height:11px}
+  .chip.hot{background:var(--red-soft);border-color:#f3c1c1;color:#b91c1c}
+  .chip.blue{background:var(--pri-soft);border-color:#c8dbfa;color:var(--pri)}
+  .chip.green{background:var(--green-soft);border-color:#bfe8d4;color:#047857}
+  .chip.amber{background:var(--amber-soft);border-color:#f2d9ab;color:#b45309}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .kpi{border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .kpi .kv{font-size:19px;font-weight:800;letter-spacing:-.4px}
+  .kpi .kl{font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+  .kpi.alert .kv{color:var(--red)}
+  .card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
+  .card h5{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);display:flex;align-items:center;gap:6px;margin-bottom:7px}
+  .wx{display:flex;gap:10px;align-items:center}
+  .wx .ic{width:22px;height:22px;color:var(--amber)}
+  .wx .wt{font-weight:700;font-size:13px}
+  .wx .ws{font-size:11px;color:var(--tx2);line-height:1.4;margin-top:1px}
+  .attrow{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line2);cursor:pointer;font-size:11.5px;line-height:1.4}
+  .attrow:last-child{border-bottom:none}
+  .attrow .ic{width:13px;height:13px;margin-top:2px}
+  .attrow.r .ic{color:var(--red)}.attrow.a .ic{color:var(--amber)}.attrow.b .ic{color:var(--pri)}
+  .attrow:hover{color:var(--pri)}
+  .caprow{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px}
+  .caprow .cn{width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .caprow .cb{flex:1;height:5px;background:var(--line2);border-radius:3px;overflow:hidden}
+  .caprow .cb i{display:block;height:100%;border-radius:3px}
+  .caprow .cv{width:58px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .suggest{border:1px solid #f3c1c1;background:#fff7f7;border-radius:10px;padding:9px 11px;margin-top:11px}
+  .suggest h6{font-size:11px;font-weight:800;color:var(--red);display:flex;gap:6px;align-items:center;margin-bottom:4px}
+  .suggest p{font-size:11px;color:var(--tx2);line-height:1.45}
+  .nudge{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .nudge button{padding:6px 9px;font-size:11px;font-weight:700;color:var(--tx2);background:#fff;display:flex;align-items:center;gap:4px}
+  .nudge button:hover{background:var(--line2)}
+  select.mini{border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:11.5px;background:#fff;max-width:210px}
+
+  /* ---------- Toasts ---------- */
+  #toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:99}
+  .toast{background:#0f172a;color:#fff;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(15,23,42,.35);animation:tin .2s ease-out;max-width:380px;line-height:1.4}
+  .toast .ic{width:14px;height:14px;flex:none}
+  .toast.err{background:#7f1d1d}.toast.warn{background:#92400e}.toast.ok{background:#14532d}.toast.info{background:#1e3a8a}
+  @keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cfd6df;border-radius:6px;border:2px solid #fff}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <g id="i-pin"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></g>
+  <g id="i-clock"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g>
+  <g id="i-lock"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></g>
+  <g id="i-user"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></g>
+  <g id="i-users"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><circle cx="17" cy="9" r="3"/><path d="M22 21c0-2.5-1.5-4-3.5-4.6"/></g>
+  <g id="i-box"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></g>
+  <g id="i-wrench"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></g>
+  <g id="i-truck"><path d="M1 7h13v9H1z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></g>
+  <g id="i-alert"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></g>
+  <g id="i-zap"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></g>
+  <g id="i-shield"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/></g>
+  <g id="i-award"><circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/></g>
+  <g id="i-check"><path d="M20 6L9 17l-5-5"/></g>
+  <g id="i-x"><path d="M18 6L6 18M6 6l12 12"/></g>
+  <g id="i-info"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></g>
+  <g id="i-bell"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></g>
+  <g id="i-search"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></g>
+  <g id="i-chev-l"><path d="M15 18l-6-6 6-6"/></g>
+  <g id="i-chev-r"><path d="M9 18l6-6-6-6"/></g>
+  <g id="i-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g>
+  <g id="i-flame"><path d="M12 2c1.5 3.5 5.5 5 5.5 9.5a5.5 5.5 0 0 1-11 0C6.5 9 8.5 7.5 9 5c.8 1.6 1.8 2.5 3 3-.6-2-.4-4 0-6z"/></g>
+  <g id="i-arrow-r"><path d="M5 12h14M13 6l6 6-6 6"/></g>
+  <g id="i-send"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></g>
+  <g id="i-undo"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15.5-6.4L3 13"/></g>
+  <g id="i-cols"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></g>
+  <g id="i-listic"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></g>
+  <g id="i-building"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h1.5M13.5 7H15M9 11h1.5M13.5 11H15M9 15h1.5M13.5 15H15M12 21v-3"/></g>
+  <g id="i-wind"><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/></g>
+  <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+  <g id="i-minus"><path d="M5 12h14"/></g>
+  <g id="i-phone"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c1 .3 2 .6 2.9.7a2 2 0 0 1 1.7 2z"/></g>
+</defs></svg>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-wind"/></svg></div>
+    <div>
+      <div class="bt">Fieldline <span>HVAC</span></div>
+      <div class="sub">Dispatch Console</div>
+    </div>
+  </div>
+  <div class="datenav">
+    <button class="navbtn" disabled title="Only tomorrow is loaded"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev-l"/></svg></button>
+    <div class="dlabel">Wed, Mar 12 <span class="pill-tom">TOMORROW</span></div>
+    <button class="navbtn" disabled title="Only tomorrow is loaded"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev-r"/></svg></button>
+  </div>
+  <div class="topright">
+    <label class="search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-search"/></svg><input id="search" placeholder="Search site, job, tech…"></label>
+    <button class="btn ghost" id="btnUndo" style="display:none" title="Undo last change"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-undo"/></svg>Undo</button>
+    <button class="btn primary" id="btnPublish" disabled><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-send"/></svg>Publish schedule <span class="badge" id="pubBadge" style="display:none">0</span></button>
+    <button class="iconbtn" id="btnBell" title="Alerts"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bell"/></svg><span class="dot" id="bellDot">3</span></button>
+    <div class="avatar" style="background:#334155">JR</div>
+    <div class="who"><b>J. Ramos</b><span>Lead Dispatcher</span></div>
+  </div>
+</header>
+
+<div class="alertstrip" id="alerts"></div>
+
+<main class="workspace">
+  <aside class="panel">
+    <div class="phead"><div><div class="pt">Crew roster</div><div class="ps">Wed, Mar 12 · 6 on shift · 1 on call</div></div></div>
+    <div class="scroll" id="roster"></div>
+  </aside>
+
+  <section class="panel boardwrap">
+    <div class="boardhead">
+      <div class="seg">
+        <button data-view="timeline" class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cols"/></svg>Timeline</button>
+        <button data-view="list"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-listic"/></svg>List</button>
+      </div>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:#dc2626"></span>Emergency</span>
+        <span class="lg"><span class="sw" style="background:#ea580c"></span>Repair</span>
+        <span class="lg"><span class="sw" style="background:#2563eb"></span>Maintenance</span>
+        <span class="lg"><span class="sw" style="background:#7c3aed"></span>Diagnostic</span>
+        <span class="lg" title="Restricted access window"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-lock"/></svg></span>
+        <span class="lg" title="Onsite contact required"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-user"/></svg></span>
+        <span class="lg" title="2-tech crew required"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-users"/></svg></span>
+        <span class="lg" title="Parts required"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-box"/></svg></span>
+        <span class="lg" title="Special diagnostic equipment"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-wrench"/></svg></span>
+      </div>
+      <div class="bmeta" id="boardMeta"></div>
+    </div>
+    <div class="board-scroll" id="boardScroll"><div class="board-inner" id="board"></div></div>
+  </section>
+
+  <aside class="panel">
+    <div class="scroll" id="details"></div>
+  </aside>
+</main>
+
+<div id="toasts"></div>
+
+<script>
+/* ============================ helpers ============================ */
+const $=s=>document.querySelector(s);
+const DAY_START=420, DAY_END=1080, SPAN=660;
+const ic=(n,st='')=>`<svg class="ic" ${st?`style="${st}"`:''} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-${n}"/></svg>`;
+const pct=m=>Math.min(100,Math.max(0,(m-DAY_START)/SPAN*100));
+const snap=m=>Math.round(m/15)*15;
+const fm=m=>{let h=Math.floor(m/60),mm=m%60;const s=h>=12?'p':'a';h=h%12||12;return h+':'+String(mm).padStart(2,'0')+s;};
+const fmtT=m=>{let h=Math.floor(m/60),mm=m%60;const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(mm).padStart(2,'0')+' '+ap;};
+const fmtRange=(s,e)=>fmtT(s)+' – '+fmtT(e);
+const fmtDur=m=>{const h=Math.floor(m/60),r=m%60;return (h?h+'h ':'')+(r?r+'m':'').toString().trim()||h+'h';};
+const durTxt=m=>m>=60?((Math.floor(m/60))+'h'+(m%60?' '+(m%60)+'m':'')):m+'m';
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+const ZLBL={North:'N',Downtown:'DT',West:'W',South:'S',Airport:'AP'};
+const TRAVEL={
+  North:{North:10,Downtown:15,West:20,South:30,Airport:25},
+  Downtown:{North:15,Downtown:10,West:12,South:20,Airport:25},
+  West:{North:20,Downtown:12,West:10,South:25,Airport:30},
+  South:{North:30,Downtown:20,West:25,South:10,Airport:12},
+  Airport:{North:25,Downtown:25,West:30,South:12,Airport:10}
+};
+const travel=(a,b)=>(TRAVEL[a]&&TRAVEL[a][b])||20;
+const TYPE={emergency:{l:'Emergency'},repair:{l:'Repair'},pm:{l:'Maintenance'},diag:{l:'Diagnostic'},depot:{l:'Depot'}};
+const PRI={EMG:{l:'EMERGENCY',c:'p-emg'},HIGH:{l:'HIGH',c:'p-high'},MED:{l:'MED',c:'p-med'},LOW:{l:'LOW',c:'p-low'}};
+
+/* ============================ data ============================ */
+let TECHS=[
+ {id:'marcus',name:'Marcus Webb',role:'Service Lead II',ini:'MW',color:'#2563eb',shift:[420,960],terr:['North','Downtown'],certs:['EPA 608 Universal','NATE Senior','VRF Systems','Gas Heating'],systems:['RTU','VRF','Split DX','Boiler','CRAC','Refrigeration'],van:['Recovery machine','VRF diag kit','Manifold kit','Leak detector','Filter stock']},
+ {id:'dana',name:'Dana Okafor',role:'Service Tech II',ini:'DO',color:'#0d9488',shift:[480,1020],terr:['North'],certs:['EPA 608 Type II','NATE','Heat Pump Spec'],systems:['RTU','Split DX','Heat Pump'],van:['410A compressor kit','Manifold kit','Filter stock']},
+ {id:'luis',name:'Luis Ferreira',role:'Service Lead I',ini:'LF',color:'#d97706',shift:[390,930],terr:['South','Airport'],certs:['EPA 608 Universal','Chilled Water Systems','Cooling Tower Ops'],systems:['Chiller','Cooling Tower','RTU','CRAC','Refrigeration'],van:['Recovery machine','Chiller kit','Water-treatment kit']},
+ {id:'priya',name:'Priya Raman',role:'Controls & Hydronics',ini:'PR',color:'#7c3aed',shift:[450,990],terr:['Downtown','West'],certs:['EPA 608 Universal','Boiler Operator','BAS — Niagara N4'],systems:['Boiler','Hydronics','BAS/Controls','Heat Pump'],van:['BAS laptop','Combustion analyzer']},
+ {id:'tom',name:'Tom Aldridge',role:'Service Tech I',ini:'TA',color:'#db2777',shift:[540,1080],terr:['South'],certs:['EPA 608 Type II'],systems:['RTU','Split DX'],van:['Manifold kit','Filter stock']},
+ {id:'ava',name:'Ava Reyes',role:'On-call Tech',ini:'AR',color:'#0891b2',shift:[720,1080],terr:['South','West'],certs:['EPA 608 Type II','NATE'],systems:['RTU','Split DX'],van:['Manifold kit','Filter stock'],oncall:true},
+];
+let jobs=[
+ {id:'EMG-0417',type:'emergency',site:'Cornerstone Data Center',addr:'8800 Freight Way · Airport District',zone:'Airport',sys:'CRAC',win:[600,720],start:null,end:null,dur:150,pri:'EMG',
+  problem:'CRAC-2 tripped on high-temp alarm; supply air 78°F and rising. Temp-critical server load on floor 2.',
+  parts:[],tools:['Recovery machine','Refrigerant scale'],crew:2,certs:['EPA 608 Universal'],access:null,techId:null,assists:[],warn:[],note:'SLA: qualified tech on-site by 10:00 AM.'},
+ {id:'PM-1108',type:'pm',site:'Harvest Ridge Apartments',addr:'4120 Harvest Ridge Rd · North',zone:'North',sys:'RTU',win:[420,600],start:450,end:540,dur:90,pri:'MED',
+  problem:'Quarterly PM: filters, coils and belts on RTU-1 / RTU-2.',parts:['20×20 filters ×6'],tools:[],crew:1,certs:[],access:null,techId:'marcus',assists:[],warn:[]},
+ {id:'REP-2231',type:'repair',site:'Northgate Medical Plaza',addr:'1180 Northgate Dr · North',zone:'North',sys:'VRF',win:[480,840],start:555,end:660,dur:105,pri:'HIGH',
+  problem:'Zone 4 not heating; E5 inverter fault on VRF outdoor unit.',parts:[],tools:['VRF diag kit'],crew:1,certs:['VRF Systems'],access:null,techId:'marcus',assists:[],warn:[]},
+ {id:'PM-1113',type:'pm',site:'Meridian Office Park',addr:'75 Meridian Way · Downtown',zone:'Downtown',sys:'BAS/Controls',win:[720,900],start:735,end:840,dur:105,pri:'MED',
+  problem:'BAS sensor calibration across 24 zones.',parts:[],tools:['BAS laptop'],crew:1,certs:[],access:{contact:{name:'Carol Jensen',role:'Facility Manager',phone:'(555) 014-2260'},note:'Check in at loading dock — escort to roof.'},techId:'marcus',assists:[],warn:[]},
+ {id:'DIAG-0876',type:'diag',site:'Fairview Cold Storage',addr:'5150 Fairview Ave · North',zone:'North',sys:'Refrigeration',win:[600,1020],start:870,end:930,dur:60,pri:'LOW',
+  problem:'Suspected low charge; ice on suction line at evaporator 2.',parts:[],tools:['Leak detector'],crew:1,certs:[],access:null,techId:'marcus',assists:[],warn:[]},
+ {id:'REP-2240',type:'repair',site:'Grandview Mall',addr:'900 Grandview Blvd · North',zone:'North',sys:'RTU',win:[480,900],start:540,end:690,dur:150,pri:'HIGH',
+  problem:'RTU-3 compressor replacement (20-ton packaged unit).',parts:['410A compressor kit (on van)'],tools:['Recovery machine'],crew:1,certs:[],access:null,techId:'dana',assists:[],warn:[],
+  overrun:75,overrunNote:'Crew history on this scope: +40–60% runtime. Refrigerant recovery + brazing time above estimate.'},
+ {id:'REP-2244',type:'repair',site:'Riverside Dental Clinic',addr:'2901 Riverside Pkwy · South',zone:'South',sys:'Split DX',win:[720,900],start:720,end:810,dur:90,pri:'HIGH',
+  problem:'No cooling in operatories 2–4 since Monday.',parts:[],tools:['Manifold kit'],crew:1,certs:[],access:{contact:{name:'Dr. Patel',role:'Practice Owner',phone:'(555) 014-8890'},note:'Onsite contact must be present for interior work.'},techId:'dana',assists:[],warn:[]},
+ {id:'PM-1201',type:'pm',site:'Cedar Point Hotel',addr:'44 Cedar Point Dr · South',zone:'South',sys:'Chiller',win:[390,720],start:420,end:570,dur:150,pri:'MED',
+  problem:'Chiller #2 annual PM + eddy-current tube test.',parts:[],tools:['Chiller kit'],crew:1,certs:['Chilled Water Systems'],access:null,techId:'luis',assists:[],warn:[]},
+ {id:'PM-1204',type:'pm',site:'Airport Logistics Hub',addr:'775 Cargo Rd · Airport District',zone:'Airport',sys:'Cooling Tower',win:[420,900],start:585,end:720,dur:135,pri:'LOW',
+  problem:'Cooling tower PM: belts, spray nozzles, basin clean.',parts:['Tower belt set'],tools:[],crew:1,certs:[],access:null,techId:'luis',assists:[],warn:[]},
+ {id:'PM-1207',type:'pm',site:'Southgate Grocery',addr:'2210 Southgate Ctr · South',zone:'South',sys:'RTU',win:[540,1020],start:810,end:900,dur:90,pri:'LOW',
+  problem:'RTU ×3 belt & bearing PM.',parts:['Bearing set ×3'],tools:[],crew:1,certs:[],access:null,techId:'luis',assists:[],warn:[]},
+ {id:'PM-1302',type:'pm',site:'Ashford Tower',addr:'300 Ashford Ave · Downtown',zone:'Downtown',sys:'Boiler',win:[420,780],start:480,end:630,dur:150,pri:'HIGH',
+  problem:'Boiler plant annual inspection & combustion tune.',parts:[],tools:['Combustion analyzer'],crew:1,certs:['Boiler Operator'],access:null,techId:'priya',assists:[],warn:[]},
+ {id:'PM-1305',type:'pm',site:'The Hub Coworking',addr:'55 Junction St · West',zone:'West',sys:'Hydronics',win:[540,900],start:660,end:750,dur:90,pri:'MED',
+  problem:'Hydronic loop air purge & balance after pump swap.',parts:[],tools:[],crew:1,certs:[],access:null,techId:'priya',assists:[],warn:[]},
+ {id:'REP-3102',type:'repair',site:'City Hall Annex',addr:'1 Civic Square · Downtown',zone:'Downtown',sys:'BAS/Controls',win:[780,990],start:780,end:930,dur:150,pri:'HIGH',
+  problem:'BAS controls cutover — 3 AHUs, occupancy scheduling.',parts:[],tools:['BAS laptop'],crew:1,certs:['BAS — Niagara N4'],access:{restricted:[780,990],escort:true,note:'Badge escort required — check in at security desk.'},techId:'priya',assists:[],warn:[]},
+ {id:'REP-4103',type:'repair',site:'Pinecrest Retail',addr:'6600 Pinecrest Rd · South',zone:'South',sys:'Split DX',win:[540,900],start:540,end:630,dur:90,pri:'MED',
+  problem:'No heat at entrance; thermostat error code.',parts:[],tools:['Manifold kit'],crew:1,certs:[],access:null,techId:'tom',assists:[],warn:[]},
+ {id:'PM-1404',type:'pm',site:'Willow Business Park',addr:'900 Willow Pkwy · South',zone:'South',sys:'RTU',win:[540,900],start:645,end:735,dur:90,pri:'LOW',
+  problem:'Economizer PM on RTU ×2.',parts:['Filters ×4'],tools:[],crew:1,certs:[],access:null,techId:'tom',assists:[],warn:[]},
+];
+const J=id=>jobs.find(j=>j.id===id);
+const T=id=>TECHS.find(t=>t.id===id);
+const tName=id=>{const t=T(id);return t?t.name:'—';};
+const eEnd=j=>j.end+(j.overrun||0);
+const state={view:'timeline',sel:null,q:'',pending:0,history:[],dragId:null,didDrag:false};
+
+/* ============================ alerts ============================ */
+let ALERTS=[
+ {id:'a1',sev:'crit',title:'Emergency call unassigned',review:'EMG-0417',
+  check:()=>!!J('EMG-0417').techId,
+  desc(){const j=J('EMG-0417');
+    if(j.techId)return `Dispatched to ${tName(j.techId)}${j.assists.length?' + '+j.assists.map(a=>tName(a.techId)).join(' & '):''} — on-site ${j.start?fmtT(j.start):''}.`;
+    return `CRAC-2 down at Cornerstone Data Center. SLA: on-site by 10:00 AM. Requires EPA 608 Universal, a recovery rig and a 2-tech crew. Nearest qualified: Luis F. (~10 min out).`;},
+  fixLabel:'Dispatch Luis F. + Tom A. · 11:00 AM',
+  fix(){
+    const e=J('EMG-0417');
+    e.techId='luis';e.start=660;e.end=810;e.warn=[];
+    e.assists=[{techId:'tom',start:660,end:735}];
+    e.note='Dispatched 11:00 AM — Luis F. (lead) + Tom A. (assist 11:00–12:15). Inside SLA window.';
+    const hub=J('PM-1204');hub.end=645;hub.note='Cut short for emergency response — remaining nozzle PM deferred to Friday.';
+    const sg=J('PM-1207');sg.techId='tom';sg.start=885;sg.end=975;sg.warn=[];sg.note='Reassigned from Luis to cover emergency dispatch.';
+    const wl=J('PM-1404');wl.techId='ava';wl.start=780;wl.end=870;wl.warn=[];wl.note='Moved to on-call coverage (Ava Reyes).';
+    jobs.push({id:'DEP-01',type:'depot',site:'Southside Depot',addr:'220 Depot St · South',zone:'South',sys:null,win:null,start:825,end:915,dur:90,pri:'LOW',
+      problem:'Offload recovery cylinders, restock van for Thursday.',parts:[],tools:[],crew:1,certs:[],access:null,techId:'luis',assists:[],warn:[],note:'Added after emergency dispatch.'});
+    return 5;
+  }},
+ {id:'a2',sev:'warn',title:'Grandview overrun collides with Riverside Dental',review:'REP-2244',
+  check(){const j=J('REP-2244');return j.techId!=='dana'||j.start>=765;},
+  desc(){const r=J('REP-2244');
+    if(this.check())return 'Riverside Dental no longer collides with the Grandview overrun.';
+    return `Dana's compressor replacement revised ETA is 12:45 PM (+75m) — colliding with Riverside Dental (window closes 3:00 PM, onsite contact required).`;},
+  fixLabel:'Reassign Riverside → Tom A. · 12:45 PM',
+  fix(){const r=J('REP-2244');r.techId='tom';r.start=765;r.end=855;r.warn=[];r.note='Reassigned off Dana Okafor due to Grandview overrun.';return 1;}},
+ {id:'a3',sev:'info',title:'Escort arrives 1:30 PM at City Hall',review:'REP-3102',
+  check:()=>J('REP-3102').start>=810,
+  desc(){return this.check()?'City Hall start moved to 1:30 PM — restricted-access escort window honored.':'Security escort is confirmed for 1:30 PM, but the BAS cutover starts at 1:00 PM — 30 min idle inside a restricted building.';},
+  fixLabel:'Shift start to 1:30 PM',
+  fix(){const j=J('REP-3102');j.start=810;j.end=960;j.warn=[];return 1;}},
+];
+ALERTS.forEach(a=>a.snapshot=null);
+
+/* ============================ core logic ============================ */
+function getOccupancy(techId){
+  const out=[];
+  jobs.forEach(j=>{
+    if(j.techId===techId)out.push({start:j.start,end:j.end,eEnd:eEnd(j),job:j,assist:false});
+    (j.assists||[]).forEach(a=>{if(a.techId===techId)out.push({start:a.start,end:a.end,eEnd:a.end,job:j,assist:true});});
+  });
+  return out.sort((a,b)=>a.start-b.start);
+}
+function bookedMin(t){
+  let m=0;
+  jobs.forEach(j=>{if(j.techId===t.id)m+=eEnd(j)-j.start;});
+  jobs.forEach(j=>(j.assists||[]).forEach(a=>{if(a.techId===t.id)m+=a.end-a.start;}));
+  return m;
+}
+function certGap(job,t){return (job.certs||[]).filter(c=>!(t.certs||[]).includes(c));}
+
+function placeJob(job,techId,start){
+  const t=T(techId);const end=start+job.dur;
+  const occ=getOccupancy(techId).filter(o=>o.job!==job);
+  const miss=certGap(job,t);
+  if(miss.length)return{ok:false,msg:`${t.name} lacks ${miss.join(', ')} — required for this visit.`};
+  if(job.sys&&!t.systems.includes(job.sys))return{ok:false,msg:`${t.name} is not set up to service ${job.sys} systems.`};
+  const bad=occ.find(o=>start<o.eEnd&&end>o.start);
+  if(bad)return{ok:false,msg:`Overlaps ${bad.job.site} (${fmtRange(bad.start,bad.eEnd)}).`};
+  const warns=[];
+  if(start<t.shift[0]||end>t.shift[1])warns.push('Outside shift hours ('+fmtRange(t.shift[0],t.shift[1])+')');
+  if(job.win&&(start<job.win[0]||end>job.win[1]))warns.push('Outside service window '+fmtRange(job.win[0],job.win[1]));
+  const prev=[...occ].reverse().find(o=>o.eEnd<=start);
+  if(prev){const tv=travel(prev.job.zone,job.zone);if(prev.eEnd+tv>start)warns.push(`Tight travel from ${prev.job.site} (needs ${tv}m drive)`);}
+  const next=occ.find(o=>o.start>=end);
+  if(next){const tv=travel(job.zone,next.job.zone);if(end+tv>next.start)warns.push(`Not enough travel time to ${next.job.site} (needs ${tv}m drive)`);}
+  pushHistory();
+  const delta=start-(job.start??start);
+  job.techId=techId;job.start=start;job.end=end;
+  (job.assists||[]).forEach(a=>{a.start+=delta;a.end+=delta;});
+  job.warn=warns;state.pending++;
+  if(job.crew>1&&!(job.assists||[]).length)
+    toast(`ok`,`Lead assigned at ${fmtT(start)}. 2-tech job — add an assist from the details panel.`,3600);
+  else if(warns.length)toast('warn','Assigned with flags: '+warns[0],4200);
+  else toast('ok',`${job.id} → ${t.name} at ${fmtT(start)}`,2800);
+  return{ok:true};
+}
+function findSlot(techId,job){
+  const t=T(techId);const occ=getOccupancy(techId).filter(o=>o.job!==job);
+  let t0=Math.max(job.win?job.win[0]:DAY_START,t.shift[0],DAY_START);t0=snap(t0);
+  for(let i=0;i<60;i++){
+    const end=t0+job.dur;
+    if(job.win&&end>job.win[1])return null;
+    if(end>t.shift[1])return null;
+    const bad=occ.find(o=>t0<o.eEnd&&end>o.start);
+    if(!bad){
+      const prev=[...occ].reverse().find(o=>o.eEnd<=t0);
+      if(prev&&prev.eEnd+travel(prev.job.zone,job.zone)>t0){t0=snap(prev.eEnd+travel(prev.job.zone,job.zone));continue;}
+      return t0;
+    }
+    t0=snap(Math.max(bad.eEnd,t0));
+  }
+  return null;
+}
+function pushHistory(){state.history.push(JSON.stringify(jobs));if(state.history.length>30)state.history.shift();updateHeader();}
+function undo(){if(!state.history.length)return;jobs=JSON.parse(state.history.pop());state.pending=Math.max(0,state.pending-1);renderAll();toast('info','Last change undone.',2400);}
+function unassign(job){pushHistory();job.techId=null;job.assists=[];state.pending++;renderAll();toast('info',`${job.id} returned to the unassigned queue.`,2600);}
+
+/* ============================ rendering ============================ */
+function flagIcons(job){
+  const f=[];
+  if(job.access&&job.access.restricted)f.push(`<span class="fi" title="Restricted access: ${fmtRange(job.access.restricted[0],job.access.restricted[1])}">${ic('lock')}</span>`);
+  if(job.access&&job.access.contact)f.push(`<span class="fi" title="Onsite contact required: ${job.access.contact.name}">${ic('user')}</span>`);
+  if(job.crew>1)f.push(`<span class="fi" title="Requires 2 technicians">${ic('users')}</span>`);
+  if(job.parts&&job.parts.length)f.push(`<span class="fi" title="Parts: ${job.parts.join('; ')}">${ic('box')}</span>`);
+  if(job.tools&&job.tools.length)f.push(`<span class="fi" title="Equipment: ${job.tools.join('; ')}">${ic('wrench')}</span>`);
+  if(job.overrun)f.push(`<span class="fi" title="Estimated overrun +${job.overrun}m">${ic('alert')}</span>`);
+  if(job.warn&&job.warn.length)f.push(`<span class="fi" title="${esc(job.warn[0])}" style="color:#b45309">${ic('alert')}</span>`);
+  return f.join('');
+}
+function jobMatchesQ(j){
+  if(!state.q)return true;const q=state.q.toLowerCase();
+  const t=j.techId?T(j.techId):null;
+  return (j.site+' '+j.id+' '+j.type+' '+j.pri+' '+j.problem+' '+(t?t.name:'')+' '+(j.sys||'')).toLowerCase().includes(q);
+}
+function qCls(j){return state.q&&!jobMatchesQ(j)?' qdim':'';}
+
+function blockHTML(job,o){
+  const laneCls=o.lane?' l1':'';const assist=o.assist;
+  const left=pct(o.start),width=Math.max(1.4,pct(o.end)-pct(o.start));
+  const warn=job.warn&&job.warn.length?' warnb':'';
+  const sel=state.sel&&state.sel.kind==='job'&&state.sel.id===job.id?' selected':'';
+  const dim=qCls(job);
+  const tags=`<span class="pilling ${PRI[job.pri].c}">${PRI[job.pri].l}</span>${flagIcons(job)}`;
+  if(assist){
+    return `<div class="job assist t-emg${laneCls}${sel}" data-job="${job.id}" data-assist="${o.techId}"
+      style="left:${left}%;width:${width}%;top:${o.lane?56:10}px;height:${o.lane?38:42}px" title="Assist block — ${esc(job.site)}">
+      <div class="b-time">${fm(o.start)}–${fm(o.end)} · ASSIST</div><div class="b-site">${esc(job.site)}</div>
+      <button class="fi" data-act="rmassist" data-job="${job.id}" data-tech="${o.techId}" title="Remove assist" style="position:absolute;right:4px;top:4px;color:#b91c1c">${ic('x')}</button></div>`;
+  }
+  const top=o.lane?52:6,height=o.lane?44:48;
+  let extra='';
+  if(job.overrun&&!o.lane){
+    const el2=pct(o.start+job.dur),ew=Math.max(1.6,pct(eEnd(job))-el2);
+    extra=`<div class="ext" data-job="${job.id}" style="left:${el2}%;width:${ew}%;top:${top}px;height:${height}px" title="${esc(job.overrunNote||'Estimated overrun')}">${ic('alert')} +${job.overrun}m · ETA ${fm(eEnd(job))}</div>`;
+  }
+  return `${extra}<div class="job ${'t-'+(job.type==='emergency'?'emg':job.type==='repair'?'rep':job.type==='pm'?'pm':job.type==='diag'?'diag':'depot')}${laneCls}${warn}${sel}${dim}"
+    draggable="true" data-job="${job.id}" style="left:${left}%;width:${width}%;top:${top}px;height:${height}px">
+    <div class="b-time">${fm(o.start)}–${fm(eEnd(job))}${job.overrun?' *':''}</div>
+    <div class="b-site">${esc(job.site)}</div>
+    ${o.lane?'':`<div class="b-tags">${tags}</div>`}</div>`;
+}
+function chipsHTML(occ){
+  let html='';
+  for(let i=0;i<occ.length-1;i++){
+    const a=occ[i],b=occ[i+1];const gap=b.start-a.eEnd;if(gap<=0)continue;
+    const tv=travel(a.job.zone,b.job.zone);
+    const l=pct(a.eEnd),w=pct(b.start)-pct(a.eEnd);
+    if(w<3.2)continue;
+    const ok=gap>=tv+5;
+    html+=`<div class="tchip ${ok?'ok':'bad'}" style="left:${l}%;width:${w}%" title="Drive ${tv} min · ${esc(a.job.site)} → ${esc(b.job.site)}">${ic('truck')}${tv}m drive${ok?' · '+gap+'m gap':' — no buffer'}</div>`;
+  }
+  return html;
+}
+function renderBoardTimeline(){
+  let hrs='';for(let h=DAY_START/60;h<DAY_END/60;h++){hrs+=`<div class="rc">${h===12?'12 PM':h>12?(h-12)+' PM':h+' AM'}</div>`;}
+  let html=`<div class="ruler"><div class="rh">Crew · 7 AM – 6 PM</div><div class="rt">${hrs}</div></div>`;
+  /* unassigned lane */
+  const un=jobs.filter(j=>!j.techId&&j.type!=='depot');
+  let uTracks='';
+  un.forEach(j=>{
+    const l=pct(j.win[0]),w=Math.max(22,pct(j.win[1])-pct(j.win[0]));
+    uTracks+=`<div class="job ucard" draggable="true" data-job="${j.id}" style="left:${l}%;top:10px">
+      <div class="u1"><span class="pulse"></span><span class="uc">${j.id} · EMERGENCY · UNASSIGNED</span></div>
+      <div class="u2">${esc(j.site)}</div>
+      <div class="u3">${esc(j.problem)}<br>${durTxt(j.dur)} · needs ${j.certs.join(', ')} · 2-tech crew</div>
+      <div class="u4"><span class="slachip">SLA ${fmtT(j.win[0])}</span>
+      <button class="linkbtn" data-act="suggest">Suggest crew ${ic('arrow-r')}</button>
+      <span class="draghint">${ic('arrow-r')} drag to a tech row</span></div></div>`;
+  });
+  html+=`<div class="brow ulane"><div class="rhead" style="cursor:default">
+    <div><div class="rname" style="color:var(--red)">${ic('zap')} Unassigned <span class="pilling p-emg">${un.length}</span></div>
+    <div class="rrole">Emergency queue — needs dispatch</div>
+    <div class="rhours">Drag onto a qualified tech, or open the job to assign.</div></div></div>
+    <div class="track" data-lane="unassigned">${uTracks}</div></div>`;
+  /* tech rows */
+  TECHS.forEach(t=>{
+    const occ=getOccupancy(t.id);
+    const booked=bookedMin(t),pctB=Math.min(100,Math.round(booked/(t.shift[1]-t.shift[0])*100));
+    const hasWarn=jobs.some(j=>(j.techId===t.id&&j.warn&&j.warn.length)||(j.assists||[]).some(a=>a.techId===t.id));
+    const sel=state.sel&&state.sel.kind==='tech'&&state.sel.id===t.id?' sel':'';
+    /* lane stacking */
+    const items=[];let lastEnd=-1,lane=0;
+    occ.forEach(o=>{if(o.start<lastEnd)lane=1;else lane=0;lastEnd=Math.max(lastEnd,o.eEnd);items.push({...o,lane});});
+    let blocks='';
+    items.forEach(o=>{blocks+=blockHTML(o.job,{start:o.assist?o.start:o.job.start,end:o.assist?o.end:eEnd(o.job),lane:o.lane,assist:o.assist,techId:t.id});});
+    blocks+=chipsHTML(occ);
+    const dim1=`<div class="offshift" style="left:0;width:${pct(t.shift[0])}%"></div><div class="offshift" style="left:${pct(t.shift[1])}%;width:${100-pct(t.shift[1])}%"></div>`;
+    const sbar=`<div class="shiftbar" style="left:${pct(t.shift[0])}%;width:${pct(t.shift[1])-pct(t.shift[0])}%;background:${t.color}"></div>`;
+    html+=`<div class="brow"><div class="rhead${sel}" data-tech="${t.id}">
+      <div class="rav" style="background:${t.color}">${t.ini}</div>
+      <div style="flex:1;min-width:0">
+        <div class="rname">${esc(t.name)} <span class="dot ${t.oncall?'off':hasWarn?'warn':'ok'}" title="${t.oncall?'On call from depot':hasWarn?'Has flagged visits':'On schedule'}"></span></div>
+        <div class="rrole">${esc(t.role)} · ${t.terr.map(z=>ZLBL[z]).join(' · ')}</div>
+        <div class="rhours">${fmtT(t.shift[0])}–${fmtT(t.shift[1])} · <b>${durTxt(booked)}</b> booked</div>
+        <div class="mini"><i style="width:${pctB}%;background:${pctB>85?'var(--red)':pctB>70?'var(--amber)':t.color}"></i></div>
+      </div></div>
+      <div class="track" data-tech="${t.id}">${dim1}${sbar}${blocks}</div></div>`;
+  });
+  $('#board').innerHTML=html;
+}
+function renderBoardList(){
+  const flags=j=>`<div class="lflags">${flagIcons(j)||'<span style="font-size:10px">—</span>'}</div>`;
+  const row=j=>{
+    const t=j.techId?T(j.techId):null;
+    return `<div class="lrow${state.sel&&state.sel.kind==='job'&&state.sel.id===j.id?' sel':''}${qCls(j)}" data-open="${j.id}">
+      <div class="lt">${j.start!=null?fm(j.start)+'–'+fm(eEnd(j)):'—'}</div>
+      <div class="ls">${esc(j.site)} <span>· ${j.id}</span></div>
+      <div><span class="typepill t-${j.type==='emergency'?'emg':j.type==='repair'?'rep':j.type==='pm'?'pm':j.type==='diag'?'diag':'depot'}" style="border:1px solid transparent">${TYPE[j.type].l}</span></div>
+      <div><span class="pilling ${PRI[j.pri].c}">${PRI[j.pri].l}</span></div>
+      ${flags(j)}
+      <div class="lwin">${j.win?fmtRange(j.win[0],j.win[1]):'—'}${t?`<br><span style="color:${t.color};font-weight:700">${esc(t.name)}</span>`:'<br><b style="color:var(--red)">Unassigned</b>'}</div>
+    </div>`;
+  };
+  let html='<div class="listwrap">';
+  const un=jobs.filter(j=>!j.techId&&j.type!=='depot');
+  html+=`<div class="lsec"><h4><span class="dot" style="background:var(--red)"></span>Unassigned queue (${un.length})</h4>${un.map(row).join('')||'<div style="font-size:11px;color:var(--tx3);padding:4px 2px">Nothing unassigned.</div>'}</div>`;
+  TECHS.forEach(t=>{
+    const list=jobs.filter(j=>j.techId===t.id).sort((a,b)=>a.start-b.start);
+    if(!list.length&&!jobs.some(j=>(j.assists||[]).some(a=>a.techId===t.id)))return;
+    html+=`<div class="lsec"><h4><span class="dot" style="background:${t.color}"></span>${esc(t.name)} · ${fmtT(t.shift[0])}–${fmtT(t.shift[1])} · ${durTxt(bookedMin(t))} booked</h4>${list.map(row).join('')||''}`;
+    jobs.forEach(j=>(j.assists||[]).forEach(a=>{if(a.techId===t.id)html+=row({...j,site:j.site+' (assist)',start:a.start,end:a.end,overrun:0});}));
+    html+='</div>';
+  });
+  $('#board').innerHTML=html+'</div>';
+}
+function renderBoard(){state.view==='timeline'?renderBoardTimeline():renderBoardList();}
+
+function renderRoster(){
+  const un=jobs.filter(j=>!j.techId&&j.type!=='depot');
+  let html=`<div class="unassignedCard" data-open="${un[0]?un[0].id:''}">
+    <div class="un">${ic('zap')} Unassigned queue · ${un.length}</div>
+    <div class="us">${un.length?esc(un[0].site)+' — SLA '+fmtT(un[0].win[0])+'. Tap to review and dispatch.':'All visits have a crew. Nice work.'}</div></div>`;
+  TECHS.forEach(t=>{
+    const booked=bookedMin(t),pctB=Math.min(100,Math.round(booked/(t.shift[1]-t.shift[0])*100));
+    const hasWarn=jobs.some(j=>(j.techId===t.id&&j.warn&&j.warn.length));
+    const sel=state.sel&&state.sel.kind==='tech'&&state.sel.id===t.id?' sel':'';
+    html+=`<div class="tcard${sel}" data-tech="${t.id}">
+      <div class="trow"><div class="tav" style="background:${t.color}">${t.ini}</div>
+      <div style="min-width:0;flex:1"><div class="tn">${esc(t.name)} <span class="dot ${t.oncall?'off':hasWarn?'warn':'ok'}"></span></div>
+      <div class="tr">${esc(t.role)} · ${t.terr.join(', ')}${t.oncall?' · from depot':''}</div></div></div>
+      <div class="tmeta"><span>${fmtT(t.shift[0])}–${fmtT(t.shift[1])}</span><b>${durTxt(booked)} / ${durTxt(t.shift[1]-t.shift[0])}</b></div>
+      <div class="ubar"><i style="width:${pctB}%;background:${pctB>85?'var(--red)':pctB>70?'var(--amber)':'var(--pri)'}"></i></div>
+      <div class="tcerts" title="${esc(t.certs.join(' · '))}">${ic('award')} ${esc(t.certs.join(' · '))}</div>
+    </div>`;
+  });
+  $('#roster').innerHTML=html;
+}
+
+function renderAlerts(){
+  const unresolved=ALERTS.filter(a=>!a.check()).length;
+  $('#bellDot').textContent=unresolved;$('#bellDot').style.display=unresolved?'':'none';
+  $('#alerts').innerHTML=ALERTS.map(a=>{
+    const done=a.check();
+    const cls=a.sev==='crit'?'crit':a.sev==='warn'?'warn':'info';
+    return `<div class="acard ${done?'done':cls}">
+      <div class="atop">${done?ic('check'):ic(a.sev==='crit'?'zap':a.sev==='warn'?'alert':'info')} ${esc(a.title)}</div>
+      <div class="abody">${a.desc()}</div>
+      <div class="arow">${done
+        ?(a.snapshot?`<button class="btn ghost sm" data-act="revertAlert" data-alert="${a.id}">${ic('undo')}Revert</button><span class="btn sm" style="color:var(--green);font-weight:700;cursor:default">${ic('check')}Resolved</span>`
+                    :`<span class="btn sm" style="color:var(--green);font-weight:700;cursor:default">${ic('check')}Resolved</span>`)
+        :`<button class="btn sm ${a.sev==='crit'?'danger':a.sev==='warn'?'warnb':'blueb'}" data-act="fixAlert" data-alert="${a.id}">${ic('zap')}Apply fix</button>
+          <button class="btn ghost sm" data-act="reviewAlert" data-alert="${a.id}">Review</button>`}</div></div>`;
+  }).join('');
+}
+
+/* ---------- details ---------- */
+function drow(l,v,icn){return `<div class="drow"><div class="dl">${icn?ic(icn):''}${l}</div><div class="dv">${v}</div></div>`;}
+function renderDetails(){
+  const el=$('#details');
+  if(state.sel&&state.sel.kind==='job'){const j=J(state.sel.id);if(j)return renderJobView(el,j);}
+  if(state.sel&&state.sel.kind==='tech'){const t=T(state.sel.id);if(t)return renderTechView(el,t);}
+  renderOverview(el);
+}
+function backBar(title,sub){
+  return `<div class="dhead"><button class="iconbtn" data-act="overview" title="Back to overview" style="margin-top:2px">${ic('chev-l')}</button>
+    <div style="min-width:0"><div class="dkick">${title}</div><div class="dtitle">${sub}</div></div></div>`;
+}
+function renderJobView(el,j){
+  const t=j.techId?T(j.techId):null;
+  const occ=t?getOccupancy(t.id):[];
+  const idx=t?occ.findIndex(o=>o.job===j.id||o.job===j):-1;
+  let travelPrev='—';
+  if(t&&idx>0){const p=occ[idx-1];const tv=travel(p.job.zone,j.zone);travelPrev=`${tv} min drive from ${esc(p.job.site)}${p.eEnd+tv>j.start?' <b style="color:#b91c1c">· no buffer</b>':''}`;}
+  let travelNext='—';
+  if(t&&idx>=0&&idx<occ.length-1){const n=occ[idx+1];const tv=travel(j.zone,n.job.zone);travelNext=`Next: ${esc(n.job.site)} · ${tv} min drive${eEnd(j)+tv>n.start?' <b style="color:#b91c1c">· tight</b>':''}`;}
+  const assists=(j.assists||[]).map(a=>`<span class="chip hot">${ic('users')}${esc(tName(a.techId))} · ${fm(a.start)}–${fm(a.end)} <button data-act="rmassist" data-job="${j.id}" data-tech="${a.techId}" style="color:inherit;display:inline-flex">${ic('x')}</button></span>`).join('');
+  const needAssist=j.crew>1&&t&&!(j.assists||[]).length;
+  const restricted=j.access&&j.access.restricted;
+  el.innerHTML=`
+    ${backBar(esc(TYPE[j.type].l)+' · '+j.id,esc(j.site))}
+    <div class="dbody">
+      <div class="chiprow" style="margin-bottom:4px">
+        <span class="pilling ${PRI[j.pri].c}">${PRI[j.pri].l}</span>
+        <span class="chip">${ic('building')}${esc(j.zone)} zone</span>
+        ${j.sys?`<span class="chip">${ic('wind')}${esc(j.sys)}</span>`:''}
+        ${j.techId?`<span class="chip green">${ic('check')}${esc(t.name)}</span>`:`<span class="chip hot">${ic('alert')}Unassigned</span>`}
+      </div>
+      <div style="font-size:12px;color:var(--tx2);font-style:italic;line-height:1.5;margin:6px 0 2px">“${esc(j.problem)}”</div>
+      ${j.overrun?`<div class="card" style="border-color:#f8d5b8;background:#fff8f2;margin-top:10px">
+        <h5 style="color:#c2410c">${ic('alert')} Running long — revised ETA</h5>
+        <div style="font-size:11.5px;color:var(--tx2);line-height:1.5">${esc(j.overrunNote||'')}<br><b style="color:#9a3412">Planned end ${fmtT(j.end)} → revised ${fmtT(eEnd(j))} (+${j.overrun}m).</b></div></div>`:''}
+      <div style="margin-top:8px">
+        ${drow('Window',j.win?fmtRange(j.win[0],j.win[1])+(restricted?` <span class="chip hot">${ic('lock')}Restricted ${fmtRange(restricted[0],restricted[1])}</span>`:''):'Flexible','clock')}
+        ${drow('Address',esc(j.addr)+(t?`<div class="muted" style="margin-top:2px">${ic('truck')} ${travelPrev}</div>`:''),'pin')}
+        ${drow('Duration',`${durTxt(j.dur)} planned${j.overrun?` · <b style="color:#c2410c">${durTxt(eEnd(j)-j.start)} revised</b>`:''}${travelNext!=='—'?`<div class="muted" style="margin-top:2px">${travelNext}</div>`:''}`,'clock')}
+        ${drow('Equipment',esc(j.sys||'—')+(j.id==='REP-2240'?' · RTU-3, 20-ton packaged':'')),''}
+        ${drow('Reported',esc(j.problem),'info')}
+        ${drow('Parts',j.parts&&j.parts.length?`<div class="chiprow">${j.parts.map(p=>`<span class="chip">${ic('box')}${esc(p)}</span>`).join('')}</div>`:'<span class="muted">None required</span>','box')}
+        ${drow('Crew & tools',(j.crew>1?`<span class="chip amber">${ic('users')}2-tech crew required</span> `:'')+`<div class="chiprow" style="margin-top:4px">${(j.tools||[]).map(x=>`<span class="chip">${ic('wrench')}${esc(x)}</span>`).join('')||'<span class="muted">Standard kit</span>'}</div>`,'wrench')}
+        ${drow('Certifications',j.certs&&j.certs.length?`<div class="chiprow">${j.certs.map(c=>{
+            const okT=t&&t.certs.includes(c);
+            return `<span class="chip ${t?(okT?'green':'hot'):'blue'}">${ic(okT?'check':'shield')}${esc(c)}${t?(okT?' ✓':' — '+esc(t.name)+' lacks'):' required'}</span>`;}).join('')}</div>`:'<span class="muted">None</span>','award')}
+        ${drow('Site access',j.access?`${esc(j.access.note)}${j.access.contact?`<div class="chiprow" style="margin-top:5px"><span class="chip blue">${ic('user')}${esc(j.access.contact.name)} · ${esc(j.access.contact.role)}</span><button class="chip" data-act="call" data-name="${esc(j.access.contact.name)}" data-phone="${esc(j.access.contact.phone)}">${ic('phone')}${esc(j.access.contact.phone)}</button></div>`:''}`:'<span class="muted">Standard access</span>','lock')}
+        ${drow('Assigned',t?`${esc(t.name)} (${fmtT(t.shift[0])}–${fmtT(t.shift[1])})${assists?`<div class="chiprow" style="margin-top:5px">${assists}</div>`:''}${needAssist?`<div style="margin-top:6px;color:#b45309;font-weight:700;font-size:11px">${ic('users')} 2-tech job — add an assist:</div><select class="mini" data-act="assist" data-job="${j.id}" style="margin-top:4px"><option value="">Choose assist tech…</option>${TECHS.filter(x=>x.id!==t.id&&x.systems.includes(j.sys||'RTU')).map(x=>`<option value="${x.id}">${x.name} — ${x.role}</option>`).join('')}</select>`:''}`
+          :`<b style="color:var(--red)">Not yet dispatched</b> — drag the card to a tech row, or assign below.`,'users')}
+        ${j.note?drow('Note',esc(j.note),'info'):''}
+      </div>
+      ${!j.techId&&j.id==='EMG-0417'?`<div class="suggest"><h6>${ic('zap')} Recommended dispatch</h6>
+        <p><b>Luis F. (lead) + Tom A. (assist 11:00–12:15), on-site 11:00 AM</b> — inside the SLA window. Luis is ~10 min away at Airport Logistics Hub; his tower PM gets cut short, Willow PM moves to on-call Ava R.</p>
+        <div class="actions" style="margin-top:8px"><button class="btn danger sm" data-act="applySuggest">${ic('zap')}Apply recommended dispatch</button></div></div>`:''}
+      ${j.techId?`<div class="actions">
+        <span class="nudge"><button data-act="nudge" data-job="${j.id}" data-d="-15">${ic('minus')}15m</button><button data-act="nudge" data-job="${j.id}" data-d="15">+15m ${ic('plus')}</button></span>
+        <button class="btn ghost" data-act="unassign" data-job="${j.id}">${ic('x')}Unassign</button>
+        <button class="btn ghost" data-act="openTech" data-tech="${t.id}">View ${esc(t.name.split(' ')[0])}'s day ${ic('arrow-r')}</button>
+      </div>`:`<div class="actions">
+        <select class="mini" data-act="assign" data-job="${j.id}"><option value="">Assign to technician…</option>
+          ${TECHS.map(x=>{const miss=certGap(j,x);const sysOK=!j.sys||x.systems.includes(j.sys);
+            return `<option value="${x.id}" ${miss.length||!sysOK?'disabled':''}>${x.name}${miss.length?' — needs '+miss[0]:!sysOK?' — no '+j.sys:''}</option>`;}).join('')}
+        </select></div>`}
+    </div>`;
+}
+function renderTechView(el,t){
+  const booked=bookedMin(t),shiftMin=t.shift[1]-t.shift[0],pctB=Math.min(100,Math.round(booked/shiftMin*100));
+  const list=jobs.filter(j=>j.techId===t.id).sort((a,b)=>a.start-b.start);
+  const ass=jobs.filter(j=>(j.assists||[]).some(a=>a.techId===t.id));
+  el.innerHTML=`
+    ${backBar('Technician profile',esc(t.name))}
+    <div class="dbody">
+      <div class="chiprow" style="margin-bottom:6px">
+        <span class="chip" style="border-color:${t.color};color:${t.color}">${ic('user')}${esc(t.role)}</span>
+        ${t.oncall?`<span class="chip amber">${ic('clock')}On call · from depot</span>`:`<span class="chip green">${ic('check')}On shift</span>`}
+      </div>
+      ${drow('Shift',fmtT(t.shift[0])+' – '+fmtT(t.shift[1]),'clock')}
+      ${drow('Territory',t.terr.join(', '),'pin')}
+      ${drow('Certifications',`<div class="chiprow">${t.certs.map(c=>`<span class="chip blue">${ic('award')}${esc(c)}</span>`).join('')}</div>`,'award')}
+      ${drow('Services systems',`<div class="chiprow">${t.systems.map(c=>`<span class="chip">${ic('wind')}${esc(c)}</span>`).join('')}</div>`,'wind')}
+      ${drow('Van equipment',`<div class="chiprow">${t.van.map(c=>`<span class="chip">${ic('box')}${esc(c)}</span>`).join('')}</div>`,'truck')}
+      <div class="card"><h5>Capacity — ${durTxt(booked)} of ${durTxt(shiftMin)} booked</h5>
+        <div class="ubar" style="height:7px"><i style="width:${pctB}%;background:${pctB>85?'var(--red)':pctB>70?'var(--amber)':'var(--pri)'}"></i></div>
+        <div style="font-size:10.5px;color:var(--tx3);margin-top:5px">${pctB}% of shift committed${t.oncall?' · on-call standby':' · '+list.length+' visit'+(list.length===1?'':'s')}</div></div>
+      <div class="card"><h5>Today's route</h5>
+        ${list.length?list.map(j=>`<div class="attrow" data-open="${j.id}">${ic('arrow-r','color:'+t.color)}<div><b>${fm(j.start)}–${fm(eEnd(j))}</b> · ${esc(j.site)} <span style="color:var(--tx3)">· ${TYPE[j.type].l} · ${PRI[j.pri].l}</span>${j.warn&&j.warn.length?`<div style="color:#b45309;font-size:10.5px">${ic('alert')} ${esc(j.warn[0])}</div>`:''}</div></div>`).join(''):'<div style="font-size:11.5px;color:var(--tx3)">No visits assigned — available capacity.</div>'}
+        ${ass.length?ass.map(j=>{const a=j.assists.find(x=>x.techId===t.id);return `<div class="attrow" data-open="${j.id}">${ic('users','color:#b91c1c')}<div><b>${fm(a.start)}–${fm(a.end)}</b> · Assist: ${esc(j.site)} <span style="color:var(--tx3)">· for ${esc(tName(j.techId))}</span></div></div>`;}).join(''):''}
+      </div>
+    </div>`;
+}
+function renderOverview(el){
+  const visits=jobs.filter(j=>j.type!=='depot');
+  const un=jobs.filter(j=>!j.techId&&j.type!=='depot');
+  const util=Math.round(TECHS.reduce((s,t)=>s+bookedMin(t)/(t.shift[1]-t.shift[0]),0)/TECHS.length*100);
+  const att=[];
+  un.forEach(j=>att.push({c:'r',i:'zap',txt:`<b>${esc(j.site)}</b> — emergency unassigned, SLA ${fmtT(j.win[0])}`,id:j.id}));
+  jobs.filter(j=>j.overrun).forEach(j=>att.push({c:'a',i:'alert',txt:`<b>${esc(j.site)}</b> — revised ETA ${fmtT(eEnd(j))} (+${j.overrun}m)`,id:j.id}));
+  jobs.filter(j=>j.warn&&j.warn.length).forEach(j=>att.push({c:'a',i:'alert',txt:`<b>${esc(j.site)}</b> — ${esc(j.warn[0])}`,id:j.id}));
+  if(J('REP-3102').start<810)att.push({c:'b',i:'lock',txt:`<b>City Hall Annex</b> — escort confirmed 1:30 PM, job starts ${fmtT(J('REP-3102').start)}`,id:'REP-3102'});
+  const emg=J('EMG-0417');
+  const zones=['North','Downtown','West','South','Airport'].map(z=>{
+    const c=visits.filter(j=>j.zone===z).length;
+    const ts=TECHS.filter(t=>t.terr.includes(z)).map(t=>t.name.split(' ')[1]).join(', ');
+    return `<span class="chip">${ic('pin')}<b>${z}</b> · ${c} visit${c===1?'':'s'} · ${esc(ts||'none')}</span>`;}).join('');
+  el.innerHTML=`
+    <div class="dhead"><div style="min-width:0"><div class="dkick">Day overview</div><div class="dtitle">Tomorrow · Wed, Mar 12</div>
+      <div class="dsub">${visits.length} site visits planned across 5 zones · ${un.length} unassigned · planning mode</div></div></div>
+    <div class="dbody">
+      <div class="kpis">
+        <div class="kpi"><div class="kv">${visits.length}</div><div class="kl">Visits scheduled</div></div>
+        <div class="kpi ${un.length?'alert':''}"><div class="kv">${un.length}</div><div class="kl">Unassigned</div></div>
+        <div class="kpi"><div class="kv">${util}%</div><div class="kl">Fleet booked</div></div>
+        <div class="kpi ${att.length?'alert':''}"><div class="kv">${att.length}</div><div class="kl">At risk / flagged</div></div>
+      </div>
+      <div class="card wx">${ic('sun')}<div><div class="wt">95°F · Heat advisory</div><div class="ws">Cooling call volume +20%. Rooftop work caution 12:00–4:00 PM — hydrate crews, watch RTU runtimes.</div></div></div>
+      ${!emg.techId?`<div class="card" style="border-color:#f3c1c1;background:#fff7f7">
+        <h5 style="color:var(--red)">${ic('zap')} SLA watch — Cornerstone Data Center</h5>
+        <div style="font-size:11.5px;color:var(--tx2);line-height:1.5">Qualified tech must be on-site by <b>10:00 AM</b>. Requires EPA 608 Universal, recovery rig and a 2-tech crew. <button class="linkbtn" data-open="EMG-0417">Open emergency call ${'→'}</button></div></div>`
+      :`<div class="card" style="border-color:#bfe8d4;background:var(--green-soft)"><h5 style="color:var(--green)">${ic('check')} Emergency crew dispatched</h5><div style="font-size:11.5px;color:#065f46">${esc(emg.site)} — on-site ${emg.start?fmtT(emg.start):''} · ${esc(tName(emg.techId))}${emg.assists.length?' + '+emg.assists.map(a=>tName(a.techId)).join(' & '):''}</div></div>`}
+      <div class="card"><h5>${ic('alert')} Needs attention</h5>
+        ${att.length?att.map(a=>`<div class="attrow ${a.c}" data-open="${a.id}">${ic(a.i)}<div>${a.txt}</div></div>`).join(''):'<div style="font-size:11.5px;color:var(--tx3)">No open issues — schedule looks clean.</div>'}
+      </div>
+      <div class="card"><h5>${ic('pin')} Coverage by zone</h5><div class="chiprow">${zones}</div></div>
+      <div class="card"><h5>${ic('users')} Crew capacity</h5>
+        ${TECHS.map(t=>{const b=bookedMin(t),p2=Math.min(100,Math.round(b/(t.shift[1]-t.shift[0])*100));
+          return `<div class="caprow" data-techrow="${t.id}" style="cursor:pointer"><span class="cn">${esc(t.name)}${t.oncall?' <span style="color:var(--amber);font-size:9px;font-weight:800">ON CALL</span>':''}</span><span class="cb"><i style="width:${p2}%;background:${p2>85?'var(--red)':p2>70?'var(--amber)':'var(--pri)'}"></i></span><span class="cv">${durTxt(b)} / ${durTxt(t.shift[1]-t.shift[0])}</span></div>`;}).join('')}
+      </div>
+    </div>`;
+}
+
+function updateHeader(){
+  const b=$('#pubBadge');b.textContent=state.pending;b.style.display=state.pending?'':'none';
+  $('#btnPublish').disabled=!state.pending;
+  $('#btnPublish').childNodes[1].textContent=state.pending?'Publish schedule · '+state.pending:'Schedule published ';
+  $('#btnUndo').style.display=state.history.length?'':'none';
+}
+function renderBoardMeta(){
+  const visits=jobs.filter(j=>j.type!=='depot');
+  const un=visits.filter(j=>!j.techId).length;
+  $('#boardMeta').innerHTML=`<b>${visits.length}</b> visits · <b style="color:${un?'var(--red)':'var(--green)'}">${un}</b> unassigned · <b>${TECHS.length}</b> techs on the board`;
+}
+function renderAll(){renderAlerts();renderRoster();renderBoard();renderDetails();renderBoardMeta();updateHeader();}
+
+/* ============================ toast ============================ */
+function toast(kind,msg,ms){
+  const icn=kind==='err'?'x':kind==='warn'?'alert':kind==='ok'?'check':'info';
+  const d=document.createElement('div');d.className='toast '+kind;d.innerHTML=ic(icn)+'<span>'+msg+'</span>';
+  $('#toasts').appendChild(d);setTimeout(()=>{d.style.opacity='0';d.style.transition='.3s';setTimeout(()=>d.remove(),320);},ms||3200);
+}
+
+/* ============================ events ============================ */
+document.addEventListener('click',e=>{
+  const act=e.target.closest('[data-act]');
+  const open=e.target.closest('[data-open]');
+  const tech=e.target.closest('[data-tech]');
+  const techrow=e.target.closest('[data-techrow]');
+  if(act){
+    const a=act.dataset.act;
+    if(a==='fixAlert'||a==='applySuggest'){
+      const al=ALERTS.find(x=>x.id===(act.dataset.alert||'a1'));
+      if(al.check()){renderAll();return;}
+      pushHistory();const n=al.fix();state.pending+=n;al.snapshot=state.history[state.history.length-1];
+      renderAll();toast('ok','Fix applied — '+n+' schedule change'+(n>1?'s':'')+' made. Review and publish.',3800);return;
+    }
+    if(a==='revertAlert'){
+      const al=ALERTS.find(x=>x.id===act.dataset.alert);
+      if(al&&al.snapshot){pushHistory();jobs=JSON.parse(al.snapshot);al.snapshot=null;renderAll();toast('info','Fix reverted.',2400);}return;
+    }
+    if(a==='reviewAlert'){const al=ALERTS.find(x=>x.id===act.dataset.alert);state.sel={kind:'job',id:al.review};renderAll();scrollJobIntoView(al.review);return;}
+    if(a==='suggest'){state.sel={kind:'job',id:'EMG-0417'};renderAll();scrollJobIntoView('EMG-0417');toast('info','Recommended: Luis F. (lead) + Tom A. (assist) at 11:00 AM — see details panel.',4200);return;}
+    if(a==='overview'){state.sel=null;renderAll();return;}
+    if(a==='unassign'){unassign(J(act.dataset.job));return;}
+    if(a==='nudge'){
+      const j=J(act.dataset.job);const d=+act.dataset.d;pushHistory();
+      const ns=j.start+d,occ=getOccupancy(j.techId).filter(o=>o.job!==j);
+      if(occ.some(o=>ns<o.eEnd&&ns+j.dur>o.start)){state.history.pop();toast('err','That shift overlaps another visit — try a different slot.',3400);renderAll();return;}
+      const warns=[];
+      const t=T(j.techId);
+      if(ns<t.shift[0]||ns+j.dur>t.shift[1])warns.push('Outside shift hours');
+      if(j.win&&(ns<j.win[0]||ns+j.dur>j.win[1]))warns.push('Outside service window');
+      j.start=ns;j.end=ns+j.dur;j.warn=warns;state.pending++;renderAll();
+      toast(warns.length?'warn':'ok',j.id+' moved to '+fmtT(ns)+(warns.length?' — flag: '+warns[0]:''),3400);return;
+    }
+    if(a==='call'){toast('info','Calling '+act.dataset.name+' at '+act.dataset.phone+' … (demo)',2600);return;}
+    if(a==='rmassist'){
+      e.stopPropagation();const j=J(act.dataset.job);pushHistory();
+      j.assists=j.assists.filter(x=>x.techId!==act.dataset.tech);state.pending++;
+      renderAll();toast('info','Assist removed from '+tName(act.dataset.tech)+'.',2400);return;
+    }
+    if(a==='openTech'){state.sel={kind:'tech',id:act.dataset.tech};renderAll();return;}
+  }
+  if(open&&open.dataset.open){state.sel={kind:'job',id:open.dataset.open};renderAll();if(state.view==='timeline')scrollJobIntoView(open.dataset.open);return;}
+  if(techrow){state.sel={kind:'tech',id:techrow.dataset.techrow};renderAll();return;}
+  if(tech&&tech.dataset.tech){state.sel={kind:'tech',id:tech.dataset.tech};renderAll();return;}
+  if(e.target.closest('.job')&&!state.didDrag){const jb=e.target.closest('.job');if(jb.dataset.job){state.sel={kind:'job',id:jb.dataset.job};renderAll();return;}}
+  state.sel=null;renderAll();
+});
+document.addEventListener('change',e=>{
+  const s=e.target.closest('select[data-act]');if(!s)return;
+  const j=J(s.dataset.job);
+  if(s.dataset.act==='assign'){
+    if(!s.value)return;
+    const start=findSlot(s.value,j);
+    if(start==null){toast('err','No slot fits '+j.site+' inside '+tName(s.value)+'\u2019s shift and the service window.',4200);s.value='';return;}
+    const res=placeJob(j,s.value,start);
+    if(res.ok){state.sel={kind:'job',id:j.id};}
+    renderAll();
+  }
+  if(s.dataset.act==='assist'){
+    if(!s.value)return;
+    const tech=T(s.value);const lead=T(j.techId);
+    const occ=getOccupancy(s.value);
+    if(occ.some(o=>j.start<o.eEnd&&eEnd(j)>o.start)){toast('err',tech.name+' is busy during that window — overlaps '+occ.find(o=>j.start<o.eEnd&&eEnd(j)>o.start).job.site+'.',3800);s.value='';return;}
+    pushHistory();
+    j.assists=j.assists||[];j.assists.push({techId:s.value,start:j.start,end:Math.min(eEnd(j),j.start+90)});
+    state.pending++;renderAll();
+    toast('ok',tech.name+' added as assist ('+fm(j.start)+'–'+fm(Math.min(eEnd(j),j.start+90))+').',3200);
+  }
+});
+$('#search').addEventListener('input',e=>{state.q=e.target.value.trim();renderBoard();});
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b));
+  state.view=b.dataset.view;renderBoard();
+}));
+$('#btnUndo').addEventListener('click',undo);
+$('#btnPublish').addEventListener('click',()=>{
+  if(!state.pending){toast('info','No pending changes to publish.',2200);return;}
+  state.pending=0;state.history=[];ALERTS.forEach(a=>a.snapshot=null);
+  updateHeader();toast('ok','Schedule published — 6 technicians notified via mobile app.',3600);
+});
+$('#btnBell').addEventListener('click',()=>{window.scrollTo({top:0,behavior:'smooth'});toast('info',$('#bellDot').textContent+' active alert(s) shown in the alert strip.',2600);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){state.sel=null;renderAll();}});
+
+/* drag & drop */
+const boardEl=$('#board'),scrollEl=$('#boardScroll');
+let dropLine=null;
+boardEl.addEventListener('dragstart',e=>{
+  const jb=e.target.closest('.job[draggable="true"]');if(!jb)return;
+  state.dragId=jb.dataset.job;state.didDrag=true;
+  e.dataTransfer.setData('text/plain',state.dragId);
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>jb.classList.add('dragging'),0);
+});
+boardEl.addEventListener('dragend',e=>{
+  boardEl.querySelectorAll('.dragging').forEach(x=>x.classList.remove('dragging'));
+  clearDrop();state.dragId=null;setTimeout(()=>state.didDrag=false,80);
+});
+boardEl.addEventListener('dragover',e=>{
+  const track=e.target.closest('.track');if(!track||!state.dragId)return;
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  boardEl.querySelectorAll('.track.dropok').forEach(x=>x.classList.remove('dropok'));
+  track.classList.add('dropok');
+  const rect=track.getBoundingClientRect();
+  const m=Math.min(DAY_END,Math.max(DAY_START,snap(DAY_START+(e.clientX-rect.left)/rect.width*SPAN)));
+  if(!dropLine){dropLine=document.createElement('div');dropLine.className='dropline';track.appendChild(dropLine);}
+  if(dropLine.parentElement!==track)track.appendChild(dropLine);
+  dropLine.style.left=pct(m)+'%';
+});
+boardEl.addEventListener('dragleave',e=>{if(!boardEl.contains(e.relatedTarget))clearDrop();});
+boardEl.addEventListener('drop',e=>{
+  const track=e.target.closest('.track');clearDrop();
+  if(!track||!state.dragId)return;
+  e.preventDefault();
+  const job=J(state.dragId);
+  if(track.dataset.lane==='unassigned'){
+    if(job.techId){unassign(job);}return;
+  }
+  const techId=track.dataset.tech;if(!techId)return;
+  const rect=track.getBoundingClientRect();
+  const m=Math.min(DAY_END-job.dur,Math.max(DAY_START,snap(DAY_START+(e.clientX-rect.left)/rect.width*SPAN)));
+  const res=placeJob(job,techId,m);
+  if(!res.ok)toast('err',res.msg,4200);
+  renderAll();
+});
+function clearDrop(){boardEl.querySelectorAll('.track.dropok').forEach(x=>x.classList.remove('dropok'));if(dropLine){dropLine.remove();dropLine=null;}}
+
+function scrollJobIntoView(id){
+  if(state.view!=='timeline')return;
+  const j=J(id);if(!j||j.start==null)return;
+  const track=[...boardEl.querySelectorAll('.track')].find(t=>t.dataset.tech===j.techId);
+  if(!track)return;
+  const row=track.closest('.brow');row.scrollIntoView({block:'nearest'});
+  const w=track.getBoundingClientRect().width;
+  scrollEl.scrollLeft=Math.max(0,(pct(j.start)/100)*w-220);
+}
+
+/* go */
+renderAll();
+toast('info','Planning tomorrow — 3 issues detected in the schedule. Review the alert strip.',4600);
+</script>
+</body>
+</html>

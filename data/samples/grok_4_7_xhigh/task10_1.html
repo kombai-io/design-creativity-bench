@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldline Repair — Dispatch</title>
+<style>
+  :root {
+    --ink: #1c1915;
+    --muted: #6b645c;
+    --line: #e3dacd;
+    --paper: #efeae2;
+    --card: #fffcf8;
+    --navy: #1b2430;
+    --copper: #c85a28;
+    --track: 880px;
+    --tech: 214px;
+    --row: 118px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Segoe UI", "Avenir Next", "Trebuchet MS", sans-serif;
+    color: var(--ink);
+    background: #e4dfd4;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2, h3, p { margin: 0; }
+  .app {
+    min-width: 1280px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .top {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 14px 8px 12px;
+    background: var(--navy);
+    color: #f4efe8;
+    border-top: 3px solid var(--copper);
+  }
+  .brand { display: flex; align-items: center; gap: 8px; flex: none; }
+  .brand h1 {
+    font-family: Georgia, "Iowan Old Style", Palatino, serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .brand p {
+    margin-top: 2px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #e2b8a0;
+  }
+  nav { display: flex; gap: 12px; flex: none; }
+  nav a {
+    color: #d7cfc3;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 4px 0;
+  }
+  nav a[aria-current="page"] {
+    color: #fff;
+    box-shadow: inset 0 -2px 0 #e08a55;
+  }
+  .stats { display: flex; gap: 2px; margin-left: auto; }
+  .chip {
+    text-align: center;
+    padding: 0 10px;
+    border-left: 1px solid #33404e;
+    min-width: 64px;
+  }
+  .chip b { display: block; font-size: 16px; line-height: 1.1; color: #fff; }
+  .chip span {
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #c9c0b2;
+  }
+  .chip.warn b { color: #f0c27a; }
+  .chip.bad b { color: #f3b0a6; }
+  .who { display: flex; align-items: center; gap: 8px; flex: none; }
+  .clock { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+  .who small { display: block; color: #c9c0b2; font-size: 11px; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--copper); color: #fff;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .exceptions {
+    flex: none;
+    margin: 8px 10px 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--copper);
+    border-radius: 6px;
+  }
+  .ex-head {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 6px 10px 2px;
+  }
+  .ex-head h2, .card h2, .tech-head {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .ex-note { color: var(--muted); font-size: 12px; }
+  #stat-exceptions { font-weight: 800; color: #a3262c; font-size: 12px; }
+  .ex {
+    display: grid;
+    grid-template-columns: 108px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 10px;
+    border-top: 1px solid var(--line);
+  }
+  .ex-k { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+  .ex.urgent .ex-k { color: #a3262c; }
+  .ex.over .ex-k { color: #a15c00; }
+  .ex.cap .ex-k { color: #8c3b28; }
+  .ex.parts .ex-k { color: #8a5a12; }
+  .ex.cleared { background: #f3f7f4; }
+  .ex.cleared .ex-k { color: #1f7a45; }
+  .ex-b { font-size: 12.5px; line-height: 1.35; }
+  .ex-actions { display: flex; gap: 6px; }
+  .workspace { flex: 1; min-height: 0; display: flex; }
+  .schedule { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .toolbar {
+    flex: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 10px;
+    background: #f7f4ee;
+    border-bottom: 1px solid var(--line);
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 10px; }
+  .lg { display: inline-flex; align-items: center; gap: 4px; color: #5c564c; font-size: 11px; }
+  .lg i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .crewline { margin: 3px 0 0; font-size: 12px; color: #3c3832; }
+  input[type="search"] {
+    border: 1px solid #d5cdc0;
+    background: #fff;
+    border-radius: 4px;
+    padding: 6px 8px;
+    width: 230px;
+    flex: none;
+  }
+  .gantt-scroll { flex: 1; overflow: auto; }
+  .gantt-inner { width: 1094px; }
+  .ruler {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    background: #efeae2;
+    border-bottom: 1px solid #ddd4c6;
+    height: 28px;
+  }
+  .tech-head {
+    width: var(--tech);
+    flex: none;
+    position: sticky;
+    left: 0;
+    z-index: 9;
+    background: #efeae2;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 8px 5px;
+  }
+  .hours { position: relative; width: var(--track); height: 28px; flex: none; }
+  .hours > span {
+    position: absolute;
+    top: 8px;
+    font-size: 10px;
+    color: #6f685e;
+    transform: translateX(-50%);
+  }
+  .hours > span:first-child { transform: none; }
+  .hours > span:last-of-type { transform: translateX(-100%); }
+  .now-flag {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    background: var(--copper);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    font-style: normal;
+    padding: 1px 4px;
+    border-radius: 0 0 3px 3px;
+    z-index: 5;
+  }
+  .row { display: flex; height: var(--row); border-bottom: 1px solid #e6dfd3; background: #f7f4ee; }
+  .row.hot { background: #fbf6f1; }
+  .row.t-open { background: #f8efee; }
+  .row.t-chris { background: #f6f3f8; }
+  .tech {
+    width: var(--tech);
+    height: var(--row);
+    flex: none;
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    background: #fbfaf6;
+    border-right: 1px solid #e0d8cc;
+    padding: 6px 8px;
+    overflow: hidden;
+  }
+  .row.hot .tech { background: #fbf4ee; }
+  .row.t-open .tech { background: #f8ecea; }
+  .row.t-chris .tech { background: #f4f0f7; }
+  .tech-name { font-weight: 700; font-size: 12.5px; display: flex; align-items: center; }
+  .tech-name em {
+    font-style: normal;
+    background: #a3262c;
+    color: #fff;
+    border-radius: 99px;
+    padding: 0 5px;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  .tech-name em.ok { background: #1f7a45; }
+  .tech-meta { font-size: 10.5px; line-height: 1.28; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tech-meta.warn { color: #8a4b08; font-weight: 700; }
+  .tech-meta.ok { color: #1f7a45; font-weight: 700; }
+  .swatch {
+    width: 8px; height: 8px; border-radius: 2px;
+    background: var(--c); display: inline-block; margin-right: 5px; flex: none;
+  }
+  .bar { height: 5px; background: #e4dcd0; border-radius: 99px; margin-top: 3px; max-width: 120px; }
+  .bar span { display: block; height: 100%; background: var(--c, #1a646c); border-radius: 99px; }
+  .bar.over span { background: #a3262c; }
+  .t-derek { --c: #1a646c; --c-soft: #d7ebe8; }
+  .t-priya { --c: #2c4f86; --c-soft: #dbe3f1; }
+  .t-marcus { --c: #7a3222; --c-soft: #f4ddd7; }
+  .t-elena { --c: #245c38; --c-soft: #d9eddf; }
+  .t-jordan { --c: #6f4a10; --c-soft: #f4e6cf; }
+  .t-chris { --c: #5c4d7a; --c-soft: #e6e0f0; }
+  .t-open { --c: #8f2d36; --c-soft: #f8e4e2; }
+  .track {
+    position: relative;
+    width: var(--track);
+    height: var(--row);
+    flex: none;
+    background-image: repeating-linear-gradient(to right, rgba(40,32,20,0.07) 0, rgba(40,32,20,0.07) 1px, transparent 1px, transparent 80px);
+  }
+  .off {
+    position: absolute; top: 0; bottom: 0; z-index: 1; pointer-events: none;
+    background: repeating-linear-gradient(-45deg, rgba(40,32,20,.03), rgba(40,32,20,.03) 5px, rgba(40,32,20,.08) 5px, rgba(40,32,20,.08) 10px);
+  }
+  .off span, .hard span, .wintick span {
+    position: absolute; top: 4px; left: 4px;
+    font-size: 9px; font-weight: 800; letter-spacing: 0.04em;
+    text-transform: uppercase; color: #8a8175; white-space: nowrap;
+  }
+  .hard, .wintick, .now {
+    position: absolute; top: 0; bottom: 0; width: 0; z-index: 5; pointer-events: none;
+  }
+  .now { border-left: 2px solid var(--copper); left: 39.09%; }
+  .hard, .wintick { border-left: 1.5px solid #a3262c; }
+  .hard span, .wintick span { color: #a3262c; }
+  .job, .window-bar {
+    position: absolute;
+    top: 30px;
+    height: 76px;
+    border: 0;
+    border-radius: 4px;
+    text-align: left;
+    padding: 4px 6px;
+    overflow: hidden;
+    z-index: 3;
+    color: #fff;
+    background: var(--c);
+    box-shadow: 0 1px 0 rgba(255,255,255,.15) inset;
+  }
+  .job.done { background: var(--c-soft); color: #241f1a; }
+  .job.over { box-shadow: inset 0 0 0 1.5px #e2b15a; }
+  .job.parts { box-shadow: inset 4px 0 0 #e2b15a; }
+  .job.live::after {
+    content: "";
+    position: absolute; left: 0; bottom: 0; height: 3px;
+    width: var(--p, 60%);
+    background: rgba(255,255,255,.75);
+  }
+  .job-time, .job-sub, .job-title, .window-bar strong, .window-bar span {
+    display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .job-title { font-weight: 700; font-size: 12px; }
+  .job-time, .job-sub { font-size: 10.5px; opacity: .92; }
+  .job.done .job-time, .job.done .job-sub { opacity: 1; }
+  .window-bar {
+    background: #f8e4e2;
+    color: #6e1c22;
+    border: 1.5px dashed #a3262c;
+    box-shadow: none;
+  }
+  .window-bar strong { font-size: 12px; }
+  .window-bar span { font-size: 10.5px; }
+  .ghost {
+    position: absolute; top: 30px; height: 76px; z-index: 2; pointer-events: none;
+    border: 1.5px dashed #a15c00; border-radius: 4px;
+    background: rgba(212, 160, 60, .2);
+  }
+  .ghost.suggest { border-color: #5c4d7a; background: rgba(92, 77, 122, .13); }
+  .ghost span {
+    position: absolute; right: 4px; bottom: 3px;
+    font-size: 9px; font-weight: 800; color: #6a3e00;
+  }
+  .ghost.suggest span { color: #3d3456; }
+  .travel {
+    position: absolute; top: 6px; transform: translateX(-50%);
+    font-size: 9.5px; color: #6d665c; background: rgba(247,244,238,.92);
+    padding: 0 3px; z-index: 4; white-space: nowrap; border-radius: 2px;
+  }
+  .is-selected { outline: 2px solid #1b2430; outline-offset: 1px; z-index: 6; }
+  .window-bar.is-selected { outline-color: #a3262c; }
+  .job.dim, .window-bar.dim { opacity: .2; }
+  .dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: #fff; margin-right: 3px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+  .hidden { display: none !important; }
+  .side {
+    width: 360px; flex: none; overflow: auto;
+    background: #e7e1d6; border-left: 1px solid #ddd4c6; padding: 8px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .card h2 { margin-bottom: 8px; }
+  .urgency-bar { font-size: 12px; font-weight: 700; padding: 5px 7px; border-radius: 4px; margin-bottom: 8px; }
+  .urgency-bar.urgent { background: #f8e4e2; color: #8c1f26; }
+  .urgency-bar.high { background: #f8ead8; color: #8a3f10; }
+  .urgency-bar.ok { background: #e7f3ea; color: #1d5c34; }
+  .urgency-bar.live { background: #1b2430; color: #fff; }
+  .urgency-bar.warn { background: #f8ead8; color: #8a4b08; }
+  .dh { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .dh h3 { font-size: 16px; }
+  .ticket { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .pill {
+    flex: none;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 3px 6px; border-radius: 99px;
+  }
+  .pill.urgent { background: #f8d6d4; color: #8c1f26; }
+  .pill.high { background: #f8e4cf; color: #8a3f10; }
+  .pill.std { background: #e5eeec; color: #1a646c; }
+  .pill.low { background: #eeeae3; color: #5c564c; }
+  .pill.done { background: #e7efe8; color: #1f7a45; }
+  .pill.live { background: #1b2430; color: #fff; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; }
+  .facts .wide { grid-column: 1 / -1; }
+  .k { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .v { font-size: 12.5px; line-height: 1.35; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  caption {
+    text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 0 4px;
+  }
+  th { text-align: left; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  td, th { padding: 4px 3px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.fit { table-layout: fixed; }
+  table.fit td:first-child, table.fit th:first-child { width: 92px; font-weight: 700; }
+  tr.yes td { background: #e7f4ea; }
+  tr.trade td { background: #fbf3e4; }
+  tr.no td { color: #5e584f; }
+  .detail-actions, .ex-actions { align-items: center; }
+  .detail-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  button.act, .ex-actions button, .detail-actions button, .notice button, .oncall button {
+    background: var(--navy); color: #fff; border: 0; border-radius: 4px;
+    padding: 6px 8px; font-size: 12px; font-weight: 650;
+  }
+  button.secondary { background: #fff; color: var(--navy); border: 1px solid #cfc6b8; }
+  .ex-actions button:hover:not(:disabled),
+  .detail-actions button:hover:not(:disabled),
+  .notice button:hover:not(:disabled) { background: var(--copper); }
+  button:disabled { opacity: .6; cursor: default; }
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--copper); outline-offset: 2px;
+  }
+  .quiet { font-size: 12px; color: var(--muted); margin: 6px 0; }
+  .notice { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .notice:last-child { border-bottom: 0; }
+  .notice header { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+  .notice h3 { font-size: 13px; }
+  .nstat { font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #a3262c; }
+  .notice.sent .nstat { color: #1f7a45; }
+  .script { background: #f6f1e8; padding: 6px; border-radius: 4px; font-size: 12px; line-height: 1.4; margin: 4px 0; }
+  .crew-card { padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .crew-card h3 { font-size: 13px; }
+  .crew-card p { font-size: 12px; line-height: 1.35; margin-top: 1px; }
+  .area-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .zone { border: 1px solid var(--line); border-radius: 4px; padding: 6px; background: #fff; }
+  .zone.hot { border-color: #a3262c; background: #fdf6f5; }
+  .zone strong { display: block; font-size: 12px; }
+  .zone span { display: block; font-size: 11px; color: #5c564c; }
+  .log { list-style: none; padding: 0; margin: 0; }
+  .log li {
+    display: grid; grid-template-columns: 64px 1fr; gap: 6px;
+    padding: 4px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+  }
+  .log time { color: var(--muted); }
+  textarea {
+    width: 100%; min-height: 68px; border: 1px solid var(--line); border-radius: 4px;
+    padding: 6px 8px; background: #fff; resize: vertical;
+  }
+  .footer {
+    flex: none; background: var(--navy); color: #d9d0c4;
+    font-size: 11px; padding: 6px 12px;
+    display: flex; justify-content: space-between; gap: 12px;
+  }
+  #toast {
+    position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%);
+    background: var(--navy); color: #f7f4ee; padding: 10px 14px; border-radius: 6px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s;
+    z-index: 20; max-width: 640px;
+  }
+  #toast.show { opacity: 1; }
+  .hold { color: #8a5a12; font-weight: 800; }
+  .badtag { color: #a3262c; font-weight: 800; }
+  .oktag { color: #1f7a45; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+        <rect x="1" y="1" width="26" height="26" rx="4" fill="#243244" stroke="#e08a55" stroke-width="1.5"/>
+        <path d="M5 18.5h6.5l2.2-7.2h8.3" fill="none" stroke="#f4efe6" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M6.2 13.4l2.3-3.3 2.3 3.3" fill="none" stroke="#e08a55" stroke-width="1.4" stroke-linejoin="round"/>
+        <circle cx="13.7" cy="11.3" r="1.35" fill="#e08a55"/>
+      </svg>
+      <div>
+        <h1>Fieldline</h1>
+        <p>Repair dispatch</p>
+      </div>
+    </div>
+    <nav aria-label="Primary">
+      <a href="#schedule" aria-current="page">Schedule</a>
+      <a href="#crew">Crew</a>
+      <a href="#notices">Notices</a>
+      <a href="#parts">Parts</a>
+    </nav>
+    <div class="stats" aria-label="Today at a glance">
+      <div class="chip"><b id="stat-stops">21</b><span>stops</span></div>
+      <div class="chip"><b>7</b><span>done</span></div>
+      <div class="chip"><b>2</b><span>live</span></div>
+      <div class="chip"><b id="stat-ahead">11</b><span>ahead</span></div>
+      <div class="chip bad"><b id="stat-urgent">1</b><span>urgent</span></div>
+      <div class="chip warn"><b id="stat-notice">5</b><span>to notify</span></div>
+      <div class="chip bad"><b id="stat-marcus">106%</b><span>Marcus fcst</span></div>
+    </div>
+    <div class="who">
+      <div>
+        <div class="clock">11:18 AM</div>
+        <small>Thu, Apr 9, 2026 · North Metro</small>
+      </div>
+      <div class="avatar" aria-hidden="true">MC</div>
+      <div>Maya Chen<small>Dispatcher · ext 204</small></div>
+    </div>
+  </header>
+
+  <section class="exceptions" aria-label="Assignment and capacity problems">
+    <div class="ex-head">
+      <h2>Exceptions</h2>
+      <span id="stat-exceptions">4 open</span>
+      <span class="ex-note">Coverage, windows, and parts before the 2:00 and 2:15 deadlines.</span>
+    </div>
+    <div class="ex urgent" id="ex-park">
+      <div class="ex-k" id="ex-park-k">Urgent open</div>
+      <div class="ex-b" id="ex-park-text">Helen Park, FL-48219. Samsung fridge short-cycling at 2408 Rivergate Blvd 4B. Service window 11:00–2:00, 105 min. Needs EPA 608 and R600a. No on-duty tech can make it.</div>
+      <div class="ex-actions">
+        <button type="button" data-action="padilla" title="Page Chris Padilla. Arrives 12:01, finishes 1:46, inside the window and before his 3:00 stop. Call-in premium $85.">Page Padilla</button>
+      </div>
+    </div>
+    <div class="ex over" id="ex-ferrer">
+      <div class="ex-k" id="ex-ferrer-k">Likely overrun</div>
+      <div class="ex-b" id="ex-ferrer-text">Luis Ferrer, FL-48195, 1507 Linden. Planned 90 min, likely 145 if the Samsung restriction is real. Camille Brooks’s hard arrival at 2:15 is four minutes short.</div>
+      <div class="ex-actions">
+        <button type="button" data-action="ferrer-diag" title="Cut Ferrer to a 45-minute diagnostic and book the sealed-system return Friday 10:15. Derek then reaches Hawthorne at 1:24.">Diagnostic only</button>
+      </div>
+    </div>
+    <div class="ex cap" id="ex-marcus">
+      <div class="ex-k" id="ex-marcus-k">Capacity</div>
+      <div class="ex-b" id="ex-marcus-text">Marcus Hale forecast 106%. Castillo leak runs to 12:20. Ellison misses the 12:15 window. Lang would end 3:57, past the 3:30 school-pickup stop.</div>
+      <div class="ex-actions">
+        <button type="button" data-action="notify" data-who="ellison" title="Text Nora Ellison that arrival slips to about 12:35.">Text Ellison</button>
+        <button type="button" data-action="move-lang" title="Move Victor Lang to Friday 8:30–10:00, open before Anita Shah at 10:30.">Move Lang to Fri</button>
+      </div>
+    </div>
+    <div class="ex parts" id="ex-ortiz">
+      <div class="ex-k" id="ex-ortiz-k">Parts hold</div>
+      <div class="ex-b" id="ex-ortiz-text">Bosch sensor 00650463 hits Irving shop at 12:40. Samuel Ortiz still expects Priya at 12:15. Real arrival is 1:10, still inside his 12:00–3:00 window.</div>
+      <div class="ex-actions">
+        <button type="button" data-action="notify" data-who="ortiz" title="Send Samuel Ortiz the revised 1:10 ETA.">Send 1:10 ETA</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="workspace">
+    <main class="schedule" id="schedule">
+      <div class="toolbar">
+        <div>
+          <div class="legend" aria-label="Schedule legend">
+            <span class="lg"><i style="background:#d7ebe8"></i>Done</span>
+            <span class="lg"><i style="background:#1a646c"></i>Confirmed</span>
+            <span class="lg"><i style="background:#1b2430"></i>Live</span>
+            <span class="lg"><i style="background:#e2b15a"></i>Overrun or parts</span>
+            <span class="lg"><i style="background:#f8e4e2;box-shadow:inset 0 0 0 1px #a3262c"></i>Unassigned window</span>
+            <span class="lg"><i style="background:repeating-linear-gradient(-45deg,#ddd,#ddd 2px,#f4f0e8 2px,#f4f0e8 4px)"></i>Off shift</span>
+            <span class="lg"><i style="background:#c85a28"></i>Now 11:18</span>
+            <span class="lg">Travel chips are drive minutes</span>
+          </div>
+          <p class="crewline" id="crewline">Derek en route, ETA Linden 11:28, Brooks window at risk · Marcus on site, overrun, Lang past stop · Priya wrapping Market St · Elena en route, ETA Ashland 11:29 · Jordan at south annex, transmission in hand · Padilla on call, not paged</p>
+        </div>
+        <input id="q" type="search" aria-label="Filter stops, technicians, and tickets" placeholder="Filter stops, techs, tickets" autocomplete="off">
+      </div>
+      <div class="gantt-scroll" id="gantt-scroll">
+        <div class="gantt-inner">
+          <div class="ruler">
+            <div class="tech-head">Technician</div>
+            <div class="hours">
+              <span style="left:0%">7a</span>
+              <span style="left:9.09%">8a</span>
+              <span style="left:18.18%">9a</span>
+              <span style="left:27.27%">10a</span>
+              <span style="left:36.36%">11a</span>
+              <span style="left:45.45%">12p</span>
+              <span style="left:54.55%">1p</span>
+              <span style="left:63.64%">2p</span>
+              <span style="left:72.73%">3p</span>
+              <span style="left:81.82%">4p</span>
+              <span style="left:90.91%">5p</span>
+              <span style="left:100%">6p</span>
+              <i class="now-flag" style="left:39.09%">11:18</i>
+            </div>
+          </div>
+
+          <div class="row t-open" id="row-open">
+            <div class="tech">
+              <div class="tech-name" id="open-name"><i class="swatch"></i>Unassigned <em id="open-count">1</em></div>
+              <div class="tech-meta">Urgent · Riverward</div>
+              <div class="tech-meta">Needs EPA 608 + R600a</div>
+              <div class="tech-meta warn" id="unassigned-status">No certified tech free</div>
+            </div>
+            <div class="track">
+              <div class="now"></div>
+              <div class="travel" id="suggest-label" style="left:54%">If Padilla rolls · 12:05–1:50</div>
+              <div class="ghost suggest" id="ghost-padilla" style="left:46.21%;width:15.91%"><span>12:05–1:50</span></div>
+              <button type="button" class="window-bar is-selected" id="job-park" data-id="park" data-search="helen park urgent samsung rivergate unassigned fl-48219" style="left:36.36%;width:27.27%" title="Helen Park, FL-48219, 2408 Rivergate Blvd Apt 4B, Riverward. Service window 11:00 AM–2:00 PM hard. Expected duration 105 min. Samsung RF28R7201SR. Compressor short-cycling, fridge 47 F. Priority Urgent. Unassigned. Needs EPA 608, manifold, R600a.">
+                <strong id="park-bar-title">Helen Park · FL-48219</strong>
+                <span id="park-bar-sub">Urgent · 105 min · Samsung fridge · EPA 608 + R600a</span>
+                <span>Hard window 11:00 AM–2:00 PM · formula and medication</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row hot t-marcus">
+            <div class="tech" title="Marcus Hale, Van 03. Working hours 8:00 AM–3:30 PM hard stop, school pickup. Service area West Hills, Cedar Ridge. Skills: built-in refrigeration, cooking. Certifications: EPA 608 Universal, Sub-Zero and Wolf. Brands: Sub-Zero, Wolf, GE Monogram, KitchenAid. Kit: manifold, Appion vacuum pump in use, micron gauge, R134a. Load 91% planned, 106% forecast.">
+              <div class="tech-name"><i class="swatch"></i>Marcus Hale</div>
+              <div class="tech-meta">Van 03 · 8:00a–3:30p</div>
+              <div class="tech-meta">West Hills, Cedar Ridge</div>
+              <div class="tech-meta">EPA 608 · Sub-Zero, Wolf</div>
+              <div class="tech-meta">Brands: Sub-Zero, Wolf, Monogram</div>
+              <div class="tech-meta warn" id="marcus-line">Load 106% fcst · on the leak</div>
+              <div class="bar over" title="Forecast load 106 percent"><span style="width:100%"></span></div>
+            </div>
+            <div class="track">
+              <div class="off" style="left:0;width:9.09%"><span>Off</span></div>
+              <div class="off" style="left:77.27%;width:22.73%"><span>Hard stop</span></div>
+              <div class="now"></div>
+              <div class="hard" style="left:77.27%" title="Hard stop 3:30 PM, school pickup"><span>3:30</span></div>
+              <div class="wintick" style="left:47.73%" title="Nora Ellison hard window ends 12:15"><span>12:15</span></div>
+              <div class="travel" style="left:5%">travel 12m</div>
+              <div class="travel" style="left:22.7%">15m</div>
+              <div class="travel" style="left:38.7%">11m</div>
+              <div class="travel" style="left:55.9%">16m</div>
+              <button type="button" class="job done" data-id="nguyen" data-search="patrick nguyen ge monogram west hills fl-48176 done" style="left:9.85%;width:11.36%" title="Patrick Nguyen, FL-48176, 300 Summit Avenue, West Hills. Window 8:00–10:30 AM. 75 min. GE Monogram ZWE23PSHSS. Warm freezer. Completed 9:22. Warranty defrost timer.">
+                <span class="job-time">8:05–9:20 · Done</span>
+                <span class="job-title">Nguyen · GE Monogram</span>
+                <span class="job-sub">Warm freezer · timer replaced</span>
+              </button>
+              <div class="ghost" id="ghost-castillo" style="left:24.24%;width:24.24%"><span>est 12:20</span></div>
+              <button type="button" class="job live over" data-id="castillo" data-search="irene castillo sub-zero cedar ridge overrun fl-48188" style="left:24.24%;width:13.64%;--p:100%" title="Irene Castillo, FL-48188, 614 Terrace Drive, Cedar Ridge. Window 9:30 AM–12:00 PM. Planned 90, already over. Sub-Zero BI-48S/O not cooling, leak confirmed. Priority High. Est. finish 12:20. Manifold and vacuum pump in use.">
+                <span class="job-time"><i class="dot"></i>9:40–11:10 · 90m plan</span>
+                <span class="job-title">Castillo · Sub-Zero 48"</span>
+                <span class="job-sub">Leak confirmed · recovery on</span>
+                <span class="job-sub">Live · 96 min in · est 12:20</span>
+              </button>
+              <div class="ghost" id="ghost-ellison" style="left:50.15%;width:15.15%"><span>est 12:31</span></div>
+              <button type="button" class="job over" id="job-ellison" data-id="ellison" data-search="nora ellison wolf cedar ridge fl-48201" style="left:39.55%;width:15.15%" title="Nora Ellison, FL-48201, 88 Oakmont Place, Cedar Ridge. Hard arrival window 11:00 AM–12:15 PM. 100 min. Wolf GR366 hinge sag and temperature swing. Priority Standard. Forecast arrival 12:31, misses window. Travel 11 min from Terrace.">
+                <span class="job-time">11:21–1:01 · 100m</span>
+                <span class="job-title">Ellison · Wolf range</span>
+                <span class="job-sub" id="ellison-sub">Hinge and temp · misses 12:15</span>
+                <span class="job-sub">Window 11:00–12:15 · travel 11m</span>
+              </button>
+              <div class="ghost" id="ghost-lang" style="left:67.73%;width:13.63%"><span>est 3:57</span></div>
+              <button type="button" class="job over" id="job-lang" data-id="lang" data-search="victor lang kitchenaid cedar ridge fl-48215" style="left:57.12%;width:13.64%" title="Victor Lang, FL-48215, 17 Cedar Ridge Road, Cedar Ridge. Window 1:00–3:15 PM. 90 min. KitchenAid KBBR306ESS ice buildup and fan noise. Priority Standard. Forecast end 3:57, past Marcus 3:30 hard stop. Travel 16 min.">
+                <span class="job-time" id="lang-time">1:17–2:47 · 90m</span>
+                <span class="job-title" id="lang-title">Lang · KitchenAid fridge</span>
+                <span class="job-sub" id="lang-sub">Ice and fan noise · ends 3:57</span>
+                <span class="job-sub" id="lang-win">Past 3:30 stop if leak holds</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row hot t-derek">
+            <div class="tech" title="Derek Alvarez, Van 14. Working hours 7:30 AM–4:00 PM. Service area Lakeview, Northside. Skills: refrigeration, dishwashers. Certifications: EPA 608 Universal, Samsung refrigeration. Brands: GE, Samsung, Whirlpool, LG. Kit: Fieldpiece manifold, Inficon leak detector, R600a, R134a. Load 82%.">
+              <div class="tech-name"><i class="swatch"></i>Derek Alvarez</div>
+              <div class="tech-meta">Van 14 · 7:30a–4:00p</div>
+              <div class="tech-meta">Lakeview, Northside</div>
+              <div class="tech-meta">EPA 608 · Samsung cert</div>
+              <div class="tech-meta">Brands: GE, Samsung, Whirlpool, LG</div>
+              <div class="tech-meta warn" id="derek-line">Load 82% · Brooks window at risk</div>
+              <div class="bar" title="Load 82 percent"><span style="width:82%"></span></div>
+            </div>
+            <div class="track">
+              <div class="off" style="left:0;width:4.55%"><span>Off</span></div>
+              <div class="off" style="left:81.82%;width:18.18%"><span>Off 4:00</span></div>
+              <div class="now"></div>
+              <div class="wintick" id="brooks-tick" style="left:65.91%" title="Camille Brooks hard arrival ends 2:15"><span>2:15</span></div>
+              <div class="travel" style="left:3%">12m</div>
+              <div class="travel" style="left:22.3%">travel 22m</div>
+              <div class="travel" style="left:39.4%">16m</div>
+              <div class="travel" id="travel-brooks" style="left:56.3%">24m</div>
+              <button type="button" class="job done" data-id="okada" data-search="james okada ge lakeview fl-48174 done" style="left:6.82%;width:13.64%" title="James Okada, FL-48174, 412 Maple Avenue, Lakeview. Window 7:30–10:00. 90 min. GE Profile PFE28KYNFS not cooling. High. Completed 9:12. Fan WR60X31522. SMS delivered 7:12.">
+                <span class="job-time">7:45–9:15 · Done</span>
+                <span class="job-title">Okada · GE fridge</span>
+                <span class="job-sub">Not cooling · fan replaced</span>
+              </button>
+              <button type="button" class="job done" data-id="adelman" data-search="ruth adelman whirlpool northside fl-48184 done" style="left:24.24%;width:13.64%" title="Ruth Adelman, FL-48184, 88 Birch Lane, Northside. Window 9:00 AM–12:00 PM. 90 min. Whirlpool dishwasher WDT750SAHZ not draining. Completed 11:08. Pump W11457841.">
+                <span class="job-time">9:40–11:10 · Done</span>
+                <span class="job-title">Adelman · Whirlpool DW</span>
+                <span class="job-sub">Not draining · pump replaced</span>
+              </button>
+              <div class="ghost" id="ghost-ferrer" style="left:40.91%;width:21.97%"><span>likely 1:55</span></div>
+              <button type="button" class="job over" id="job-ferrer" data-id="ferrer" data-search="luis ferrer samsung lakeview linden likely overrun fl-48195" style="left:40.91%;width:13.64%" title="Luis Ferrer, FL-48195, 1507 Linden Street, Lakeview. Window 11:00 AM–2:00 PM. Planned 90, likely 145. Samsung RF28R7351SR ice maker jammed, sealed-system restriction suspected. High. Travel 16 min. Ice kit DA97-15217D on van. Manifold required.">
+                <span class="job-time" id="ferrer-time">11:30–1:00 · 90m plan</span>
+                <span class="job-title">Ferrer · Samsung RF28</span>
+                <span class="job-sub" id="ferrer-sub">Likely +55 · sealed system</span>
+                <span class="job-sub">Window 11:00 AM–2:00 PM</span>
+              </button>
+              <button type="button" class="job over" id="job-brooks" data-id="brooks" data-search="camille brooks lg northside hawthorne fl-48207 at risk" style="left:58.18%;width:11.36%" title="Camille Brooks, FL-48207, 19 Hawthorne Court, Northside. Hard arrival window 1:15–2:15 PM, contractor on site. 75 min. LG LFXS26973S loud knocking. Standard. Travel 24 min from Linden. Forecast arrival 2:19 if Ferrer runs long.">
+                <span class="job-time">1:24–2:39 · 75m</span>
+                <span class="job-title">Brooks · LG fridge</span>
+                <span class="job-sub" id="brooks-sub">Knocking · hard window 2:15</span>
+                <span class="job-sub" id="brooks-sub2">At risk · est. arrival 2:19</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row t-priya">
+            <div class="tech" title="Priya Shah, Van 07. Working hours 8:00 AM–5:00 PM. Service area Downtown, Riverward. Skills: laundry, ranges, ovens. Certifications: Whirlpool Factory Authorized, Bosch cooking. Brands: Whirlpool, Maytag, Bosch, KitchenAid. Kit: UEI combustion analyzer. No refrigerant, no EPA 608. Load 80%.">
+              <div class="tech-name"><i class="swatch"></i>Priya Shah</div>
+              <div class="tech-meta">Van 07 · 8:00a–5:00p</div>
+              <div class="tech-meta">Downtown, Riverward</div>
+              <div class="tech-meta">Whirlpool factory · Bosch</div>
+              <div class="tech-meta">Brands: Whirlpool, Maytag, Bosch</div>
+              <div class="tech-meta warn">Load 80% · Ortiz parts detour</div>
+              <div class="bar" title="Load 80 percent"><span style="width:80%"></span></div>
+            </div>
+            <div class="track">
+              <div class="off" style="left:0;width:9.09%"><span>Off</span></div>
+              <div class="off" style="left:90.91%;width:9.09%"><span>Off 5:00</span></div>
+              <div class="now"></div>
+              <div class="travel" style="left:6%">travel 14m</div>
+              <div class="travel" style="left:26.5%">12m</div>
+              <div class="travel" style="left:43.5%">shop 22m + wait</div>
+              <div class="travel" id="travel-petrov" style="left:64%">18m</div>
+              <button type="button" class="job done" data-id="williams" data-search="andre williams maytag downtown fl-48179 done" style="left:11.36%;width:13.64%" title="Andre Williams, FL-48179, 55 Wabash Street Apt 12, Downtown. Window 8:00–11:00. 90 min. Maytag washer MVW7232HW will not spin, F7 E1. Completed 9:41. Shift actuator replaced.">
+                <span class="job-time">8:15–9:45 · Done</span>
+                <span class="job-title">Williams · Maytag washer</span>
+                <span class="job-sub">Will not spin · actuator</span>
+              </button>
+              <button type="button" class="job live" data-id="lin" data-search="mei lin kitchenaid downtown fl-48190 live" style="left:28.03%;width:11.36%;--p:97%" title="Mei Lin, FL-48190, 901 Market Street Unit 4, Downtown. Window 10:00 AM–1:00 PM. 75 min. KitchenAid range KFGG500ESS front burner will not ignite. Live, 2 min left. Glow igniter on van.">
+                <span class="job-time"><i class="dot"></i>10:05–11:20 · 75m</span>
+                <span class="job-title">Lin · KitchenAid range</span>
+                <span class="job-sub">Burner will not light · live</span>
+                <span class="job-sub">Window to 1:00 · closing out</span>
+              </button>
+              <button type="button" class="job parts" id="job-ortiz" data-id="ortiz" data-search="samuel ortiz bosch riverward parts hold fl-48204" style="left:47.73%;width:13.64%" title="Samuel Ortiz, FL-48204, 14 Pier Street, Riverward. Window 12:00–3:00 PM. 90 min. Bosch range HGS8055UC oven will not hold temperature. Sensor 00650463 arrives Irving shop 12:40. Quoted 12:15, forecast arrival 1:10. Travel detour 22 plus 22 min.">
+                <span class="job-time" id="ortiz-time">12:15–1:45 · 90m</span>
+                <span class="job-title">Ortiz · Bosch range</span>
+                <span class="job-sub" id="ortiz-sub">Oven temp · sensor hold</span>
+                <span class="job-sub" id="ortiz-win">Quoted 12:15 · window to 3:00</span>
+              </button>
+              <button type="button" class="job" id="job-petrov" data-id="petrov" data-search="grace petrov whirlpool dryer riverward fl-48213" style="left:66.67%;width:13.64%" title="Grace Petrov, FL-48213, 220 Halsted Avenue, Riverward. Window 2:00–5:00 PM. 90 min. Whirlpool dryer WED7120HC takes two cycles. Cycling thermostat on van. Travel 18 min. Still inside window if Ortiz slips.">
+                <span class="job-time" id="petrov-time">2:20–3:50 · 90m</span>
+                <span class="job-title">Petrov · Whirlpool dryer</span>
+                <span class="job-sub">Two cycles to dry</span>
+                <span class="job-sub">Window 2:00–5:00 · thermostat</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row t-elena">
+            <div class="tech" title="Elena Voss, Van 11. Working hours 7:00 AM–3:30 PM. Service area Eastside, Oak Park, Mill District. Skills: dishwashers, disposals, compactors. Certifications: Bosch dishwasher, Miele authorized. No EPA 608. Brands: Bosch, Miele, KitchenAid, GE dishwashers. No sealed-system tools. Load 78%.">
+              <div class="tech-name"><i class="swatch"></i>Elena Voss</div>
+              <div class="tech-meta">Van 11 · 7:00a–3:30p</div>
+              <div class="tech-meta">Eastside, Oak Park, Mill</div>
+              <div class="tech-meta">Bosch DW · Miele · no EPA</div>
+              <div class="tech-meta">Brands: Bosch, Miele, GE DW</div>
+              <div class="tech-meta ok">Load 78% · on track</div>
+              <div class="bar" title="Load 78 percent"><span style="width:78%"></span></div>
+            </div>
+            <div class="track">
+              <div class="off" style="left:77.27%;width:22.73%"><span>Off 3:30</span></div>
+              <div class="now"></div>
+              <div class="travel" style="left:1.5%">16m</div>
+              <div class="travel" style="left:15.9%">travel 18m</div>
+              <div class="travel" style="left:36.7%">24m · held</div>
+              <div class="travel" style="left:58%">12m</div>
+              <button type="button" class="job done" data-id="walsh" data-search="fiona walsh bosch mill fl-48171 done" style="left:3.03%;width:11.36%" title="Fiona Walsh, FL-48171, 44 Mill Street, Mill District. Window 7:00–9:30. 75 min. Bosch SHPM88Z75N not drying. Completed 8:31. Rinse-aid and dry setting, no part.">
+                <span class="job-time">7:20–8:35 · Done</span>
+                <span class="job-title">Walsh · Bosch DW</span>
+                <span class="job-sub">Not drying · setting fixed</span>
+              </button>
+              <button type="button" class="job done" data-id="haddad" data-search="omar haddad miele oak park fl-48182 done" style="left:17.42%;width:13.64%" title="Omar Haddad, FL-48182, 812 Oak Park Boulevard, Oak Park. Window 8:30–11:30. 90 min. Miele G7316 error F11. Completed 10:18. Drain cleared, filter reseated.">
+                <span class="job-time">8:55–10:25 · Done</span>
+                <span class="job-title">Haddad · Miele DW</span>
+                <span class="job-sub">F11 drain · filter reseated</span>
+              </button>
+              <button type="button" class="job" data-id="russo" data-search="diane russo ge eastside fl-48193" style="left:42.42%;width:13.64%" title="Diane Russo, FL-48193, 19 Ashland Avenue, Eastside. Window 11:00 AM–2:00 PM. 90 min. GE dishwasher GDT665SSNSS leaking at the door. Gasket WD08X10071 on van 11. Elena ETA 11:29, start 11:40. Travel 24 min.">
+                <span class="job-time">11:40–1:10 · 90m</span>
+                <span class="job-title">Russo · GE dishwasher</span>
+                <span class="job-sub">Door leak · gasket on van</span>
+                <span class="job-sub">Window 11:00–2:00 · ETA 11:29</span>
+              </button>
+              <button type="button" class="job" data-id="salas" data-search="benito salas kitchenaid disposal eastside fl-48209" style="left:59.85%;width:11.36%" title="Benito Salas, FL-48209, 640 Porter Street, Eastside. Window 1:00–3:30 PM. 75 min. KitchenAid disposal humming, will not grind. Replacement on van, customer approved $214. Low priority. Travel 12 min.">
+                <span class="job-time">1:35–2:50 · 75m</span>
+                <span class="job-title">Salas · disposal</span>
+                <span class="job-sub">Humming · swap approved</span>
+                <span class="job-sub">Window 1:00–3:30 · unit on van</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row t-jordan">
+            <div class="tech" title="Jordan Kim, Van 19. Working hours 9:00 AM–6:00 PM. Service area South Corridor, Brookline. Skills: laundry, heat-pump dryers. Certifications: LG Pro, Electrolux. No EPA 608. Brands: LG, Electrolux, Samsung laundry. Kit: transmission jack, spin-test harness. Load 88%.">
+              <div class="tech-name"><i class="swatch"></i>Jordan Kim</div>
+              <div class="tech-meta">Van 19 · 9:00a–6:00p</div>
+              <div class="tech-meta">South Corridor, Brookline</div>
+              <div class="tech-meta">LG Pro · Electrolux · no EPA</div>
+              <div class="tech-meta">Brands: LG, Electrolux, Samsung</div>
+              <div class="tech-meta ok">Load 88% · part in hand</div>
+              <div class="bar" title="Load 88 percent"><span style="width:88%"></span></div>
+            </div>
+            <div class="track">
+              <div class="off" style="left:0;width:18.18%"><span>Off until 9</span></div>
+              <div class="now"></div>
+              <div class="travel" style="left:19.3%">travel 18m</div>
+              <div class="travel" style="left:35.6%">12m</div>
+              <div class="travel" style="left:43.5%">16m</div>
+              <div class="travel" style="left:65.5%">14m</div>
+              <div class="travel" style="left:82.6%">12m</div>
+              <button type="button" class="job done" data-id="rahman" data-search="aisha rahman lg brookline fl-48186 done" style="left:20.45%;width:13.64%" title="Aisha Rahman, FL-48186, 1020 Brookline Avenue, Brookline. Window 9:00–11:30. 90 min. LG washer WM4000HWA OE error. Completed 10:38. Drain pump replaced.">
+                <span class="job-time">9:15–10:45 · Done</span>
+                <span class="job-title">Rahman · LG washer</span>
+                <span class="job-sub">OE will not drain · pump</span>
+              </button>
+              <button type="button" class="job live" data-id="pickup" data-search="parts pickup transmission b-14 jordan south annex" style="left:37.12%;width:8%" title="Parts pickup at Fieldline south annex, 4100 S Halsted. Transmission 4413ER1001A scanned from bin B-14 at 11:06. Jordan on site now, leaving 11:35. Travel 16 min to Brennan.">
+                <span class="job-time"><i class="dot"></i>11:05</span>
+                <span class="job-title">Bin B-14</span>
+                <span class="job-sub">Part in hand</span>
+              </button>
+              <button type="button" class="job" data-id="brennan" data-search="tom brennan lg south corridor fl-48197 high" style="left:45.45%;width:18.18%" title="Tom Brennan, FL-48197, 455 Southport Road, South Corridor. Window 11:30 AM–3:00 PM. 120 min. LG washer WT7300CW loud bang on spin. High. Transmission 4413ER1001A in hand. Jack required. Arrive about 11:51.">
+                <span class="job-time">12:00–2:00 · 120m</span>
+                <span class="job-title">Brennan · LG washer</span>
+                <span class="job-sub">Bang on spin · transmission</span>
+                <span class="job-sub">Window 11:30–3:00 · part in hand</span>
+              </button>
+              <button type="button" class="job" data-id="stein" data-search="leah stein samsung dryer brookline fl-48211" style="left:67.42%;width:13.64%" title="Leah Stein, FL-48211, 78 Harper Lane, Brookline. Window 2:00–5:30 PM. 90 min. Samsung heat-pump dryer DV45B6300C long dry times. Thermistor on van. Travel 14 min.">
+                <span class="job-time">2:25–3:55 · 90m</span>
+                <span class="job-title">Stein · Samsung dryer</span>
+                <span class="job-sub">Heat pump slow · thermistor</span>
+                <span class="job-sub">Window 2:00–5:30</span>
+              </button>
+              <button type="button" class="job" data-id="daley" data-search="chris daley electrolux south corridor fl-48217" style="left:84.09%;width:11.36%" title="Chris Daley, FL-48217, 330 Kenwood Street, South Corridor. Window 4:00–6:00 PM. 75 min. Electrolux washer ELFW7637AT walks across the floor. Low. No parts, suspension and level check. Travel 12 min.">
+                <span class="job-time">4:15–5:30 · 75m</span>
+                <span class="job-title">Daley · Electrolux</span>
+                <span class="job-sub">Walking washer · level check</span>
+                <span class="job-sub">Window 4:00–6:00</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row t-chris hidden" id="row-padilla">
+            <div class="tech" title="Chris Padilla, Van 02, on call. If paged, working window until 3:00 PM. Home base Irving Park. Certifications: EPA 608 Universal, GE factory. Brands: GE, Samsung, Whirlpool, LG. Kit at home: manifold, leak detector, two cans R600a.">
+              <div class="tech-name"><i class="swatch"></i>Chris Padilla</div>
+              <div class="tech-meta">Van 02 · on call to 3:00p</div>
+              <div class="tech-meta">Irving Park · Riverward 26m</div>
+              <div class="tech-meta">EPA 608 · GE factory</div>
+              <div class="tech-meta">Brands: GE, Samsung, Whirlpool</div>
+              <div class="tech-meta ok" id="padilla-status">Not paged</div>
+            </div>
+            <div class="track">
+              <div class="off" style="left:0;width:46.21%"><span>Not rolled</span></div>
+              <div class="off" style="left:72.73%;width:27.27%"><span>Off 3:00</span></div>
+              <div class="now"></div>
+              <button type="button" class="job" data-id="park" data-search="helen park chris padilla assigned" style="left:46.21%;width:15.91%" title="Helen Park assigned to Chris Padilla. Arrive 12:05, finish 1:50. 105 min. Samsung RF28R7201SR. Inside the 2:00 window.">
+                <span class="job-time">12:05–1:50 · 105m</span>
+                <span class="job-title">Park · Samsung fridge</span>
+                <span class="job-sub">Urgent · sealed system</span>
+                <span class="job-sub">Window holds · alley access</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="side">
+      <section class="card" aria-live="polite">
+        <h2>Selected stop</h2>
+        <div id="detail">
+          <div class="urgency-bar urgent">Urgent · unassigned · promised callback by 11:30 AM · 12 min left</div>
+          <div class="dh">
+            <div>
+              <h3>Helen Park</h3>
+              <p class="ticket">FL-48219 · no technician</p>
+            </div>
+            <span class="pill urgent">Urgent</span>
+          </div>
+          <div class="facts">
+            <div><div class="k">Priority</div><div class="v">Urgent</div></div>
+            <div><div class="k">Expected duration</div><div class="v">105 min</div></div>
+            <div class="wide"><div class="k">Service window</div><div class="v">11:00 AM–2:00 PM arrival. Hard. She leaves for a shift at 2:15.</div></div>
+            <div class="wide"><div class="k">Address</div><div class="v">2408 Rivergate Blvd, Apt 4B, Riverward</div></div>
+            <div class="wide"><div class="k">Appliance</div><div class="v">Samsung RF28R7201SR French-door refrigerator</div></div>
+            <div class="wide"><div class="k">Reported problem</div><div class="v">Compressor short-cycling since last night. Fresh food was 47°F at the 6:12 AM report. Infant formula and a refrigerated medication are inside.</div></div>
+            <div class="wide"><div class="k">Replacement parts</div><div class="v">R600a and a possible start device are not staged on an assigned van. Padilla’s home kit has two 420g cans.</div></div>
+            <div class="wide"><div class="k">Diagnostic equipment</div><div class="v">Sealed-system manifold, leak detector, recovery bag. EPA 608 Universal required.</div></div>
+            <div class="wide"><div class="k">Travel time</div><div class="v">Practical only for a certified tech who is free now. Fit is below.</div></div>
+            <div><div class="k">Phone</div><div class="v">(312) 555-0148</div></div>
+            <div><div class="k">Contact</div><div class="v">Call only — no SMS</div></div>
+            <div class="wide"><div class="k">Access</div><div class="v">Doorman building. Park in the alley, code 1942. Card on file, approved to $650.</div></div>
+          </div>
+          <table class="fit">
+            <caption>Who can make this window</caption>
+            <thead><tr><th>Technician</th><th>Travel and fit</th></tr></thead>
+            <tbody>
+              <tr class="yes"><td>Chris Padilla</td><td>Yes. EPA 608, R600a at home, free until 3:00. Travel 26 min from Irving Park. Arrives 12:01, finishes 1:46. Call-in premium $85.</td></tr>
+              <tr class="trade"><td>Derek Alvarez</td><td>Tradeoff. EPA 608 and R600a on van 14. Travel 22 min from his current GPS, but he is 10 min from Ferrer, a committed high-priority fridge.</td></tr>
+              <tr class="no"><td>Marcus Hale</td><td>No. EPA 608, but the manifold is in use. Travel 36 min from Terrace Dr. Not free until about 12:20, then Ellison is already late.</td></tr>
+              <tr class="no"><td>Priya Shah</td><td>No. Closest on-duty tech at 18 min from Market St, but no EPA 608 and no manifold.</td></tr>
+              <tr class="no"><td>Elena Voss</td><td>No. Dishwashers only, no EPA 608. Travel 29 min from the Eastside run.</td></tr>
+              <tr class="no"><td>Jordan Kim</td><td>No. Laundry only, no EPA 608. Travel 24 min from the south annex, and the transmission job is locked.</td></tr>
+            </tbody>
+          </table>
+          <div class="detail-actions">
+            <button type="button" class="act" data-action="padilla">Page Padilla · $85</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="notices">
+        <h2>Customer notices · 5 waiting</h2>
+        <article class="notice" id="notice-park">
+          <header>
+            <h3>Helen Park · (312) 555-0148</h3>
+            <span class="nstat">Call due 11:30</span>
+          </header>
+          <p class="script" id="script-park">Helen, this is Maya at Fieldline Repair. I do not have an on-duty technician who can reach Rivergate before you leave. I can page Chris Padilla, a sealed-system tech, for a 12:00–12:10 arrival finishing about 1:50. Can you stay for that?</p>
+          <button type="button" data-action="notify" data-who="park">Log the callback</button>
+        </article>
+        <article class="notice" id="notice-ellison">
+          <header>
+            <h3>Nora Ellison · (312) 555-0172</h3>
+            <span class="nstat">SMS not sent</span>
+          </header>
+          <p class="script" id="script-ellison">Fieldline Repair: Marcus is finishing a leak repair on Terrace Dr and will miss the 12:15 window. He can arrive about 12:35 if you can stay, or we can move you to Friday. Reply STAY or CALL. (312) 555-0190.</p>
+          <button type="button" data-action="notify" data-who="ellison">Send delay SMS</button>
+        </article>
+        <article class="notice" id="notice-lang">
+          <header>
+            <h3>Victor Lang · (312) 555-0114</h3>
+            <span class="nstat">SMS not sent</span>
+          </header>
+          <p class="script" id="script-lang">Fieldline Repair: Marcus has a 3:30 hard stop and today’s leak repair ran long. We need to move your KitchenAid fridge to Friday 8:30–10:00 AM. Reply YES to confirm or call (312) 555-0190.</p>
+          <button type="button" data-action="notify" data-who="lang">Send reschedule SMS</button>
+        </article>
+        <article class="notice" id="notice-ortiz">
+          <header>
+            <h3>Samuel Ortiz · (312) 555-0166</h3>
+            <span class="nstat">SMS not sent</span>
+          </header>
+          <p class="script" id="script-ortiz">Fieldline Repair: the Bosch sensor arrives at our shop at 12:40, so Priya will reach Pier St about 1:10 PM, still inside your 12:00–3:00 window. Reply OK or call (312) 555-0190.</p>
+          <button type="button" data-action="notify" data-who="ortiz">Send revised ETA</button>
+        </article>
+        <article class="notice" id="notice-brooks">
+          <header>
+            <h3>Camille Brooks · (312) 555-0194</h3>
+            <span class="nstat">Watch · call</span>
+          </header>
+          <p class="script" id="script-brooks">Camille, Derek may miss your 2:15 contractor deadline by a few minutes if the Linden refrigerator is a sealed system. I can convert that stop to a 45-minute diagnostic and keep him at Hawthorne by 1:24. Do you want me to protect the window?</p>
+          <button type="button" data-action="notify" data-who="brooks">Log the watch call</button>
+        </article>
+      </section>
+
+      <section class="card" id="crew">
+        <h2>Crew · hours, skills, brands</h2>
+        <article class="crew-card t-derek">
+          <h3>Derek Alvarez · Van 14</h3>
+          <p>Working hours 7:30 AM–4:00 PM. Service area Lakeview, Northside.</p>
+          <p>Skills: refrigeration, dishwashers. Certifications: EPA 608 Universal, Samsung refrigeration.</p>
+          <p>Brands: GE, Samsung, Whirlpool, LG. Kit: Fieldpiece manifold, Inficon leak detector, R600a, R134a.</p>
+          <p>Load 82%, slack 1 hr 30 min. En route to Linden, ETA 11:28. To Rivergate: 22 min, but committed.</p>
+        </article>
+        <article class="crew-card t-priya">
+          <h3>Priya Shah · Van 07</h3>
+          <p>Working hours 8:00 AM–5:00 PM. Service area Downtown, Riverward.</p>
+          <p>Skills: laundry, ranges, ovens. Certifications: Whirlpool Factory Authorized, Bosch cooking. No EPA 608.</p>
+          <p>Brands: Whirlpool, Maytag, Bosch, KitchenAid. Kit: UEI combustion analyzer. No refrigerant.</p>
+          <p>Load 80%. On site at Market St, wrapping up. To Rivergate: 18 min, not certified.</p>
+        </article>
+        <article class="crew-card t-marcus">
+          <h3>Marcus Hale · Van 03</h3>
+          <p>Working hours 8:00 AM–3:30 PM, hard stop for school pickup. Service area West Hills, Cedar Ridge.</p>
+          <p>Skills: built-in refrigeration, cooking. Certifications: EPA 608 Universal, Sub-Zero and Wolf.</p>
+          <p>Brands: Sub-Zero, Wolf, GE Monogram, KitchenAid. Kit: manifold, Appion vacuum in use, micron gauge, R134a.</p>
+          <p>Load 91% planned, 106% forecast. On site at Terrace Dr. To Rivergate: 36 min, not free.</p>
+        </article>
+        <article class="crew-card t-elena">
+          <h3>Elena Voss · Van 11</h3>
+          <p>Working hours 7:00 AM–3:30 PM. Service area Eastside, Oak Park, Mill District.</p>
+          <p>Skills: dishwashers, disposals, compactors. Certifications: Bosch dishwasher, Miele authorized. No EPA 608.</p>
+          <p>Brands: Bosch, Miele, KitchenAid, GE dishwashers. No sealed-system tools.</p>
+          <p>Load 78%. En route to Ashland, ETA 11:29. To Rivergate: 29 min, not certified.</p>
+        </article>
+        <article class="crew-card t-jordan">
+          <h3>Jordan Kim · Van 19</h3>
+          <p>Working hours 9:00 AM–6:00 PM. Service area South Corridor, Brookline.</p>
+          <p>Skills: laundry, heat-pump dryers. Certifications: LG Pro, Electrolux. No EPA 608.</p>
+          <p>Brands: LG, Electrolux, Samsung laundry. Kit: transmission jack, spin-test harness.</p>
+          <p>Load 88%. At south annex, transmission in hand. To Rivergate: 24 min, not certified.</p>
+        </article>
+        <article class="crew-card t-chris" id="crew-padilla">
+          <h3>Chris Padilla · Van 02 · on call</h3>
+          <p id="padilla-card-status">Not on today’s board. If paged, he can roll by 11:35 and must stop at 3:00 PM.</p>
+          <p>Skills: refrigeration, ranges. Certifications: EPA 608 Universal, GE factory authorized.</p>
+          <p>Brands: GE, Samsung, Whirlpool, LG. Kit already in the van at home: manifold, leak detector, two cans of R600a.</p>
+          <p>Travel to Rivergate 26 min. Call-in premium $85. Last stop yesterday 4:40 PM in Brookline. He can take Helen, not Lang.</p>
+        </article>
+      </section>
+
+      <section class="card" id="areas">
+        <h2>Travel to Rivergate</h2>
+        <div class="area-grid">
+          <div class="zone"><strong>Irving Park</strong><span>Shop · Padilla 26 min</span><span>Certified, free if paged</span></div>
+          <div class="zone hot"><strong>Riverward</strong><span>Helen Park · urgent</span><span>Priya later, not certified</span></div>
+          <div class="zone"><strong>Lakeview</strong><span>Derek · 22 min</span><span>Certified, committed</span></div>
+          <div class="zone"><strong>Downtown</strong><span>Priya · 18 min</span><span>No EPA 608</span></div>
+          <div class="zone"><strong>Cedar Ridge</strong><span>Marcus · 36 min</span><span>Certified, stuck on leak</span></div>
+          <div class="zone"><strong>Eastside</strong><span>Elena · 29 min</span><span>Dishwashers only</span></div>
+          <div class="zone"><strong>South Corridor</strong><span>Jordan · 24 min</span><span>Part in hand, no EPA</span></div>
+          <div class="zone"><strong>Northside</strong><span>Brooks at 1:24 plan</span><span>Hard arrival 2:15</span></div>
+        </div>
+      </section>
+
+      <section class="card" id="parts">
+        <h2>Parts and equipment</h2>
+        <table>
+          <thead><tr><th>Part</th><th>Stop</th><th>Where</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>00650463 sensor</td><td>Ortiz · Bosch</td><td>Irving dock, 12:40</td><td class="hold">Hold</td></tr>
+            <tr><td>4413ER1001A transmission</td><td>Brennan · LG</td><td>South annex B-14</td><td class="oktag">In hand</td></tr>
+            <tr><td>DA97-15217D ice kit</td><td>Ferrer · Samsung</td><td>Van 14</td><td>Staged</td></tr>
+            <tr><td>R600a, 2 cans</td><td>Park · Samsung</td><td>Padilla home kit</td><td class="badtag">Needed</td></tr>
+            <tr><td>WD08X10071 gasket</td><td>Russo · GE DW</td><td>Van 11</td><td>Staged</td></tr>
+            <tr><td>Badger 5 disposal</td><td>Salas · $214 ok</td><td>Van 11</td><td>Staged</td></tr>
+            <tr><td>Manifold + vacuum</td><td>Castillo · Sub-Zero</td><td>Van 03, in use</td><td class="hold">In use</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" id="friday">
+        <h2>Friday draft · <span id="fri-count">9 confirmed</span></h2>
+        <p class="quiet">Not today. Open slots that can absorb a move:</p>
+        <ul class="log" id="friday-list">
+          <li><time>8:30</time><span>Marcus Hale is open until 10:15, then Anita Shah, Wolf warranty, 410 Summit Ave.</span></li>
+          <li><time>10:15</time><span>Derek Alvarez is open until 12:45, then Paul Ng, Whirlpool dishwasher, 88 Belmont Ave at 1:00.</span></li>
+          <li><time>7:30</time><span>Elena Voss · Bosch dishwasher return · 77 Oak Park Blvd · confirmed.</span></li>
+          <li><time>8:00</time><span>Jordan Kim · Sofia Marin · LG dryer no-heat · 88 Brookline Ave · confirmed.</span></li>
+          <li><time>2:00</time><span>Priya Shah · Maytag washer · 50 State St · confirmed. Three more Kim laundry stops after 3:30.</span></li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Dispatch log</h2>
+        <ol class="log" id="log">
+          <li><time>11:06 AM</time><span>Jordan Kim scanned transmission 4413ER1001A out of south annex bin B-14.</span></li>
+          <li><time>10:52 AM</time><span>Renee Cho, parts desk, moved Bosch sensor 00650463 to a 12:40 PM Irving dock ETA.</span></li>
+          <li><time>10:48 AM</time><span>Marcus Hale confirmed a leak on the Sub-Zero BI-48S. Recovery started at 11:02.</span></li>
+          <li><time>10:16 AM</time><span>Castillo flagged as already likely to run long. Ellison and Lang marked at risk.</span></li>
+          <li><time>9:22 AM</time><span>Patrick Nguyen closed. Monogram defrost timer replaced under warranty.</span></li>
+          <li><time>8:41 AM</time><span>James Okada closed. Evaporator fan WR60X31522 replaced. Arrival SMS had been delivered at 7:12.</span></li>
+          <li><time>7:12 AM</time><span>SMS delivered to James Okada: Derek arriving 7:40–7:50.</span></li>
+          <li><time>6:40 AM</time><span>Maya Chen published the North Metro board. 20 assigned, Helen Park left open for a skill match.</span></li>
+          <li><time>6:14 AM</time><span>Ana Ruiz logged Helen Park urgent. Fridge at 47°F, formula and medication inside.</span></li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <h2>Board note</h2>
+        <label class="k" for="board-note">Saved by Maya at 10:20 AM</label>
+        <textarea id="board-note">Protect Brooks’s 2:15 contractor deadline if Ferrer looks like a sealed system. Do not promise Helen a technician until Padilla confirms the page-out. Marcus cannot stay past 3:30.</textarea>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="footer">
+    <span>Fieldline Repair · 900 N Irving Park Rd · South annex 4100 S Halsted · Dispatch (312) 555-0190 · Parts ext 118</span>
+    <span id="last-action">Last change 11:06 AM · transmission scanned out of B-14</span>
+  </footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var state = {
+    padilla: false,
+    ferrerDiag: false,
+    langMoved: false,
+    ortizMoved: false,
+    noticesSent: {},
+    noticeCount: 5,
+    exceptions: 4,
+    marcus: { lang: false, ellison: false },
+    selected: 'park',
+    stops: 21,
+    ahead: 11
+  };
+
+  var JOBS = {
+    park: job('FL-48219', 'Helen Park', '(312) 555-0148', 'Call only — no SMS', '2408 Rivergate Blvd, Apt 4B, Riverward', '11:00 AM–2:00 PM arrival. Hard. She leaves for a shift at 2:15.', '105 min', 'Samsung RF28R7201SR French-door refrigerator', 'Compressor short-cycling since last night. Fresh food was 47°F at the 6:12 AM report. Infant formula and a refrigerated medication are inside.', 'Urgent', 'Unassigned', 'urgent', 'R600a and a possible start device are not staged on an assigned van. Padilla’s home kit has two 420g cans.', 'Sealed-system manifold, leak detector, recovery bag. EPA 608 Universal required.', 'See the fit table. Only a free certified tech makes this window.', 'Unassigned', 'Doorman. Alley code 1942. Card approved to $650.', 'Urgent · unassigned · promised callback by 11:30 AM · 12 min left', 'urgent'),
+    ferrer: job('FL-48195', 'Luis Ferrer', '(312) 555-0133', 'SMS OK', '1507 Linden Street, Lakeview', '11:00 AM–2:00 PM', '90 min planned, likely 145', 'Samsung RF28R7351SR French-door refrigerator', 'Ice maker jammed. Pre-call notes: click every 2 minutes, condenser fan running, freezer 20°F, fresh food 51°F. Playbook flags a restriction. Four of six similar calls last month ran 130–160 min.', 'High', 'Confirmed · en route', 'high', 'Ice kit DA97-15217D is on van 14. Filter drier is not staged.', 'Fieldpiece manifold and leak detector, both on van 14. EPA 608 required if it is a sealed system.', '16 min from Birch Ln. Derek left at 11:12, ETA 11:28. Next hop to Hawthorne Ct is 24 min.', 'Derek Alvarez · Van 14', 'Customer approved up to $480 for diagnosis.', 'High · likely to run 55 min past the 90 min plan', 'high'),
+    brooks: job('FL-48207', 'Camille Brooks', '(312) 555-0194', 'Call only — contractor is with her', '19 Hawthorne Court, Northside', '1:15–2:15 PM hard arrival. Contractor closes the kitchen at 2:30.', '75 min', 'LG LFXS26973S refrigerator', 'Loud knocking on startup. No prior sealed-system history. Diagnostic first.', 'Standard', 'Confirmed · at risk', 'std', 'None staged.', 'Standard electrical and level kit. No manifold required on the plan.', '24 min from Linden St. On-time arrival 1:24. Forecast arrival 2:19 if Ferrer runs +55.', 'Derek Alvarez · Van 14', 'Trip charge $189 approved.', 'Standard · hard window at risk if Ferrer overruns', 'warn'),
+    castillo: job('FL-48188', 'Irene Castillo', '(312) 555-0121', 'SMS OK', '614 Terrace Drive, Cedar Ridge', '9:30 AM–12:00 PM', '90 min planned, trending 160', 'Sub-Zero BI-48S/O built-in refrigerator', 'Not cooling, evaporator frost. Leak confirmed at 10:48. Recovery started 11:02. Vacuum not started. Warranty auth SZ-44921.', 'High', 'Live · over plan', 'live', 'Filter drier may be required. R134a is on van 03.', 'Manifold, Appion vacuum pump, and micron gauge are in use on van 03.', 'Already on site since 9:42. 11 min to the next stop on Oakmont.', 'Marcus Hale · Van 03', 'Sub-Zero warranty. Parts bill to the manufacturer if the leak is in the coil.', 'Live overrun · 8 min past plan · est. finish 12:20 PM', 'live'),
+    ellison: job('FL-48201', 'Nora Ellison', '(312) 555-0172', 'SMS OK', '88 Oakmont Place, Cedar Ridge', '11:00 AM–12:15 PM hard arrival. She has a 1:45 showing.', '100 min', 'Wolf GR366 gas range', 'Oven door hinge sag and temperature swing.', 'Standard', 'Confirmed · will miss window', 'std', 'Hinge kit not staged. Diagnostic first.', 'Combustion analyzer is on Priya’s van, not Marcus’s. Hinge work does not need it.', '11 min from Terrace Dr. Forecast arrival 12:31, 16 min past the window.', 'Marcus Hale · Van 03', '', 'Standard · arrival slips past the 12:15 window', 'warn'),
+    lang: job('FL-48215', 'Victor Lang', '(312) 555-0114', 'SMS OK', '17 Cedar Ridge Road, Cedar Ridge', '1:00–3:15 PM', '90 min', 'KitchenAid KBBR306ESS built-in refrigerator', 'Ice buildup and fan noise. Likely a fan or defrost issue, not a sealed system.', 'Standard', 'Confirmed · past hard stop', 'std', 'None staged.', 'Manifold only if the diagnosis changes. Marcus’s pump is tied up until about 12:20.', '16 min from Oakmont. Forecast start 2:27, end 3:57, 27 min past the 3:30 stop.', 'Marcus Hale · Van 03', '', 'Standard · cannot finish before Marcus’s 3:30 stop', 'warn'),
+    ortiz: job('FL-48204', 'Samuel Ortiz', '(312) 555-0166', 'SMS OK', '14 Pier Street, Riverward', '12:00–3:00 PM arrival. Customer was quoted 12:15.', '90 min', 'Bosch range HGS8055UC', 'Oven will not hold temperature. Sensor suspected from the pre-call.', 'Standard', 'Confirmed · parts hold', 'std', 'Temperature sensor 00650463 arrives Irving shop at 12:40. Not on the van.', 'UEI combustion analyzer is on van 07 if the sensor is not the cause.', '22 min Downtown to Irving shop, wait until 12:40, 22 min shop to Pier. Forecast arrival 1:10.', 'Priya Shah · Van 07', '', 'Parts hold · quoted 12:15, real arrival 1:10, still inside the window', 'warn'),
+    petrov: job('FL-48213', 'Grace Petrov', '(312) 555-0139', 'SMS OK', '220 Halsted Avenue, Riverward', '2:00–5:00 PM', '90 min', 'Whirlpool dryer WED7120HC', 'Takes two cycles to dry. Vent already checked by the customer.', 'Standard', 'Confirmed', 'std', 'Cycling thermostat is on van 07.', 'Outlet tester on van 07.', '18 min from Pier St. Still inside the window if Ortiz slips to 1:10.', 'Priya Shah · Van 07', '', 'Confirmed · no notice needed unless Ortiz slips past 2:40', 'ok'),
+    okada: job('FL-48174', 'James Okada', '(312) 555-0102', 'SMS OK · delivered 7:12 AM', '412 Maple Avenue, Lakeview', '7:30–10:00 AM', '90 min', 'GE Profile refrigerator PFE28KYNFS', 'Not cooling. Freezer was 28°F, fresh food 51°F.', 'High', 'Completed 9:12 AM', 'done', 'Evaporator fan WR60X31522 installed.', 'Manifold was not needed.', '18 min from Irving shop on the original plan; he left at 7:33.', 'Derek Alvarez · Van 14', 'Customer signed. Food loss avoided.', 'Completed · customer was informed at 7:12 AM', 'ok'),
+    adelman: job('FL-48184', 'Ruth Adelman', '(312) 555-0108', 'SMS OK', '88 Birch Lane, Northside', '9:00 AM–12:00 PM', '90 min', 'Whirlpool dishwasher WDT750SAHZ', 'Not draining, standing water after the cycle.', 'Standard', 'Completed 11:08 AM', 'done', 'Drain pump W11457841 installed.', 'None beyond hand tools.', '22 min from Maple Ave.', 'Derek Alvarez · Van 14', '', 'Completed · rinse test passed', 'ok'),
+    williams: job('FL-48179', 'Andre Williams', '(312) 555-0177', 'SMS OK', '55 Wabash Street, Apt 12, Downtown', '8:00–11:00 AM', '90 min', 'Maytag washer MVW7232HW', 'Will not spin. Error F7 E1.', 'Standard', 'Completed 9:41 AM', 'done', 'Shift actuator replaced.', 'None.', '14 min from his start.', 'Priya Shah · Van 07', '', 'Completed · spin confirmed', 'ok'),
+    lin: job('FL-48190', 'Mei Lin', '(312) 555-0127', 'SMS OK', '901 Market Street, Unit 4, Downtown', '10:00 AM–1:00 PM', '75 min', 'KitchenAid range KFGG500ESS', 'Front right burner will not ignite.', 'Standard', 'Live · closing out', 'live', 'Glow igniter is on the van and in use.', 'Combustion analyzer on van 07.', '12 min from Wabash. Two minutes left on the plan.', 'Priya Shah · Van 07', '', 'Live · about 2 minutes left on the plan', 'live'),
+    nguyen: job('FL-48176', 'Patrick Nguyen', '(312) 555-0181', 'SMS OK', '300 Summit Avenue, West Hills', '8:00–10:30 AM', '75 min', 'GE Monogram refrigerator ZWE23PSHSS', 'Warm freezer, defrost failure.', 'Standard', 'Completed 9:22 AM', 'done', 'Defrost timer, warranty.', 'None left on site.', '12 min from the shop.', 'Marcus Hale · Van 03', 'Warranty closed.', 'Completed · warranty timer', 'ok'),
+    walsh: job('FL-48171', 'Fiona Walsh', '(312) 555-0184', 'SMS OK', '44 Mill Street, Mill District', '7:00–9:30 AM', '75 min', 'Bosch dishwasher SHPM88Z75N', 'Not drying.', 'Standard', 'Completed 8:31 AM', 'done', 'No part. Rinse-aid and dry setting.', 'None.', '16 min from her start.', 'Elena Voss · Van 11', '', 'Completed · not a parts failure', 'ok'),
+    haddad: job('FL-48182', 'Omar Haddad', '(312) 555-0188', 'SMS OK', '812 Oak Park Boulevard, Oak Park', '8:30–11:30 AM', '90 min', 'Miele dishwasher G7316 SCU', 'Error F11, will not drain.', 'Standard', 'Completed 10:18 AM', 'done', 'No part. Filter reseated, sump cleared.', 'None.', '18 min from Mill St.', 'Elena Voss · Van 11', '', 'Completed · F11 cleared', 'ok'),
+    russo: job('FL-48193', 'Diane Russo', '(312) 555-0144', 'SMS OK', '19 Ashland Avenue, Eastside', '11:00 AM–2:00 PM', '90 min', 'GE dishwasher GDT665SSNSS', 'Leaking from the door bottom.', 'Standard', 'Confirmed · tech en route', 'std', 'Door gasket WD08X10071 is on van 11.', 'None special.', '24 min from Oak Park. Elena ETA 11:29, start held for 11:40.', 'Elena Voss · Van 11', '', 'Confirmed · on track, gasket on the van', 'ok'),
+    salas: job('FL-48209', 'Benito Salas', '(312) 555-0169', 'SMS OK', '640 Porter Street, Eastside', '1:00–3:30 PM', '75 min', 'KitchenAid disposal', 'Humming, will not grind. Customer approved a full swap.', 'Low', 'Confirmed', 'low', 'Badger 5 disposal on van 11. Customer approved $214.', 'None special.', '12 min from Ashland. Fits before Elena’s 3:30 end with 40 min slack.', 'Elena Voss · Van 11', '', 'Confirmed · low priority, part on the van', 'ok'),
+    rahman: job('FL-48186', 'Aisha Rahman', '(312) 555-0191', 'SMS OK', '1020 Brookline Avenue, Brookline', '9:00–11:30 AM', '90 min', 'LG washer WM4000HWA', 'OE error, will not drain.', 'Standard', 'Completed 10:38 AM', 'done', 'Drain pump replaced.', 'None.', '18 min from his start.', 'Jordan Kim · Van 19', '', 'Completed · OE cleared', 'ok'),
+    pickup: job('PARTS', 'South annex pickup', '(312) 555-0118', 'Internal', '4100 S Halsted Street, South Corridor', 'Internal, 11:05–11:35', '30 min', 'LG transmission 4413ER1001A', 'Not a customer stop. Vince Moretti staged the transmission in bin B-14. Scanned out at 11:06.', 'High', 'Live · part in hand', 'live', '4413ER1001A in Jordan’s hands.', 'Transmission jack loads before he rolls.', '16 min from the annex to Southport Rd.', 'Jordan Kim · Van 19', '', 'Parts pickup · transmission in hand · leave by 11:35', 'live'),
+    brennan: job('FL-48197', 'Tom Brennan', '(312) 555-0151', 'SMS OK', '455 Southport Road, South Corridor', '11:30 AM–3:00 PM', '120 min', 'LG washer WT7300CW', 'Loud bang on spin. Transmission failure suspected and the part is confirmed.', 'High', 'Confirmed · part in hand', 'high', 'Transmission 4413ER1001A scanned out of B-14.', 'Transmission jack required. It is on van 19.', '16 min from the south annex. Arrive about 11:51, inside the window.', 'Jordan Kim · Van 19', 'Customer approved the transmission price yesterday.', 'High · on track because the part is in hand', 'ok'),
+    stein: job('FL-48211', 'Leah Stein', '(312) 555-0158', 'SMS OK', '78 Harper Lane, Brookline', '2:00–5:30 PM', '90 min', 'Samsung heat-pump dryer DV45B6300C', 'Runs a long time and clothes stay damp. Heat pump suspected.', 'Standard', 'Confirmed', 'std', 'Thermistor is on van 19.', 'Spin-test harness is not needed. Heat-pump service kit is on the van.', '14 min from Southport.', 'Jordan Kim · Van 19', '', 'Confirmed · thermistor staged', 'ok'),
+    daley: job('FL-48217', 'Chris Daley', '(312) 555-0162', 'SMS OK', '330 Kenwood Street, South Corridor', '4:00–6:00 PM', '75 min', 'Electrolux washer ELFW7637AT', 'Walks across the floor on spin.', 'Low', 'Confirmed', 'low', 'None. Level and suspension check.', 'None special.', '12 min from Harper Lane. Jordan is off at 6:00, job ends 5:30.', 'Jordan Kim · Van 19', '', 'Confirmed · low priority, no parts', 'ok')
+  };
+
+  function job(ticket, customer, phone, prefer, address, window, duration, appliance, problem, priority, status, pill, parts, equipment, travel, tech, access, banner, bannerClass) {
+    return {
+      ticket: ticket, customer: customer, phone: phone, prefer: prefer, address: address,
+      window: window, duration: duration, appliance: appliance, problem: problem,
+      priority: priority, status: status, pill: pill, parts: parts, equipment: equipment,
+      travel: travel, tech: tech, access: access, banner: banner, bannerClass: bannerClass
+    };
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function fact(k, v, wide) {
+    if (!v) return '';
+    return '<div class="' + (wide ? 'wide' : '') + '"><div class="k">' + k + '</div><div class="v">' + esc(v) + '</div></div>';
+  }
+
+  function fitTable() {
+    var pad = state.padilla
+      ? 'Assigned. Accepted the page-out. Rolling from Irving Park, ETA 12:01, finish 1:46.'
+      : 'Yes. EPA 608, R600a at home, free until 3:00. Travel 26 min from Irving Park. Arrives 12:01, finishes 1:46. Call-in premium $85.';
+    return '<table class="fit"><caption>Who can make this window</caption><thead><tr><th>Technician</th><th>Travel and fit</th></tr></thead><tbody>'
+      + '<tr class="yes"><td>Chris Padilla</td><td>' + pad + '</td></tr>'
+      + '<tr class="trade"><td>Derek Alvarez</td><td>Tradeoff. EPA 608 and R600a on van 14. Travel 22 min from his current GPS, but he is 10 min from Ferrer, a committed high-priority fridge.</td></tr>'
+      + '<tr class="no"><td>Marcus Hale</td><td>No. EPA 608, manifold in use. Travel 36 min from Terrace Dr. Not free until about 12:20, then Ellison is already late.</td></tr>'
+      + '<tr class="no"><td>Priya Shah</td><td>No. Closest on-duty tech at 18 min from Market St, but no EPA 608 and no manifold.</td></tr>'
+      + '<tr class="no"><td>Elena Voss</td><td>No. Dishwashers only, no EPA 608. Travel 29 min from the Eastside run.</td></tr>'
+      + '<tr class="no"><td>Jordan Kim</td><td>No. Laundry only, no EPA 608. Travel 24 min from the south annex, and the transmission job is locked.</td></tr>'
+      + '</tbody></table>';
+  }
+
+  function actionsHTML(id) {
+    if (id === 'park') {
+      if (!state.padilla) return '<button type="button" data-action="padilla">Page Padilla · $85</button>';
+      var sent = state.noticesSent.park;
+      return '<p class="quiet">Padilla accepted. Arrival 12:00–12:10. Finish about 1:50. Helen is call only — confirm alley access.</p><button type="button" data-action="notify" data-who="park"' + (sent ? ' disabled' : '') + '>' + (sent ? 'Callback logged' : 'Log the confirmation call') + '</button>';
+    }
+    if (id === 'ferrer' || id === 'brooks') {
+      if (state.ferrerDiag) return '<p class="quiet">Ferrer is diagnostic-only, 11:30–12:15. Brooks arrival holds at 1:24. Friday return is on Derek at 10:15.</p>';
+      return '<button type="button" data-action="ferrer-diag">Make Ferrer a 45-min diagnostic</button>';
+    }
+    if (id === 'ellison') {
+      var s = state.noticesSent.ellison;
+      return '<button type="button" data-action="notify" data-who="ellison"' + (s ? ' disabled' : '') + '>' + (s ? 'Delay text sent' : 'Text the 12:35 arrival') + '</button>';
+    }
+    if (id === 'lang') {
+      if (state.langMoved) return '<p class="quiet">Moved to Friday 8:30–10:00 with Marcus, before Anita Shah at 10:30. Send the confirmation if it is not already sent.</p>';
+      return '<button type="button" data-action="move-lang">Move to Friday 8:30</button>';
+    }
+    if (id === 'ortiz') {
+      var o = state.noticesSent.ortiz;
+      return '<button type="button" data-action="notify" data-who="ortiz"' + (o ? ' disabled' : '') + '>' + (o ? 'ETA sent' : 'Send the 1:10 ETA') + '</button>';
+    }
+    if (id === 'castillo') return '<p class="quiet">No reassignment. Recovery is in progress and the manifold cannot move. Text Ellison and move Lang instead.</p>';
+    return '<p class="quiet">No customer notice pending on this stop.</p>';
+  }
+
+  function detailHTML(j) {
+    var fit = j.customer === 'Helen Park' ? fitTable() : '';
+    var tech = j.tech;
+    if (j.customer === 'Helen Park' && state.padilla) tech = 'Chris Padilla · Van 02 · ETA 12:01';
+    var status = j.status;
+    if (j.customer === 'Helen Park' && state.padilla) status = 'Assigned · on call';
+    if (j.customer === 'Luis Ferrer' && state.ferrerDiag) status = 'Diagnostic only';
+    if (j.customer === 'Victor Lang' && state.langMoved) status = 'Moved to Friday';
+    return '<div class="urgency-bar ' + j.bannerClass + '">' + esc(j.banner) + '</div>'
+      + '<div class="dh"><div><h3>' + esc(j.customer) + '</h3><p class="ticket">' + esc(j.ticket) + ' · ' + esc(tech) + '</p></div><span class="pill ' + j.pill + '">' + esc(status) + '</span></div>'
+      + '<div class="facts">'
+      + fact('Priority', j.priority)
+      + fact('Expected duration', j.duration)
+      + fact('Service window', j.window, true)
+      + fact('Address', j.address, true)
+      + fact('Appliance', j.appliance, true)
+      + fact('Reported problem', j.problem, true)
+      + fact('Replacement parts', j.parts, true)
+      + fact('Diagnostic equipment', j.equipment, true)
+      + fact('Travel time', j.travel, true)
+      + fact('Phone', j.phone)
+      + fact('Contact', j.prefer)
+      + fact('Access / pay', j.access, true)
+      + '</div>' + fit
+      + '<div class="detail-actions">' + actionsHTML(idOf(j)) + '</div>';
+  }
+
+  function idOf(j) {
+    var ids = Object.keys(JOBS);
+    for (var i = 0; i < ids.length; i++) if (JOBS[ids[i]] === j) return ids[i];
+    return '';
+  }
+
+  function render(id) {
+    var j = JOBS[id];
+    if (!j) return;
+    state.selected = id;
+    document.querySelectorAll('.is-selected').forEach(function (el) { el.classList.remove('is-selected'); });
+    document.querySelectorAll('[data-id="' + id + '"]').forEach(function (el) { el.classList.add('is-selected'); });
+    document.getElementById('detail').innerHTML = detailHTML(j);
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 4600);
+  }
+
+  function log(time, text) {
+    var li = document.createElement('li');
+    var t = document.createElement('time');
+    t.textContent = time;
+    var s = document.createElement('span');
+    s.textContent = text;
+    li.appendChild(t);
+    li.appendChild(s);
+    var list = document.getElementById('log');
+    list.insertBefore(li, list.firstChild);
+    document.getElementById('last-action').textContent = 'Last change ' + time + ' · ' + text;
+  }
+
+  function setExceptions(n) {
+    state.exceptions = n;
+    document.getElementById('stat-exceptions').textContent = n === 0 ? 'All clear' : n + ' open';
+  }
+
+  function refreshCrewline() {
+    var derek = state.ferrerDiag
+      ? 'Derek diagnostic-only on Ferrer, Brooks window holds at 1:24'
+      : 'Derek en route, ETA Linden 11:28, Brooks window at risk';
+    var marcus = state.langMoved
+      ? 'Marcus Lang moved to Friday, load back under the stop'
+      : 'Marcus on site, overrun, Lang past stop';
+    var pad = state.padilla
+      ? 'Padilla accepted, rolling, ETA Rivergate 12:01'
+      : 'Padilla on call, not paged';
+    document.getElementById('crewline').textContent = derek + ' · ' + marcus + ' · Priya wrapping Market St · Elena en route, ETA Ashland 11:29 · Jordan at south annex, transmission in hand · ' + pad;
+  }
+
+  function callPadilla() {
+    if (state.padilla) return;
+    state.padilla = true;
+    state.ahead += 1;
+    document.getElementById('stat-ahead').textContent = String(state.ahead);
+    document.getElementById('stat-urgent').textContent = '0';
+    document.getElementById('row-padilla').classList.remove('hidden');
+    document.getElementById('padilla-status').textContent = 'Accepted · ETA 12:01';
+    document.getElementById('padilla-card-status').textContent = 'Paged at 11:18 and accepted. Rolling from Irving Park. ETA Rivergate 12:01, finish 1:46, hard stop still 3:00 PM.';
+    document.getElementById('open-name').innerHTML = '<i class="swatch"></i>Covered <em class="ok">1</em>';
+    document.getElementById('unassigned-status').textContent = 'Padilla · ETA 12:01';
+    document.getElementById('park-bar-title').textContent = 'Helen Park · assigned to Padilla';
+    document.getElementById('park-bar-sub').textContent = '12:05–1:50 · inside the 2:00 window · call to confirm access';
+    document.getElementById('suggest-label').textContent = 'Padilla rolling · 12:05–1:50';
+    document.getElementById('ex-park').classList.add('cleared');
+    document.getElementById('ex-park-k').textContent = 'Covered';
+    document.getElementById('ex-park-text').textContent = 'Helen Park assigned to Chris Padilla. He accepted the page-out. ETA 12:01, finish 1:46, inside the window. Call her — she does not take SMS.';
+    document.querySelectorAll('[data-action="padilla"]').forEach(function (b) {
+      b.disabled = true;
+      b.textContent = 'Padilla accepted';
+    });
+    var script = document.getElementById('script-park');
+    if (script && !state.noticesSent.park) {
+      script.textContent = 'Helen, this is Maya at Fieldline. Chris Padilla is rolling from Irving Park and will arrive between 12:00 and 12:10. He finishes around 1:50, before you leave. He has R600a and a manifold. Please confirm alley code 1942 and that an adult will be home to sign.';
+    }
+    var nstat = document.querySelector('#notice-park .nstat');
+    if (nstat && !state.noticesSent.park) nstat.textContent = 'Ready to call · tech changed';
+    JOBS.park.status = 'Assigned · Chris Padilla';
+    JOBS.park.banner = 'Assigned · Padilla accepted · ETA 12:01 · call Helen to confirm access';
+    JOBS.park.bannerClass = 'ok';
+    setExceptions(state.exceptions - 1);
+    refreshCrewline();
+    log('11:18 AM', 'Page-out accepted by Chris Padilla. Helen Park assigned. ETA Rivergate 12:01. Premium $85.');
+    toast('Padilla accepted. Helen is covered, 12:01–1:46. Call her to confirm access.');
+    render(state.selected);
+    var row = document.getElementById('row-padilla');
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  function ferrerDiag() {
+    if (state.ferrerDiag) return;
+    state.ferrerDiag = true;
+    var block = document.getElementById('job-ferrer');
+    block.style.width = '6.82%';
+    block.classList.remove('over');
+    document.getElementById('ferrer-time').textContent = '11:30–12:15 · 45m';
+    document.getElementById('ferrer-sub').textContent = 'Diagnostic only · return Fri';
+    document.getElementById('ghost-ferrer').classList.add('hidden');
+    document.getElementById('brooks-sub').textContent = 'Knocking · window holds';
+    document.getElementById('brooks-sub2').textContent = 'Protected · arrival 1:24';
+    document.getElementById('job-brooks').classList.remove('over');
+    document.getElementById('derek-line').textContent = 'Load 74% · Brooks window holds';
+    document.getElementById('ex-ferrer').classList.add('cleared');
+    document.getElementById('ex-ferrer-k').textContent = 'Window held';
+    document.getElementById('ex-ferrer-text').textContent = 'Ferrer cut to a 45-minute diagnostic, 11:30–12:15. Derek reaches Hawthorne at 1:24, inside the 2:15 deadline. Sealed-system return booked Friday 10:15–12:30.';
+    document.querySelectorAll('[data-action="ferrer-diag"]').forEach(function (b) {
+      b.disabled = true;
+      b.textContent = 'Diagnostic set';
+    });
+    var brooksNote = document.querySelector('#notice-brooks .nstat');
+    if (brooksNote && !state.noticesSent.brooks) {
+      brooksNote.textContent = 'No call needed';
+      document.getElementById('script-brooks').textContent = 'Window protected. Derek arrives about 1:24, before the contractor. A watch call is optional, not required.';
+    }
+    JOBS.ferrer.status = 'Diagnostic only';
+    JOBS.ferrer.duration = '45 min today, return Friday 10:15–12:30';
+    JOBS.ferrer.banner = 'Diagnostic only · Brooks window protected · Friday return 10:15';
+    JOBS.ferrer.bannerClass = 'ok';
+    JOBS.brooks.status = 'Confirmed · window holds';
+    JOBS.brooks.banner = 'Hard window protected · Derek arrives 1:24';
+    JOBS.brooks.bannerClass = 'ok';
+    var li = document.createElement('li');
+    li.innerHTML = '<time>10:15</time><span>Added: Derek Alvarez · Luis Ferrer sealed-system return · 1507 Linden St · 10:15–12:30, before Paul Ng at 1:00. Pre-order a filter drier.</span>';
+    document.getElementById('friday-list').insertBefore(li, document.getElementById('friday-list').firstChild);
+    document.getElementById('fri-count').textContent = (9 + (state.langMoved ? 1 : 0) + 1) + ' confirmed';
+    setExceptions(state.exceptions - 1);
+    refreshCrewline();
+    log('11:18 AM', 'Ferrer converted to a 45-minute diagnostic. Brooks 2:15 window protected. Friday 10:15 return held for Derek.');
+    toast('Ferrer is diagnostic-only. Brooks keeps the 1:24 arrival.');
+    render(state.selected);
+  }
+
+  function moveLang() {
+    if (state.langMoved) return;
+    state.langMoved = true;
+    state.marcus.lang = true;
+    state.stops -= 1;
+    state.ahead -= 1;
+    document.getElementById('stat-stops').textContent = String(state.stops);
+    document.getElementById('stat-ahead').textContent = String(state.ahead);
+    document.getElementById('stat-marcus').textContent = '82%';
+    var block = document.getElementById('job-lang');
+    block.classList.remove('over');
+    block.classList.add('done');
+    document.getElementById('lang-time').textContent = 'Moved off today';
+    document.getElementById('lang-title').textContent = 'Lang · Friday 8:30';
+    document.getElementById('lang-sub').textContent = 'KitchenAid · before Shah';
+    document.getElementById('lang-win').textContent = 'Customer still needs the SMS';
+    document.getElementById('ghost-lang').classList.add('hidden');
+    document.getElementById('marcus-line').textContent = state.marcus.ellison
+      ? 'Load 82% · both downstream fixes in'
+      : 'Load 82% · Ellison still needs a text';
+    var li = document.createElement('li');
+    li.innerHTML = '<time>8:30</time><span>Added: Marcus Hale · Victor Lang · KitchenAid KBBR306ESS · 17 Cedar Ridge Rd · 8:30–10:00, 15 min before Anita Shah.</span>';
+    document.getElementById('friday-list').insertBefore(li, document.getElementById('friday-list').firstChild);
+    document.getElementById('fri-count').textContent = (9 + 1 + (state.ferrerDiag ? 1 : 0)) + ' confirmed';
+    JOBS.lang.status = 'Moved to Friday 8:30 AM';
+    JOBS.lang.window = 'Friday, April 10, 8:30–10:00 AM';
+    JOBS.lang.banner = 'Moved to Friday 8:30–10:00 with Marcus · send the confirmation SMS';
+    JOBS.lang.bannerClass = 'ok';
+    document.querySelectorAll('[data-action="move-lang"]').forEach(function (b) {
+      b.disabled = true;
+      b.textContent = 'Moved to Fri';
+    });
+    marcusBanner();
+    refreshCrewline();
+    log('11:18 AM', 'Victor Lang moved to Friday 8:30–10:00 with Marcus Hale. Today’s forecast load drops to 82%.');
+    toast('Lang is on Friday at 8:30. Send him the confirmation text.');
+    render(state.selected);
+  }
+
+  function marcusBanner() {
+    var both = state.marcus.lang && state.marcus.ellison;
+    var el = document.getElementById('ex-marcus');
+    if (both) {
+      el.classList.add('cleared');
+      document.getElementById('ex-marcus-k').textContent = 'Capacity held';
+      document.getElementById('ex-marcus-text').textContent = 'Lang is on Friday at 8:30. Ellison has the delay text. Marcus finishes the Wolf range about 2:11, before the 3:30 school pickup. Forecast load 82%.';
+      setExceptions(state.exceptions - 1);
+      document.getElementById('marcus-line').textContent = 'Load 82% · downstream cleared';
+    } else if (state.marcus.lang) {
+      document.getElementById('ex-marcus-text').textContent = 'Lang moved to Friday 8:30, so the 3:30 stop holds. Ellison still misses 12:15 unless she accepts a 12:35 arrival. Text is not sent yet.';
+    } else if (state.marcus.ellison) {
+      document.getElementById('ex-marcus-text').textContent = 'Ellison has the delay text and has not replied. Lang still ends at 3:57, past the school-pickup stop, until he is moved.';
+    }
+  }
+
+  function applyOrtizEta() {
+    if (state.ortizMoved) return;
+    state.ortizMoved = true;
+    var o = document.getElementById('job-ortiz');
+    o.style.left = '56.06%';
+    o.classList.remove('parts');
+    document.getElementById('ortiz-time').textContent = '1:10–2:40 · 90m';
+    document.getElementById('ortiz-sub').textContent = 'Sensor pickup · ETA sent';
+    document.getElementById('ortiz-win').textContent = 'Inside 12:00–3:00 window';
+    document.getElementById('job-petrov').style.left = '72.42%';
+    document.getElementById('petrov-time').textContent = '2:58–4:28 · 90m';
+    document.getElementById('travel-petrov').style.left = '70%';
+    document.getElementById('ex-ortiz').classList.add('cleared');
+    document.getElementById('ex-ortiz-k').textContent = 'ETA sent';
+    document.getElementById('ex-ortiz-text').textContent = 'Samuel Ortiz notified. Priya arrives about 1:10 after the sensor hits the dock at 12:40. Grace Petrov shifts to 2:58, still inside 2:00–5:00, no notice required.';
+    JOBS.ortiz.status = 'ETA revised · customer notified';
+    JOBS.ortiz.banner = 'Customer has the 1:10 ETA · still inside the 3:00 window';
+    JOBS.ortiz.bannerClass = 'ok';
+    setExceptions(state.exceptions - 1);
+    log('11:18 AM', 'Ortiz ETA revised to 1:10 PM after the Bosch sensor dock time. Petrov shifted to 2:58, still inside her window.');
+  }
+
+  function sendNotice(who) {
+    if (state.noticesSent[who]) return;
+    state.noticesSent[who] = true;
+    state.noticeCount -= 1;
+    document.getElementById('stat-notice').textContent = String(state.noticeCount);
+    var row = document.getElementById('notice-' + who);
+    if (row) {
+      row.classList.add('sent');
+      var st = row.querySelector('.nstat');
+      if (st) st.textContent = 'Sent 11:18 AM';
+    }
+    document.querySelectorAll('[data-who="' + who + '"]').forEach(function (btn) {
+      if (btn.tagName === 'BUTTON') {
+        btn.disabled = true;
+        btn.textContent = 'Sent 11:18';
+      }
+    });
+    var names = { park: 'Helen Park', ellison: 'Nora Ellison', lang: 'Victor Lang', ortiz: 'Samuel Ortiz', brooks: 'Camille Brooks' };
+    if (who === 'ortiz') applyOrtizEta();
+    if (who === 'ellison') {
+      state.marcus.ellison = true;
+      document.getElementById('ellison-sub').textContent = 'Text sent · awaiting reply';
+      JOBS.ellison.banner = 'Delay text sent at 11:18 · awaiting STAY or CALL';
+      marcusBanner();
+    }
+    log('11:18 AM', 'Customer notice sent to ' + names[who] + '.');
+    toast('Notice sent to ' + names[who] + '.');
+    render(state.selected);
+  }
+
+  function applySearch(q) {
+    q = q.trim().toLowerCase();
+    document.querySelectorAll('.job, .window-bar').forEach(function (el) {
+      var hay = (el.getAttribute('data-search') || '') + ' ' + el.textContent.toLowerCase();
+      el.classList.toggle('dim', !!q && hay.indexOf(q) === -1);
+    });
+  }
+
+  document.body.addEventListener('click', function (e) {
+    var act = e.target.closest('[data-action]');
+    if (act && !act.disabled) {
+      var a = act.getAttribute('data-action');
+      if (a === 'padilla') callPadilla();
+      else if (a === 'ferrer-diag') ferrerDiag();
+      else if (a === 'move-lang') moveLang();
+      else if (a === 'notify') sendNotice(act.getAttribute('data-who'));
+    }
+    var jobBtn = e.target.closest('.job, .window-bar');
+    if (jobBtn && jobBtn.getAttribute('data-id')) render(jobBtn.getAttribute('data-id'));
+  });
+
+  document.getElementById('q').addEventListener('input', function () {
+    applySearch(this.value);
+  });
+})();
+</script>
+</body>
+</html>

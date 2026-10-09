@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fieldline HVAC — Dispatch Console</title>
+<style>
+  :root{
+    --bg:#edf1f6; --panel:#ffffff; --ink:#10202f; --muted:#5c6b7d; --faint:#8494a7;
+    --line:#dfe6ee; --line2:#e9eff5;
+    --blue:#2563eb; --blue-d:#1e40af; --navy:#0b1a2b;
+    --green:#16a34a; --green-bg:#f0fdf4; --green-bd:#bbf7d0;
+    --amber:#d97706; --amber-bg:#fffbeb; --amber-bd:#fcd34d;
+    --red:#dc2626; --red-bg:#fef2f2; --red-bd:#fecaca;
+    --slate-bg:#f4f7fb;
+    --r:10px;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:13px;
+    display:grid; grid-template-rows:auto auto 1fr; height:100vh; overflow:hidden;
+  }
+  .ic{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-2px}
+  .ic.sm{width:11px;height:11px}
+  .ic.lg{width:16px;height:16px}
+
+  /* ---------- Top bar ---------- */
+  .topbar{height:54px;background:linear-gradient(90deg,#0a1826,#12283f 60%,#14304c);color:#d7e4f2;
+    display:flex;align-items:center;gap:18px;padding:0 16px;flex:none;border-bottom:1px solid #0a1522}
+  .brand{display:flex;align-items:center;gap:9px}
+  .brand .mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#0ea5e9);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(255,255,255,.15) inset}
+  .brand .mark svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .brand b{color:#fff;font-size:15px;letter-spacing:.2px}
+  .brand span{color:#7e97b1;font-size:11px;border-left:1px solid #29435e;padding-left:9px;margin-left:2px}
+  .datenav{display:flex;align-items:center;gap:6px;margin-left:6px}
+  .datenav .dlabel{color:#fff;font-weight:600;font-size:13px;min-width:160px;text-align:center}
+  .iconbtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#cfe0f0;border-radius:7px;
+    width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .iconbtn:hover{background:rgba(255,255,255,.16)}
+  .todaychip{font-size:11px;color:#9fc2e8;background:rgba(37,99,235,.25);border:1px solid rgba(96,165,250,.4);
+    padding:2px 8px;border-radius:20px}
+  .tabs{display:flex;gap:2px;margin-left:10px;background:rgba(255,255,255,.06);padding:3px;border-radius:9px}
+  .tabs button{background:transparent;border:0;color:#a9c0d6;font-size:12px;font-weight:600;padding:5px 14px;border-radius:7px;cursor:pointer}
+  .tabs button.on{background:#2563eb;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .search{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+    border-radius:8px;padding:5px 10px;color:#9db4c9}
+  .search input{background:transparent;border:0;outline:0;color:#e7eff8;font-size:12px;width:170px}
+  .search input::placeholder{color:#7d94ab}
+  .bell{position:relative}
+  .bell .bcount{position:absolute;top:-6px;right:-7px;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;
+    min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #0e2036}
+  .userchip{display:flex;align-items:center;gap:9px}
+  .userchip .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px}
+  .userchip .un{color:#fff;font-size:12px;font-weight:600;line-height:1.1}
+  .userchip .ur{color:#8aa4bd;font-size:10.5px}
+
+  /* ---------- KPI strip ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:10px 16px 0;flex:none}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:9px 13px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi .kl{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);font-weight:700}
+  .kpi .kv{font-size:21px;font-weight:700;margin-top:1px;line-height:1.1}
+  .kpi .ks{font-size:10.5px;color:var(--muted);margin-top:2px}
+  .kpi .kbar{position:absolute;left:0;top:0;bottom:0;width:3px;background:#cbd5e1}
+  .kpi.red .kv{color:var(--red)} .kpi.red .kbar{background:var(--red)}
+  .kpi.amber .kv{color:var(--amber)} .kpi.amber .kbar{background:var(--amber)}
+  .kpi.green .kv{color:var(--green)} .kpi.green .kbar{background:var(--green)}
+  .kpi.blue .kv{color:var(--blue)} .kpi.blue .kbar{background:var(--blue)}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:302px minmax(560px,1fr) 356px;gap:12px;padding:12px 16px 14px;min-height:0}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .phead{padding:10px 13px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px;flex:none}
+  .phead h2{font-size:12.5px;font-weight:700}
+  .phead .cnt{background:#e2e8f0;color:#334155;font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 7px}
+  .phead .cnt.red{background:var(--red-bg);color:var(--red)}
+  .pbody{overflow-y:auto;flex:1;min-height:0}
+
+  /* emergency banner */
+  .banner{grid-column:1/-1;background:linear-gradient(90deg,#7f1d1d,#b91c1c);color:#fff;border-radius:10px;
+    padding:8px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;box-shadow:var(--shadow)}
+  .banner .pulse{width:9px;height:9px;border-radius:50%;background:#fca5a5;animation:pl 1.2s infinite}
+  @keyframes pl{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(252,165,165,.6)}50%{opacity:.6;box-shadow:0 0 0 6px rgba(252,165,165,0)}}
+  .banner b{font-weight:700}
+  .banner button{margin-left:auto;background:#fff;color:#b91c1c;border:0;font-weight:700;font-size:11.5px;
+    padding:5px 13px;border-radius:7px;cursor:pointer}
+
+  /* ---------- Queue ---------- */
+  .qsub{font-size:10.5px;color:var(--faint);padding:7px 13px 0}
+  .qcard{margin:9px 10px;border:1px solid var(--line);border-left:4px solid #94a3b8;border-radius:9px;
+    padding:9px 11px;cursor:pointer;background:#fff;transition:box-shadow .12s,border-color .12s}
+  .qcard:hover{box-shadow:0 2px 8px rgba(16,24,40,.1)}
+  .qcard.sel{border-color:var(--blue);border-left-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,235,.18)}
+  .qcard.em{border-left-color:var(--red);background:linear-gradient(180deg,#fff5f5,#fff)}
+  .qcard.hi{border-left-color:var(--amber)}
+  .qcard .qtop{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .qcard .qcust{font-weight:700;font-size:12.5px}
+  .qcard .qprob{color:var(--muted);font-size:11.5px;margin:2px 0 6px;line-height:1.35}
+  .qchips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#475569;
+    background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:2px 6px;white-space:nowrap}
+  .chip.red{background:var(--red-bg);border-color:var(--red-bd);color:var(--red)}
+  .chip.amber{background:var(--amber-bg);border-color:var(--amber-bd);color:#b45309}
+  .chip.blue{background:#eff6ff;border-color:#bfdbfe;color:var(--blue-d)}
+  .chip.green{background:var(--green-bg);border-color:var(--green-bd);color:#15803d}
+  .qbest{margin-top:7px;padding-top:6px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .qbest b{color:var(--blue-d)}
+  .pill{font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;border-radius:5px;padding:2px 6px}
+  .pill.em{background:var(--red);color:#fff}
+  .pill.hi{background:#f59e0b;color:#fff}
+  .pill.md{background:#64748b;color:#fff}
+  .pill.ro{background:#e2e8f0;color:#475569}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pl 1.2s infinite}
+
+  /* ---------- Schedule toolbar ---------- */
+  .stoolbar{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--line2);flex:none;flex-wrap:wrap}
+  .stoolbar h2{font-size:12.5px;font-weight:700;margin-right:4px}
+  .seg{display:flex;background:#eef2f7;border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+  .seg button{border:0;background:transparent;font-size:11px;font-weight:600;color:var(--muted);padding:4px 11px;border-radius:6px;cursor:pointer}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(16,24,40,.12)}
+  .legend{margin-left:auto;display:flex;gap:11px;font-size:10.5px;color:var(--muted);align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .dashline{width:16px;border-top:2px dashed #94a3b8;display:inline-block}
+
+  /* ---------- Timeline ---------- */
+  .timeline{flex:1;overflow:auto;position:relative;background:#fbfcfe;min-height:0}
+  .tl-inner{position:relative;width:1650px}
+  .ruler{display:flex;position:sticky;top:0;z-index:6;background:#fff;border-bottom:1px solid var(--line);height:30px}
+  .ruler .rl{width:210px;flex:none;position:sticky;left:0;background:#fff;z-index:7;border-right:1px solid var(--line);
+    font-size:10.5px;font-weight:700;color:var(--faint);display:flex;align-items:center;padding:0 12px;text-transform:uppercase;letter-spacing:.5px}
+  .ruler .rh{position:relative;width:1440px;flex:none}
+  .ruler .hr{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);font-size:10px;color:var(--faint);padding:8px 0 0 5px;font-weight:600}
+  .tl-row{display:flex;height:66px;border-bottom:1px solid var(--line2)}
+  .tech-cell{width:210px;flex:none;position:sticky;left:0;z-index:5;background:#fff;border-right:1px solid var(--line);
+    padding:7px 10px;display:flex;gap:9px;align-items:center}
+  .tech-cell .av{width:34px;height:34px;border-radius:9px;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .tech-cell .tn{font-weight:700;font-size:12px;line-height:1.15}
+  .tech-cell .tr{font-size:10px;color:var(--faint)}
+  .tech-cell .tshift{font-size:9.5px;color:var(--muted);margin-top:2px}
+  .loadbar{height:4px;background:#e8eef4;border-radius:2px;margin-top:4px;width:112px;overflow:hidden}
+  .loadbar i{display:block;height:100%;border-radius:2px;background:var(--green)}
+  .tech-cell.out .av{background:#94a3b8 !important}
+  .tech-cell .outtag{font-size:9px;font-weight:800;color:var(--red);background:var(--red-bg);border:1px solid var(--red-bd);border-radius:5px;padding:1px 5px;display:inline-block;margin-top:3px}
+  .track{position:relative;width:1440px;flex:none;
+    background-image:linear-gradient(90deg,#e6ecf3 1px,transparent 1px),linear-gradient(90deg,#f2f6fa 1px,transparent 1px);
+    background-size:120px 100%,60px 100%}
+  .offshift{position:absolute;top:0;bottom:0;background:rgba(15,23,42,.05);
+    background-image:repeating-linear-gradient(135deg,rgba(100,116,139,.07) 0 6px,transparent 6px 12px)}
+  .outstripe{position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(148,163,184,.14) 0 10px,rgba(148,163,184,.05) 10px 20px);
+    display:flex;align-items:center;justify-content:center;color:#64748b;font-size:11.5px;font-weight:600;gap:8px;z-index:1}
+  .nowline{position:absolute;top:30px;bottom:0;width:2px;background:#ef4444;z-index:4;pointer-events:none}
+  .nowline .ntag{position:absolute;top:2px;left:-22px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:700;
+    padding:1px 6px;border-radius:5px;white-space:nowrap}
+
+  .block{position:absolute;top:9px;height:48px;border-radius:8px;border:1px solid var(--line);border-left:4px solid #94a3b8;
+    background:#fff;padding:4px 26px 4px 8px;font-size:11px;line-height:1.3;cursor:pointer;overflow:hidden;
+    box-shadow:0 1px 2px rgba(16,24,40,.07);z-index:2;transition:box-shadow .1s}
+  .block:hover{box-shadow:0 3px 10px rgba(16,24,40,.16);z-index:3}
+  .block.sel{outline:2px solid var(--blue);outline-offset:1px}
+  .block .b-t{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
+  .block .b-t b{font-size:11px;overflow:hidden;text-overflow:ellipsis}
+  .block .b-time{font-size:9.5px;color:var(--faint);font-weight:600;flex:none}
+  .block .b-s{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;display:flex;gap:5px;align-items:center}
+  .block .b-s .ic{width:10px;height:10px}
+  .block .b-flag{position:absolute;top:4px;right:4px;font-size:8.5px;font-weight:800;border-radius:4px;padding:1px 4px;display:flex;align-items:center;gap:2px}
+  .block .b-flag .ic{width:9px;height:9px}
+  .block .prog{position:absolute;left:0;bottom:0;height:3px;background:var(--blue);opacity:.85}
+  .st-completed{background:var(--green-bg);border-color:var(--green-bd);border-left-color:var(--green)}
+  .st-completed .b-t b{color:#166534}.st-completed .b-s{color:#15803d}
+  .st-progress{background:#eff6ff;border-color:#bfdbfe;border-left-color:var(--blue)}
+  .st-progress .b-t b{color:var(--blue-d)}.st-progress .b-s{color:#3b62a6}
+  .st-scheduled{background:#fff;border-left-color:#94a3b8}
+  .is-warn{background:var(--amber-bg) !important;border-color:var(--amber-bd) !important;border-left-color:var(--amber) !important}
+  .is-warn .b-t b{color:#92400e}.is-warn .b-s{color:#b45309}
+  .is-warn .b-flag{background:#f59e0b;color:#fff}
+  .is-crit{background:var(--red-bg) !important;border-color:var(--red-bd) !important;border-left-color:var(--red) !important}
+  .is-crit .b-t b{color:#991b1b}.is-crit .b-s{color:#b91c1c}
+  .is-crit .b-flag{background:var(--red);color:#fff}
+  .blk-lunch{background:#f1f5f9;border:1px dashed #cbd5e1;border-left:3px solid #cbd5e1;color:#64748b;
+    display:flex;align-items:center;justify-content:center;gap:5px;font-size:10px;font-weight:600;padding:0}
+  .blk-depot{background:#f5f3ff;border-color:#ddd6fe;border-left-color:#8b5cf6}
+  .blk-depot .b-t b{color:#5b21b6}
+  .dim{opacity:.18;filter:grayscale(.6)}
+  .travel{position:absolute;top:33px;border-top:2px dashed #94a3b8;z-index:1}
+  .travel .tlab{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:#eef2f7;color:#64748b;
+    font-size:8.5px;font-weight:700;border-radius:4px;padding:0 4px;white-space:nowrap;display:flex;gap:2px;align-items:center}
+  .travel .tlab .ic{width:9px;height:9px}
+  .travel.bad{border-top-color:var(--red)}
+  .travel.bad .tlab{background:var(--red);color:#fff}
+
+  .flash{animation:fl 1.5s ease}
+  @keyframes fl{0%,60%{box-shadow:0 0 0 4px rgba(37,99,235,.45)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+
+  /* ---------- Right panel ---------- */
+  .ptabs{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line2);flex:none}
+  .ptabs button{flex:1;border:0;background:transparent;font-size:12px;font-weight:700;color:var(--muted);
+    padding:7px 4px 9px;cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:6px}
+  .ptabs button.on{color:var(--blue-d);border-bottom-color:var(--blue)}
+  .ptabs .bdg{font-size:9.5px;font-weight:800;background:var(--red);color:#fff;border-radius:9px;min-width:16px;height:15px;
+    display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+  .dsec{padding:11px 14px;border-bottom:1px solid var(--line2)}
+  .dsec .dl{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);font-weight:800;margin-bottom:7px}
+  .dhead{padding:13px 14px 11px;border-bottom:1px solid var(--line2)}
+  .dhead .pills{display:flex;gap:5px;margin-bottom:7px;flex-wrap:wrap}
+  .dhead h3{font-size:15px;line-height:1.25}
+  .dhead .dsub{color:var(--muted);font-size:12px;margin-top:2px}
+  .spill{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:5px;padding:2px 7px;display:inline-flex;align-items:center;gap:4px}
+  .spill.done{background:var(--green-bg);color:#15803d;border:1px solid var(--green-bd)}
+  .spill.prog{background:#eff6ff;color:var(--blue-d);border:1px solid #bfdbfe}
+  .spill.sched{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+  .spill.unas{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+  .meta{display:grid;grid-template-columns:86px 1fr;gap:5px 10px;font-size:11.5px}
+  .meta .mk{color:var(--faint);font-weight:600;display:flex;gap:5px;align-items:center}
+  .meta .mv{color:var(--ink);line-height:1.35}
+  .meta .mv .warn{color:#b45309;font-weight:700}
+  .reqrow{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:11.5px;border-bottom:1px dashed var(--line2)}
+  .reqrow:last-child{border-bottom:0}
+  .reqrow .ric{width:22px;height:22px;border-radius:6px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#64748b;flex:none}
+  .reqrow .rt{flex:1;line-height:1.3}
+  .reqrow .rt small{display:block;color:var(--faint);font-size:10px}
+  .rok{color:var(--green);font-weight:700;font-size:10.5px;display:flex;gap:3px;align-items:center;white-space:nowrap}
+  .rwarn{color:#b45309;font-weight:700;font-size:10.5px;display:flex;gap:3px;align-items:center;white-space:nowrap}
+  .rno{color:var(--red);font-weight:700;font-size:10.5px;display:flex;gap:3px;align-items:center;white-space:nowrap}
+  .slabox{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:9px;padding:9px 12px;margin:0 14px 10px;
+    display:flex;gap:9px;align-items:center;color:#991b1b;font-size:11.5px;font-weight:600}
+  .btn{border:0;border-radius:7px;font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+  .btn.pri{background:var(--blue);color:#fff}
+  .btn.pri:hover{background:#1d4ed8}
+  .btn.warnb{background:#f59e0b;color:#fff}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:#334155}
+  .btn.ghost:hover{background:#f8fafc}
+  .btn.sm{padding:4px 9px;font-size:10.5px}
+  .btnrow{display:flex;gap:6px;flex-wrap:wrap}
+  .sugg{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px;display:flex;gap:9px;align-items:center}
+  .sugg .av{width:28px;height:28px;border-radius:8px;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .sugg .sn{font-weight:700;font-size:11.5px}
+  .sugg .ss{font-size:10px;color:var(--muted);margin-top:1px}
+  .sugg .tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  .sugg .go{margin-left:auto}
+  .cert{font-size:9px;font-weight:700;border-radius:4px;padding:1px 5px;display:inline-flex;gap:2px;align-items:center}
+  .cert.ok{background:var(--green-bg);color:#15803d}
+  .cert.no{background:var(--red-bg);color:var(--red)}
+  .assignedchip{display:flex;align-items:center;gap:9px;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px}
+  .assignedchip .av{width:30px;height:30px;border-radius:8px;color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center}
+
+  .arow{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line2);cursor:pointer;align-items:flex-start}
+  .arow:hover{background:#f8fafc}
+  .arow .ai{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+  .arow.crit .ai{background:var(--red-bg);color:var(--red)}
+  .arow.warn .ai{background:var(--amber-bg);color:var(--amber)}
+  .arow.info .ai{background:#eff6ff;color:var(--blue)}
+  .arow .at{font-weight:700;font-size:12px;line-height:1.3}
+  .arow .as{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
+  .arow .chev{margin-left:auto;color:#c3cfdb;align-self:center}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f2033;color:#e6eff8;
+    font-size:12.5px;font-weight:600;padding:10px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);
+    opacity:0;pointer-events:none;transition:all .25s;z-index:99;display:flex;gap:8px;align-items:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .ic{color:#4ade80}
+
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#c6d2de;border-radius:5px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#a9bac9;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-crit" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-checkc" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-chevl" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="i-chevr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+  <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><line x1="3.5" y1="7" x2="20.5" y2="17"/><line x1="3.5" y1="17" x2="20.5" y2="7"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H15"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark"><svg><use href="#i-route"/></svg></div>
+    <b>Fieldline</b><span>HVAC Dispatch Console</span>
+  </div>
+  <div class="datenav">
+    <button class="iconbtn" data-demo="day"><svg class="ic"><use href="#i-chevl"/></svg></button>
+    <span class="dlabel"><svg class="ic sm" style="vertical-align:-1px"><use href="#i-cal"/></svg> Tue, October 14</span>
+    <button class="iconbtn" data-demo="day"><svg class="ic"><use href="#i-chevr"/></svg></button>
+    <span class="todaychip">Today</span>
+  </div>
+  <div class="tabs">
+    <button class="on">Timeline</button>
+    <button data-demo="view">Board</button>
+    <button data-demo="view">Map</button>
+  </div>
+  <div class="top-right">
+    <div class="search"><svg class="ic"><use href="#i-search"/></svg><input id="searchBox" placeholder="Search customer, site, tech…"></div>
+    <button class="iconbtn bell" id="bellBtn"><svg class="ic lg"><use href="#i-bell"/></svg><span class="bcount" id="bellCount">8</span></button>
+    <div class="userchip">
+      <div class="av">AR</div>
+      <div><div class="un">A. Rivera</div><div class="ur">Lead Dispatcher</div></div>
+    </div>
+  </div>
+</header>
+
+<section class="kpis" id="kpis"></section>
+
+<main class="layout" id="layout">
+  <div class="banner" id="emBanner" style="display:none">
+    <span class="pulse"></span>
+    <span id="emBannerTxt"></span>
+    <button id="emReview">Review &amp; assign</button>
+  </div>
+
+  <!-- Unassigned queue -->
+  <aside class="panel">
+    <div class="phead"><h2>Unassigned queue</h2><span class="cnt red" id="qCount">4</span>
+      <span style="margin-left:auto;font-size:10px;color:var(--faint)" id="qNote"></span></div>
+    <div class="pbody" id="queue"></div>
+  </aside>
+
+  <!-- Schedule -->
+  <section class="panel">
+    <div class="stoolbar">
+      <h2>Route plan · 6:00 AM – 6:00 PM</h2>
+      <div class="seg" id="filterSeg">
+        <button class="on" data-f="all">All visits</button>
+        <button data-f="issues">Issues only</button>
+        <button data-f="emergency">Emergency</button>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:#16a34a"></i>Completed</span>
+        <span><i class="dot" style="background:#2563eb"></i>In progress</span>
+        <span><i class="dot" style="background:#94a3b8"></i>Scheduled</span>
+        <span><i class="dot" style="background:#dc2626"></i>Conflict</span>
+        <span><i class="dashline"></i>Travel</span>
+      </div>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  </section>
+
+  <!-- Right panel -->
+  <aside class="panel">
+    <div class="ptabs">
+      <button class="on" data-tab="details" id="tabDetails">Visit details</button>
+      <button data-tab="alerts" id="tabAlerts">Alerts <span class="bdg" id="alertBdg">8</span></button>
+    </div>
+    <div class="pbody" id="side"></div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"><svg class="ic"><use href="#i-checkc"/></svg><span id="toastMsg"></span></div>
+
+<script>
+/* ============================== DATA ============================== */
+const NOW = 580;            // 9:40 AM
+const DAY_START = 360, DAY_END = 1080, PX = 2;
+
+const techs = [
+ {id:'dana',  name:'Dana Kowalski', ini:'DK', role:'Senior Tech',  terr:'Central', shift:[390,900], certs:['EPA Universal','RTU','Boiler','Gas heat'], color:'#2563eb', status:'active'},
+ {id:'marcus',name:'Marcus Webb',   ini:'MW', role:'Master Tech',  terr:'North',   shift:[420,930], certs:['EPA Universal','Chiller','CRAC','VRF','RTU'], color:'#7c3aed', status:'active'},
+ {id:'priya', name:'Priya Nair',    ini:'PN', role:'Senior Tech',  terr:'Central', shift:[420,930], certs:['EPA Universal','VRF','Controls/BMS','CRAC','RTU'], color:'#db2777', status:'active'},
+ {id:'luis',  name:'Luis Ortega',   ini:'LO', role:'Field Tech II',terr:'South',   shift:[480,990], certs:['EPA 608 II','RTU','Gas heat'], color:'#059669', status:'active'},
+ {id:'sam',   name:'Sam Delgado',   ini:'SD', role:'Apprentice',   terr:'South',   shift:[480,990], certs:['EPA 608 I'], color:'#d97706', status:'active'},
+ {id:'tom',   name:'Tom Beck',      ini:'TB', role:'Senior Tech',  terr:'North',   shift:[420,930], certs:['EPA Universal','RTU'], color:'#64748b', status:'out', outNote:'Called in sick · 5:42 AM'}
+];
+
+const visits = [
+ /* ---- Dana ---- */
+ {id:'d1',techId:'dana',kind:'visit',start:405,end:495,status:'completed',priority:'routine',type:'Maintenance',
+  customer:'Harborview Medical Plaza',short:'Q3 preventive maintenance — 6 rooftop units',window:[390,540],
+  address:'1200 Harborview Pkwy',terr:'Central',equipment:'6× Carrier WeatherMaker 10-ton RTUs',
+  problem:'Quarterly preventive maintenance — filters, belts, economizer operation, amp draws.',reqCerts:['RTU'],
+  contact:{name:'Ana P. — Facilities',phone:'(555) 014-7788'},travelTo:15},
+ {id:'d2',techId:'dana',kind:'visit',start:515,end:605,status:'progress',priority:'high',type:'Repair',
+  customer:'Meridian Office Tower',short:'RTU-4 compressor replacement',window:[480,720],
+  address:'400 Meridian St — Roof access',terr:'Central',equipment:'Trane Voyager 15-ton RTU (RTU-4)',
+  problem:'Compressor grounded — replace & evacuate. Tech reports a refrigerant leak in the line set; brazing repair in progress.',reqCerts:['RTU'],
+  part:{name:'OEM compressor',onTruck:true},diag:'Recovery machine + micron gauge',overrun:75,
+  contact:{name:'Mike D. — Building engineer',phone:'(555) 882-0143',mustPresent:true},travelTo:20},
+ {id:'d3',techId:'dana',kind:'visit',start:620,end:710,status:'scheduled',priority:'high',type:'Repair',
+  customer:'Brightline Logistics Center',short:'Dock unit — no-heat call',window:[600,780],
+  address:'1 Brightline Way — Dock 3',terr:'South',equipment:'AAON RN-series 20-ton RTU (dock)',
+  problem:'No heat at shipping dock; ignition fault reported. Staff working in unheated area.',reqCerts:['RTU'],
+  contact:{name:'R. Ames — Dock supervisor',phone:'(555) 771-9042'},travelTo:45},
+ {id:'dl',techId:'dana',kind:'lunch',start:710,end:740},
+ {id:'d5',techId:'dana',kind:'visit',start:740,end:800,status:'scheduled',priority:'routine',type:'Repair',
+  customer:'Cedar & Main Dental',short:'Zone thermostat replacement',window:[720,960],
+  address:'22 Cedar St, Suite 3',terr:'Central',equipment:'Honeywell commercial zone stat (Z-2)',
+  problem:'Waiting area overheating — replace failed zone thermostat and re-verify schedule.',reqCerts:[],
+  part:{name:'Zone thermostat',onTruck:true},contact:{name:'Front desk',phone:'(555) 640-2210'},travelTo:20},
+
+ /* ---- Marcus ---- */
+ {id:'m1',techId:'marcus',kind:'depot',start:420,end:450,customer:'Fieldline Warehouse',
+  short:'Parts pickup — economizer actuator + recovery machine',note:'Load economizer actuator (for Foundry Sq) and recovery machine.'},
+ {id:'m2',techId:'marcus',kind:'visit',start:480,end:630,status:'progress',priority:'high',type:'Repair',
+  customer:'Foundry Square',short:'Chiller #2 economizer repair',window:[450,720],
+  address:'88 Foundry Sq — Mech penthouse',terr:'North',equipment:'Carrier AquaEdge 90-ton chiller (#2)',
+  problem:'Economizer damper actuator failed closed — high head pressure, unit tripping.',reqCerts:['Chiller'],
+  crew:{need:2,have:2,note:'2-tech crew — S. Delgado assisting (recovery & checkout)'},
+  part:{name:'Economizer actuator',onTruck:true},diag:'Recovery machine',
+  contact:{name:'Ray T. — Facilities manager',phone:'(555) 230-1187',mustPresent:true,note:'Meet at loading dock'},travelTo:30},
+ {id:'m3',techId:'marcus',kind:'visit',start:665,end:725,status:'scheduled',priority:'routine',type:'Maintenance',
+  customer:'Summit Pointe Offices',short:'Seasonal RTU service',window:[600,840],
+  address:'2210 Summit Pointe Dr',terr:'North',equipment:'2× York 7.5-ton RTUs',
+  problem:'Seasonal changeover — heat-side checkout, belts, filters.',reqCerts:['RTU'],
+  contact:{name:'Property mgmt office',phone:'(555) 318-6645'},travelTo:35},
+ {id:'ml',techId:'marcus',kind:'lunch',start:725,end:755},
+ {id:'m5',techId:'marcus',kind:'visit',start:755,end:845,status:'scheduled',priority:'medium',type:'Repair',
+  customer:'Grand Calder Hotel',short:'VRF zone controller fault',window:[720,900],
+  address:'5 Grand Calder Ave',terr:'North',equipment:'Daikin VRV IV — 12 zones',
+  problem:'Floors 8–9 zones unresponsive; central controller communication fault.',reqCerts:['VRF'],
+  contact:{name:'S. Okafor — Chief engineer',phone:'(555) 412-9960',mustPresent:true,note:'Escort required to roof'},travelTo:20},
+
+ /* ---- Priya ---- */
+ {id:'p1',techId:'priya',kind:'visit',start:450,end:540,status:'completed',priority:'routine',type:'Maintenance',
+  customer:'Lakeshore Commons',short:'Quarterly VRF PM — 8 indoor units',window:[420,600],
+  address:'77 Lakeshore Commons',terr:'Central',equipment:'Mitsubishi City Multi — 8 indoor units',
+  problem:'Quarterly PM — filters, drain check, error-log review.',reqCerts:['VRF'],
+  contact:{name:'Leasing office',phone:'(555) 776-0912'},travelTo:15},
+ {id:'p2',techId:'priya',kind:'visit',start:560,end:680,status:'progress',priority:'medium',type:'Diagnostic',
+  customer:'Kestrel Brewing Co.',short:'BMS integration fault',window:[540,720],
+  address:'16 Kestrel Ln',terr:'Central',equipment:'Alerton BMS ↔ Daikin iTouch gateway',
+  problem:'BMS intermittently loses comms with VRF central controller; trend logs dropping.',reqCerts:['Controls/BMS'],
+  diag:'BMS diagnostic laptop + interface cables',
+  contact:{name:'T. Kestrel — Ops',phone:'(555) 294-8033'},travelTo:20},
+ {id:'pl',techId:'priya',kind:'lunch',start:680,end:710},
+ {id:'p3',techId:'priya',kind:'visit',start:810,end:900,status:'scheduled',priority:'routine',type:'Maintenance',
+  customer:'Riverbend Elementary',short:'Gymnasium unit service',window:[780,960],
+  address:'300 Riverbend Rd',terr:'Central',equipment:'Bard wall-mount units (gym)',
+  problem:'Annual service on gym units; district requested filter upgrade.',reqCerts:[],
+  accessAfter:780,accessNote:'No entry before 1:00 PM — classes in session. Custodian escort required.',
+  contact:{name:'D. Flores — Custodian',phone:'(555) 902-3341',mustPresent:true},travelTo:25},
+ {id:'p4',techId:'priya',kind:'visit',start:900,end:960,status:'scheduled',priority:'medium',type:'Diagnostic',
+  customer:'Helix Labs',short:'Controls retrofit verification',window:[840,1020],
+  address:'1400 Helix Way',terr:'Central',equipment:'Retrofit VAV controllers (phase 2)',
+  problem:'Point-to-point verification on phase-2 VAV controller retrofit.',reqCerts:['Controls/BMS'],
+  contact:{name:'Lab manager — J. Wu',phone:'(555) 118-4409'},travelTo:20},
+
+ /* ---- Luis ---- */
+ {id:'l1',techId:'luis',kind:'visit',start:480,end:570,status:'completed',priority:'routine',type:'Maintenance',
+  customer:'Sunrise Retail Plaza',short:'RTU preventive maintenance — 4 units',window:[480,660],
+  address:'910 Sunrise Plaza',terr:'South',equipment:'4× Goodman 5–7.5-ton RTUs',
+  problem:'Preventive maintenance — filters, belts, electrical connections.',reqCerts:['RTU'],
+  contact:{name:'Store manager',phone:'(555) 520-1177'},travelTo:15},
+ {id:'l2',techId:'luis',kind:'visit',start:585,end:645,status:'progress',priority:'medium',type:'Repair',
+  customer:'Atlas Self Storage',short:'Condenser fan motor replacement',window:[540,720],
+  address:'655 Atlas Rd',terr:'South',equipment:'Carrier 5-ton split system (office)',
+  problem:'Office AC out — condenser fan motor seized.',reqCerts:['RTU'],
+  part:{name:'Condenser fan motor',onTruck:false,location:'Fieldline warehouse — 12 mi'},
+  contact:{name:'Site kiosk — remote unlock',phone:'(555) 804-5512'},travelTo:15},
+ {id:'l3',techId:'luis',kind:'visit',start:675,end:735,status:'scheduled',priority:'high',type:'Repair',
+  customer:'Brookfield Charter School',short:'Gym unit — no cooling',window:[660,840],
+  address:'1200 Brookfield Ave',terr:'South',equipment:'Bard 5-ton wall unit (gym)',
+  problem:'Gym AC down; afternoon PE classes scheduled in the space.',reqCerts:[],
+  accessAfter:780,accessNote:'No entry before 1:00 PM — classes in session.',
+  contact:{name:'Front office (pages custodian)',phone:'(555) 633-2081'},travelTo:30},
+ {id:'ll',techId:'luis',kind:'lunch',start:735,end:765},
+ {id:'l5',techId:'luis',kind:'visit',start:780,end:900,status:'scheduled',priority:'routine',type:'Maintenance',
+  customer:'Overton Business Park',short:'Multi-RTU service — 3 units',window:[780,1020],
+  address:'4020 Overton Pkwy',terr:'South',equipment:'3× Rheem 7.5-ton RTUs',
+  problem:'Semi-annual service contract visit — full checkout.',reqCerts:['RTU'],
+  contact:{name:'Building engineer',phone:'(555) 711-3980'},travelTo:20},
+
+ /* ---- Sam ---- */
+ {id:'s1',techId:'sam',kind:'visit',start:480,end:630,status:'progress',priority:'high',type:'Repair',
+  customer:'Foundry Square',short:'Chiller #2 economizer repair — 2nd tech (with M. Webb)',window:[450,720],
+  address:'88 Foundry Sq — Mech penthouse',terr:'North',equipment:'Carrier AquaEdge 90-ton chiller (#2)',
+  problem:'Assist M. Webb — recovery, evacuation and checkout.',reqCerts:[],crew:{need:2,have:2,note:'Crew job — lead: M. Webb'},
+  contact:{name:'Ray T. — Facilities manager',phone:'(555) 230-1187',mustPresent:true},travelTo:30},
+ {id:'s2',techId:'sam',kind:'visit',start:660,end:750,status:'scheduled',priority:'medium',type:'Install / Commission',
+  customer:'Vantage Row Lofts',short:'VRF system commissioning',window:[660,900],
+  address:'12 Vantage Row',terr:'South',equipment:'Fujitsu Airstage VRF — 6 zones',
+  problem:'New-install commissioning — startup, addressing, test run. Manufacturer requires a certified VRF lead on site.',reqCerts:['VRF'],
+  contact:{name:'GC site super — P. Nolan',phone:'(555) 366-9042',mustPresent:true},travelTo:25},
+ {id:'sl',techId:'sam',kind:'lunch',start:750,end:780},
+ {id:'s3',techId:'sam',kind:'visit',start:780,end:840,status:'scheduled',priority:'routine',type:'Maintenance',
+  customer:'Copperline Fitness',short:'Thermostat reprogram + filters',window:[780,960],
+  address:'250 Copperline Ave',terr:'South',equipment:'Lobby split systems (2)',
+  problem:'Reprogram stat schedules; replace lobby filters.',reqCerts:[],
+  contact:{name:'Club manager',phone:'(555) 845-1270'},travelTo:15},
+ {id:'s4',techId:'sam',kind:'visit',start:855,end:915,status:'scheduled',priority:'routine',type:'Maintenance',
+  customer:'Anchor Storage',short:'Office unit heater check',window:[840,1020],
+  address:'47 Anchor Ct',terr:'South',equipment:'Modine unit heater (office)',
+  problem:'Pre-season check of office unit heater.',reqCerts:[],
+  contact:{name:'Remote gate code in CRM',phone:'—'},travelTo:15},
+
+ /* ---- Unassigned ---- */
+ {id:'u1',techId:null,kind:'visit',start:null,end:null,duration:90,status:'scheduled',priority:'emergency',type:'Emergency repair',
+  customer:'Pinnacle Data Suites',short:'CRAC-2 failure — server room 84°F and rising',window:null,sla:660,
+  address:'880 Pinnacle Dr',terr:'North',equipment:'Liebert 12-ton CRAC (unit 2)',
+  problem:'CRAC-2 down — server room at 84°F, rising ~2°F/hr. NOC requesting immediate dispatch; failover unit at capacity.',reqCerts:['EPA Universal','CRAC'],
+  diag:'Refrigerant gauge set',contact:{name:'NOC desk — 24/7',phone:'(555) 090-1212',mustPresent:true}},
+ {id:'u2',techId:null,kind:'visit',start:null,end:null,duration:90,status:'scheduled',priority:'high',type:'Repair',fromTech:'tom',
+  customer:'Westfield Galleria',short:'Food court RTU-7 tripping on high pressure',window:[600,840],
+  address:'1 Galleria Way',terr:'Central',equipment:'Trane 12.5-ton RTU (RTU-7)',
+  problem:'Unit trips on high head pressure after ~20 min runtime; food court warming up.',reqCerts:['RTU'],
+  contact:{name:'K. Bisset — Mall operations',phone:'(555) 448-7720'}},
+ {id:'u3',techId:null,kind:'visit',start:null,end:null,duration:60,status:'scheduled',priority:'medium',type:'Maintenance',fromTech:'tom',
+  customer:'Northgate Medical Plaza',short:'Backup RTU run test (compliance)',window:[780,960],
+  address:'450 Northgate Blvd',terr:'North',equipment:'Carrier 10-ton backup RTU',
+  problem:'Monthly backup-unit run test with compliance report; facilities manager must be present.',reqCerts:['RTU'],
+  contact:{name:'G. Roy — Facilities',phone:'(555) 555-8823',mustPresent:true}},
+ {id:'u4',techId:null,kind:'visit',start:null,end:null,duration:45,status:'scheduled',priority:'routine',type:'Maintenance',
+  customer:'Cityside Convention Center',short:'Lobby AHU filters + inspection',window:[540,1020],
+  address:'200 Cityside Blvd',terr:'South',equipment:'2× Trane air handlers (lobby)',
+  problem:'Filter change + belt inspection on lobby air handlers. New request — flexible timing.',reqCerts:[],
+  contact:{name:'Event ops office',phone:'(555) 277-6640'}}
+];
+
+const ALERTS = [
+ {id:'a1',level:'crit',ref:'u1',title:'Emergency call unassigned',sub:'Pinnacle Data Suites · CRAC-2 down · SLA on-site by 11:00 AM',
+  resolved:()=>!!V('u1').techId},
+ {id:'a2',level:'crit',ref:'s2',title:'Certification gap',sub:'S. Delgado assigned to VRF commissioning (Vantage Row, 11:00 AM) — no VRF cert',
+  resolved:()=>{const v=V('s2'),t=T(v.techId);return t&&v.reqCerts.every(c=>t.certs.includes(c));}},
+ {id:'a3',level:'warn',ref:'d2',title:'Visit running long',sub:'Meridian compressor replacement trending +75m over estimate — downstream visits at risk',
+  resolved:()=>!V('d2').overrun},
+ {id:'a4',level:'warn',ref:'d3',title:'Travel conflict',sub:'Brightline Logistics: 45-min drive, only a 15-min gap after Meridian',
+  resolved:()=>!visitIssues(V('d3')).some(i=>i.type==='travel')},
+ {id:'a5',level:'warn',ref:'l3',title:'Restricted-access conflict',sub:'Brookfield Charter School: no entry before 1:00 PM · scheduled 11:15 AM',
+  resolved:()=>!visitIssues(V('l3')).some(i=>i.type==='access')},
+ {id:'a6',level:'warn',ref:'l2',title:'Part not on truck',sub:'Atlas Self Storage: condenser fan motor still at warehouse — pickup needed',
+  resolved:()=>V('l2').part.onTruck},
+ {id:'a7',level:'warn',ref:'u2',title:'Coverage gap — T. Beck out sick',sub:'2 of Tom\u2019s visits need reassignment (Westfield Galleria, Northgate Medical)',
+  resolved:()=>!!V('u2').techId&&!!V('u3').techId},
+ {id:'a8',level:'info',ref:'p4',title:'Overtime risk',sub:'P. Nair scheduled 30m past shift end (Helix Labs verification)',
+  resolved:()=>!visitIssues(V('p4')).some(i=>i.type==='ot')}
+];
+
+/* ============================== STATE ============================== */
+let selId='u1', tab='details', filter='all', query='';
+
+/* ============================== HELPERS ============================== */
+const V=id=>visits.find(v=>v.id===id);
+const T=id=>techs.find(t=>t.id===id);
+const X=m=>(m-DAY_START)*PX;
+const fmt=m=>{let h=Math.floor(m/60),mm=m%60,ap=h<12?'AM':'PM',h12=((h+11)%12)+1;return h12+':'+String(mm).padStart(2,'0')+' '+ap;};
+const fmtT=m=>{let h=Math.floor(m/60),mm=m%60,h12=((h+11)%12)+1;return h12+':'+String(mm).padStart(2,'0');};
+const ic=(n,c='')=>`<svg class="ic ${c}"><use href="#i-${n}"/></svg>`;
+const prioPill=p=>({emergency:'<span class="pill em">Emergency</span>',high:'<span class="pill hi">High</span>',medium:'<span class="pill md">Medium</span>',routine:'<span class="pill ro">Routine</span>'}[p]);
+const statusPill=v=>{
+  if(!v.techId)return '<span class="spill unas">Unassigned</span>';
+  if(v.status==='completed')return '<span class="spill done">'+ic('check','sm')+' Completed</span>';
+  if(v.status==='progress')return '<span class="spill prog">In progress</span>';
+  return '<span class="spill sched">Scheduled</span>';
+};
+
+function techBlocks(tid,excludeId){
+  return visits.filter(v=>v.techId===tid&&v.start!=null&&v.id!==excludeId&&v.kind!=='lunch')
+               .sort((a,b)=>a.start-b.start);
+}
+function visitIssues(v){
+  const out=[]; if(v.kind!=='visit')return out;
+  const t=T(v.techId);
+  if(t){
+    if(v.reqCerts&&v.reqCerts.length&&!v.reqCerts.every(c=>t.certs.includes(c)))
+      out.push({type:'cert',level:'crit',label:'Cert gap',long:`Requires ${v.reqCerts.filter(c=>!t.certs.includes(c)).join(', ')} — ${t.name.split(' ')[0]} not certified`});
+    if(v.end>t.shift[1])
+      out.push({type:'ot',level:'info',label:'+'+(v.end-t.shift[1])+'m OT',long:`Ends ${v.end-t.shift[1]}m past shift end (${fmt(t.shift[1])})`});
+    if(v.travelTo){
+      const prev=techBlocks(t.id,v.id).filter(b=>b.end<=v.start).pop();
+      if(prev&&(v.start-prev.end)<v.travelTo)
+        out.push({type:'travel',level:'warn',label:'Drive '+v.travelTo+'m',long:`${v.travelTo}-min drive but only ${v.start-prev.end}-min gap after ${prev.customer}`});
+    }
+  }
+  if(v.accessAfter!=null&&v.start!=null&&v.start<v.accessAfter)
+    out.push({type:'access',level:'warn',label:'No access',long:`Site access starts ${fmt(v.accessAfter)} — scheduled ${fmtT(v.start)}`});
+  if(v.part&&!v.part.onTruck)
+    out.push({type:'part',level:'warn',label:'Part missing',long:`${v.part.name} not on truck (${v.part.location||'warehouse'})`});
+  if(v.overrun)
+    out.push({type:'overrun',level:'warn',label:'+'+v.overrun+'m',long:`Trending ~${v.overrun}m over estimate`});
+  return out;
+}
+function suggestions(v){
+  const dur=v.start!=null?(v.end-v.start):v.duration;
+  const base=Math.max(v.priority==='emergency'?NOW:(v.window?v.window[0]:DAY_START),NOW,DAY_START);
+  const res=[];
+  for(const t of techs){
+    if(t.status!=='active'||t.id===v.techId)continue;
+    let cur=Math.max(base,t.shift[0]);
+    const blocks=techBlocks(t.id,v.id);
+    let found=null;
+    for(const b of blocks){
+      if(b.end<=cur)continue;
+      if(cur+dur+10<=b.start){found=cur;break;}
+      cur=Math.max(cur,b.end+15);
+    }
+    if(found==null)found=cur;
+    const end=found+dur;
+    if(end<=t.shift[1]+60){
+      res.push({tech:t,start:found,end,
+        ot:end>t.shift[1]?end-t.shift[1]:0,
+        certOk:!v.reqCerts||v.reqCerts.every(c=>t.certs.includes(c)),
+        missing:(v.reqCerts||[]).filter(c=>!t.certs.includes(c)),
+        offTerr:v.terr&&t.terr!==v.terr,
+        outWin:v.window&&(found<v.window[0]||end>v.window[1]),
+        slaLate:v.sla?Math.max(0,found-v.sla):0});
+    }
+  }
+  res.sort((a,b)=>(b.certOk-a.certOk)||(a.ot-b.ot)||(a.slaLate-b.slaLate)||(a.start-b.start));
+  return res.slice(0,3);
+}
+function activeAlerts(){return ALERTS.filter(a=>!a.resolved());}
+
+/* ============================== RENDER ============================== */
+function renderKpis(){
+  const all=visits.filter(v=>v.kind==='visit');
+  const un=all.filter(v=>!v.techId);
+  const emUn=un.filter(v=>v.priority==='emergency');
+  const al=activeAlerts();
+  const crit=al.filter(a=>a.level==='crit').length;
+  const act=techs.filter(t=>t.status==='active');
+  const shiftMin=act.reduce((s,t)=>s+(t.shift[1]-t.shift[0]),0);
+  const workMin=visits.filter(v=>v.techId&&v.kind!=='lunch'&&T(v.techId).status==='active')
+                      .reduce((s,v)=>s+(v.end-v.start),0);
+  const util=Math.round(workMin/shiftMin*100);
+  const done=all.filter(v=>v.status==='completed').length;
+  const prog=all.filter(v=>v.status==='progress').length;
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi blue"><i class="kbar"></i><div class="kl">Visits today</div><div class="kv">${all.length}</div><div class="ks">${done} completed · ${prog} in progress</div></div>
+    <div class="kpi ${un.length?'red':'green'}"><i class="kbar"></i><div class="kl">Unassigned</div><div class="kv">${un.length}</div><div class="ks">${emUn.length?'incl. '+emUn.length+' emergency':'queue clear'}</div></div>
+    <div class="kpi ${al.length?'amber':'green'}"><i class="kbar"></i><div class="kl">Open issues</div><div class="kv">${al.length}</div><div class="ks">${crit} critical</div></div>
+    <div class="kpi ${emUn.length?'red':'green'}"><i class="kbar"></i><div class="kl">Emergencies waiting</div><div class="kv">${emUn.length}</div><div class="ks">${emUn.length?'SLA '+fmt(emUn[0].sla):'none pending'}</div></div>
+    <div class="kpi"><i class="kbar"></i><div class="kl">Techs active</div><div class="kv">${act.length}/${techs.length}</div><div class="ks">T. Beck out sick</div></div>
+    <div class="kpi ${util>92?'amber':''}"><i class="kbar"></i><div class="kl">Crew utilization</div><div class="kv">${util}%</div><div class="ks">of available shift hours</div></div>`;
+}
+
+function renderBanner(){
+  const em=visits.find(v=>!v.techId&&v.priority==='emergency');
+  const b=document.getElementById('emBanner');
+  if(em){b.style.display='flex';
+    document.getElementById('emBannerTxt').innerHTML=`<b>Emergency awaiting dispatch</b> — ${em.customer}: ${em.short} · SLA on-site by <b>${fmt(em.sla)}</b>`;
+  }else b.style.display='none';
+}
+
+function matches(v){
+  if(query && !((v.customer||'')+' '+(v.short||'')).toLowerCase().includes(query))return false;
+  if(filter==='emergency')return v.priority==='emergency';
+  if(filter==='issues')return !v.techId||visitIssues(v).length>0;
+  return true;
+}
+
+function renderQueue(){
+  const q=visits.filter(v=>!v.techId&&v.kind==='visit')
+    .sort((a,b)=>(b.priority==='emergency')-(a.priority==='emergency')||((a.window?a.window[0]:0)-(b.window?b.window[0]:0)));
+  document.getElementById('qCount').textContent=q.length;
+  document.getElementById('qNote').textContent=q.some(v=>v.fromTech)?'2 via T. Beck (out sick)':'';
+  document.getElementById('queue').innerHTML=q.map(v=>{
+    const best=suggestions(v)[0];
+    const win=v.window?fmt(v.window[0])+' – '+fmt(v.window[1]):'ASAP · SLA '+fmt(v.sla);
+    const reqs=[
+      v.reqCerts&&v.reqCerts.length?`<span class="chip">${ic('shield','sm')} ${v.reqCerts.join(' + ')}</span>`:'',
+      v.diag?`<span class="chip">${ic('gauge','sm')} diag equip</span>`:'',
+      v.contact&&v.contact.mustPresent?`<span class="chip">${ic('user','sm')} contact req.</span>`:''
+    ].join('');
+    return `<div class="qcard ${v.priority==='emergency'?'em':v.priority==='high'?'hi':''} ${selId===v.id?'sel':''} ${matches(v)?'':'dim'}" data-qid="${v.id}">
+      <div class="qtop">${v.priority==='emergency'?'<span class="live-dot"></span>':''}${prioPill(v.priority)}
+        <span class="chip ${v.priority==='emergency'?'red':'blue'}" style="margin-left:auto">${ic('clock','sm')} ${win}</span></div>
+      <div class="qcust">${v.customer}</div>
+      <div class="qprob">${v.short}</div>
+      <div class="qchips"><span class="chip">${ic('clock','sm')} ~${v.duration}m</span>
+        <span class="chip">${ic('pin','sm')} ${v.terr}</span>${reqs}</div>
+      ${best?`<div class="qbest">${ic('route','sm')} Best match: <b>${best.tech.name}</b> · on-site ${fmt(best.start)}${best.ot?' (+'+best.ot+'m OT)':''}</div>`
+            :`<div class="qbest" style="color:var(--red)">${ic('alert','sm')} No capacity found today</div>`}
+    </div>`;
+  }).join('')||'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px">'+ic('checkc','lg')+'<br><br>Queue clear — all visits assigned.</div>';
+}
+
+function blockHTML(v){
+  const issues=visitIssues(v);
+  const top=issues.find(i=>i.level==='crit')||issues.find(i=>i.level==='warn')||issues.find(i=>i.level==='info');
+  const isCls=top?(top.level==='crit'?'is-crit':top.level==='warn'||top.type==='ot'?'is-warn':''):'';
+  const stCls=v.status==='completed'?'st-completed':v.status==='progress'?'st-progress':'st-scheduled';
+  const icons=[
+    v.crew&&v.crew.need>1?ic('users'):'', v.part?ic('box'):'', v.accessAfter!=null?ic('lock'):'',
+    v.diag?ic('gauge'):'', v.contact&&v.contact.mustPresent?ic('user'):''
+  ].join('');
+  const prog=v.status==='progress'?`<i class="prog" style="width:${Math.min(100,Math.round((NOW-v.start)/(v.end-v.start)*100))}%"></i>`:'';
+  return `<div class="block ${stCls} ${isCls} ${selId===v.id?'sel':''} ${matches(v)?'':'dim'}"
+     style="left:${X(v.start)}px;width:${Math.max(26,(v.end-v.start)*PX-3)}px" data-bid="${v.id}"
+     title="${v.customer} · ${fmt(v.start)}–${fmt(v.end)}">
+    <div class="b-t"><b>${v.status==='completed'?'✓ ':''}${v.customer}</b><span class="b-time">${fmtT(v.start)}–${fmtT(v.end)}</span></div>
+    <div class="b-s">${v.short}&nbsp;${icons}</div>
+    ${top?`<span class="b-flag">${ic('alert','sm')}${top.label}</span>`:''}${prog}</div>`;
+}
+
+function renderTimeline(){
+  const hours=[]; for(let h=DAY_START;h<=DAY_END;h+=60)hours.push(h);
+  let rows='';
+  for(const t of techs){
+    const blocks=visits.filter(v=>v.techId===t.id&&v.start!=null).sort((a,b)=>a.start-b.start);
+    let inner='';
+    if(t.status==='out'){
+      inner=`<div class="outstripe">${ic('user')} ${t.name} — out sick · 2 visits moved to unassigned queue</div>`;
+    }else{
+      inner+=`<div class="offshift" style="left:0;width:${X(t.shift[0])}px"></div>
+              <div class="offshift" style="left:${X(t.shift[1])}px;right:0"></div>`;
+      for(const v of blocks){
+        if(v.kind==='lunch'){
+          inner+=`<div class="block blk-lunch" style="left:${X(v.start)}px;width:${(v.end-v.start)*PX-3}px" title="Lunch">${ic('coffee')}Lunch</div>`;
+        }else if(v.kind==='depot'){
+          inner+=`<div class="block blk-depot" style="left:${X(v.start)}px;width:${(v.end-v.start)*PX-3}px" data-bid="${v.id}" title="${v.customer} — ${v.short}">
+            <div class="b-t"><b>${ic('home','sm')} Depot</b><span class="b-time">${fmtT(v.start)}</span></div>
+            <div class="b-s">Parts pickup</div></div>`;
+        }else inner+=blockHTML(v);
+      }
+      /* travel connectors */
+      for(let i=1;i<blocks.length;i++){
+        const p=blocks[i-1],b=blocks[i];
+        if(b.kind!=='visit'||!b.travelTo)continue;
+        const gap=b.start-p.end; if(gap<2)continue;
+        const bad=gap<b.travelTo;
+        inner+=`<div class="travel ${bad?'bad':''}" style="left:${X(p.end)}px;width:${gap*PX}px">
+          ${gap*PX>44?`<span class="tlab">${ic(bad?'alert':'truck','sm')}${b.travelTo}m</span>`:''}</div>`;
+      }
+    }
+    const work=visits.filter(v=>v.techId===t.id&&v.kind!=='lunch'&&v.start!=null).reduce((s,v)=>s+(v.end-v.start),0);
+    const load=t.status==='out'?0:Math.round(work/(t.shift[1]-t.shift[0])*100);
+    rows+=`<div class="tl-row">
+      <div class="tech-cell ${t.status==='out'?'out':''}">
+        <div class="av" style="background:${t.color}">${t.ini}</div>
+        <div><div class="tn">${t.name}</div>
+          <div class="tr">${t.role} · ${t.terr}</div>
+          ${t.status==='out'?`<span class="outtag">OUT SICK</span>`:
+            `<div class="tshift">${fmtT(t.shift[0])}–${fmt(t.shift[1])} · load ${load}%</div>
+             <div class="loadbar"><i style="width:${Math.min(100,load)}%;background:${load>92?'var(--amber)':'var(--green)'}"></i></div>`}
+        </div></div>
+      <div class="track">${inner}</div></div>`;
+  }
+  document.getElementById('timeline').innerHTML=`
+    <div class="tl-inner">
+      <div class="ruler"><div class="rl">Technicians · 5 active / 1 out</div>
+        <div class="rh">${hours.map(h=>`<div class="hr" style="left:${X(h)}px">${fmt(h)}</div>`).join('')}</div></div>
+      ${rows}
+      <div class="nowline" style="left:${210+X(NOW)}px"><span class="ntag">${fmtT(NOW)}</span></div>
+    </div>`;
+}
+
+function reqRow(icon,title,sub,status){
+  return `<div class="reqrow"><div class="ric">${ic(icon)}</div>
+    <div class="rt">${title}${sub?`<small>${sub}</small>`:''}</div>${status||''}</div>`;
+}
+function suggHTML(v,label){
+  const s=suggestions(v);
+  const dur=v.start!=null?(v.end-v.start):v.duration;
+  return `<div class="dsec"><div class="dl">${label}</div>
+    ${s.length?s.map(g=>`<div class="sugg">
+      <div class="av" style="background:${g.tech.color}">${g.tech.ini}</div>
+      <div><div class="sn">${g.tech.name} <span style="font-weight:400;color:var(--faint);font-size:10px">· ${g.tech.role}</span></div>
+        <div class="ss">${ic('clock','sm')} On-site ${fmt(g.start)} – ${fmt(g.end)} · ~15m drive</div>
+        <div class="tags">
+          ${(v.reqCerts||[]).map(c=>`<span class="cert ${g.tech.certs.includes(c)?'ok':'no'}">${g.tech.certs.includes(c)?'✓':'✗'} ${c}</span>`).join('')}
+          ${g.ot?`<span class="chip amber">+${g.ot}m OT</span>`:''}
+          ${v.sla?(g.slaLate?`<span class="chip red">+${g.slaLate}m past SLA</span>`:`<span class="chip green">meets SLA</span>`):''}
+          ${g.offTerr?`<span class="chip">off-territory</span>`:''}
+          ${g.outWin?`<span class="chip amber">outside window</span>`:''}
+        </div></div>
+      <button class="btn pri sm go" data-assign="${v.id}|${g.tech.id}|${g.start}|${dur}">${v.techId?'Move':'Assign'}</button>
+    </div>`).join('')
+    :'<div style="font-size:11.5px;color:var(--muted)">No capacity found today — consider overtime approval or next-day scheduling.</div>'}
+  </div>`;
+}
+
+function renderSide(){
+  const side=document.getElementById('side');
+  document.getElementById('tabDetails').classList.toggle('on',tab==='details');
+  document.getElementById('tabAlerts').classList.toggle('on',tab==='alerts');
+  const al=activeAlerts();
+  document.getElementById('alertBdg').textContent=al.length;
+  document.getElementById('bellCount').textContent=al.length;
+
+  if(tab==='alerts'){
+    side.innerHTML=al.map(a=>`<div class="arow ${a.level}" data-alert="${a.ref}">
+      <div class="ai">${ic(a.level==='crit'?'crit':a.level==='warn'?'alert':'info')}</div>
+      <div><div class="at">${a.title}</div><div class="as">${a.sub}</div></div>
+      <svg class="ic chev"><use href="#i-chevr"/></svg></div>`).join('')
+      ||'<div style="padding:28px;text-align:center;color:var(--faint);font-size:12px">'+ic('checkc','lg')+'<br><br>All clear — no open issues.</div>';
+    return;
+  }
+
+  const v=V(selId);
+  if(!v){side.innerHTML='<div style="padding:24px;color:var(--faint);font-size:12px">Select a visit to see details.</div>';return;}
+  if(v.kind==='depot'){side.innerHTML=`<div class="dhead"><div class="pills"><span class="spill sched">Depot stop</span></div>
+    <h3>${v.customer}</h3><div class="dsub">${fmt(v.start)} – ${fmt(v.end)}</div></div>
+    <div class="dsec"><div class="dl">Notes</div><div style="font-size:12px;color:var(--muted)">${v.note||v.short}</div></div>`;return;}
+
+  const t=T(v.techId);
+  const issues=visitIssues(v);
+  const winTxt=v.window?fmt(v.window[0])+' – '+fmt(v.window[1]):'ASAP — SLA on-site '+fmt(v.sla);
+  const outWin=v.window&&v.start!=null&&(v.start<v.window[0]||v.end>v.window[1]);
+
+  let reqs='';
+  if(v.reqCerts&&v.reqCerts.length){
+    const ok=t&&v.reqCerts.every(c=>t.certs.includes(c));
+    reqs+=reqRow('shield','Certifications: '+v.reqCerts.join(', '),
+      t?(ok?t.name+' — certified':'Missing: '+v.reqCerts.filter(c=>!t.certs.includes(c)).join(', ')):'No tech assigned',
+      ok?`<span class="rok">${ic('check','sm')} met</span>`:`<span class="rno">${ic('x','sm')} gap</span>`);
+  }
+  if(v.crew)reqs+=reqRow('users',`Two-tech crew required`,v.crew.note,
+    v.crew.have>=v.crew.need?`<span class="rok">${ic('check','sm')} ${v.crew.have}/${v.crew.need}</span>`:`<span class="rno">${v.crew.have}/${v.crew.need}</span>`);
+  if(v.part)reqs+=reqRow('box','Part: '+v.part.name,v.part.onTruck?'Loaded on truck':'At '+v.part.location,
+    v.part.onTruck?`<span class="rok">${ic('check','sm')} on truck</span>`:`<span class="rwarn">${ic('alert','sm')} not loaded</span>`);
+  if(v.diag)reqs+=reqRow('gauge','Diagnostic equipment',v.diag,`<span class="rok">${ic('check','sm')} assigned kit</span>`);
+  if(v.accessAfter!=null){
+    const ok=v.start!=null&&v.start>=v.accessAfter;
+    reqs+=reqRow('lock','Restricted access',(v.accessNote||'')+' — entry from '+fmt(v.accessAfter),
+      ok?`<span class="rok">${ic('check','sm')} ok</span>`:`<span class="rno">${ic('alert','sm')} conflict</span>`);
+  }
+  if(v.contact)reqs+=reqRow('phone',v.contact.name,v.contact.phone+(v.contact.mustPresent?' · must be present on site':'')+(v.contact.note?' · '+v.contact.note:''),
+    v.contact.mustPresent?`<span class="rwarn">${ic('user','sm')} required</span>`:'');
+
+  side.innerHTML=`
+  <div class="dhead">
+    <div class="pills">${prioPill(v.priority)}${statusPill(v)}<span class="spill sched">${v.type}</span></div>
+    <h3>${v.customer}</h3><div class="dsub">${v.short}</div>
+  </div>
+  ${v.priority==='emergency'&&!v.techId?`<div class="slabox">${ic('zap')} SLA on-site by ${fmt(v.sla)} — ${Math.max(0,v.sla-NOW)} min remaining. Server room temp rising ~2°F/hr.</div>`:''}
+  ${issues.length?`<div class="dsec" style="background:${issues.some(i=>i.level==='crit')?'var(--red-bg)':'var(--amber-bg)'}">
+    <div class="dl" style="color:${issues.some(i=>i.level==='crit')?'#991b1b':'#92400e'}">Flagged issues</div>
+    ${issues.map(i=>`<div style="display:flex;gap:7px;font-size:11.5px;padding:3px 0;color:${i.level==='crit'?'#991b1b':'#92400e'}">${ic('alert','sm')} ${i.long}</div>`).join('')}</div>`:''}
+  <div class="dsec"><div class="dl">Schedule</div>
+    <div class="meta">
+      <div class="mk">${ic('clock','sm')} Window</div><div class="mv">${winTxt} ${outWin?'<span class="warn">— scheduled outside window</span>':''}</div>
+      <div class="mk">${ic('cal','sm')} Planned</div><div class="mv">${v.start!=null?fmt(v.start)+' – '+fmt(v.end)+' ('+(v.end-v.start)+' min)':'Not yet placed · est. '+v.duration+' min'}</div>
+      <div class="mk">${ic('pin','sm')} Site</div><div class="mv">${v.address} · <span style="color:var(--faint)">${v.terr} territory</span>${t&&v.terr&&t.terr!==v.terr?' <span class="warn">(off-territory for '+t.name.split(' ')[0]+')</span>':''}</div>
+      ${v.travelTo&&t?`<div class="mk">${ic('truck','sm')} Travel</div><div class="mv">~${v.travelTo} min drive from previous stop</div>`:''}
+    </div></div>
+  <div class="dsec"><div class="dl">Equipment &amp; reported problem</div>
+    <div style="font-size:11.5px;font-weight:600">${ic('snow','sm')} ${v.equipment}</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.45">${v.problem}</div></div>
+  ${reqs?`<div class="dsec"><div class="dl">Requirements</div>${reqs}</div>`:''}
+  <div class="dsec"><div class="dl">Assignment</div>
+    ${t?`<div class="assignedchip"><div class="av" style="background:${t.color}">${t.ini}</div>
+      <div><div style="font-weight:700;font-size:12px">${t.name} <span style="font-weight:400;color:var(--faint);font-size:10px">· ${t.role} · ${t.terr}</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${t.certs.map(c=>`<span class="cert ok" style="margin-right:3px">${c}</span>`).join('')}</div></div></div>
+      <div class="btnrow">
+        <button class="btn ghost sm" data-act="unassign">${ic('x','sm')} Unassign</button>
+        <button class="btn ghost sm" data-act="notify">${ic('phone','sm')} Notify customer</button>
+        ${v.overrun?`<button class="btn warnb sm" data-act="extend">${ic('clock','sm')} Extend +${v.overrun}m &amp; push downstream</button>`:''}
+        ${v.part&&!v.part.onTruck?`<button class="btn warnb sm" data-act="parts">${ic('box','sm')} Schedule parts run</button>`:''}
+      </div>`
+    :`<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">No technician assigned yet.</div>`}
+  </div>
+  ${suggHTML(v,t?'Reassign / move to another tech':'Suggested assignments')}`;
+}
+
+function renderAll(){renderKpis();renderBanner();renderQueue();renderTimeline();renderSide();}
+
+/* ============================== ACTIONS ============================== */
+function toast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),3200);
+}
+function flash(id){
+  requestAnimationFrame(()=>{
+    const el=document.querySelector(`[data-bid="${id}"]`)||document.querySelector(`[data-qid="${id}"]`);
+    if(el){el.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1600);}
+  });
+}
+function select(id){selId=id;tab='details';renderAll();flash(id);}
+
+function doAssign(v,tid,start,dur){
+  v.techId=tid;v.start=start;v.end=start+dur;
+  if(!v.duration)v.duration=dur;
+  v.travelTo=15;v.status=start<=NOW&&NOW<v.end?'progress':'scheduled';
+  /* shift any lunch that now overlaps */
+  visits.filter(x=>x.techId===tid&&x.kind==='lunch'&&x.start<v.end&&x.end>v.start).forEach(ln=>{
+    let ns=v.end,ne=ns+30;
+    const nxt=visits.filter(x=>x.techId===tid&&x.start!=null&&x.id!==ln.id&&x.start>=v.end).sort((a,b)=>a.start-b.start)[0];
+    if(nxt&&ne>nxt.start)ne=nxt.start;
+    if(ne-ns<15){visits.splice(visits.indexOf(ln),1);}else{ln.start=ns;ln.end=ne;}
+  });
+  selId=v.id;tab='details';renderAll();flash(v.id);
+  toast(`Assigned to ${T(tid).name} — ETA ${fmt(start)} sent to site contact.`);
+}
+function doUnassign(v){
+  v.duration=v.end-v.start;v.techId=null;v.start=null;v.end=null;v.status='scheduled';v.travelTo=null;
+  tab='details';renderAll();
+  toast('Visit moved to the unassigned queue.');
+}
+function doExtend(v){
+  const extra=v.overrun;v.end+=extra;v.overrun=null;
+  const later=visits.filter(x=>x.techId===v.techId&&x.start!=null&&x.id!==v.id&&x.start>=v.end-extra).sort((a,b)=>a.start-b.start);
+  let prev=v;
+  for(const n of later){
+    const need=prev.end+(n.kind==='lunch'?0:(n.travelTo||10));
+    if(n.start<need){const s=need-n.start;n.start+=s;n.end+=s;}
+    prev=n;
+  }
+  renderAll();flash(v.id);
+  toast('Plan adjusted — downstream visits pushed; check for new overtime flags.');
+}
+
+/* ============================== EVENTS ============================== */
+document.addEventListener('click',e=>{
+  const blk=e.target.closest('[data-bid]'); if(blk){select(blk.dataset.bid);return;}
+  const qc=e.target.closest('[data-qid]'); if(qc){select(qc.dataset.qid);return;}
+  const ar=e.target.closest('[data-alert]'); if(ar){select(ar.dataset.alert);return;}
+  const as=e.target.closest('[data-assign]');
+  if(as){const[vid,tid,st,du]=as.dataset.assign.split('|');doAssign(V(vid),tid,+st,+du);return;}
+  const act=e.target.closest('[data-act]');
+  if(act){const v=V(selId);
+    if(act.dataset.act==='unassign')doUnassign(v);
+    if(act.dataset.act==='notify')toast('ETA and tech details sent to '+((v.contact&&v.contact.name)||'site contact')+'.');
+    if(act.dataset.act==='extend')doExtend(v);
+    if(act.dataset.act==='parts'){v.part.onTruck=true;renderAll();toast('Parts run scheduled — '+v.part.name+' delivered to site.');}
+    return;}
+  const demo=e.target.closest('[data-demo]');
+  if(demo){toast(demo.dataset.demo==='day'?'Demo build — single day (Tue, Oct 14).':'Demo build — Timeline view only.');return;}
+});
+document.getElementById('filterSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  filter=b.dataset.f;
+  document.querySelectorAll('#filterSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  renderQueue();renderTimeline();
+});
+document.querySelector('.ptabs').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;tab=b.dataset.tab;renderSide();
+});
+document.getElementById('bellBtn').addEventListener('click',()=>{tab='alerts';renderSide();});
+document.getElementById('emReview').addEventListener('click',()=>{
+  const em=visits.find(v=>!v.techId&&v.priority==='emergency');if(em)select(em.id);
+});
+document.getElementById('searchBox').addEventListener('input',e=>{
+  query=e.target.value.trim().toLowerCase();renderQueue();renderTimeline();
+});
+
+renderAll();
+</script>
+</body>
+</html>

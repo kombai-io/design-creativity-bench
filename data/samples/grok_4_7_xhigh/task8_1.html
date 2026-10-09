@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#14332f">
+<meta name="description" content="MorrowSpec turns an OpenAPI specification into a hosted mock API with realistic responses, named errors, and shared test scenarios. Join the private beta waitlist.">
+<title>MorrowSpec — Hosted mock APIs from your OpenAPI spec</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314332f'/%3E%3Cpath d='M6 22h20M8 22a8 8 0 0 1 16 0' fill='none' stroke='%23f4efe6' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+:root {
+  --desk: #d7cfc2;
+  --sheet: #f4efe6;
+  --ink: #1b1914;
+  --muted: #5e584e;
+  --line: #cfc4b4;
+  --copper: #b4532a;
+  --copper-deep: #6f3012;
+  --pine: #14332f;
+  --pine-deep: #10211f;
+  --ivory: #f7f3ec;
+  --code: #efe6d8;
+  --clay: #6f241e;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: "Avenir Next", "Century Gothic", Futura, "Trebuchet MS", "Gill Sans", sans-serif;
+  --mono: "IBM Plex Mono", "Cascadia Mono", "Cascadia Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  padding: 28px 16px 56px;
+  color: var(--ink);
+  background-color: var(--desk);
+  background-image: radial-gradient(rgba(27, 25, 20, 0.045) 0.7px, transparent 0.7px);
+  background-size: 6px 6px;
+  font-family: var(--sans);
+  font-size: 16.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: #e7c7b4; color: var(--ink); }
+:focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; }
+img { max-width: 100%; }
+a { color: inherit; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.025em; line-height: 1.02; }
+p { margin: 0 0 12px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+code { font-family: var(--mono); font-size: 0.9em; background: var(--code); padding: 1px 5px; }
+.skip {
+  position: absolute; left: 12px; top: -48px; z-index: 30;
+  background: var(--pine); color: var(--ivory); padding: 8px 12px; text-decoration: none;
+}
+.skip:focus { top: 12px; }
+.utility {
+  max-width: 1180px; margin: 0 auto 10px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em;
+}
+.live-dot {
+  width: 8px; height: 8px; background: #1f6b4a; display: inline-block;
+  box-shadow: 0 0 0 3px rgba(31, 107, 74, 0.18);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.35; } }
+.sheet {
+  max-width: 1180px; margin: 0 auto; background: var(--sheet);
+  border: 1px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); position: relative;
+}
+.sheet::before { content: ""; display: block; height: 8px; background: var(--pine); }
+.mast, .nav, .hero, .sec-head, .wrap, .foot { padding-left: 48px; padding-right: 48px; }
+.mast {
+  display: flex; justify-content: space-between; gap: 24px; align-items: flex-start;
+  padding-top: 26px; padding-bottom: 20px;
+}
+.brand { display: flex; gap: 12px; align-items: center; }
+.mark { width: 36px; height: 36px; color: var(--pine); flex: none; }
+.word { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; letter-spacing: -0.03em; display: block; line-height: 1; }
+.word em { font-style: italic; color: var(--copper); font-weight: 600; }
+.brand small, .tag {
+  display: block; margin-top: 4px; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.titleblock {
+  display: grid; grid-template-columns: 1fr 1fr; margin: 0; width: max-content;
+  border: 1px solid var(--ink); border-bottom: 0; border-right: 0;
+}
+.titleblock div { display: grid; grid-template-columns: 72px 128px; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.titleblock dt, .titleblock dd {
+  margin: 0; padding: 6px 8px; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.titleblock dt { color: var(--muted); border-right: 1px solid var(--ink); }
+.titleblock dd { font-weight: 600; }
+.nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-top: 10px; padding-bottom: 10px;
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink);
+  position: sticky; top: 0; z-index: 8; background: rgba(244, 239, 230, 0.96);
+}
+.nav-links { display: flex; gap: 22px; align-items: center; list-style: none; margin: 0; padding: 0; }
+.nav-links a { text-decoration: none; font-size: 0.96rem; }
+.nav-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.nav-toggle { display: none; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--pine); color: var(--ivory); text-decoration: none;
+  border: 1px solid var(--ink); padding: 11px 14px; cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink); line-height: 1.2;
+}
+.btn:hover { background: #0c2421; transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--ink); }
+.btn-ghost { background: transparent; color: var(--ink); box-shadow: none; }
+.btn-ghost:hover { background: var(--ink); color: var(--ivory); transform: none; box-shadow: none; }
+.btn-small { padding: 6px 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; box-shadow: none; }
+.btn-block { width: 100%; }
+.hero {
+  display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 40px; align-items: start;
+  padding-top: 42px; padding-bottom: 36px;
+}
+.kicker {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--copper-deep); margin: 0 0 14px;
+}
+h1 { font-size: clamp(2.7rem, 5.4vw, 4.7rem); margin: 0 0 18px; text-wrap: balance; }
+h1 em { font-style: italic; color: var(--copper); }
+.lede { font-family: var(--serif); font-size: 1.28rem; line-height: 1.4; max-width: 38rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 14px; }
+.fine { color: var(--muted); font-size: 0.94rem; max-width: 46ch; }
+.receipt {
+  background: var(--pine-deep); color: #e6eee9; border: 1px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink); padding: 16px;
+}
+.receipt-top, .url-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.receipt-top { margin-bottom: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #c5d5cf; }
+.receipt h2 { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0; color: #f4efe6; margin: 0 0 8px; text-transform: none; }
+.receipt pre, .band-dark pre, .card pre, pre.spec {
+  margin: 0; overflow: auto; white-space: pre-wrap; word-break: break-word;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+}
+.receipt pre { background: #0b1917; color: #e7efe9; padding: 12px; border: 1px solid #2a4540; }
+.url-row { margin-top: 12px; font-family: var(--mono); font-size: 11px; word-break: break-all; align-items: flex-start; }
+.receipt .btn { background: var(--ivory); color: var(--pine); box-shadow: none; flex: none; }
+.receipt .btn:hover { background: #fff; transform: none; }
+.meta-line { margin: 10px 0 0; color: #c5d5cf; font-family: var(--mono); font-size: 11px; letter-spacing: 0.03em; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.stat { padding: 20px 22px; border-right: 1px solid var(--line); }
+.stat:last-child { border-right: 0; }
+.stat b {
+  display: block; font-family: var(--serif); font-weight: 600; font-size: clamp(1.8rem, 3vw, 2.4rem);
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.stat span { display: block; margin-top: 6px; color: var(--muted); font-size: 0.92rem; }
+.sec-head {
+  display: grid; grid-template-columns: 52px minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 16px; align-items: end; padding-top: 34px;
+}
+.sec-no { font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; color: var(--copper-deep); }
+.sec-head h2 { margin: 0; font-size: clamp(1.7rem, 3vw, 2.35rem); }
+.sec-head p { margin: 0; color: var(--muted); }
+.wrap { padding-top: 22px; padding-bottom: 48px; }
+.paper { border-top: 1px solid var(--ink); }
+h3 { margin: 0 0 8px; font-size: 1.35rem; }
+.sub { display: block; color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: 0.01em; margin-top: 3px; }
+.split { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 28px; align-items: start; }
+.split + .split, .stack > * + * { margin-top: 28px; }
+.table-wrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 14.5px; }
+caption {
+  text-align: left; caption-side: top; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 0 10px;
+}
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
+td.hl, th.hl { background: #e7f0ec; }
+tbody tr:hover td { background: #fffdf9; }
+tbody tr:hover td.hl { background: #dceae3; }
+tr.is-drift td { background: #f8efe6; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
+.stamp {
+  display: inline-block; border: 1px solid currentColor; padding: 2px 6px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  line-height: 1.4; white-space: nowrap;
+}
+.stamp-ok { color: var(--pine); background: #e5f2eb; border-color: var(--pine); }
+.stamp-warn { color: var(--copper-deep); background: #f6e7dc; border-color: var(--copper-deep); }
+.stamp-bad { color: var(--clay); background: #f8e6e2; border-color: var(--clay); }
+.stamp-ink { color: var(--ink); background: transparent; }
+pre.spec {
+  background: var(--pine-deep); color: #e7efe9; padding: 16px; border: 1px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.ticks { margin: 8px 0 0; padding-left: 1.15rem; }
+.ticks li { margin: 7px 0; }
+.steps { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.steps li { border-top: 2px solid var(--ink); padding-top: 12px; }
+.steps .idx { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--copper-deep); }
+.band-dark { background: var(--pine-deep); color: #e6eee9; }
+.band-dark .sec-no { color: #e3a27a; }
+.band-dark .sec-head p, .band-dark .hint, .band-dark .sub { color: #c5d5cf; }
+.band-dark h2, .band-dark h3 { color: #f4efe6; }
+.band-dark code { background: #0b1917; color: #f4efe6; }
+.band-dark pre { background: #0b1917; color: #e7efe9; padding: 14px 16px; border: 1px solid #2a4540; }
+.band-dark .table-wrap { border: 1px solid #2a4540; }
+.band-dark table.data { min-width: 640px; }
+.band-dark th, .band-dark td { border-bottom-color: #2a4540; color: #e6eee9; }
+.band-dark th { color: #c5d5cf; }
+.band-dark caption { color: #c5d5cf; }
+.band-dark tbody tr:hover td { background: #16302c; }
+.env-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 14px; }
+.env-btn, .tab {
+  text-align: left; border: 1px solid #2a4540; background: transparent; color: #e6eee9;
+  padding: 8px 10px; cursor: pointer;
+}
+.env-btn small { display: block; color: #c5d5cf; font-family: var(--mono); font-size: 11px; margin-top: 3px; }
+.env-btn[aria-pressed="true"], .tab[aria-selected="true"] { background: #f4efe6; color: var(--pine); border-color: #f4efe6; }
+.env-btn[aria-pressed="true"] small { color: #5e584e; }
+.tablist { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.tab { font-family: var(--mono); font-size: 12px; letter-spacing: 0.03em; }
+.txn-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; font-family: var(--mono); font-size: 12px; }
+.method { color: #e3a27a; font-weight: 700; }
+.hint { font-size: 0.95rem; margin-bottom: 14px; }
+.callout { border: 1px solid var(--copper-deep); background: #f8efe6; padding: 16px 18px; }
+.callout strong { font-family: var(--serif); font-size: 1.25rem; font-weight: 600; display: block; margin-bottom: 6px; }
+.callout ul { margin: 8px 0; padding-left: 1.1rem; }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: minmax(160px, 1.1fr) minmax(80px, 1.6fr) auto; gap: 10px; align-items: center; font-size: 0.92rem; }
+.bar-track { height: 10px; background: var(--code); border: 1px solid var(--ink); }
+.bar-fill { display: block; height: 100%; background: var(--pine); }
+.bar-val { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { display: grid; grid-template-columns: 58px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.feed time { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.card, .role {
+  border: 1px solid var(--ink); background: #fffdf9; padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.card p, .role p { margin: 0; }
+.card .quote, .role .quote { font-family: var(--serif); font-style: italic; font-size: 1.08rem; line-height: 1.35; }
+.roles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.who { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.bounds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bound { border: 1px solid var(--ink); padding: 16px 16px 8px; background: #fffdf9; }
+.bound ul { margin: 8px 0 12px; padding-left: 1.1rem; }
+.bound li { margin: 6px 0; }
+.timeline { list-style: none; margin: 8px 0 0; padding: 22px 0 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; position: relative; }
+.timeline::before { content: ""; position: absolute; top: 27px; left: 0; right: 0; height: 1px; background: var(--ink); }
+.timeline li { position: relative; padding-top: 16px; }
+.timeline li::before {
+  content: ""; position: absolute; top: 0; left: 0; width: 11px; height: 11px;
+  background: var(--sheet); border: 1px solid var(--ink);
+}
+.timeline .is-done::before { background: var(--pine); }
+.timeline .is-now::before { background: var(--copper); border-color: var(--copper-deep); }
+.when { font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+.slots { list-style: none; margin: 8px 0 0; padding: 0; }
+.slots li { display: flex; gap: 8px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.checkgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+details { border-bottom: 1px solid var(--line); padding: 12px 0; }
+summary { cursor: pointer; font-family: var(--serif); font-size: 1.2rem; font-weight: 600; }
+details p { margin: 10px 0 4px; max-width: 72ch; }
+.founder {
+  display: grid; grid-template-columns: 48px 1fr; gap: 16px;
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink);
+  padding: 18px 0; margin-bottom: 26px;
+}
+.avatar {
+  width: 48px; height: 48px; display: grid; place-items: center;
+  background: var(--pine); color: var(--ivory); font-family: var(--mono); border: 1px solid var(--ink);
+}
+.founder p { margin: 0 0 8px; font-family: var(--serif); font-size: 1.22rem; line-height: 1.4; }
+.founder footer { color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; }
+label { display: block; margin-bottom: 12px; }
+.lbl { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+input, select, textarea {
+  width: 100%; background: #fffdf9; border: 1px solid var(--ink); padding: 10px 12px; border-radius: 0;
+}
+textarea { min-height: 108px; resize: vertical; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.95rem; }
+.check input { width: auto; margin-top: 3px; }
+.form-error { color: var(--clay); border: 1px solid var(--clay); background: #f8e8e4; padding: 10px 12px; margin: 0 0 12px; }
+.done { border: 1px solid var(--ink); background: #e7f0ec; padding: 18px; }
+.done .kicker { color: var(--pine); }
+.done ol { margin: 8px 0 16px; padding-left: 1.2rem; }
+.recent { list-style: none; margin: 0; padding: 0; }
+.recent li { border-top: 1px solid var(--line); padding: 10px 0; font-size: 0.95rem; }
+.side-note { border: 1px solid var(--ink); padding: 14px; background: #fffdf9; margin-top: 16px; }
+.foot {
+  display: grid; grid-template-columns: 1.4fr 1fr 0.8fr; gap: 20px;
+  border-top: 1px solid var(--ink); padding-top: 28px; padding-bottom: 32px;
+}
+.foot a { display: block; margin: 4px 0; }
+.foot p { margin: 0 0 8px; }
+.colophon {
+  max-width: 1180px; margin: 12px auto 0; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.04em; color: #3f3a33;
+}
+@media (max-width: 980px) {
+  .hero, .split, .bounds, .checkgrid, .roles, .cards, .foot, .form-row { grid-template-columns: 1fr 1fr; }
+  .roles, .cards { grid-template-columns: 1fr 1fr; }
+  .steps, .timeline { grid-template-columns: 1fr 1fr; }
+  .timeline::before { display: none; }
+  .sec-head { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat:nth-child(odd) { border-right: 1px solid var(--line); }
+  .stat:nth-child(even) { border-right: 0; }
+  .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 800px) {
+  .mast, .nav, .hero, .sec-head, .wrap, .foot { padding-left: 20px; padding-right: 20px; }
+  .nav-toggle { display: inline-flex; }
+  .nav-links {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    flex-direction: column; align-items: stretch; gap: 12px;
+    background: var(--sheet); border-bottom: 1px solid var(--ink); padding: 12px 20px 16px;
+  }
+  .nav-links.is-open { display: flex; }
+  .nav-links .btn { width: 100%; }
+  .titleblock { width: 100%; margin-top: 16px; }
+  .titleblock div { grid-template-columns: 84px 1fr; }
+  .mast { flex-direction: column; }
+}
+@media (max-width: 640px) {
+  body { padding: 0 0 32px; background-image: none; }
+  .sheet { margin: 0; border-left: 0; border-right: 0; box-shadow: none; }
+  .utility { padding: 10px 20px 0; }
+  .hero, .split, .bounds, .checkgrid, .roles, .cards, .foot, .steps, .stats, .env-switch, .form-row, .timeline {
+    grid-template-columns: 1fr;
+  }
+  .stat { border-right: 0 !important; border-bottom: 1px solid var(--line); }
+  .bar-row { grid-template-columns: 1fr; }
+  .colophon { padding: 0 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .live-dot { animation: none; }
+  .btn:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<p class="utility">
+  <span class="live-dot" aria-hidden="true"></span>
+  <span>Mock runtime operational</span>
+  <span aria-hidden="true">&middot;</span>
+  <span>us-east-1 and eu-central-1</span>
+  <span aria-hidden="true">&middot;</span>
+  <span>As of Wednesday 11 Mar 2026, 10:46 UTC</span>
+</p>
+<div class="sheet" id="top">
+  <header class="mast">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="29" height="29" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+        <path d="M6 21.5a10 10 0 0 1 20 0" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+        <path d="M5 21.5h22" stroke="#b4532a" stroke-width="2"></path>
+      </svg>
+      <div>
+        <span class="word">Morrow<em>Spec</em></span>
+        <small>Hosted mocks from the specification</small>
+      </div>
+    </div>
+    <dl class="titleblock">
+      <div><dt>Doc</dt><dd>MS-B04</dd></div>
+      <div><dt>Rev</dt><dd>11 Mar 2026</dd></div>
+      <div><dt>Status</dt><dd>Pre-launch</dd></div>
+      <div><dt>Runtime</dt><dd>0.9.4-beta</dd></div>
+    </dl>
+  </header>
+  <nav class="nav" aria-label="Primary">
+    <button class="btn btn-ghost btn-small nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links">Menu</button>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#walkthrough">The mock</a></li>
+      <li><a href="#tenant">Reference tenant</a></li>
+      <li><a href="#beta">Beta</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a class="btn btn-small" href="#waitlist">Request a seat</a></li>
+    </ul>
+  </nav>
+  <main id="main">
+    <section class="hero">
+      <div>
+        <p class="kicker">Private beta &middot; Cohort 04 &middot; OpenAPI REST</p>
+        <h1>The backend can be late.<br><em>The contract cannot.</em></h1>
+        <p class="lede">MorrowSpec reads an OpenAPI specification and stands up a hosted mock: realistic responses, named errors, and test scenarios your frontend, backend, QA, and product teammates share. Import a file, or sync a repository. When the spec changes, the mock changes with it.</p>
+        <div class="actions">
+          <a class="btn" href="#waitlist">Request a beta seat</a>
+          <a class="btn btn-ghost" href="#walkthrough">Inspect the mock</a>
+        </div>
+        <p class="fine"><span data-wait-count>1,284</span> teams on the list. <span data-seats-left>37</span> of 80 seats still open. Invites go out 17 March 2026. This beta is OpenAPI-based REST only.</p>
+      </div>
+      <aside class="receipt" aria-label="Recorded response from the reference tenant">
+        <div class="receipt-top">
+          <span>Reference tenant &middot; Northline</span>
+          <span class="stamp stamp-ok">In sync</span>
+        </div>
+        <h2>GET /v1/payments/pay_8f21c0a4</h2>
+        <p class="meta-line" style="margin-top:0">200 OK &middot; 96 ms &middot; recorded path &middot; 10:44:18 UTC</p>
+        <pre>{
+  "id": "pay_8f21c0a4",
+  "object": "payment",
+  "amount": 18420,
+  "currency": "usd",
+  "status": "succeeded",
+  "description": "Order NL-20491, Field wool coat",
+  "customer": "cus_19ka",
+  "payment_method": {
+    "brand": "visa",
+    "last4": "4242"
+  },
+  "risk": { "score": 12, "level": "normal" },
+  "created": "2026-03-11T10:44:02Z"
+}</pre>
+        <div class="url-row">
+          <span>https://mocks.morrowspec.dev/northline/checkout-staging</span>
+          <button class="btn btn-small" type="button" data-copy="https://mocks.morrowspec.dev/northline/checkout-staging">Copy URL</button>
+        </div>
+        <p class="meta-line">payments.openapi.yaml &middot; OpenAPI 3.1 &middot; rev c4e91a2 &middot; synced 10:42 UTC &middot; us-east-1 &middot; 14 consumers</p>
+      </aside>
+    </section>
+    <div class="stats" aria-label="Beta and reference tenant figures">
+      <div class="stat"><b data-wait-count>1,284</b><span>teams on the waitlist</span></div>
+      <div class="stat"><b data-seats-left>37</b><span>seats left of 80 in cohort 04</span></div>
+      <div class="stat"><b>14 min</b><span>median merge to updated mock, last 7 days</span></div>
+      <div class="stat"><b>96.4%</b><span>responses schema-valid, reference tenant</span></div>
+    </div>
+
+    <section id="product">
+      <div class="sec-head">
+        <span class="sec-no">01</span>
+        <h2>The mock is a build of the spec.</h2>
+        <p>Hand-written stubs drift the day the contract changes. MorrowSpec regenerates the host from the OpenAPI document you already keep.</p>
+      </div>
+      <div class="wrap">
+        <div class="table-wrap">
+          <table class="data">
+            <caption>Stub file versus a MorrowSpec environment</caption>
+            <thead>
+              <tr>
+                <th scope="col">Question</th>
+                <th scope="col">Hand-maintained stub</th>
+                <th scope="col" class="hl">MorrowSpec environment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Source of truth</th>
+                <td>Whoever last edited the JSON file</td>
+                <td class="hl">The OpenAPI document, pinned to a branch and commit</td>
+              </tr>
+              <tr>
+                <th scope="row">Happy path</th>
+                <td>One example, often from last quarter</td>
+                <td class="hl">Recorded example when the spec has one; otherwise a schema-valid body</td>
+              </tr>
+              <tr>
+                <th scope="row">Errors and scenarios</th>
+                <td>Usually missing</td>
+                <td class="hl">Named scenarios with a status, a body, and a header to force them</td>
+              </tr>
+              <tr>
+                <th scope="row">When the spec changes</th>
+                <td>A manual edit, if anyone remembers</td>
+                <td class="hl">Poll every 15 minutes, or sooner via the beta GitHub App. The URL stays put</td>
+              </tr>
+              <tr>
+                <th scope="row">Sharing</th>
+                <td>A paste in chat</td>
+                <td class="hl">One host for frontend, backend, QA, and product, with per-person keys</td>
+              </tr>
+              <tr>
+                <th scope="row">Drift</th>
+                <td>Invisible until a demo breaks</td>
+                <td class="hl">A stamp, the commits ahead, and the revision still being served</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ol class="steps" style="margin-top:28px">
+          <li>
+            <span class="idx">01 &mdash; Import</span>
+            <h3>Bring the contract</h3>
+            <p>Upload <code>payments.openapi.yaml</code>, or point MorrowSpec at <code>northline/payments-spec</code>, branch <code>main</code>, path <code>openapi/payments.openapi.yaml</code>. GitHub App or GitLab project token. OpenAPI 3.0 and 3.1, YAML or JSON.</p>
+          </li>
+          <li>
+            <span class="idx">02 &mdash; Host</span>
+            <h3>Stand up the endpoint</h3>
+            <p>Examples become the recorded path. You name the failures: declines, conflicts, timeouts. When the pinned branch moves, the mock is rebuilt. Median on the reference tenant, last 7 days: 14 minutes. Poll interval is 15; the GitHub App path is faster, which pulls the median under the interval.</p>
+          </li>
+          <li>
+            <span class="idx">03 &mdash; Share</span>
+            <h3>Hand out keys, not files</h3>
+            <p>Scopes in this beta: read, scenario-admin, write-spec, admin. Frontend and product usually hold read. QA holds scenario-admin. The URL does not change when the spec syncs, so CI and review notes do not rot.</p>
+          </li>
+        </ol>
+        <div class="split" style="margin-top:32px">
+          <div>
+            <h3>Pinned file, this morning</h3>
+            <p class="sub" style="margin-bottom:10px">northline/payments-spec &middot; openapi/payments.openapi.yaml &middot; commit c4e91a2</p>
+            <pre class="spec">openapi: 3.1.0
+info:
+  title: Northline Payments
+  version: 1.8.4
+paths:
+  /v1/payments/{payment_id}:
+    get:
+      operationId: getPayment
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment captured
+          content:
+            application/json:
+              example:
+                id: pay_8f21c0a4
+                amount: 18420
+                currency: usd
+                status: succeeded
+        "404":
+          description: Unknown payment</pre>
+          </div>
+          <div>
+            <h3>What the build keeps</h3>
+            <ul class="ticks">
+              <li>OpenAPI 3.1.0, document version 1.8.4</li>
+              <li>operationId <code>getPayment</code>, path parameter required</li>
+              <li>Example id <code>pay_8f21c0a4</code>, amount 18420 cents</li>
+              <li>Declared 200 and 404. The 404 is a named scenario, not a surprise</li>
+              <li>If an example is missing, required fields are filled from the schema: types, enums, formats. The mock does not invent a second contract</li>
+              <li>Same 18420 cents is served by Atlas <code>catalog-preview</code> for <code>sku_wool-coat-navy</code>. The storefront calls both hosts</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band-dark" id="walkthrough">
+      <div class="sec-head">
+        <span class="sec-no">02</span>
+        <h2>A URL, not a slide.</h2>
+        <p>Three reference environments are on this sheet. Switch them. Force a failure. This is the shape your team would get.</p>
+      </div>
+      <div class="wrap">
+        <div class="env-switch" role="group" aria-label="Reference environments">
+          <button class="env-btn" type="button" data-env="checkout" aria-pressed="true">checkout-staging<small>Northline &middot; in sync &middot; c4e91a2</small></button>
+          <button class="env-btn" type="button" data-env="harbor" aria-pressed="false">scheduling-qa<small>Harbor Health &middot; in sync &middot; b71e0c8</small></button>
+          <button class="env-btn" type="button" data-env="atlas" aria-pressed="false">catalog-preview<small>Atlas Commerce &middot; drift &middot; a88c014</small></button>
+        </div>
+        <p class="hint">Force a named scenario with the header <code>X-Morrow-Scenario</code>. Omit it and the operation returns its recorded path.</p>
+
+        <div data-env-panel="checkout">
+          <div data-tabs>
+            <div class="tablist" role="tablist" aria-label="Scenarios for checkout-staging">
+              <button class="tab" type="button" role="tab" id="tab-co-ok" aria-controls="panel-co-ok" aria-selected="true">card_approved &middot; 200</button>
+              <button class="tab" type="button" role="tab" id="tab-co-no" aria-controls="panel-co-no" aria-selected="false" tabindex="-1">card_declined &middot; 402</button>
+            </div>
+            <div role="tabpanel" id="panel-co-ok" aria-labelledby="tab-co-ok">
+              <div class="txn-meta">
+                <span class="method">POST</span>
+                <span>/v1/payments</span>
+                <span class="stamp stamp-ok">200 OK</span>
+                <span>138 ms</span>
+                <span>scenario card_approved</span>
+              </div>
+              <pre>HTTP/1.1 200 OK
+content-type: application/json
+x-morrowspec-environment: checkout-staging
+x-morrowspec-scenario: card_approved
+x-morrowspec-spec-rev: c4e91a2
+x-request-id: req_7b21e0c4
+
+{
+  "id": "pay_8f21c0a4",
+  "object": "payment",
+  "amount": 18420,
+  "currency": "usd",
+  "status": "succeeded",
+  "description": "Order NL-20491, Field wool coat",
+  "customer": "cus_19ka",
+  "payment_method": { "brand": "visa", "last4": "4242", "exp_month": 8, "exp_year": 2028 },
+  "risk": { "score": 12, "level": "normal" },
+  "created": "2026-03-11T10:44:02Z"
+}</pre>
+            </div>
+            <div role="tabpanel" id="panel-co-no" aria-labelledby="tab-co-no" hidden>
+              <div class="txn-meta">
+                <span class="method">POST</span>
+                <span>/v1/payments</span>
+                <span class="stamp stamp-warn">402 Payment Required</span>
+                <span>121 ms</span>
+                <span>scenario card_declined</span>
+              </div>
+              <pre>HTTP/1.1 402 Payment Required
+content-type: application/json
+x-morrowspec-environment: checkout-staging
+x-morrowspec-scenario: card_declined
+x-morrowspec-spec-rev: c4e91a2
+x-request-id: req_7b21e19a
+
+{
+  "error": {
+    "type": "card_error",
+    "code": "card_declined",
+    "message": "The card was declined. Ask the customer to try another method.",
+    "decline_code": "insufficient_funds",
+    "payment_id": "pay_8f22aa10",
+    "doc_url": "https://mocks.morrowspec.dev/northline/checkout-staging/docs/errors#card_declined"
+  }
+}</pre>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:16px">
+            <table class="data">
+              <caption>Recent calls &middot; checkout-staging &middot; 11 Mar 2026</caption>
+              <thead>
+                <tr><th>Time</th><th>Method</th><th>Path</th><th>Scenario</th><th>Status</th><th>Latency</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">10:44:18</td><td>GET</td><td>/v1/payments/pay_8f21c0a4</td><td>recorded</td><td>200</td><td class="num">96 ms</td></tr>
+                <tr><td class="num">10:44:02</td><td>POST</td><td>/v1/payments</td><td>card_approved</td><td>200</td><td class="num">138 ms</td></tr>
+                <tr><td class="num">10:43:51</td><td>POST</td><td>/v1/payments</td><td>card_declined</td><td>402</td><td class="num">121 ms</td></tr>
+                <tr><td class="num">10:41:07</td><td>POST</td><td>/v1/refunds</td><td>amount_exceeds_capture</td><td>422</td><td class="num">110 ms</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="split" style="margin-top:22px">
+            <div>
+              <h3>What the storefront sends</h3>
+              <p>Chris Adelayo’s checkout branch calls Northline directly. Bearer key <code>mk_test_front_n9k</code>, scope read. The scenario header is how QA forces <code>card_declined</code> without a second URL.</p>
+              <p class="hint">Recorded path for POST /v1/payments is <code>card_approved</code>. Idempotency-Key is required; missing it is scenario <code>missing_idempotency</code>, status 400.</p>
+            </div>
+            <pre>const res = await fetch(
+  "https://mocks.morrowspec.dev/northline/checkout-staging/v1/payments",
+  {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "authorization": "Bearer mk_test_front_n9k",
+      "idempotency-key": "order-NL-20491",
+      "x-morrow-scenario": "card_approved"
+    },
+    body: JSON.stringify({
+      amount: 18420,
+      currency: "usd",
+      customer: "cus_19ka",
+      description: "Order NL-20491, Field wool coat"
+    })
+  }
+);</pre>
+          </div>
+          <div class="url-row">
+            <span>https://mocks.morrowspec.dev/northline/checkout-staging</span>
+            <button class="btn btn-small" type="button" data-copy="https://mocks.morrowspec.dev/northline/checkout-staging">Copy URL</button>
+          </div>
+        </div>
+
+        <div data-env-panel="harbor" hidden>
+          <div data-tabs>
+            <div class="tablist" role="tablist" aria-label="Scenarios for scheduling-qa">
+              <button class="tab" type="button" role="tab" id="tab-ha-ok" aria-controls="panel-ha-ok" aria-selected="true">slot_booked &middot; 201</button>
+              <button class="tab" type="button" role="tab" id="tab-ha-no" aria-controls="panel-ha-no" aria-selected="false" tabindex="-1">slot_conflict &middot; 409</button>
+            </div>
+            <div role="tabpanel" id="panel-ha-ok" aria-labelledby="tab-ha-ok">
+              <div class="txn-meta">
+                <span class="method">POST</span>
+                <span>/v1/appointments</span>
+                <span class="stamp stamp-ok">201 Created</span>
+                <span>154 ms</span>
+                <span>scenario slot_booked</span>
+              </div>
+              <pre>HTTP/1.1 201 Created
+content-type: application/json
+x-morrowspec-environment: scheduling-qa
+x-morrowspec-scenario: slot_booked
+x-morrowspec-spec-rev: b71e0c8
+x-request-id: req_91aa2201
+
+{
+  "id": "apt_22091",
+  "status": "booked",
+  "patient": { "id": "pat_441", "display": "R. Pell" },
+  "provider": { "id": "prv_12", "name": "Dr. Helen Cho" },
+  "start": "2026-03-18T15:30:00-07:00",
+  "end": "2026-03-18T15:50:00-07:00",
+  "location": "clinic_ballard",
+  "reason": "Follow-up, blood pressure"
+}</pre>
+            </div>
+            <div role="tabpanel" id="panel-ha-no" aria-labelledby="tab-ha-no" hidden>
+              <div class="txn-meta">
+                <span class="method">POST</span>
+                <span>/v1/appointments</span>
+                <span class="stamp stamp-warn">409 Conflict</span>
+                <span>133 ms</span>
+                <span>scenario slot_conflict</span>
+              </div>
+              <pre>HTTP/1.1 409 Conflict
+content-type: application/json
+x-morrowspec-environment: scheduling-qa
+x-morrowspec-scenario: slot_conflict
+x-morrowspec-spec-rev: b71e0c8
+x-request-id: req_91aa2288
+
+{
+  "error": {
+    "type": "conflict",
+    "code": "slot_taken",
+    "message": "15:30 with Dr. Helen Cho is no longer open.",
+    "suggestions": [
+      "2026-03-18T16:10:00-07:00",
+      "2026-03-19T09:00:00-07:00"
+    ]
+  }
+}</pre>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:16px">
+            <table class="data">
+              <caption>Recent calls &middot; scheduling-qa &middot; 11 Mar 2026</caption>
+              <thead>
+                <tr><th>Time</th><th>Method</th><th>Path</th><th>Scenario</th><th>Status</th><th>Latency</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">10:41:02</td><td>POST</td><td>/v1/appointments</td><td>slot_conflict</td><td>409</td><td class="num">133 ms</td></tr>
+                <tr><td class="num">10:40:18</td><td>POST</td><td>/v1/appointments</td><td>slot_booked</td><td>201</td><td class="num">154 ms</td></tr>
+                <tr><td class="num">10:22:41</td><td>GET</td><td>/v1/providers/prv_12/slots</td><td>recorded</td><td>200</td><td class="num">101 ms</td></tr>
+                <tr><td class="num">09:58:14</td><td>GET</td><td>/v1/appointments/apt_22091</td><td>recorded</td><td>200</td><td class="num">89 ms</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint" style="margin-top:14px">Recorded path for POST /v1/appointments is <code>slot_booked</code>. Owen Blake edited <code>slot_conflict</code> at 10:18 UTC so the 409 now includes two suggested times. Session state in the beta lasts 24 hours.</p>
+          <div class="url-row">
+            <span>https://mocks.morrowspec.dev/harbor/scheduling-qa</span>
+            <button class="btn btn-small" type="button" data-copy="https://mocks.morrowspec.dev/harbor/scheduling-qa">Copy URL</button>
+          </div>
+        </div>
+
+        <div data-env-panel="atlas" hidden>
+          <div data-tabs>
+            <div class="tablist" role="tablist" aria-label="Scenarios for catalog-preview">
+              <button class="tab" type="button" role="tab" id="tab-at-ok" aria-controls="panel-at-ok" aria-selected="true">product_found &middot; 200</button>
+              <button class="tab" type="button" role="tab" id="tab-at-no" aria-controls="panel-at-no" aria-selected="false" tabindex="-1">variant_missing &middot; 404</button>
+            </div>
+            <div role="tabpanel" id="panel-at-ok" aria-labelledby="tab-at-ok">
+              <div class="txn-meta">
+                <span class="method">GET</span>
+                <span>/v1/products/sku_wool-coat-navy</span>
+                <span class="stamp stamp-ok">200 OK</span>
+                <span>84 ms</span>
+                <span>scenario product_found</span>
+              </div>
+              <pre>HTTP/1.1 200 OK
+content-type: application/json
+x-morrowspec-environment: catalog-preview
+x-morrowspec-scenario: product_found
+x-morrowspec-spec-rev: a88c014
+x-request-id: req_44c0aa10
+
+{
+  "sku": "sku_wool-coat-navy",
+  "title": "Field wool coat",
+  "price": { "amount": 18420, "currency": "usd" },
+  "available": 14,
+  "variants": [
+    { "id": "var_38", "size": "M", "available": 6 },
+    { "id": "var_39", "size": "L", "available": 8 }
+  ],
+  "updated": "2026-03-11T08:12:00Z"
+}</pre>
+            </div>
+            <div role="tabpanel" id="panel-at-no" aria-labelledby="tab-at-no" hidden>
+              <div class="txn-meta">
+                <span class="method">GET</span>
+                <span>/v1/products/sku_wool-coat-navy/variants/var_40</span>
+                <span class="stamp stamp-bad">404 Not Found</span>
+                <span>77 ms</span>
+                <span>scenario variant_missing</span>
+              </div>
+              <pre>HTTP/1.1 404 Not Found
+content-type: application/json
+x-morrowspec-environment: catalog-preview
+x-morrowspec-scenario: variant_missing
+x-morrowspec-spec-rev: a88c014
+x-request-id: req_44c0aa72
+
+{
+  "error": {
+    "type": "not_found",
+    "code": "variant_missing",
+    "message": "Variant var_40 is not on sku_wool-coat-navy.",
+    "sku": "sku_wool-coat-navy"
+  }
+}</pre>
+            </div>
+          </div>
+          <p class="hint" style="margin-top:14px">Spec <code>main</code> is 2 commits ahead. Responses are still built from rev a88c014 because <code>Variant.compare_at</code> is a string in the new commit and a number in the recorded example. Generation is paused, not silently wrong.</p>
+          <div class="url-row">
+            <span>https://mocks.morrowspec.dev/atlas/catalog-preview</span>
+            <button class="btn btn-small" type="button" data-copy="https://mocks.morrowspec.dev/atlas/catalog-preview">Copy URL</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="paper" id="tenant">
+      <div class="sec-head">
+        <span class="sec-no">03</span>
+        <h2>This morning in the reference tenant.</h2>
+        <p>Sample workspaces we host so you can judge the product. Atlas checkout calls Northline. Same coat, same 18420 cents, two specifications.</p>
+      </div>
+      <div class="wrap">
+        <div class="table-wrap">
+          <table class="data">
+            <caption>Reference environments as of 11 Mar 2026, 10:46 UTC</caption>
+            <thead>
+              <tr>
+                <th>Environment</th>
+                <th>Specification</th>
+                <th>Serving</th>
+                <th>Region</th>
+                <th>Consumers</th>
+                <th>Last sync</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>checkout-staging</strong><span class="sub">northline / payments</span></td>
+                <td><code>payments.openapi.yaml</code><span class="sub">OpenAPI 3.1.0 &middot; v1.8.4</span></td>
+                <td class="num">c4e91a2</td>
+                <td>us-east-1</td>
+                <td class="num">14</td>
+                <td>10:42 UTC</td>
+                <td><span class="stamp stamp-ok">In sync</span></td>
+              </tr>
+              <tr>
+                <td><strong>scheduling-qa</strong><span class="sub">harbor / appointments</span></td>
+                <td><code>appointments.yaml</code><span class="sub">OpenAPI 3.0.3 &middot; v2.4.0</span></td>
+                <td class="num">b71e0c8</td>
+                <td>us-east-1</td>
+                <td class="num">8</td>
+                <td>10:05 UTC</td>
+                <td><span class="stamp stamp-ok">In sync</span></td>
+              </tr>
+              <tr class="is-drift">
+                <td><strong>catalog-preview</strong><span class="sub">atlas / commerce</span></td>
+                <td><code>commerce-v3.yaml</code><span class="sub">OpenAPI 3.1.0 &middot; v3.2.1</span></td>
+                <td class="num">a88c014</td>
+                <td>eu-central-1</td>
+                <td class="num">9</td>
+                <td>09:12 UTC</td>
+                <td><span class="stamp stamp-warn">Drift &middot; 2 commits</span></td>
+              </tr>
+              <tr>
+                <td><strong>tracking-sandbox</strong><span class="sub">lumen / shipments</span></td>
+                <td><code>shipments.yaml</code><span class="sub">OpenAPI 3.0.3 &middot; v0.9.7</span></td>
+                <td class="num">e33a91f</td>
+                <td>us-east-1</td>
+                <td class="num">6</td>
+                <td>07:40 UTC</td>
+                <td><span class="stamp stamp-ok">In sync</span></td>
+              </tr>
+              <tr>
+                <td><strong>ledger-contract</strong><span class="sub">kindred / accounts</span></td>
+                <td><code>accounts.yaml</code><span class="sub">OpenAPI 3.1.0 &middot; v4.0.2</span></td>
+                <td class="num">44d0ab1</td>
+                <td>eu-central-1</td>
+                <td class="num">11</td>
+                <td>10 Mar 16:40</td>
+                <td><span class="stamp stamp-ok">In sync</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="fine" style="margin-top:8px">4 of 5 environments are in sync. Consumer counts include CI keys. Human keys we surface on this tour are listed below.</p>
+        <div class="callout" style="margin-top:16px">
+          <strong>catalog-preview is drifted on purpose, and visibly.</strong>
+          <p>Generation of the new commits paused: <code>Variant.compare_at</code> is typed string in the incoming spec and number in the recorded example. The mock is still serving rev a88c014. Price 18420 is unchanged, so the Northline payment and the Atlas PDP still agree.</p>
+          <ul>
+            <li><code>c1ab90e</code> Add compare_at to Variant &middot; Mei Lin &middot; 09:40 UTC</li>
+            <li><code>9ff21d0</code> Deprecate old_sku &middot; Mei Lin &middot; 09:06 UTC</li>
+          </ul>
+          <button class="btn btn-small" type="button" data-env="atlas" data-jump aria-pressed="false">Open catalog-preview in the host</button>
+        </div>
+        <div class="split" style="margin-top:28px">
+          <div>
+            <h3>Scenario coverage &middot; checkout-staging</h3>
+            <p class="fine">Named scenarios that return a schema-valid body or a documented error. Counted at 10:40 UTC.</p>
+            <div class="bars" role="img" aria-label="Scenario coverage for checkout-staging endpoints">
+              <div class="bar-row"><span><code>POST /v1/payments</code></span><span class="bar-track"><span class="bar-fill" style="width:100%"></span></span><span class="bar-val">6/6 &middot; 100%</span></div>
+              <div class="bar-row"><span><code>GET /v1/payments/{id}</code></span><span class="bar-track"><span class="bar-fill" style="width:83%"></span></span><span class="bar-val">5/6 &middot; 83%</span></div>
+              <div class="bar-row"><span><code>POST /v1/refunds</code></span><span class="bar-track"><span class="bar-fill" style="width:67%"></span></span><span class="bar-val">4/6 &middot; 67%</span></div>
+              <div class="bar-row"><span><code>GET /v1/customers/{id}</code></span><span class="bar-track"><span class="bar-fill" style="width:100%"></span></span><span class="bar-val">4/4 &middot; 100%</span></div>
+              <div class="bar-row"><span><code>POST /v1/payment_methods</code></span><span class="bar-track"><span class="bar-fill" style="width:60%"></span></span><span class="bar-val">3/5 &middot; 60%</span></div>
+            </div>
+            <p class="fine" style="margin-top:10px">Gap still open: <code>capture_already_settled</code> on GET payment, plus two payment-method failures not pinned yet. The bars do not pretend those exist.</p>
+          </div>
+          <div>
+            <h3>Activity since 08:00 UTC</h3>
+            <ol class="feed">
+              <li><time datetime="2026-03-11T10:42:00Z">10:42</time><div><strong>Spec sync</strong> northline/payments-spec@c4e91a2<span class="sub">3 paths changed: /v1/payments, /v1/refunds, /v1/payment_methods. checkout-staging rebuilt.</span></div></li>
+              <li><time datetime="2026-03-11T10:41:00Z">10:41</time><div><strong>Scenario run</strong> scheduling-qa &middot; slot_conflict<span class="sub">Owen Blake &middot; 409 &middot; CI job harbor-bookings.</span></div></li>
+              <li><time datetime="2026-03-11T10:22:00Z">10:22</time><div><strong>Read</strong> catalog-preview &middot; Camille Ortiz<span class="sub">GET sku_wool-coat-navy &middot; 200 &middot; still on rev a88c014.</span></div></li>
+              <li><time datetime="2026-03-11T10:18:00Z">10:18</time><div><strong>Scenario edited</strong> scheduling-qa<span class="sub">slot_conflict now returns two suggested times.</span></div></li>
+              <li><time datetime="2026-03-11T09:55:00Z">09:55</time><div><strong>Key rotated</strong> catalog-preview<span class="sub">Read key for Camille Ortiz. Previous key revoked. URL unchanged.</span></div></li>
+              <li><time datetime="2026-03-11T09:12:00Z">09:12</time><div><strong>Drift opened</strong> catalog-preview<span class="sub">compare_at type clash. Still serving a88c014.</span></div></li>
+              <li><time datetime="2026-03-11T08:40:00Z">08:40</time><div><strong>Overnight CI</strong> tracking-sandbox<span class="sub">carrier_timeout hit 128 times from job lumen-contract. All expected 504s.</span></div></li>
+            </ol>
+          </div>
+        </div>
+        <div class="table-wrap" style="margin-top:28px">
+          <table class="data">
+            <caption>Human keys surfaced on this tour</caption>
+            <thead>
+              <tr><th>Person</th><th>Discipline</th><th>Environment</th><th>Scope</th><th>Key</th><th>Last call</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Chris Adelayo</td><td>Frontend</td><td>checkout-staging</td><td>read</td><td class="num">mk_test_front_n9k</td><td>10:44 UTC</td></tr>
+              <tr><td>Mei Lin</td><td>Product</td><td>checkout-staging</td><td>read</td><td class="num">mk_test_prod_19e</td><td>09:58 UTC</td></tr>
+              <tr><td>Owen Blake</td><td>QA</td><td>scheduling-qa</td><td>scenario-admin</td><td class="num">mk_test_qa_44b</td><td>10:41 UTC</td></tr>
+              <tr><td>Camille Ortiz</td><td>Frontend</td><td>catalog-preview</td><td>read</td><td class="num">mk_test_front_7c2</td><td>10:22 UTC</td></tr>
+              <tr><td>Jonah Adeyemi</td><td>Backend</td><td>tracking-sandbox</td><td>write-spec</td><td class="num">mk_test_spec_90d</td><td>08:16 UTC</td></tr>
+              <tr><td>Samir Patel</td><td>Platform</td><td>ledger-contract</td><td>admin</td><td class="num">mk_test_adm_2aa</td><td>10 Mar 16:40</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="paper" id="scenarios">
+      <div class="sec-head">
+        <span class="sec-no">04</span>
+        <h2>Named failures, ready to force.</h2>
+        <p>A scenario is a status, a body, and a header. QA runs them in CI. Product reads the copy. Nobody edits a second JSON file.</p>
+      </div>
+      <div class="wrap">
+        <div class="cards">
+          <article class="card">
+            <div><span class="stamp stamp-warn">402</span> <span class="stamp stamp-ink">checkout-staging</span></div>
+            <h3>card_declined</h3>
+            <p>Header <code>X-Morrow-Scenario: card_declined</code>. Decline copy is what Mei reviews before the processor client exists.</p>
+            <p class="who">Owner Mei Lin &middot; edited 9 Mar 2026</p>
+            <pre>{
+  "error": {
+    "code": "card_declined",
+    "decline_code": "insufficient_funds",
+    "payment_id": "pay_8f22aa10"
+  }
+}</pre>
+          </article>
+          <article class="card">
+            <div><span class="stamp stamp-bad">400</span> <span class="stamp stamp-ink">checkout-staging</span></div>
+            <h3>missing_idempotency</h3>
+            <p>Fires when <code>Idempotency-Key</code> is absent on POST /v1/payments. No scenario header required.</p>
+            <p class="who">Owner Mei Lin &middot; edited 2 Mar 2026</p>
+            <pre>{
+  "error": {
+    "code": "missing_idempotency",
+    "message": "Idempotency-Key header is required."
+  }
+}</pre>
+          </article>
+          <article class="card">
+            <div><span class="stamp stamp-warn">409</span> <span class="stamp stamp-ink">scheduling-qa</span></div>
+            <h3>slot_conflict</h3>
+            <p>Header <code>X-Morrow-Scenario: slot_conflict</code>. Returns two alternate times so the UI can render a recovery, not a blank error.</p>
+            <p class="who">Owner Owen Blake &middot; edited 11 Mar 2026, 10:18 UTC</p>
+            <pre>{
+  "error": {
+    "code": "slot_taken",
+    "suggestions": ["2026-03-18T16:10:00-07:00", "2026-03-19T09:00:00-07:00"]
+  }
+}</pre>
+          </article>
+          <article class="card">
+            <div><span class="stamp stamp-bad">504</span> <span class="stamp stamp-ink">tracking-sandbox</span></div>
+            <h3>carrier_timeout</h3>
+            <p>Header <code>X-Morrow-Scenario: carrier_timeout</code>. CI job lumen-contract hit this 128 times overnight. All of them were the named scenario, not a runtime fault.</p>
+            <p class="who">Owner Jonah Adeyemi &middot; edited 8 Mar 2026</p>
+            <pre>{
+  "error": {
+    "code": "carrier_timeout",
+    "carrier": "north-pacific",
+    "waited_ms": 8000,
+    "tracking": "NPX4491208831"
+  }
+}</pre>
+          </article>
+          <article class="card">
+            <div><span class="stamp stamp-warn">409</span> <span class="stamp stamp-ink">catalog-preview</span></div>
+            <h3>price_mismatch</h3>
+            <p>Header <code>X-Morrow-Scenario: price_mismatch</code>. Cart sent 17900; catalog expects 18420 for the Field wool coat. The storefront shows the spec price, not a stale one.</p>
+            <p class="who">Owner Camille Ortiz &middot; edited 7 Mar 2026</p>
+            <pre>{
+  "error": {
+    "code": "price_mismatch",
+    "expected": 18420,
+    "received": 17900,
+    "sku": "sku_wool-coat-navy"
+  }
+}</pre>
+          </article>
+          <article class="card">
+            <div><span class="stamp stamp-warn">402</span> <span class="stamp stamp-ink">ledger-contract</span></div>
+            <h3>insufficient_funds</h3>
+            <p>Header <code>X-Morrow-Scenario: insufficient_funds</code>. Kindred’s contract tests assert both the code and the available balance.</p>
+            <p class="who">Owner Samir Patel &middot; edited 6 Mar 2026</p>
+            <pre>{
+  "error": {
+    "code": "insufficient_funds",
+    "available": 190000,
+    "requested": 250000,
+    "account": "acct_4401"
+  }
+}</pre>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="paper" id="sharing">
+      <div class="sec-head">
+        <span class="sec-no">05</span>
+        <h2>Four disciplines, one host.</h2>
+        <p>Frontend, backend, QA, and product stop maintaining private stubs that disagree by Thursday.</p>
+      </div>
+      <div class="wrap">
+        <div class="roles">
+          <article class="role">
+            <span class="stamp stamp-ink">Frontend</span>
+            <h3>Camille Ortiz</h3>
+            <p class="who">Atlas Commerce &middot; catalog-preview &middot; read &middot; mk_test_front_7c2</p>
+            <p class="quote">“I rendered the coat page on Tuesday. The pricing service is still in review.”</p>
+            <p>She calls catalog-preview from the PDP branch. The key was rotated at 09:55; the URL did not change.</p>
+          </article>
+          <article class="role">
+            <span class="stamp stamp-ink">Backend</span>
+            <h3>Jonah Adeyemi</h3>
+            <p class="who">Lumen Freight &middot; tracking-sandbox &middot; write-spec &middot; mk_test_spec_90d</p>
+            <p class="quote">“The contract test and the QA explorer finally call the same host.”</p>
+            <p>He publishes <code>shipments.yaml</code> from lumen/tracking. Last push 08:16 UTC, rev e33a91f.</p>
+          </article>
+          <article class="role">
+            <span class="stamp stamp-ink">QA</span>
+            <h3>Owen Blake</h3>
+            <p class="who">Harbor Health &middot; scheduling-qa &middot; scenario-admin &middot; mk_test_qa_44b</p>
+            <p class="quote">“slot_conflict is a CI step now. We stopped discovering it in the demo.”</p>
+            <p>One header selects the failure. He does not keep a second mock in the test repo.</p>
+          </article>
+          <article class="role">
+            <span class="stamp stamp-ink">Product</span>
+            <h3>Mei Lin</h3>
+            <p class="who">Northline &middot; checkout-staging &middot; read &middot; mk_test_prod_19e</p>
+            <p class="quote">“I read the decline string in the mock before we argued about it in Figma.”</p>
+            <p>She walks checkout-staging in review without Docker. Last call 09:58 UTC, before this morning’s sync.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="paper" id="beta">
+      <div class="sec-head">
+        <span class="sec-no">06</span>
+        <h2>Cohort 04, plainly.</h2>
+        <p>80 seats. 43 invites already out. <span data-seats-left>37</span> remain. Complimentary through 15 April 2026. OpenAPI REST only.</p>
+      </div>
+      <div class="wrap">
+        <div class="bounds">
+          <div class="bound">
+            <h3>In this beta</h3>
+            <ul>
+              <li>OpenAPI 3.0.x and 3.1.x, JSON request and response bodies</li>
+              <li>Path, query, and header parameters</li>
+              <li>File upload, plus GitHub App or GitLab project token, poll every 15 minutes</li>
+              <li>3 hosted environments, 50,000 requests per month</li>
+              <li>Named scenarios and the <code>X-Morrow-Scenario</code> header</li>
+              <li>Per-person keys: read, scenario-admin, write-spec, admin</li>
+              <li>Regions us-east-1 and eu-central-1</li>
+              <li>Session state kept for 24 hours</li>
+              <li>Auth schemes declared in the spec, echoed as mock keys</li>
+            </ul>
+          </div>
+          <div class="bound">
+            <h3>Not in this beta</h3>
+            <ul>
+              <li>GraphQL, gRPC, AsyncAPI, SOAP</li>
+              <li>Webhook delivery to your receivers. Callbacks are recorded, not dispatched</li>
+              <li>Custom code hooks or scripting inside the mock</li>
+              <li>Stateful carts that must survive past 24 hours</li>
+              <li>SSO. Beta access is an email magic link</li>
+              <li>On-prem or VPC peering</li>
+              <li>A public multi-tenant free tier. This is a seated cohort</li>
+            </ul>
+          </div>
+        </div>
+        <h3 style="margin-top:28px">Cohort calendar</h3>
+        <ol class="timeline">
+          <li class="is-done"><span class="when">4 Mar</span><strong>Applications opened</strong><span class="sub">Waitlist passed 1,000 teams.</span></li>
+          <li class="is-now"><span class="when">11 Mar &middot; today</span><strong>Spec office hours</strong><span class="sub">16:00–17:00 UTC. Two slots left.</span></li>
+          <li><span class="when">16 Mar</span><strong>Applications close</strong><span class="sub">18:00 UTC.</span></li>
+          <li><span class="when">17 Mar</span><strong>Invites</strong><span class="sub">Decision mail from beta@morrowspec.dev.</span></li>
+          <li><span class="when">18 Mar</span><strong>Cohort starts</strong><span class="sub">09:00 UTC. Magic links.</span></li>
+          <li><span class="when">15 Apr</span><strong>Retro and end</strong><span class="sub">Complimentary window closes.</span></li>
+        </ol>
+        <div class="split" style="margin-top:28px">
+          <div>
+            <h3>Office hours today</h3>
+            <p>Hosted by Nia Calder. 25 minutes. Bring a redacted OpenAPI file. Mention the slot in your waitlist note if you want one.</p>
+            <ul class="slots">
+              <li><span class="stamp stamp-warn">Held</span> <span>16:00 UTC &middot; Elena Voss, Paperlane</span></li>
+              <li><span class="stamp stamp-ok">Open</span> <span>16:25 UTC &middot; 25 minutes</span></li>
+              <li><span class="stamp stamp-ok">Open</span> <span>16:50 UTC &middot; 25 minutes</span></li>
+            </ul>
+            <p class="who" style="margin-top:10px">Earlier: 09:30 UTC Theo Nguyen, Fieldnote, eligible OpenAPI 3.1. 10 Mar 16:30 UTC Hugo Berg, Candle Metrics.</p>
+          </div>
+          <div>
+            <h3>Should you join this cohort?</h3>
+            <div class="checkgrid">
+              <div>
+                <p class="who">Join if</p>
+                <ul class="ticks">
+                  <li>You have an OpenAPI 3.0 or 3.1 document, even a partial one</li>
+                  <li>Frontend or QA is blocked on a service that is not deployed</li>
+                  <li>More than one discipline needs the same fake backend</li>
+                  <li>You can live with REST only, no scripting, and 24-hour state</li>
+                </ul>
+              </div>
+              <div>
+                <p class="who">Wait for a later runtime if</p>
+                <ul class="ticks">
+                  <li>You need GraphQL or gRPC in the next month</li>
+                  <li>The mock must call your webhooks</li>
+                  <li>You need SSO or on-prem before anyone can try it</li>
+                  <li>You need durable multi-day state in the mock itself</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="paper" id="faq">
+      <div class="sec-head">
+        <span class="sec-no">07</span>
+        <h2>Questions teams ask before they join.</h2>
+        <p>Short answers. The same facts as the rest of this sheet, in the order people actually ask them.</p>
+      </div>
+      <div class="wrap">
+        <details open>
+          <summary>What does a beta seat include?</summary>
+          <p>Three hosted environments, 50,000 requests a month, GitHub or GitLab sync every 15 minutes, file upload, named scenarios, per-person keys, and a choice of us-east-1 or eu-central-1. No charge during cohort 04, which runs 18 March to 15 April 2026. 43 of 80 invites are already out.</p>
+        </details>
+        <details>
+          <summary>Which specifications work?</summary>
+          <p>OpenAPI 3.0.x and 3.1.x describing JSON REST. YAML or JSON. Partial specs are accepted; paths you have not described return 501 with the missing operationId. GraphQL, gRPC, AsyncAPI, and SOAP are not in this beta. If that is what you need, stay on the list for a later runtime rather than taking a seat you cannot use.</p>
+        </details>
+        <details>
+          <summary>How realistic are the responses?</summary>
+          <p>Happy-path bodies come from examples in the spec when those exist. Otherwise MorrowSpec generates values that satisfy the schema: types, enums, formats, required fields. Named scenarios return the status and body you pin. On the reference tenant, 96.4% of responses over the last 7 days validated against the active schema. The misses are mostly free-form additionalProperties objects, which we report rather than hide.</p>
+        </details>
+        <details>
+          <summary>What happens when the spec changes?</summary>
+          <p>The pinned branch is polled every 15 minutes, or sooner if the GitHub App receives a push. GitLab uses a project access token. The mock URL stays the same. If generation fails, or if main moves ahead of the last good build, the environment is stamped Drift and keeps serving the last good revision. catalog-preview is in that state now: two commits ahead, still serving a88c014, because compare_at changed type.</p>
+        </details>
+        <details>
+          <summary>Who on the team can use an environment?</summary>
+          <p>Anyone you issue a key to. Scopes are read, scenario-admin, write-spec, and admin. Frontend and product usually hold read. QA holds scenario-admin so they can pin failures. The person who owns the spec holds write-spec. Keys can be revoked without rotating the URL, as Camille’s was at 09:55 UTC today.</p>
+        </details>
+        <details>
+          <summary>What do you do with our specification?</summary>
+          <p>Stored in the region you pick, encrypted at rest, used only to build your mock. Not used to train models. Not sold. You can delete an environment and its spec from the beta console; deletion completes within 24 hours. Office-hour files sent by email are deleted after the slot notes are written.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="paper" id="waitlist">
+      <div class="sec-head">
+        <span class="sec-no">08</span>
+        <h2>Ask for a seat in cohort 04.</h2>
+        <p>If your team is blocked on a service that already has an OpenAPI file, tell us. We reply from beta@morrowspec.dev.</p>
+      </div>
+      <div class="wrap">
+        <blockquote class="founder">
+          <div class="avatar" aria-hidden="true">NC</div>
+          <div>
+            <p>We started MorrowSpec after a quarter in which three teams rewrote the same checkout client against a spec that changed twice and a stub that changed never. The mock should be a build of the contract, the way a binary is a build of the source. That is the whole product.</p>
+            <footer>Nia Calder, founder &middot; 11 March 2026 &middot; Portland and Lisbon</footer>
+          </div>
+        </blockquote>
+        <div class="split">
+          <div>
+            <form id="waitlist-form" action="#waitlist" novalidate>
+              <p id="form-error" class="form-error" role="alert" hidden></p>
+              <div class="form-row">
+                <label for="f-name"><span class="lbl">Full name (required)</span><input id="f-name" name="name" type="text" autocomplete="name" required placeholder="Mei Lin"></label>
+                <label for="f-email"><span class="lbl">Work email (required)</span><input id="f-email" name="email" type="email" autocomplete="email" required placeholder="mei@northline.example"></label>
+              </div>
+              <div class="form-row">
+                <label for="f-company"><span class="lbl">Company (required)</span><input id="f-company" name="company" type="text" autocomplete="organization" required placeholder="Northline"></label>
+                <label for="f-role"><span class="lbl">Role (required)</span>
+                  <select id="f-role" name="role" required>
+                    <option value="">Choose one</option>
+                    <option>Frontend engineer</option>
+                    <option>Backend engineer</option>
+                    <option>QA / SDET</option>
+                    <option>Product manager</option>
+                    <option>Platform / DevEx</option>
+                    <option>Engineering manager</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-row">
+                <label for="f-spec"><span class="lbl">Specification (required)</span>
+                  <select id="f-spec" name="spec" required>
+                    <option value="">Choose one</option>
+                    <option>OpenAPI 3.0</option>
+                    <option>OpenAPI 3.1</option>
+                    <option>Both 3.0 and 3.1</option>
+                    <option>Not sure yet</option>
+                  </select>
+                </label>
+                <label for="f-source"><span class="lbl">Where it lives (required)</span>
+                  <select id="f-source" name="source" required>
+                    <option value="">Choose one</option>
+                    <option>GitHub repository</option>
+                    <option>GitLab repository</option>
+                    <option>Uploaded YAML or JSON</option>
+                    <option>Generated from code annotations</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-row">
+                <label for="f-size"><span class="lbl">Team size sharing the mock (required)</span>
+                  <select id="f-size" name="size" required>
+                    <option value="">Choose one</option>
+                    <option>2–5</option>
+                    <option>6–15</option>
+                    <option>16–40</option>
+                    <option>41–100</option>
+                    <option>More than 100</option>
+                  </select>
+                </label>
+                <label for="f-region"><span class="lbl">Region preference (required)</span>
+                  <select id="f-region" name="region" required>
+                    <option value="">Choose one</option>
+                    <option>us-east-1, N. Virginia</option>
+                    <option>eu-central-1, Frankfurt</option>
+                    <option>No preference</option>
+                  </select>
+                </label>
+              </div>
+              <label for="f-note"><span class="lbl">What is the mock unblocking?</span>
+                <textarea id="f-note" name="note" maxlength="500" placeholder="Checkout UI is waiting on Payments v1.8, still in design review. We can share an OpenAPI 3.1 file today."></textarea>
+              </label>
+              <label class="check" for="f-ack"><input id="f-ack" name="ack" type="checkbox" value="yes" required> <span>Our specification is OpenAPI 3.0 or 3.1 REST, which is what this beta supports.</span></label>
+              <label class="check" for="f-optin"><input id="f-optin" name="optin" type="checkbox" value="yes"> <span>Email me the office-hour notes even if I do not get a seat this cohort.</span></label>
+              <button class="btn btn-block" type="submit">Request a seat</button>
+              <p class="fine" style="margin-top:10px">No card. No call unless you ask for 16:25 or 16:50 UTC today. We reply within one business day, and cohort decisions go out 17 March 2026.</p>
+            </form>
+            <div id="form-done" class="done" hidden role="status" tabindex="-1">
+              <p class="kicker">Request noted</p>
+              <h3>You are number <span data-slot="pos">1,285</span> on the list, <span data-slot="name">friend</span>.</h3>
+              <p>We will write to <strong data-slot="email">you</strong> about <strong data-slot="company">your team</strong> by Tuesday 17 March 2026. Role recorded: <span data-slot="role">role</span>. Region preference: <span data-slot="region">region</span>. A seat is not held until that invite. 37 seats remain in cohort 04 until the invites go out.</p>
+              <p id="note-line" hidden>Note we kept: <span data-slot="note"></span></p>
+              <ol>
+                <li>We read what you need the mock to unblock.</li>
+                <li>OpenAPI REST teams are eligible for cohort 04. Other protocols stay on the list for a later runtime.</li>
+                <li>Invites go out 17 March. The cohort starts 18 March, 09:00 UTC, with a magic link.</li>
+              </ol>
+              <a class="btn" href="#walkthrough">Keep inspecting the reference tenant</a>
+            </div>
+          </div>
+          <aside>
+            <h3>Latest on the list</h3>
+            <p class="fine"><span data-wait-count>1,284</span> teams. These five wrote in this morning.</p>
+            <ul class="recent" id="recent-list">
+              <li><span class="when">10:38 UTC</span><strong>Elena Voss</strong> &middot; Eng Manager &middot; Paperlane<span class="sub">OpenAPI 3.1 &middot; GitHub &middot; holds 16:00 UTC office hours</span></li>
+              <li><span class="when">10:11 UTC</span><strong>Priya Shah</strong> &middot; Staff Engineer &middot; Latticeframe<span class="sub">OpenAPI 3.1 &middot; GitHub &middot; payments and billing, two specs</span></li>
+              <li><span class="when">09:02 UTC</span><strong>Theo Nguyen</strong> &middot; SDET &middot; Fieldnote<span class="sub">OpenAPI 3.1 &middot; GitLab &middot; attended 09:30 UTC, eligible</span></li>
+              <li><span class="when">08:26 UTC</span><strong>Imani Brooks</strong> &middot; Frontend &middot; Saltroute<span class="sub">OpenAPI 3.0 &middot; uploaded file &middot; PDP blocked on catalog</span></li>
+              <li><span class="when">07:51 UTC</span><strong>Hugo Berg</strong> &middot; Backend &middot; Candle Metrics<span class="sub">OpenAPI 3.0 &middot; GitHub &middot; attended 10 Mar office hours</span></li>
+            </ul>
+            <div class="side-note">
+              <p class="who">Two slots remain today</p>
+              <p>16:25 and 16:50 UTC. Say which one you want in the note. Host is Nia Calder. Bring a redacted spec, not production traffic.</p>
+              <p class="who">Write us</p>
+              <p><a href="mailto:beta@morrowspec.dev">beta@morrowspec.dev</a></p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="foot">
+    <div>
+      <span class="word">Morrow<em>Spec</em></span>
+      <p style="margin-top:8px">Hosted mock APIs from OpenAPI specifications. Private beta, cohort 04. Runtime 0.9.4-beta.</p>
+      <p class="fine">The reference tenant on this sheet is sample data we run so you can see the product working. It is not a customer list.</p>
+    </div>
+    <div>
+      <p><span class="stamp stamp-ok">Operational</span> Mock runtime &middot; us-east-1</p>
+      <p><span class="stamp stamp-ok">Operational</span> Mock runtime &middot; eu-central-1</p>
+      <p><span class="stamp stamp-ok">Operational</span> Spec sync &middot; no incident in 30 days</p>
+      <p><a href="mailto:beta@morrowspec.dev">beta@morrowspec.dev</a></p>
+    </div>
+    <div>
+      <a href="#waitlist">Request a seat</a>
+      <a href="#walkthrough">Inspect the mock</a>
+      <a href="#faq">Questions</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+</div>
+<p class="colophon">Sheet MS-B04 &middot; printed for the public waitlist &middot; 11 Mar 2026 &middot; MorrowSpec, Portland and Lisbon</p>
+<script>
+(function () {
+  "use strict";
+  var toggle = document.getElementById("nav-toggle");
+  var links = document.getElementById("nav-links");
+  if (toggle && links) {
+    toggle.addEventListener("click", function () {
+      var open = links.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.textContent = open ? "Close" : "Menu";
+    });
+    links.addEventListener("click", function (e) {
+      if (e.target.closest("a")) {
+        links.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.textContent = "Menu";
+      }
+    });
+  }
+
+  document.querySelectorAll("[data-tabs]").forEach(function (group) {
+    var tabs = Array.prototype.slice.call(group.querySelectorAll('[role="tab"]'));
+    var panels = Array.prototype.slice.call(group.querySelectorAll('[role="tabpanel"]'));
+    function activate(tab) {
+      var id = tab.getAttribute("aria-controls");
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.tabIndex = on ? 0 : -1;
+      });
+      panels.forEach(function (p) {
+        p.hidden = p.id !== id;
+      });
+    }
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () { activate(tab); });
+    });
+    group.addEventListener("keydown", function (e) {
+      var i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var next = null;
+      if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+      if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (e.key === "Home") next = tabs[0];
+      if (e.key === "End") next = tabs[tabs.length - 1];
+      if (next) {
+        e.preventDefault();
+        next.focus();
+        activate(next);
+      }
+    });
+  });
+
+  function reduced() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  document.querySelectorAll("[data-env]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var id = btn.getAttribute("data-env");
+      document.querySelectorAll("[data-env]").forEach(function (b) {
+        b.setAttribute("aria-pressed", b.getAttribute("data-env") === id ? "true" : "false");
+      });
+      document.querySelectorAll("[data-env-panel]").forEach(function (p) {
+        p.hidden = p.getAttribute("data-env-panel") !== id;
+      });
+      if (btn.hasAttribute("data-jump")) {
+        var target = document.getElementById("walkthrough");
+        if (target) target.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" });
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var value = btn.getAttribute("data-copy") || "";
+      var prev = btn.textContent;
+      function ok() {
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = prev; }, 1200);
+      }
+      function fail() {
+        btn.textContent = "Select the URL";
+        setTimeout(function () { btn.textContent = prev; }, 1400);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(value).then(ok).catch(fail);
+      } else {
+        fail();
+      }
+    });
+  });
+
+  var form = document.getElementById("waitlist-form");
+  if (!form) return;
+  var err = document.getElementById("form-error");
+  form.addEventListener("input", function (e) {
+    if (e.target && e.target.removeAttribute) e.target.removeAttribute("aria-invalid");
+  });
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var data = new FormData(form);
+    var name = String(data.get("name") || "").trim();
+    var email = String(data.get("email") || "").trim();
+    var company = String(data.get("company") || "").trim();
+    var role = String(data.get("role") || "");
+    var spec = String(data.get("spec") || "");
+    var source = String(data.get("source") || "");
+    var size = String(data.get("size") || "");
+    var region = String(data.get("region") || "");
+    var note = String(data.get("note") || "").trim();
+    var ack = data.get("ack");
+    var checks = [
+      ["f-name", name.length >= 2, "Add your name so we know who to write."],
+      ["f-email", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), "Use a work email we can reply to."],
+      ["f-company", company.length >= 2, "Tell us the team or company."],
+      ["f-role", role.length > 0, "Pick the role closest to how you will use the mock."],
+      ["f-spec", spec.length > 0, "Tell us which OpenAPI generation you have, or that you are not sure."],
+      ["f-source", source.length > 0, "Tell us where the specification lives."],
+      ["f-size", size.length > 0, "Tell us the team size sharing the mock."],
+      ["f-region", region.length > 0, "Pick a beta region, or no preference."],
+      ["f-ack", !!ack, "This cohort only covers OpenAPI REST. Confirm that matches your spec."]
+    ];
+    var bad = null;
+    for (var i = 0; i < checks.length; i++) {
+      if (!checks[i][1]) { bad = checks[i]; break; }
+    }
+    if (bad) {
+      err.hidden = false;
+      err.textContent = bad[2];
+      var field = document.getElementById(bad[0]);
+      if (field) {
+        field.setAttribute("aria-invalid", "true");
+        field.focus();
+      }
+      return;
+    }
+    err.hidden = true;
+    var doneBox = document.getElementById("form-done");
+    doneBox.querySelector('[data-slot="name"]').textContent = name;
+    doneBox.querySelector('[data-slot="email"]').textContent = email;
+    doneBox.querySelector('[data-slot="company"]').textContent = company;
+    doneBox.querySelector('[data-slot="role"]').textContent = role;
+    doneBox.querySelector('[data-slot="region"]').textContent = region;
+    doneBox.querySelector('[data-slot="pos"]').textContent = (1285).toLocaleString("en-US");
+    var noteLine = document.getElementById("note-line");
+    if (note) {
+      noteLine.hidden = false;
+      noteLine.querySelector('[data-slot="note"]').textContent = note;
+    } else {
+      noteLine.hidden = true;
+    }
+    document.querySelectorAll("[data-wait-count]").forEach(function (el) {
+      el.textContent = "1,285";
+    });
+    var list = document.getElementById("recent-list");
+    if (list) {
+      var li = document.createElement("li");
+      var when = document.createElement("span");
+      when.className = "when";
+      when.textContent = "Just now";
+      var strong = document.createElement("strong");
+      strong.textContent = name;
+      var sub = document.createElement("span");
+      sub.className = "sub";
+      sub.textContent = spec + " · " + source + " · " + region;
+      li.appendChild(when);
+      li.appendChild(document.createTextNode(" "));
+      li.appendChild(strong);
+      li.appendChild(document.createTextNode(" · " + role + " · " + company));
+      li.appendChild(sub);
+      list.insertBefore(li, list.firstChild);
+    }
+    form.hidden = true;
+    doneBox.hidden = false;
+    doneBox.focus();
+    doneBox.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" });
+  });
+})();
+</script>
+</body>
+</html>

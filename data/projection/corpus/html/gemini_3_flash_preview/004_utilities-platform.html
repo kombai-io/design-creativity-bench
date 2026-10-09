@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GridOS Core | Field Operations Platform</title>
+    <style>
+        :root {
+            /* Colors - Toneless & High Contrast for Bad Light */
+            --color-canvas-bg: #0d1117;
+            --color-panel-bg: #161b22;
+            --color-panel-header: #21262d;
+            --color-border-dim: #30363d;
+            --color-border-bright: #484f58;
+            --color-text-muted: #8b949e;
+            --color-text-main: #c9d1d9;
+            --color-text-bold: #f0f6fc;
+            --color-accent-gold: #e3b341;
+            --color-accent-blue: #58a6ff;
+            --color-status-ok: #3fb950;
+            --color-status-warn: #d29922;
+            --color-status-crit: #f85149;
+            --color-status-offline: #6e7681;
+            
+            /* Typography - Untreated / Monospace Engineering Feel */
+            --font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            --font-size-tiny: 10px;
+            --font-size-small: 12px;
+            --font-size-base: 13px;
+            --font-size-header: 16px;
+            --font-size-large: 20px;
+            --font-weight-thin: 300;
+            --font-weight-reg: 400;
+            --font-weight-bold: 600;
+
+            /* Spacing - Fattism (Chunky clickable areas) */
+            --spacing-0: 0px;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+
+            /* Borders & Shadows */
+            --border-width: 1px;
+            --border-thick: 2px;
+            --radius-sharp: 0px;
+            --radius-sm: 3px;
+            --radius-md: 6px;
+            --shadow-float: 0 8px 24px rgba(0,0,0,0.5);
+            --shadow-inset: inset 0 1px 0 rgba(255,255,255,0.05);
+
+            /* Dynamic Props */
+            --transition-speed: 0.2s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: var(--spacing-0);
+            padding: var(--spacing-0);
+        }
+
+        body {
+            background-color: var(--color-canvas-bg);
+            background-image: 
+                radial-gradient(var(--color-border-dim) var(--border-width), transparent var(--border-width));
+            background-size: var(--spacing-lg) var(--spacing-lg);
+            color: var(--color-text-main);
+            font-family: var(--font-family-sans);
+            font-size: var(--font-size-base);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Bar */
+        .top-bar {
+            height: 48px;
+            background: var(--color-panel-bg);
+            border-bottom: var(--border-width) solid var(--color-border-bright);
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-0) var(--spacing-md);
+            gap: var(--spacing-lg);
+            z-index: 100;
+        }
+
+        .logo {
+            font-family: var(--font-family-mono);
+            font-weight: var(--font-weight-bold);
+            color: var(--color-accent-gold);
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background: var(--color-canvas-bg);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            border: var(--border-width) solid var(--color-border-dim);
+            font-size: var(--font-size-tiny);
+            font-family: var(--font-family-mono);
+            text-transform: uppercase;
+        }
+
+        .heartbeat {
+            width: 8px;
+            height: 8px;
+            background: var(--color-status-ok);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; box-shadow: 0 0 0 0 var(--color-status-ok); }
+            70% { opacity: 0.5; box-shadow: 0 0 0 6px transparent; }
+            100% { opacity: 1; box-shadow: 0 0 0 0 transparent; }
+        }
+
+        /* Workspace Canvas */
+        .workspace {
+            flex: 1;
+            position: relative;
+            padding: var(--spacing-md);
+            display: grid;
+            grid-template-columns: 320px 1fr 340px;
+            grid-template-rows: 1fr;
+            gap: var(--spacing-md);
+            width: 1280px;
+            margin: 0 auto;
+        }
+
+        /* Panel Component */
+        .panel {
+            background: var(--color-panel-bg);
+            border: var(--border-width) solid var(--color-border-dim);
+            border-radius: var(--radius-sm);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-float);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: var(--color-panel-header);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: var(--font-size-tiny);
+            font-weight: var(--font-weight-bold);
+            font-family: var(--font-family-mono);
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            letter-spacing: 1px;
+        }
+
+        .panel-content {
+            padding: var(--spacing-md);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Section Specifics */
+        .order-summary {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .order-id {
+            font-size: var(--font-size-large);
+            font-family: var(--font-family-mono);
+            color: var(--color-text-bold);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-tiny);
+            font-weight: var(--font-weight-bold);
+            background: var(--color-border-dim);
+            color: var(--color-text-main);
+        }
+
+        .tag-priority { background: var(--color-status-crit); color: white; }
+
+        /* Telemetry Grid */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-sm);
+        }
+
+        .telemetry-card {
+            background: var(--color-canvas-bg);
+            padding: var(--spacing-sm);
+            border: var(--border-width) solid var(--color-border-dim);
+        }
+
+        .telemetry-label {
+            font-size: var(--font-size-tiny);
+            color: var(--color-text-muted);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .telemetry-value {
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-header);
+            color: var(--color-accent-gold);
+        }
+
+        /* Asset Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-small);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: var(--spacing-sm);
+            border-bottom: var(--border-thick) solid var(--color-border-dim);
+            color: var(--color-text-muted);
+            font-family: var(--font-family-mono);
+            text-transform: uppercase;
+        }
+
+        .data-table td {
+            padding: var(--spacing-sm);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+        }
+
+        .data-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        /* Progress Circle (Manual SVG) */
+        .gauge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--spacing-md) 0;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            font-size: var(--font-size-tiny);
+            text-transform: uppercase;
+            margin-bottom: var(--spacing-xs);
+            color: var(--color-text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            background: var(--color-canvas-bg);
+            border: var(--border-width) solid var(--color-border-dim);
+            color: var(--color-text-main);
+            padding: var(--spacing-sm);
+            font-family: var(--font-family-mono);
+            border-radius: var(--radius-sm);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--color-accent-blue);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-family-mono);
+            font-weight: var(--font-weight-bold);
+            cursor: pointer;
+            transition: background var(--transition-speed);
+            text-transform: uppercase;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--color-accent-gold);
+            color: var(--color-canvas-bg);
+        }
+
+        .btn-primary:hover {
+            background: #f0c55e;
+        }
+
+        .btn-secondary {
+            background: var(--color-border-dim);
+            color: var(--color-text-bold);
+        }
+
+        /* Schematic Mockup */
+        .schematic {
+            width: 100%;
+            height: 180px;
+            background: var(--color-canvas-bg);
+            border: var(--border-width) solid var(--color-border-dim);
+            position: relative;
+            margin-bottom: var(--spacing-md);
+            overflow: hidden;
+        }
+
+        .schematic-svg {
+            width: 100%;
+            height: 100%;
+            stroke: var(--color-border-bright);
+            fill: none;
+        }
+
+        /* Activity Log */
+        .log-container {
+            font-family: var(--font-family-mono);
+            font-size: var(--font-size-tiny);
+            color: var(--color-text-muted);
+            height: 120px;
+            overflow-y: auto;
+            border-top: var(--border-width) solid var(--color-border-dim);
+            padding-top: var(--spacing-sm);
+        }
+
+        .log-entry {
+            margin-bottom: 2px;
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .log-time { color: var(--color-accent-blue); }
+
+        /* Checklist */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-xs) 0;
+            border-bottom: var(--border-width) solid rgba(255,255,255,0.03);
+        }
+
+        .checkbox-custom {
+            width: 18px;
+            height: 18px;
+            border: var(--border-thick) solid var(--color-border-bright);
+            background: var(--color-canvas-bg);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        .checkbox-custom.checked {
+            background: var(--color-status-ok);
+            border-color: var(--color-status-ok);
+        }
+
+        /* Tabs ARIA style */
+        .tab-list {
+            display: flex;
+            gap: var(--border-width);
+            background: var(--color-border-dim);
+            padding: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .tab-item {
+            flex: 1;
+            padding: var(--spacing-xs);
+            text-align: center;
+            font-size: var(--font-size-tiny);
+            background: var(--color-panel-bg);
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .tab-item[aria-selected="true"] {
+            background: var(--color-accent-blue);
+            color: var(--color-canvas-bg);
+            font-weight: var(--font-weight-bold);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="top-bar">
+        <div class="logo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            GRIDOS // V4.2
+        </div>
+        
+        <div class="status-pill" role="status" aria-live="polite">
+            <div class="heartbeat"></div>
+            SYSTEM LINK: ACTIVE
+        </div>
+
+        <div class="status-pill">
+            LATENCY: 14ms
+        </div>
+
+        <div class="status-pill" style="margin-left: auto;">
+            USER: TECH_7701 (FIELD_ALPHA)
+        </div>
+    </header>
+
+    <main class="workspace" role="main">
+        
+        <!-- Left Panel: Context & Telemetry -->
+        <aside class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Asset Telemetry</h2>
+                <span class="tag">LIVE</span>
+            </div>
+            <div class="panel-content">
+                <div class="order-summary">
+                    <div class="order-id">#WO-HV-7701-D</div>
+                    <span class="tag tag-priority">URGENT</span>
+                    <span class="tag">WNW-GRID-14</span>
+                </div>
+
+                <div class="telemetry-grid">
+                    <div class="telemetry-card">
+                        <div class="telemetry-label">LOAD (MW)</div>
+                        <div class="telemetry-value" id="val-load">412.5</div>
+                    </div>
+                    <div class="telemetry-card">
+                        <div class="telemetry-label">PHASE SHIFT</div>
+                        <div class="telemetry-value" id="val-phase">0.022</div>
+                    </div>
+                    <div class="telemetry-card">
+                        <div class="telemetry-label">FREQ (HZ)</div>
+                        <div class="telemetry-value">59.98</div>
+                    </div>
+                    <div class="telemetry-card">
+                        <div class="telemetry-label">TEMP (°C)</div>
+                        <div class="telemetry-value" id="val-temp">42.1</div>
+                    </div>
+                </div>
+
+                <div class="gauge-container">
+                    <svg width="120" height="60" viewBox="0 0 100 50">
+                        <path d="M 10 50 A 40 40 0 0 1 90 50" stroke="var(--color-border-dim)" stroke-width="8" fill="none" />
+                        <path d="M 10 50 A 40 40 0 0 1 70 20" stroke="var(--color-accent-gold)" stroke-width="8" fill="none" />
+                    </svg>
+                    <div class="telemetry-label" style="margin-top: var(--spacing-sm);">CAPACITY UTILIZATION</div>
+                    <div class="telemetry-value">84%</div>
+                </div>
+
+                <div class="panel-title" style="margin-bottom: var(--spacing-sm);">Site Schematic</div>
+                <div class="schematic">
+                    <svg class="schematic-svg" viewBox="0 0 200 100">
+                        <rect x="20" y="20" width="30" height="30" />
+                        <line x1="50" y1="35" x2="80" y2="35" />
+                        <circle cx="95" cy="35" r="15" />
+                        <line x1="110" y1="35" x2="140" y2="35" />
+                        <rect x="140" y="20" width="30" height="30" stroke="var(--color-status-warn)" />
+                        <text x="145" y="40" fill="var(--color-status-warn)" font-size="8" font-family="monospace">ERR</text>
+                    </svg>
+                </div>
+
+                <div class="log-container" id="activity-log">
+                    <div class="log-entry"><span class="log-time">14:02:11</span> Telemetry handshake successful.</div>
+                    <div class="log-entry"><span class="log-time">14:01:45</span> Authentication token refreshed.</div>
+                    <div class="log-entry"><span class="log-time">14:00:02</span> WO-HV-7701-D loaded from cache.</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Panel: Booking / Order Details -->
+        <section class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Component Replacement Manifest</h2>
+                <div class="tag">7 ITEMS DETECTED</div>
+            </div>
+            <div class="panel-content">
+                <div class="tab-list" role="tablist">
+                    <div class="tab-item" role="tab" aria-selected="true" id="tab-parts">COMPONENTS</div>
+                    <div class="tab-item" role="tab" aria-selected="false">LABOR & TOOLS</div>
+                    <div class="tab-item" role="tab" aria-selected="false">DOCUMENTATION</div>
+                </div>
+
+                <table class="data-table" role="table">
+                    <thead>
+                        <tr>
+                            <th>Part ID</th>
+                            <th>Description</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span style="color: var(--color-accent-blue)">#SF6-CB-101</span></td>
+                            <td>Circuit Breaker Module 500kV</td>
+                            <td>01</td>
+                            <td><span style="color: var(--color-status-ok)">STAGED</span></td>
+                        </tr>
+                        <tr>
+                            <td><span style="color: var(--color-accent-blue)">#INS-ST-99</span></td>
+                            <td>Insulator String Composite</td>
+                            <td>04</td>
+                            <td><span style="color: var(--color-status-ok)">STAGED</span></td>
+                        </tr>
+                        <tr>
+                            <td><span style="color: var(--color-accent-blue)">#RLY-SEC-02</span></td>
+                            <td>Secondary Protection Relay</td>
+                            <td>01</td>
+                            <td><span style="color: var(--color-status-warn)">PENDING</span></td>
+                        </tr>
+                        <tr>
+                            <td><span style="color: var(--color-accent-blue)">#GAS-MON-A</span></td>
+                            <td>SF6 Gas Monitor Sensor</td>
+                            <td>02</td>
+                            <td><span style="color: var(--color-status-ok)">STAGED</span></td>
+                        </tr>
+                        <tr>
+                            <td><span style="color: var(--color-accent-blue)">#BUS-BAR-H</span></td>
+                            <td>Flexible Bus Link 4"</td>
+                            <td>06</td>
+                            <td><span style="color: var(--color-status-ok)">STAGED</span></td>
+                        </tr>
+                        <tr>
+                            <td><span style="color: var(--color-accent-blue)">#LUG-HV-01</span></td>
+                            <td>Compression Lug Assembly</td>
+                            <td>12</td>
+                            <td><span style="color: var(--color-status-ok)">STAGED</span></td>
+                        </tr>
+                        <tr>
+                            <td><span style="color: var(--color-accent-blue)">#SHD-COR-3</span></td>
+                            <td>Corona Shield Ring Kit</td>
+                            <td>01</td>
+                            <td><span style="color: var(--color-status-ok)">STAGED</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: var(--spacing-lg);">
+                    <h3 class="panel-title" style="margin-bottom: var(--spacing-md);">Safety Checklist (Mandatory)</h3>
+                    <div class="checklist-item">
+                        <div class="checkbox-custom checked"></div>
+                        <span>High-Voltage Clearance (Permit #4401) obtained</span>
+                    </div>
+                    <div class="checklist-item">
+                        <div class="checkbox-custom checked"></div>
+                        <span>Grounding chains applied and verified</span>
+                    </div>
+                    <div class="checklist-item">
+                        <div class="checkbox-custom"></div>
+                        <span>Personal Protective Equipment (PPE) inspection complete</span>
+                    </div>
+                    <div class="checklist-item">
+                        <div class="checkbox-custom"></div>
+                        <span>Arc Flash boundary established and marked</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Financial & Execution -->
+        <aside class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Final Authorization</h2>
+                <span class="tag">SECURE</span>
+            </div>
+            <div class="panel-content">
+                <div class="form-group">
+                    <label class="form-label">Cost Center Allocation</label>
+                    <select class="form-control">
+                        <option>REGION-NORTH-GRID-OPEX</option>
+                        <option>EMERGENCY-REPAIR-FUND-B</option>
+                        <option>SUBCONTRACTOR-PASS-THROUGH</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Project Budget Code</label>
+                    <input type="text" class="form-control" value="PB-2023-WNW-401">
+                </div>
+
+                <div class="telemetry-card" style="margin-bottom: var(--spacing-md); border-color: var(--color-border-bright);">
+                    <div class="telemetry-label">ESTIMATED TOTAL COST</div>
+                    <div class="telemetry-value" style="font-size: var(--font-size-large); color: var(--color-text-bold);">$14,502.90</div>
+                    <div class="telemetry-label" style="font-size: 9px; margin-top: 4px;">Includes parts, specialized tooling, and disposal fees.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Technician Digital Signature</label>
+                    <div style="background: var(--color-canvas-bg); height: 80px; border: var(--border-width) solid var(--color-border-dim); border-radius: var(--radius-sm); position: relative; cursor: crosshair;">
+                        <svg width="100%" height="100%" opacity="0.3">
+                            <line x1="10" y1="60" x2="280" y2="60" stroke="var(--color-text-muted)" />
+                        </svg>
+                        <span style="position: absolute; bottom: 5px; left: 10px; font-size: 9px; color: var(--color-text-muted); font-family: var(--font-family-mono);">SIGN HERE</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: var(--spacing-xl);">
+                    <button class="btn btn-primary" id="btn-confirm" role="button">
+                        Confirm & Release Order
+                    </button>
+                    <div style="height: var(--spacing-sm);"></div>
+                    <button class="btn btn-secondary" role="button">
+                        Save as Draft
+                    </button>
+                </div>
+
+                <div style="margin-top: var(--spacing-lg); font-size: var(--font-size-tiny); color: var(--color-text-muted); text-align: center;">
+                    Submitting this form triggers inventory deduction and procurement workflows. Please verify all Phase Shift alignments.
+                </div>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- Modal Mockup -->
+    <div id="modal-success" role="dialog" aria-modal="true" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="panel" style="width: 400px; border-color: var(--color-status-ok);">
+            <div class="panel-header" style="background: var(--color-status-ok); color: var(--color-canvas-bg);">
+                <h2 class="panel-title" style="color: var(--color-canvas-bg);">Transaction Successful</h2>
+            </div>
+            <div class="panel-content" style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: var(--spacing-md);">✓</div>
+                <div class="order-id">#TX-2911-00</div>
+                <p style="margin-bottom: var(--spacing-lg);">Order confirmed and dispatched to Central Logistics. Work ticket updated in global registry.</p>
+                <button class="btn btn-primary" onclick="location.reload()">Return to Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate Live Telemetry Updates
+        function updateTelemetry() {
+            const loadVal = document.getElementById('val-load');
+            const phaseVal = document.getElementById('val-phase');
+            const tempVal = document.getElementById('val-temp');
+            const log = document.getElementById('activity-log');
+
+            const newLoad = (410 + Math.random() * 5).toFixed(1);
+            const newPhase = (0.02 + Math.random() * 0.005).toFixed(3);
+            const newTemp = (42 + Math.random() * 0.5).toFixed(1);
+
+            loadVal.textContent = newLoad;
+            phaseVal.textContent = newPhase;
+            tempVal.textContent = newTemp;
+
+            // Occasional log update
+            if (Math.random() > 0.8) {
+                const now = new Date();
+                const timeStr = now.toTimeString().split(' ')[0];
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.innerHTML = `<span class="log-time">${timeStr}</span> Sensor jitter compensated.`;
+                log.prepend(entry);
+                if (log.children.length > 10) log.lastElementChild.remove();
+            }
+        }
+
+        setInterval(updateTelemetry, 3000);
+
+        // Simple Toggle for Checkboxes
+        document.querySelectorAll('.checkbox-custom').forEach(box => {
+            box.addEventListener('click', () => {
+                box.classList.toggle('checked');
+            });
+        });
+
+        // Confirm Order Action
+        document.getElementById('btn-confirm').addEventListener('click', () => {
+            document.getElementById('modal-success').style.display = 'flex';
+        });
+
+        // Tab selection logic
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab-item').forEach(t => t.setAttribute('aria-selected', 'false'));
+                tab.setAttribute('aria-selected', 'true');
+            });
+        });
+    </script>
+</body>
+</html>
+

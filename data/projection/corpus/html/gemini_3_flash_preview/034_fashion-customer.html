@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtelierSync | Scheduling & Resource Management</title>
+    <style>
+        :root {
+            /* Colors */
+            --clr-bg: #f8fafc;
+            --clr-surface: #ffffff;
+            --clr-border: #e2e8f0;
+            --clr-text-main: #0f172a;
+            --clr-text-muted: #64748b;
+            --clr-primary: #0f172a;
+            --clr-accent: #b45309;
+            --clr-success-bg: #f0fdf4;
+            --clr-success-text: #166534;
+            --clr-success-border: #bbf7d0;
+            --clr-error-bg: #fef2f2;
+            --clr-error-text: #991b1b;
+            --clr-error-border: #fecaca;
+            --clr-warning-bg: #fffbeb;
+            --clr-warning-text: #92400e;
+            --clr-warning-border: #fde68a;
+            --clr-indicator-idle: #cbd5e1;
+            --clr-indicator-active: #3b82f6;
+
+            /* Spacing */
+            --sp-0-5: 2px;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-6: 24px;
+            --sp-8: 32px;
+            --sp-12: 48px;
+
+            /* Typography */
+            --fs-xs: 10px;
+            --fs-sm: 12px;
+            --fs-base: 13px;
+            --fs-md: 15px;
+            --fs-lg: 18px;
+            --fs-xl: 22px;
+            --fw-normal: 400;
+            --fw-medium: 500;
+            --fw-bold: 700;
+
+            /* Borders / Shadows */
+            --rd-sm: 2px;
+            --rd-md: 4px;
+            --sh-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            
+            /* Sizing */
+            --container-width: 720px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--clr-bg);
+            color: var(--clr-text-main);
+            font-size: var(--fs-base);
+            line-height: 1.4;
+            display: flex;
+            justify-content: center;
+            padding: var(--sp-12) 0;
+        }
+
+        .main-wrapper {
+            width: var(--container-width);
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-6);
+        }
+
+        /* 1. SUCCESS BANNER */
+        .status-alert {
+            background-color: var(--clr-success-bg);
+            border: 1px solid var(--clr-success-border);
+            color: var(--clr-success-text);
+            padding: var(--sp-4);
+            border-radius: var(--rd-md);
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            box-shadow: var(--sh-sm);
+        }
+        .status-alert svg {
+            flex-shrink: 0;
+        }
+
+        /* 2. ONBOARDING BLOCK */
+        .onboarding-card {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            padding: var(--sp-4);
+            border-radius: var(--rd-md);
+        }
+        .onboarding-card h1 {
+            font-size: var(--fs-lg);
+            margin-bottom: var(--sp-2);
+        }
+        .onboarding-card p {
+            color: var(--clr-text-muted);
+            font-size: var(--fs-sm);
+            margin-bottom: var(--sp-2);
+        }
+
+        /* 3. DASHBOARD METRICS (High Density) */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--sp-2);
+        }
+        .metric-tile {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            padding: var(--sp-2) var(--sp-3);
+            border-radius: var(--rd-sm);
+        }
+        .metric-label {
+            font-size: var(--fs-xs);
+            text-transform: uppercase;
+            color: var(--clr-text-muted);
+            font-weight: var(--fw-bold);
+        }
+        .metric-value {
+            font-size: var(--fs-md);
+            font-weight: var(--fw-bold);
+        }
+
+        /* 4. COLLISION MONITOR (Visual Map) */
+        .section-title {
+            font-size: var(--fs-xs);
+            font-weight: var(--fw-bold);
+            text-transform: uppercase;
+            color: var(--clr-text-muted);
+            margin-bottom: var(--sp-2);
+            letter-spacing: 0.05em;
+        }
+
+        .collision-map {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr);
+            gap: var(--sp-0-5);
+            background: var(--clr-border);
+            border: 1px solid var(--clr-border);
+            padding: var(--sp-0-5);
+        }
+        .map-cell {
+            height: 20px;
+            background: var(--clr-surface);
+            position: relative;
+        }
+        .map-cell.conflict {
+            background: var(--clr-error-bg);
+        }
+        .map-cell.conflict::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px solid var(--clr-error-border);
+        }
+        .map-cell.busy {
+            background: var(--clr-indicator-active);
+        }
+
+        /* 5. WORKFORCE STATUS */
+        .workforce-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-1);
+        }
+        .worker-row {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-4);
+            font-size: var(--fs-xs);
+            background: var(--clr-surface);
+            padding: var(--sp-1) var(--sp-2);
+            border: 1px solid var(--clr-border);
+        }
+        .worker-name { width: 120px; font-weight: var(--fw-medium); }
+        .worker-load { flex-grow: 1; height: 4px; background: var(--clr-border); border-radius: var(--rd-sm); overflow: hidden; }
+        .load-fill { height: 100%; background: var(--clr-indicator-active); }
+        .load-fill.warning { background: var(--clr-accent); }
+
+        /* 6. MAIN QUEUE (The Paginated Table) */
+        .data-table-container {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            border-radius: var(--rd-md);
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--fs-sm);
+        }
+        th {
+            background: var(--clr-bg);
+            text-align: left;
+            padding: var(--sp-2) var(--sp-3);
+            font-weight: var(--fw-bold);
+            border-bottom: 1px solid var(--clr-border);
+            color: var(--clr-text-muted);
+            font-size: var(--fs-xs);
+            text-transform: uppercase;
+        }
+        td {
+            padding: var(--sp-2) var(--sp-3);
+            border-bottom: 1px solid var(--clr-border);
+            vertical-align: middle;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 var(--sp-2);
+            height: 18px;
+            border-radius: 9px;
+            font-size: var(--fs-xs);
+            font-weight: var(--fw-medium);
+        }
+        .status-pill.red { background: var(--clr-error-bg); color: var(--clr-error-text); }
+        .status-pill.yellow { background: var(--clr-warning-bg); color: var(--clr-warning-text); }
+        .status-pill.green { background: var(--clr-success-bg); color: var(--clr-success-text); }
+
+        .collision-badge {
+            background: var(--clr-text-main);
+            color: white;
+            padding: 1px 4px;
+            font-size: 9px;
+            border-radius: var(--rd-sm);
+        }
+
+        /* 7. PAGINATION CONTROLS */
+        .pager-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--sp-3);
+            background: var(--clr-bg);
+            border-top: 1px solid var(--clr-border);
+        }
+        .pager-actions {
+            display: flex;
+            gap: var(--sp-1);
+        }
+        .btn-pager {
+            background: var(--clr-surface);
+            border: 1px solid var(--clr-border);
+            padding: var(--sp-1) var(--sp-3);
+            font-size: var(--fs-xs);
+            cursor: pointer;
+            border-radius: var(--rd-sm);
+        }
+        .btn-pager:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .page-size-control {
+            font-size: var(--fs-xs);
+            color: var(--clr-text-muted);
+        }
+        .page-size-control select {
+            font-size: var(--fs-xs);
+            padding: var(--sp-0-5);
+            margin-left: var(--sp-1);
+        }
+
+        /* UTILS */
+        .text-right { text-align: right; }
+        .text-bold { font-weight: var(--fw-bold); }
+        .collision-warning { color: var(--clr-error-text); font-weight: var(--fw-bold); }
+    </style>
+</head>
+<body>
+
+    <main class="main-wrapper">
+        
+        <!-- SECTION 1: SUCCESS CONFIRMATION -->
+        <div role="status" class="status-alert">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <div>
+                <p class="text-bold">Schedule Update Successful</p>
+                <p style="font-size: var(--fs-xs)">Appointment #8829 (Julianne Vezza - Final Fitting) has been moved to Station 04 without new conflicts.</p>
+            </div>
+        </div>
+
+        <!-- SECTION 2: ONBOARDING / INTRO -->
+        <section class="onboarding-card">
+            <h1>AtelierSync Scheduler</h1>
+            <p>Welcome to the production nerve center. This tool manages the delicate overlap between customer fittings, seamstress availability, and garment delivery deadlines.</p>
+            <p style="margin-bottom: 0;"><strong>Tip:</strong> Hover over the Collision Map to see specific resource bottlenecks across the current shift.</p>
+        </section>
+
+        <!-- SECTION 3: SYSTEM METRICS -->
+        <section>
+            <div class="metrics-grid">
+                <div class="metric-tile">
+                    <div class="metric-label">Active Orders</div>
+                    <div class="metric-value">142</div>
+                </div>
+                <div class="metric-tile">
+                    <div class="metric-label">Collisions</div>
+                    <div class="metric-value" style="color: var(--clr-error-text)">3</div>
+                </div>
+                <div class="metric-tile">
+                    <div class="metric-label">Avg. Lead</div>
+                    <div class="metric-value">14.2d</div>
+                </div>
+                <div class="metric-tile">
+                    <div class="metric-label">Efficiency</div>
+                    <div class="metric-value">94%</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: COLLISION MONITOR -->
+        <section>
+            <h2 class="section-title">Hourly Collision Heatmap (Next 24h)</h2>
+            <div class="collision-map" aria-label="Visual representation of scheduling conflicts over 24 hours">
+                <!-- Mocking 24 hours of data -->
+                <div class="map-cell busy"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell conflict"></div>
+                <div class="map-cell conflict"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell conflict"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell busy"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell"></div>
+                <div class="map-cell"></div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: WORKFORCE ALLOCATION -->
+        <section>
+            <h2 class="section-title">Artisan Bandwidth</h2>
+            <div class="workforce-list">
+                <div class="worker-row">
+                    <span class="worker-name">Elena Rossi</span>
+                    <div class="worker-load"><div class="load-fill" style="width: 85%;"></div></div>
+                    <span class="text-right" style="width: 30px;">85%</span>
+                </div>
+                <div class="worker-row">
+                    <span class="worker-name">Marcus Thorne</span>
+                    <div class="worker-load"><div class="load-fill warning" style="width: 98%;"></div></div>
+                    <span class="text-right" style="width: 30px;">98%</span>
+                </div>
+                <div class="worker-row">
+                    <span class="worker-name">Sasha Vane</span>
+                    <div class="worker-load"><div class="load-fill" style="width: 42%;"></div></div>
+                    <span class="text-right" style="width: 30px;">42%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: THE MAIN DATA TABLE (Extremely Dense) -->
+        <section class="data-table-container">
+            <table role="grid">
+                <thead>
+                    <tr>
+                        <th>Ref ID</th>
+                        <th>Customer / Item</th>
+                        <th>Status</th>
+                        <th>Artisan</th>
+                        <th>Collision</th>
+                        <th class="text-right">Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-bold">#8829</td>
+                        <td>
+                            <div>Julianne Vezza</div>
+                            <div style="font-size: var(--fs-xs); color: var(--clr-text-muted);">Silk Satin Evening Gown</div>
+                        </td>
+                        <td><span class="status-pill green">In Fitting</span></td>
+                        <td>Elena Rossi</td>
+                        <td><span class="collision-badge">NONE</span></td>
+                        <td class="text-right">Oct 14</td>
+                    </tr>
+                    <tr>
+                        <td class="text-bold">#8830</td>
+                        <td>
+                            <div>Alistair Cooke</div>
+                            <div style="font-size: var(--fs-xs); color: var(--clr-text-muted);">Wool 3-Piece Suit</div>
+                        </td>
+                        <td><span class="status-pill yellow">Basting</span></td>
+                        <td>Marcus Thorne</td>
+                        <td><span class="collision-warning">STATION_02</span></td>
+                        <td class="text-right">Oct 15</td>
+                    </tr>
+                    <tr>
+                        <td class="text-bold">#8831</td>
+                        <td>
+                            <div>Miriam G.</div>
+                            <div style="font-size: var(--fs-xs); color: var(--clr-text-muted);">Velvet Cape + Lining</div>
+                        </td>
+                        <td><span class="status-pill green">Ready</span></td>
+                        <td>Sasha Vane</td>
+                        <td><span class="collision-badge">NONE</span></td>
+                        <td class="text-right">Oct 16</td>
+                    </tr>
+                    <tr>
+                        <td class="text-bold">#8832</td>
+                        <td>
+                            <div>Robert De Lucca</div>
+                            <div style="font-size: var(--fs-xs); color: var(--clr-text-muted);">Linen Casual Jacket</div>
+                        </td>
+                        <td><span class="status-pill red">Critical</span></td>
+                        <td>Elena Rossi</td>
+                        <td><span class="collision-warning">ARTISAN_OVL</span></td>
+                        <td class="text-right">Oct 12</td>
+                    </tr>
+                    <tr>
+                        <td class="text-bold">#8834</td>
+                        <td>
+                            <div>Clara Oswald</div>
+                            <div style="font-size: var(--fs-xs); color: var(--clr-text-muted);">Tweed Riding Coat</div>
+                        </td>
+                        <td><span class="status-pill yellow">Drafting</span></td>
+                        <td>Marcus Thorne</td>
+                        <td><span class="collision-badge">NONE</span></td>
+                        <td class="text-right">Oct 20</td>
+                    </tr>
+                    <tr>
+                        <td class="text-bold">#8835</td>
+                        <td>
+                            <div>Henri Batiste</div>
+                            <div style="font-size: var(--fs-xs); color: var(--clr-text-muted);">Double-Breasted Blazer</div>
+                        </td>
+                        <td><span class="status-pill green">Finalizing</span></td>
+                        <td>Sasha Vane</td>
+                        <td><span class="collision-badge">NONE</span></td>
+                        <td class="text-right">Oct 21</td>
+                    </tr>
+                    <tr>
+                        <td class="text-bold">#8836</td>
+                        <td>
+                            <div>Sarah Jane Smith</div>
+                            <div style="font-size: var(--fs-xs); color: var(--clr-text-muted);">Canvas Safari Shirt</div>
+                        </td>
+                        <td><span class="status-pill green">Cutting</span></td>
+                        <td>Elena Rossi</td>
+                        <td><span class="collision-badge">NONE</span></td>
+                        <td class="text-right">Oct 22</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- SECTION 7: PAGINATION CONTROLS -->
+            <nav class="pager-row" aria-label="Table navigation">
+                <div class="page-size-control">
+                    <label for="page-size">Items per page:</label>
+                    <select id="page-size">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="pager-actions">
+                    <button class="btn-pager" disabled aria-label="Go to first page">First</button>
+                    <button class="btn-pager" disabled aria-label="Go to previous page">Prev</button>
+                    <span style="font-size: var(--fs-xs); align-self: center; margin: 0 var(--sp-2);">Page 1 of 6</span>
+                    <button class="btn-pager" aria-label="Go to next page">Next</button>
+                    <button class="btn-pager" aria-label="Go to last page">Last</button>
+                </div>
+            </nav>
+        </section>
+
+        <!-- SECTION 8: SYSTEM LOGS / PENDING ACTIONS -->
+        <section style="margin-bottom: var(--sp-8);">
+            <h2 class="section-title">Conflict Resolution Log</h2>
+            <div style="background: var(--clr-surface); border: 1px solid var(--clr-border); padding: var(--sp-2); border-radius: var(--rd-sm); font-family: monospace; font-size: var(--fs-xs);">
+                <div style="color: var(--clr-text-muted);">[10:42:01] AUTO_RESOLVE: Shifted #8841 by 15 mins to avoid Threading Station collision.</div>
+                <div style="color: var(--clr-text-muted);">[10:39:15] MANUAL_MOVE: User adjusted #8829 (Success).</div>
+                <div style="color: var(--clr-error-text);">[10:35:44] ALERT: Marcus Thorne exceeds capacity for Oct 15 shift. Action required.</div>
+                <div style="color: var(--clr-text-muted);">[10:30:00] REFRESH: Syncing with Client CRM... Done.</div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Simple interactivity for the high-density professional tool
+        document.getElementById('page-size').addEventListener('change', function(e) {
+            console.log('Adjusting density to: ' + e.target.value + ' items per view.');
+            // Implementation of view scaling would go here
+        });
+
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            row.addEventListener('click', () => {
+                rows.forEach(r => r.style.backgroundColor = 'transparent');
+                row.style.backgroundColor = 'var(--clr-bg)';
+            });
+        });
+    </script>
+</body>
+</html>

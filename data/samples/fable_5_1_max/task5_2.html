@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LedgerNorth — Integrations</title>
+<style>
+:root{
+  --paper:#F6F5F1;
+  --card:#FFFFFF;
+  --ink:#0E1B2A;
+  --ink-2:#3A4658;
+  --muted:#6B7686;
+  --line:#E3E1DA;
+  --line-2:#CBD2D9;
+  --accent:#0F7B6C;
+  --accent-bright:#19A38A;
+  --accent-glow:#5FE3C4;
+  --accent-soft:#E6F4F0;
+  --hub-1:#152540;
+  --hub-2:#0B1626;
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+button{font:inherit;color:inherit;margin:0}
+.ln-sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ============ Section ============ */
+.ln-integrations{padding:104px 0 112px}
+.ln-wrap{max-width:1248px;margin:0 auto;padding:0 24px}
+
+/* ============ Header ============ */
+.ln-head{display:grid;grid-template-columns:minmax(0,700px) minmax(0,1fr);gap:64px;align-items:end}
+.ln-eyebrow{display:inline-flex;align-items:center;gap:10px;margin:0 0 22px;font:500 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.ln-eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.ln-title{margin:0;font-size:44px;line-height:1.08;letter-spacing:-.024em;font-weight:600;text-wrap:balance}
+.ln-lede{margin:0;font-size:17px;line-height:1.6;color:var(--ink-2)}
+.ln-facts{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px 22px}
+.ln-facts li{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;color:var(--ink)}
+.ln-facts li::before{content:"";flex:none;width:18px;height:18px;border-radius:50%;background:var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.3l2.3 2.3 4.7-5' fill='none' stroke='%230F7B6C' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/10px no-repeat}
+
+/* ============ Diagram canvas ============ */
+.ln-diagram{
+  position:relative;isolation:isolate;margin-top:56px;
+  background:var(--card);border:1px solid var(--line);border-radius:22px;
+  padding:30px 36px 36px;
+  display:grid;grid-template-columns:288px minmax(0,1fr) 288px;
+  box-shadow:0 30px 70px -50px rgba(14,27,42,.35),0 1px 2px rgba(14,27,42,.04);
+  animation:ln-rise .7s cubic-bezier(.2,.7,.2,1) both;
+}
+.ln-diagram::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;
+  background-image:radial-gradient(rgba(14,27,42,.10) 1px,transparent 1.2px);
+  background-size:22px 22px;background-position:11px 11px;
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 35%,transparent 90%);
+  mask-image:radial-gradient(ellipse at center,#000 35%,transparent 90%);
+}
+.ln-wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
+
+.ln-col{position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ln-col__head{display:flex;align-items:center;gap:10px;height:20px;margin-bottom:10px;font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.ln-col__head .ln-num{color:var(--accent);font-weight:600}
+.ln-legend{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:.04em;text-transform:none;color:var(--muted)}
+.ln-legend svg{width:11px;height:11px;color:var(--ink-2)}
+.ln-legend__sep{opacity:.6;margin:0 2px}
+.ln-col--hub{align-items:center}
+.ln-col--hub .ln-col__head{justify-content:center;width:100%}
+.ln-hub-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%}
+
+/* ---- Source tiles ---- */
+.ln-group{border:1px dashed var(--line-2);border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:8px;background:rgba(246,245,241,.75)}
+.ln-group__label{font:500 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:6px 6px 2px;display:flex;align-items:center;gap:8px}
+.ln-group__label::before{content:"";width:6px;height:6px;border-radius:50%;border:1.5px solid var(--line-2)}
+
+.ln-tile{
+  -webkit-appearance:none;appearance:none;position:relative;
+  display:flex;align-items:center;gap:12px;width:100%;height:50px;padding:0 12px 0 10px;
+  background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--ink);text-align:left;cursor:pointer;text-decoration:none;
+  transition:border-color .2s,box-shadow .2s,background .2s,opacity .25s;
+}
+.ln-tile:hover{border-color:#B7C0CA;box-shadow:0 6px 16px -10px rgba(14,27,42,.35)}
+.ln-tile:focus-visible,.ln-outcome:focus-visible,.ln-btn:focus-visible,.ln-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ln-tile.is-on{border-color:var(--accent-bright);background:var(--accent-soft);box-shadow:0 0 0 3px rgba(25,163,138,.14)}
+.ln-mono{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#EEF1F4;color:var(--ink);font:700 11px/1 var(--mono);letter-spacing:.02em;transition:background .2s,color .2s}
+.ln-tile.is-on .ln-mono{background:var(--accent);color:#fff}
+.ln-tile__name{flex:1;min-width:0;font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ln-tile__mode{flex:none;display:inline-flex;width:12px;height:12px;color:var(--muted);transition:color .2s}
+.ln-tile__mode svg{width:12px;height:12px}
+.ln-tile__tag{flex:none;font:500 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);transition:color .2s}
+.ln-tile.is-on .ln-tile__tag,.ln-tile.is-on .ln-tile__mode{color:var(--accent)}
+.ln-tile--more{height:44px;justify-content:space-between;border-style:dashed;background:transparent;color:var(--accent);font-size:13.5px;font-weight:600;padding:0 14px}
+.ln-tile--more svg{transition:transform .2s}
+.ln-tile--more:hover{background:var(--accent-soft);border-color:var(--accent-bright);box-shadow:none}
+.ln-tile--more:hover svg{transform:translateX(3px)}
+.has-active .ln-tile:not(.is-on):not(.ln-tile--more){opacity:.42}
+
+/* ---- Hub ---- */
+.ln-hub{
+  position:relative;width:336px;height:484px;border-radius:20px;padding:20px 20px 16px;
+  display:flex;flex-direction:column;color:#fff;overflow:hidden;
+  background:radial-gradient(140% 90% at 0% 0%,rgba(25,163,138,.36),transparent 55%),linear-gradient(180deg,var(--hub-1),var(--hub-2));
+  box-shadow:0 36px 70px -34px rgba(11,22,38,.6),inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.ln-hub::after{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:28px 28px;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 75%);mask-image:linear-gradient(180deg,#000,transparent 75%);
+}
+.ln-hub>*{position:relative;z-index:1}
+.ln-hub__head{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.ln-logo{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(160deg,#22C4A3,#0F7B6C);box-shadow:0 8px 18px -8px rgba(31,191,160,.7)}
+.ln-hub__title{font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.ln-hub__sub{margin-top:5px;font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.ln-hub__status{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font:500 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-glow);white-space:nowrap}
+.ln-hub__status::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent-glow);box-shadow:0 0 0 3px rgba(95,227,196,.18);animation:ln-pulse 2.2s ease-in-out infinite}
+.ln-hub__body{flex:1;min-height:0;padding-top:16px;overflow:hidden}
+.ln-hub__body.is-in{animation:ln-fade .32s cubic-bezier(.2,.7,.2,1) both}
+.ln-hub__foot{display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);font:500 11px/1.4 var(--mono);letter-spacing:.02em;color:rgba(255,255,255,.58)}
+.ln-hub__foot svg{flex:none;width:12px;height:12px;color:var(--accent-glow)}
+
+.ln-hub__intro{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.62)}
+.ln-pipe{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.ln-pipe li{display:flex;align-items:flex-start;gap:12px;padding:11px 0}
+.ln-pipe li+li{border-top:1px solid rgba(255,255,255,.07)}
+.ln-pipe__n{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid rgba(255,255,255,.22);display:grid;place-items:center;font:600 10.5px/1 var(--mono);color:var(--accent-glow)}
+.ln-pipe b{display:block;font-size:13.5px;font-weight:600;line-height:1.25;margin-bottom:3px}
+.ln-pipe span{display:block;font-size:12.5px;line-height:1.45;color:rgba(255,255,255,.6)}
+
+.ln-kicker{margin:0 0 8px;font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+.ln-hub__name{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 8px;font-size:18px;font-weight:600;letter-spacing:-.015em;line-height:1.2}
+.ln-badge{font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 7px;border-radius:6px;background:rgba(95,227,196,.14);color:var(--accent-glow)}
+.ln-hub__line{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.72)}
+.ln-chips{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.ln-chips li{font-size:12px;font-weight:500;line-height:1;padding:7px 9px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.92)}
+.ln-unlocks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ln-unlocks li{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;line-height:1.4}
+.ln-unlocks li::before{content:"";flex:none;width:14px;height:14px;border-radius:50%;background:rgba(95,227,196,.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.3l2.3 2.3 4.7-5' fill='none' stroke='%235FE3C4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/8px no-repeat}
+
+/* ---- Outcome cards ---- */
+.ln-outcome{
+  -webkit-appearance:none;appearance:none;position:relative;flex:1;
+  width:100%;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:6px;
+  padding:14px 14px 12px;background:#fff;border:1px solid var(--line);border-radius:14px;color:var(--ink);cursor:pointer;
+  transition:border-color .2s,box-shadow .2s,background .2s,opacity .25s;
+}
+.ln-outcome:hover{border-color:#B7C0CA;box-shadow:0 6px 16px -10px rgba(14,27,42,.35)}
+.ln-outcome.is-on{border-color:var(--accent-bright);background:var(--accent-soft);box-shadow:0 0 0 3px rgba(25,163,138,.14)}
+.ln-outcome__top{display:flex;align-items:center;gap:10px}
+.ln-outcome__icon{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#EEF1F4;color:var(--ink);transition:background .2s,color .2s}
+.ln-outcome.is-on .ln-outcome__icon{background:var(--accent);color:#fff}
+.ln-outcome__title{font-size:14.5px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.ln-outcome__desc{font-size:12.5px;line-height:1.5;color:var(--muted)}
+.ln-outcome__meta{margin-top:2px;font:500 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ln-outcome__meta b{color:var(--ink);font-weight:600}
+.ln-outcome.is-on .ln-outcome__meta b{color:var(--accent)}
+.has-active .ln-outcome:not(.is-on){opacity:.42}
+
+/* ---- Wires ---- */
+.ln-wire__base{fill:none;stroke:var(--line-2);stroke-width:1.5;transition:stroke .25s,opacity .25s,stroke-width .25s}
+.ln-wire__flow{fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-dasharray:3 11;opacity:0;transition:opacity .25s}
+.ln-wire__port{fill:#fff;stroke:var(--line-2);stroke-width:1.5;transition:fill .25s,stroke .25s,opacity .25s}
+.ln-wire.is-on .ln-wire__base{stroke:var(--accent-bright);stroke-width:2}
+.ln-wire.is-on .ln-wire__flow{opacity:.9;animation:ln-flow 1s linear infinite}
+.ln-wire.is-on .ln-wire__port{fill:var(--accent-bright);stroke:var(--accent-bright)}
+.has-active .ln-wire:not(.is-on) .ln-wire__base,.has-active .ln-wire:not(.is-on) .ln-wire__port{opacity:.35}
+
+/* ---- Footer row ---- */
+.ln-foot{margin-top:36px;display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap}
+.ln-foot__cta{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.ln-btn{display:inline-flex;align-items:center;gap:10px;height:50px;padding:0 22px 0 24px;border-radius:12px;background:var(--ink);color:#fff;text-decoration:none;font-size:15px;font-weight:600;letter-spacing:-.005em;box-shadow:0 14px 28px -16px rgba(14,27,42,.55);transition:background .2s,transform .2s,box-shadow .2s}
+.ln-btn:hover{background:#1A2C46;transform:translateY(-1px);box-shadow:0 18px 30px -16px rgba(14,27,42,.6)}
+.ln-btn svg{transition:transform .2s}
+.ln-btn:hover svg{transform:translateX(3px)}
+.ln-link{display:inline-flex;align-items:center;gap:6px;color:var(--ink);text-decoration:none;font-size:15px;font-weight:600;padding-bottom:2px;border-bottom:1px solid var(--line-2);transition:border-color .2s}
+.ln-link:hover{border-color:var(--ink)}
+.ln-foot__note{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ln-foot__label{font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.ln-foot__note ul{list-style:none;margin:0;padding:0;display:flex;gap:8px;flex-wrap:wrap}
+.ln-foot__note li{padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12.5px;font-weight:500;color:var(--ink-2);white-space:nowrap}
+
+/* ---- Motion ---- */
+@keyframes ln-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes ln-fadein{from{opacity:0}to{opacity:1}}
+@keyframes ln-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ln-flow{to{stroke-dashoffset:-28}}
+@keyframes ln-pulse{0%,100%{box-shadow:0 0 0 3px rgba(95,227,196,.18)}50%{box-shadow:0 0 0 6px rgba(95,227,196,.05)}}
+.ln-tile,.ln-outcome,.ln-group__label{animation:ln-fadein .6s ease both;animation-delay:calc(var(--i,0)*40ms + .2s)}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+
+/* ---- Narrow fallback (section is designed for 1440px desktop) ---- */
+@media (max-width:1023px){
+  .ln-head{grid-template-columns:1fr;gap:28px}
+  .ln-diagram{grid-template-columns:1fr;row-gap:28px;padding:24px}
+  .ln-wires{display:none}
+  .ln-hub{width:100%;max-width:440px;height:auto;min-height:420px}
+  .ln-col--outcomes .ln-outcome{flex:none}
+  .ln-title{font-size:36px}
+}
+</style>
+</head>
+<body>
+
+<section class="ln-integrations" id="integrations" aria-labelledby="ln-int-title">
+  <div class="ln-wrap">
+
+    <!-- ============ Header ============ -->
+    <header class="ln-head">
+      <div class="ln-head__main">
+        <p class="ln-eyebrow">Integrations</p>
+        <h2 class="ln-title" id="ln-int-title">Keep the systems you trust. Connect them in one ledger.</h2>
+      </div>
+      <div class="ln-head__aside">
+        <p class="ln-lede">LedgerNorth doesn’t replace your general ledger, banks, or card program—it sits between them. Every transaction flows in, is normalized to one chart of accounts, matched, and reconciled continuously, while each system stays the record for what it does best.</p>
+        <ul class="ln-facts" aria-label="What every connection includes">
+          <li>Two-way sync with your GL</li>
+          <li>Continuous bank, payment &amp; card feeds</li>
+          <li>Audit trail on every record</li>
+        </ul>
+      </div>
+    </header>
+
+    <!-- ============ Diagram ============ -->
+    <div class="ln-diagram" id="ln-diagram" role="group" aria-label="How LedgerNorth connects your finance stack: your systems flow into one ledger, which powers finance outcomes">
+      <svg class="ln-wires" aria-hidden="true" focusable="false" preserveAspectRatio="none"></svg>
+
+      <!-- 01 · Sources -->
+      <div class="ln-col ln-col--sources">
+        <div class="ln-col__head">
+          <span class="ln-num">01</span>Your systems
+          <span class="ln-legend" aria-hidden="true">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4h8M7.5 2l2 2-2 2M10.5 8h-8M4.5 6l-2 2 2 2"/></svg> two-way
+            <span class="ln-legend__sep">·</span>
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6h8M7 3.5L9.5 6 7 8.5"/></svg> inbound
+          </span>
+        </div>
+
+        <div class="ln-group">
+          <div class="ln-group__label" style="--i:0">General ledger · connect the one you run</div>
+
+          <button type="button" class="ln-tile" data-source="netsuite" aria-pressed="false" style="--i:1">
+            <span class="ln-mono" aria-hidden="true">NS</span>
+            <span class="ln-tile__name">Oracle NetSuite</span>
+            <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4h8M7.5 2l2 2-2 2M10.5 8h-8M4.5 6l-2 2 2 2"/></svg></span>
+            <span class="ln-sr">Two-way sync,</span>
+            <span class="ln-tile__tag">ERP</span>
+          </button>
+
+          <button type="button" class="ln-tile" data-source="quickbooks" aria-pressed="false" style="--i:2">
+            <span class="ln-mono" aria-hidden="true">QB</span>
+            <span class="ln-tile__name">QuickBooks</span>
+            <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4h8M7.5 2l2 2-2 2M10.5 8h-8M4.5 6l-2 2 2 2"/></svg></span>
+            <span class="ln-sr">Two-way sync,</span>
+            <span class="ln-tile__tag">GL</span>
+          </button>
+
+          <button type="button" class="ln-tile" data-source="xero" aria-pressed="false" style="--i:3">
+            <span class="ln-mono" aria-hidden="true">XE</span>
+            <span class="ln-tile__name">Xero</span>
+            <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4h8M7.5 2l2 2-2 2M10.5 8h-8M4.5 6l-2 2 2 2"/></svg></span>
+            <span class="ln-sr">Two-way sync,</span>
+            <span class="ln-tile__tag">GL</span>
+          </button>
+
+          <button type="button" class="ln-tile" data-source="sage" aria-pressed="false" style="--i:4">
+            <span class="ln-mono" aria-hidden="true">SI</span>
+            <span class="ln-tile__name">Sage Intacct</span>
+            <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4h8M7.5 2l2 2-2 2M10.5 8h-8M4.5 6l-2 2 2 2"/></svg></span>
+            <span class="ln-sr">Two-way sync,</span>
+            <span class="ln-tile__tag">GL</span>
+          </button>
+        </div>
+
+        <button type="button" class="ln-tile" data-source="plaid" aria-pressed="false" style="--i:5">
+          <span class="ln-mono" aria-hidden="true">PL</span>
+          <span class="ln-tile__name">Plaid</span>
+          <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6h8M7 3.5L9.5 6 7 8.5"/></svg></span>
+          <span class="ln-sr">Inbound feed,</span>
+          <span class="ln-tile__tag">Banking</span>
+        </button>
+
+        <button type="button" class="ln-tile" data-source="stripe" aria-pressed="false" style="--i:6">
+          <span class="ln-mono" aria-hidden="true">ST</span>
+          <span class="ln-tile__name">Stripe</span>
+          <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6h8M7 3.5L9.5 6 7 8.5"/></svg></span>
+          <span class="ln-sr">Inbound feed,</span>
+          <span class="ln-tile__tag">Payments</span>
+        </button>
+
+        <button type="button" class="ln-tile" data-source="ramp" aria-pressed="false" style="--i:7">
+          <span class="ln-mono" aria-hidden="true">RA</span>
+          <span class="ln-tile__name">Ramp</span>
+          <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6h8M7 3.5L9.5 6 7 8.5"/></svg></span>
+          <span class="ln-sr">Inbound feed,</span>
+          <span class="ln-tile__tag">Expenses</span>
+        </button>
+
+        <button type="button" class="ln-tile" data-source="workday" aria-pressed="false" style="--i:8">
+          <span class="ln-mono" aria-hidden="true">WD</span>
+          <span class="ln-tile__name">Workday</span>
+          <span class="ln-tile__mode" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6h8M7 3.5L9.5 6 7 8.5"/></svg></span>
+          <span class="ln-sr">Inbound feed,</span>
+          <span class="ln-tile__tag">Workforce</span>
+        </button>
+
+        <a class="ln-tile ln-tile--more" href="#integrations-directory" style="--i:9">
+          <span>Browse the full directory</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 3.5L13 8l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <!-- 02 · Hub -->
+      <div class="ln-col ln-col--hub">
+        <div class="ln-col__head"><span class="ln-num">02</span>LedgerNorth</div>
+        <div class="ln-hub-wrap">
+          <div class="ln-hub" id="ln-hub">
+            <div class="ln-hub__head">
+              <span class="ln-logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2.5l3.4 9.5H8.6z" fill="#fff"/><path d="M8.6 12l3.4 9.5 3.4-9.5z" fill="#fff" opacity=".42"/></svg>
+              </span>
+              <div>
+                <div class="ln-hub__title">LedgerNorth</div>
+                <div class="ln-hub__sub">Unified ledger</div>
+              </div>
+              <span class="ln-hub__status">Live sync</span>
+            </div>
+
+            <div class="ln-hub__body" id="ln-hub-body" aria-live="off" aria-atomic="true">
+              <p class="ln-hub__intro">Every connected system passes through the same four steps.</p>
+              <ol class="ln-pipe">
+                <li><span class="ln-pipe__n">1</span><div><b>Normalize</b><span>Mapped to one chart of accounts</span></div></li>
+                <li><span class="ln-pipe__n">2</span><div><b>Match</b><span>Paired across systems, automatically</span></div></li>
+                <li><span class="ln-pipe__n">3</span><div><b>Reconcile</b><span>Exceptions surfaced, the rest clears</span></div></li>
+                <li><span class="ln-pipe__n">4</span><div><b>Report</b><span>Books, cash, and spend—always current</span></div></li>
+              </ol>
+            </div>
+
+            <div class="ln-hub__foot" id="ln-hub-foot">
+              <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 1.8l7.3 4.2-3.3.9-1.2 3.2z" fill="currentColor"/></svg>
+              Select a system or outcome to trace the flow
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 03 · Outcomes -->
+      <div class="ln-col ln-col--outcomes">
+        <div class="ln-col__head"><span class="ln-num">03</span>What becomes possible</div>
+
+        <button type="button" class="ln-outcome" data-outcome="close" aria-pressed="false" style="--i:10">
+          <span class="ln-outcome__top">
+            <span class="ln-outcome__icon" aria-hidden="true"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.25"/><path d="M6.2 9.2l1.9 1.9 3.8-4.1"/></svg></span>
+            <span class="ln-outcome__title">Continuous close</span>
+          </span>
+          <span class="ln-outcome__desc">Books stay current as transactions land, so month-end becomes a review, not a rebuild.</span>
+          <span class="ln-outcome__meta">Fed by <b data-count="close">5</b> connected systems</span>
+        </button>
+
+        <button type="button" class="ln-outcome" data-outcome="recon" aria-pressed="false" style="--i:11">
+          <span class="ln-outcome__top">
+            <span class="ln-outcome__icon" aria-hidden="true"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h10.5M11 4l2.5 2.5L11 9"/><path d="M15 11.5H4.5M7 9l-2.5 2.5L7 14"/></svg></span>
+            <span class="ln-outcome__title">Automatic reconciliation</span>
+          </span>
+          <span class="ln-outcome__desc">Bank, payout, and card activity matched to the GL the moment it posts—you only see exceptions.</span>
+          <span class="ln-outcome__meta">Fed by <b data-count="recon">7</b> connected systems</span>
+        </button>
+
+        <button type="button" class="ln-outcome" data-outcome="cash" aria-pressed="false" style="--i:12">
+          <span class="ln-outcome__top">
+            <span class="ln-outcome__icon" aria-hidden="true"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12l3.3-4.2 3 2.4 3.4-4.6 2.3 2.2"/><path d="M2.5 15h13"/></svg></span>
+            <span class="ln-outcome__title">Live cash visibility</span>
+          </span>
+          <span class="ln-outcome__desc">Every account, payout, and card balance in one view—without logging into five portals.</span>
+          <span class="ln-outcome__meta">Fed by <b data-count="cash">3</b> connected systems</span>
+        </button>
+
+        <button type="button" class="ln-outcome" data-outcome="control" aria-pressed="false" style="--i:13">
+          <span class="ln-outcome__top">
+            <span class="ln-outcome__icon" aria-hidden="true"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h12M3 12.5h12"/><circle cx="7" cy="5.5" r="1.9" fill="currentColor" stroke="none"/><circle cx="11.5" cy="12.5" r="1.9" fill="currentColor" stroke="none"/></svg></span>
+            <span class="ln-outcome__title">Spend &amp; headcount control</span>
+          </span>
+          <span class="ln-outcome__desc">Card spend and payroll changes hit budgets the day they happen, not at month-end.</span>
+          <span class="ln-outcome__meta">Fed by <b data-count="control">4</b> connected systems</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============ CTA row ============ -->
+    <div class="ln-foot">
+      <div class="ln-foot__cta">
+        <a class="ln-btn" href="#integrations-directory">Explore all integrations
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 3.5L13 8l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="ln-link" href="#request-connector">Don’t see your system? Request a connector</a>
+      </div>
+      <div class="ln-foot__note">
+        <span class="ln-foot__label">Every connector includes</span>
+        <ul>
+          <li>Field-level mapping</li>
+          <li>Full audit trail</li>
+          <li>Sandbox testing</li>
+          <li>Historical backfill</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- Data ---------------- */
+  var SOURCES = [
+    { id: 'netsuite', name: 'Oracle NetSuite', mode: 'two-way',
+      line: 'Approved entries post back to NetSuite with a complete audit trail—no re-keying.',
+      flows: ['Journal entries', 'Chart of accounts', 'Subsidiaries & currencies', 'Vendors & bills', 'Customers & invoices'],
+      unlocks: ['close', 'recon', 'control'] },
+    { id: 'quickbooks', name: 'QuickBooks', mode: 'two-way',
+      line: 'QuickBooks stays your system of record; LedgerNorth does the matching and posts what clears.',
+      flows: ['Chart of accounts', 'Journal entries', 'Invoices & bills', 'Classes & locations'],
+      unlocks: ['close', 'recon'] },
+    { id: 'xero', name: 'Xero', mode: 'two-way',
+      line: 'Xero remains the source of truth while LedgerNorth clears exceptions before they reach the books.',
+      flows: ['Chart of accounts', 'Bank feeds', 'Invoices & bills', 'Tracking categories'],
+      unlocks: ['close', 'recon'] },
+    { id: 'sage', name: 'Sage Intacct', mode: 'two-way',
+      line: 'Dimension-aware sync built for multi-entity books and consolidations.',
+      flows: ['General ledger', 'Dimensions', 'Entities', 'AP & AR'],
+      unlocks: ['close', 'recon', 'control'] },
+    { id: 'plaid', name: 'Plaid', mode: 'inbound',
+      line: 'Every operating, payroll, and reserve account across your banks in one continuous feed.',
+      flows: ['Account balances', 'Posted transactions', 'Pending activity', 'Multi-bank coverage'],
+      unlocks: ['recon', 'cash'] },
+    { id: 'stripe', name: 'Stripe', mode: 'inbound',
+      line: 'Payouts matched to bank deposits down to the fee, refund, and dispute.',
+      flows: ['Charges & refunds', 'Fees', 'Payouts', 'Disputes', 'Balance transactions'],
+      unlocks: ['recon', 'cash'] },
+    { id: 'ramp', name: 'Ramp', mode: 'inbound',
+      line: 'Card spend arrives pre-coded with receipts attached, ready to post.',
+      flows: ['Card transactions', 'Receipts & memos', 'Reimbursements', 'Merchant & GL coding'],
+      unlocks: ['recon', 'cash', 'control'] },
+    { id: 'workday', name: 'Workday', mode: 'inbound',
+      line: 'Payroll and headcount changes reach the ledger the day they happen.',
+      flows: ['Headcount & departments', 'Cost centers', 'Compensation changes', 'Payroll journals'],
+      unlocks: ['close', 'control'] }
+  ];
+
+  var OUTCOMES = [
+    { id: 'close', title: 'Continuous close',
+      desc: 'Books stay current as transactions land, so month-end becomes a review, not a rebuild.',
+      how: 'GL entries, accruals, and payroll journals post as they happen—nothing waits for the last week of the month.' },
+    { id: 'recon', title: 'Automatic reconciliation',
+      desc: 'Bank, payout, and card activity matched to the GL the moment it posts—you only see exceptions.',
+      how: 'A continuous three-way match across bank, processor, and ledger. Unmatched items are routed to a person, not buried in a spreadsheet.' },
+    { id: 'cash', title: 'Live cash visibility',
+      desc: 'Every account, payout, and card balance in one view—without logging into five portals.',
+      how: 'Balances and pending activity refresh continuously across your banks, Stripe payouts, and Ramp cards.' },
+    { id: 'control', title: 'Spend & headcount control',
+      desc: 'Card spend and payroll changes hit budgets the day they happen, not at month-end.',
+      how: 'Actuals from cards and payroll roll into department budgets in real time, with GL dimensions intact.' }
+  ];
+
+  var SRC = {}, OUT = {};
+  SOURCES.forEach(function (s) { SRC[s.id] = s; });
+  OUTCOMES.forEach(function (o) {
+    OUT[o.id] = o;
+    o.feeders = SOURCES.filter(function (s) { return s.unlocks.indexOf(o.id) > -1; }).map(function (s) { return s.id; });
+  });
+
+  /* ---------------- DOM ---------------- */
+  var diagram = document.getElementById('ln-diagram');
+  var svg = diagram.querySelector('.ln-wires');
+  var hub = document.getElementById('ln-hub');
+  var hubBody = document.getElementById('ln-hub-body');
+  var hubFoot = document.getElementById('ln-hub-foot');
+  var defaultBody = hubBody.innerHTML;
+  var defaultFoot = hubFoot.innerHTML;
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var NS = 'http://www.w3.org/2000/svg';
+
+  var els = { source: {}, outcome: {} };
+  SOURCES.forEach(function (s) { els.source[s.id] = diagram.querySelector('[data-source="' + s.id + '"]'); });
+  OUTCOMES.forEach(function (o) {
+    els.outcome[o.id] = diagram.querySelector('[data-outcome="' + o.id + '"]');
+    var c = diagram.querySelector('[data-count="' + o.id + '"]');
+    if (c) c.textContent = o.feeders.length;
+  });
+
+  /* ---------------- Wires ---------------- */
+  function mk(tag, attrs) {
+    var el = document.createElementNS(NS, tag);
+    for (var k in attrs) if (attrs.hasOwnProperty(k)) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  var wires = { source: {}, outcome: {} };
+  function makeWire(kind, id) {
+    var g = mk('g', { 'class': 'ln-wire', 'data-kind': kind, 'data-id': id });
+    var base = mk('path', { 'class': 'ln-wire__base' });
+    var flow = mk('path', { 'class': 'ln-wire__flow' });
+    var pa = mk('circle', { 'class': 'ln-wire__port', r: 3.5 });
+    var pb = mk('circle', { 'class': 'ln-wire__port', r: 3.5 });
+    g.appendChild(base); g.appendChild(flow); g.appendChild(pa); g.appendChild(pb);
+    svg.appendChild(g);
+    wires[kind][id] = { g: g, base: base, flow: flow, pa: pa, pb: pb };
+  }
+  SOURCES.forEach(function (s) { makeWire('source', s.id); });
+  OUTCOMES.forEach(function (o) { makeWire('outcome', o.id); });
+
+  function f(n) { return Math.round(n * 10) / 10; }
+  function curve(x1, y1, x2, y2) {
+    var dx = (x2 - x1) * 0.5;
+    return 'M' + f(x1) + ' ' + f(y1) + ' C' + f(x1 + dx) + ' ' + f(y1) + ', ' + f(x2 - dx) + ' ' + f(y2) + ', ' + f(x2) + ' ' + f(y2);
+  }
+  function setWire(w, x1, y1, x2, y2) {
+    var d = curve(x1, y1, x2, y2);
+    w.base.setAttribute('d', d);
+    w.flow.setAttribute('d', d);
+    w.pa.setAttribute('cx', f(x1)); w.pa.setAttribute('cy', f(y1));
+    w.pb.setAttribute('cx', f(x2)); w.pb.setAttribute('cy', f(y2));
+  }
+
+  var drawn = false;
+  function layout() {
+    if (getComputedStyle(svg).display === 'none') return;
+    var R = svg.getBoundingClientRect();
+    if (!R.width || !R.height) return;
+    svg.setAttribute('viewBox', '0 0 ' + f(R.width) + ' ' + f(R.height));
+
+    var H = hub.getBoundingClientRect();
+    var hubL = H.left - R.left, hubR = H.right - R.left, hubT = H.top - R.top, hubH = H.height;
+
+    var n = SOURCES.length, padS = 44;
+    SOURCES.forEach(function (s, i) {
+      var b = els.source[s.id].getBoundingClientRect();
+      var x1 = b.right - R.left, y1 = b.top + b.height / 2 - R.top;
+      var y2 = hubT + padS + (hubH - 2 * padS) * (n > 1 ? i / (n - 1) : 0.5);
+      setWire(wires.source[s.id], x1, y1, hubL, y2);
+    });
+
+    var m = OUTCOMES.length, padO = 76;
+    OUTCOMES.forEach(function (o, i) {
+      var b = els.outcome[o.id].getBoundingClientRect();
+      var x2 = b.left - R.left, y2 = b.top + b.height / 2 - R.top;
+      var y1 = hubT + padO + (hubH - 2 * padO) * (m > 1 ? i / (m - 1) : 0.5);
+      setWire(wires.outcome[o.id], hubR, y1, x2, y2);
+    });
+
+    if (!drawn) { drawn = true; if (!reduceMotion) drawIn(); }
+  }
+
+  /* One-time "draw the wires" entrance */
+  function drawIn() {
+    var all = [];
+    SOURCES.forEach(function (s, i) { all.push([wires.source[s.id], i]); });
+    OUTCOMES.forEach(function (o, i) { all.push([wires.outcome[o.id], SOURCES.length + i]); });
+    all.forEach(function (p) {
+      var w = p[0], L = w.base.getTotalLength();
+      w.base.style.transition = 'none';
+      w.base.style.strokeDasharray = L + ' ' + L;
+      w.base.style.strokeDashoffset = L;
+      w.pa.style.opacity = '0'; w.pb.style.opacity = '0';
+    });
+    void svg.getBoundingClientRect(); // flush
+    all.forEach(function (p) {
+      var w = p[0], delay = 250 + p[1] * 70;
+      w.base.style.transition = 'stroke-dashoffset .9s cubic-bezier(.2,.7,.2,1) ' + delay + 'ms';
+      w.base.style.strokeDashoffset = '0';
+      w.pa.style.transition = w.pb.style.transition = 'opacity .4s ' + (delay + 350) + 'ms';
+      w.pa.style.opacity = w.pb.style.opacity = '';
+    });
+    setTimeout(function () {
+      all.forEach(function (p) { p[0].base.style.cssText = ''; p[0].pa.style.cssText = ''; p[0].pb.style.cssText = ''; });
+    }, 250 + all.length * 70 + 1400);
+  }
+
+  /* ---------------- State ---------------- */
+  var pinned = null, preview = null, userTouched = false, lastKey = 'default', clearTimer = null, hovering = false;
+  function same(a, b) { return !!(a && b && a.kind === b.kind && a.id === b.id); }
+  function current() { return preview || pinned; }
+
+  function render() {
+    var cur = current(), onS = {}, onO = {};
+    if (cur) {
+      if (cur.kind === 'source') { onS[cur.id] = 1; SRC[cur.id].unlocks.forEach(function (o) { onO[o] = 1; }); }
+      else { onO[cur.id] = 1; OUT[cur.id].feeders.forEach(function (s) { onS[s] = 1; }); }
+    }
+    diagram.classList.toggle('has-active', !!cur);
+    SOURCES.forEach(function (s) {
+      var on = !!onS[s.id], el = els.source[s.id];
+      el.classList.toggle('is-on', on);
+      el.setAttribute('aria-pressed', same(pinned, { kind: 'source', id: s.id }) ? 'true' : 'false');
+      wires.source[s.id].g.classList.toggle('is-on', on);
+    });
+    OUTCOMES.forEach(function (o) {
+      var on = !!onO[o.id], el = els.outcome[o.id];
+      el.classList.toggle('is-on', on);
+      el.setAttribute('aria-pressed', same(pinned, { kind: 'outcome', id: o.id }) ? 'true' : 'false');
+      wires.outcome[o.id].g.classList.toggle('is-on', on);
+    });
+    var key = cur ? cur.kind + ':' + cur.id : 'default';
+    if (key !== lastKey) { lastKey = key; renderHub(cur); }
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+  }
+  var ICON_TWO = '<svg viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4h8M7.5 2l2 2-2 2M10.5 8h-8M4.5 6l-2 2 2 2"/></svg>';
+  var ICON_IN = '<svg viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6h8M7 3.5L9.5 6 7 8.5"/></svg>';
+  var ICON_DOT = '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="3" fill="currentColor"/></svg>';
+
+  function renderHub(cur) {
+    var html, foot;
+    if (!cur) {
+      html = defaultBody; foot = defaultFoot;
+    } else if (cur.kind === 'source') {
+      var s = SRC[cur.id];
+      html =
+        '<p class="ln-kicker">From</p>' +
+        '<h3 class="ln-hub__name">' + esc(s.name) + '<span class="ln-badge">' + (s.mode === 'two-way' ? 'Two-way' : 'Inbound') + '</span></h3>' +
+        '<p class="ln-hub__line">' + esc(s.line) + '</p>' +
+        '<p class="ln-kicker">Flows in</p>' +
+        '<ul class="ln-chips">' + s.flows.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+        '<p class="ln-kicker">Unlocks</p>' +
+        '<ul class="ln-unlocks">' + s.unlocks.map(function (id) { return '<li>' + esc(OUT[id].title) + '</li>'; }).join('') + '</ul>';
+      foot = s.mode === 'two-way'
+        ? ICON_TWO + ' Two-way sync · updates continuously'
+        : ICON_IN + ' Inbound feed · updates continuously';
+    } else {
+      var o = OUT[cur.id];
+      html =
+        '<p class="ln-kicker">Outcome</p>' +
+        '<h3 class="ln-hub__name">' + esc(o.title) + '</h3>' +
+        '<p class="ln-hub__line">' + esc(o.desc) + '</p>' +
+        '<p class="ln-kicker">Fed by</p>' +
+        '<ul class="ln-chips">' + o.feeders.map(function (id) { return '<li>' + esc(SRC[id].name) + '</li>'; }).join('') + '</ul>' +
+        '<p class="ln-kicker">How</p>' +
+        '<p class="ln-hub__line">' + esc(o.how) + '</p>';
+      foot = ICON_DOT + ' ' + o.feeders.length + ' connected systems feed this outcome';
+    }
+    hubBody.classList.remove('is-in');
+    void hubBody.offsetWidth; // restart animation
+    hubBody.innerHTML = html;
+    hubFoot.innerHTML = foot;
+    hubBody.classList.add('is-in');
+  }
+
+  /* ---------------- Interaction ---------------- */
+  function bind(kind, id, el) {
+    var item = { kind: kind, id: id };
+    el.addEventListener('mouseenter', function () {
+      if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+      preview = item; render();
+    });
+    el.addEventListener('mouseleave', function () {
+      clearTimer = setTimeout(function () {
+        clearTimer = null;
+        if (same(preview, item)) { preview = null; render(); }
+      }, 140);
+    });
+    el.addEventListener('focus', function () {
+      userTouched = true; stopAuto();
+      hubBody.setAttribute('aria-live', 'polite');
+      preview = item; render();
+    });
+    el.addEventListener('blur', function () {
+      if (same(preview, item)) { preview = null; render(); }
+    });
+    el.addEventListener('click', function () {
+      userTouched = true; stopAuto();
+      hubBody.setAttribute('aria-live', 'polite');
+      pinned = same(pinned, item) ? null : item;
+      render();
+    });
+  }
+  SOURCES.forEach(function (s) { bind('source', s.id, els.source[s.id]); });
+  OUTCOMES.forEach(function (o) { bind('outcome', o.id, els.outcome[o.id]); });
+
+  diagram.addEventListener('mouseenter', function () { hovering = true; });
+  diagram.addEventListener('mouseleave', function () { hovering = false; });
+  diagram.addEventListener('click', function (e) {
+    var t = e.target;
+    if (pinned && !(t.closest && t.closest('.ln-tile, .ln-outcome, a'))) { pinned = null; render(); }
+  });
+  diagram.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && pinned) { pinned = null; render(); }
+  });
+
+  /* ---------------- Idle auto-tour (stops on first interaction) ---------------- */
+  var AUTO = [
+    ['source', 'netsuite'], ['source', 'plaid'], ['source', 'stripe'], ['source', 'ramp'],
+    ['source', 'workday'], ['source', 'quickbooks'], ['source', 'xero'], ['source', 'sage'],
+    ['outcome', 'recon'], ['outcome', 'cash'], ['outcome', 'close'], ['outcome', 'control']
+  ];
+  var autoTimer = null, autoIdx = 0, inView = false;
+  function autoTick() {
+    if (!inView || pinned || hovering || userTouched) return;
+    var a = AUTO[autoIdx % AUTO.length]; autoIdx++;
+    preview = { kind: a[0], id: a[1] }; render();
+  }
+  function startAuto() {
+    if (reduceMotion || userTouched || autoTimer) return;
+    autoTimer = setTimeout(function () {
+      autoTick();
+      autoTimer = setInterval(autoTick, 3400);
+    }, 1900);
+  }
+  function stopAuto() {
+    if (autoTimer) { clearTimeout(autoTimer); clearInterval(autoTimer); autoTimer = null; }
+  }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        inView = e.isIntersecting && e.intersectionRatio >= 0.35;
+        if (inView) startAuto(); else stopAuto();
+      });
+    }, { threshold: [0, 0.35, 0.7] }).observe(diagram);
+  } else { inView = true; startAuto(); }
+
+  /* ---------------- Layout triggers ---------------- */
+  var raf = null;
+  function schedule() {
+    if (raf) return;
+    raf = requestAnimationFrame(function () { raf = null; layout(); });
+  }
+  if ('ResizeObserver' in window) { new ResizeObserver(schedule).observe(diagram); }
+  window.addEventListener('resize', schedule);
+  window.addEventListener('load', schedule);
+  schedule();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TGMC // Asset Provenance & Routing Authority</title>
+    <style>
+        :root {
+            --bg-deep: #0a0c10;
+            --bg-panel: #12161d;
+            --bg-field: #1a1f29;
+            --bg-sidebar: #0e1218;
+            --accent-primary: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.2);
+            --border-heavy: #2d3748;
+            --border-light: #1e293b;
+            --text-heading: #f1f5f9;
+            --text-body: #94a3b8;
+            --text-muted: #475569;
+            --status-success: #10b981;
+            --status-warning: #f59e0b;
+            --skeleton-base: #1e293b;
+            --skeleton-highlight: #334155;
+            
+            --font-size-title: 18px;
+            --font-size-label: 11px;
+            --font-size-value: 13px;
+            --font-size-mono: 12px;
+            
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            
+            --shadow-standard: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            --sidebar-width: 340px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-body);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            font-size: var(--font-size-value);
+        }
+
+        /* Master/Detail Split */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-heavy);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-deep);
+        }
+
+        /* Sidebar UI */
+        .sidebar-header {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-heavy);
+            background-color: var(--bg-panel);
+        }
+
+        .sidebar-title {
+            font-size: var(--font-size-title);
+            color: var(--text-heading);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .sidebar-subtitle {
+            font-size: var(--font-size-label);
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .job-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: var(--spacing-sm);
+        }
+
+        .job-item {
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border-light);
+            background-color: var(--bg-panel);
+            margin-bottom: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            position: relative;
+        }
+
+        .job-item.active {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .job-id {
+            color: var(--text-heading);
+            font-family: "SF Mono", "Monaco", monospace;
+            font-size: var(--font-size-mono);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .job-meta {
+            font-size: var(--font-size-label);
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Main Content Detail */
+        .detail-header {
+            padding: var(--spacing-md);
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-heavy);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            padding: 2px 8px;
+            background-color: var(--status-success);
+            color: white;
+            font-size: var(--font-size-label);
+            font-weight: bold;
+            border-radius: var(--radius-sm);
+            text-transform: uppercase;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+            padding: var(--spacing-md);
+        }
+
+        .section-box {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-light);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .section-title {
+            color: var(--accent-primary);
+            font-size: var(--font-size-label);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: var(--spacing-xs);
+        }
+
+        /* Form Layouts within sections */
+        .form-row {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            align-items: center;
+        }
+
+        .form-label {
+            font-size: var(--font-size-label);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .form-value {
+            background-color: var(--bg-field);
+            border: 1px solid var(--border-light);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            color: var(--text-heading);
+            font-family: "SF Mono", "Monaco", monospace;
+            font-size: var(--font-size-mono);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Skeleton States */
+        .skeleton {
+            background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-highlight) 50%, var(--skeleton-base) 75%);
+            background-size: 200% 100%;
+            animation: pulse 1.5s infinite;
+            height: 18px;
+            border-radius: var(--radius-sm);
+            border: none;
+        }
+
+        @keyframes pulse {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Complex Visuals (Routing Map) */
+        .routing-viz {
+            height: 120px;
+            border: 1px solid var(--border-light);
+            background-color: var(--bg-deep);
+            position: relative;
+            margin-top: var(--spacing-sm);
+            overflow: hidden;
+        }
+
+        .node-path {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            right: 5%;
+            height: 2px;
+            background: var(--text-muted);
+            transform: translateY(-50%);
+        }
+
+        .node-circle {
+            position: absolute;
+            top: 50%;
+            width: 10px;
+            height: 10px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 5px var(--accent-primary);
+        }
+
+        /* Table Data */
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-label);
+            margin-top: var(--spacing-sm);
+        }
+
+        .audit-table th {
+            text-align: left;
+            color: var(--text-muted);
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-heavy);
+            text-transform: uppercase;
+        }
+
+        .audit-table td {
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-body);
+        }
+
+        .mono {
+            font-family: "SF Mono", "Monaco", monospace;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-heavy);
+            border-radius: var(--radius-md);
+        }
+
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar" role="complementary">
+        <header class="sidebar-header">
+            <h1 class="sidebar-title">Transcode.IO</h1>
+            <p class="sidebar-subtitle">Node Traffic Authority</p>
+        </header>
+        
+        <div class="job-list" role="listbox">
+            <div class="job-item active" role="option" aria-selected="true">
+                <span class="job-id">AX-9920-FR-4K-2023</span>
+                <div class="job-meta">
+                    <span>Source: AMS-01</span>
+                    <span>Status: RUNNING</span>
+                </div>
+            </div>
+            <div class="job-item" role="option" aria-selected="false">
+                <span class="job-id">AX-9918-US-HD-2023</span>
+                <div class="job-meta">
+                    <span>Source: JFK-04</span>
+                    <span>Status: QUEUED</span>
+                </div>
+            </div>
+            <div class="job-item" role="option" aria-selected="false">
+                <span class="job-id">AX-9915-JP-8K-2023</span>
+                <div class="job-meta">
+                    <span>Source: NRT-02</span>
+                    <span>Status: PAUSED</span>
+                </div>
+            </div>
+            <div class="job-item" role="option" aria-selected="false">
+                <span class="job-id">BX-1042-UK-SD-2023</span>
+                <div class="job-meta">
+                    <span>Source: LHR-09</span>
+                    <span>Status: ERROR</span>
+                </div>
+            </div>
+            <div class="job-item" role="option" aria-selected="false">
+                <span class="job-id">AX-9910-DE-4K-2023</span>
+                <div class="job-meta">
+                    <span>Source: FRA-02</span>
+                    <span>Status: VERIFIED</span>
+                </div>
+            </div>
+            <div class="job-item" role="option" aria-selected="false">
+                <span class="job-id">AX-9908-FR-HD-2023</span>
+                <div class="job-meta">
+                    <span>Source: CDG-01</span>
+                    <span>Status: COMPLETED</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" role="main">
+        <header class="detail-header">
+            <div>
+                <h2 style="color: var(--text-heading); font-size: var(--font-size-title);">Routing Plan: AX-9920-FR-4K-2023</h2>
+                <p style="font-size: var(--font-size-label); color: var(--text-muted);">Last updated: 2023-11-24 14:22:01 UTC</p>
+            </div>
+            <span class="status-badge">Active Transcode</span>
+        </header>
+
+        <div class="grid-container">
+            <!-- Section 1: Job Overview -->
+            <section class="section-box">
+                <h3 class="section-title">Job Identification</h3>
+                <div class="form-row">
+                    <span class="form-label">Asset Name</span>
+                    <div class="form-value">master_feature_final_hfr_hdr10.mxf</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Internal ID</span>
+                    <div class="form-value">UID-9920-XF-A1</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Priority Level</span>
+                    <div class="form-value" style="color: var(--status-warning);">P1 - CRITICAL</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Owner Entity</span>
+                    <div class="form-value">Lumiere Global Distribution</div>
+                </div>
+            </section>
+
+            <!-- Section 2: Spatial Layout Plan -->
+            <section class="section-box">
+                <h3 class="section-title">Geographic Routing Map</h3>
+                <div class="form-row">
+                    <span class="form-label">Origin Cluster</span>
+                    <div class="form-value">AMS-NORTH-01</div>
+                </div>
+                <div class="routing-viz">
+                    <div class="node-path"></div>
+                    <div class="node-circle" style="left: 10%;"></div>
+                    <div class="node-circle" style="left: 40%;"></div>
+                    <div class="node-circle" style="left: 70%;"></div>
+                    <div class="node-circle" style="left: 95%; background: var(--text-muted); box-shadow: none;"></div>
+                </div>
+                <div class="form-row" style="margin-top: var(--spacing-sm);">
+                    <span class="form-label">Target Edge</span>
+                    <div class="form-value">PAR-WEST-CDN-04</div>
+                </div>
+            </section>
+
+            <!-- Section 3: Source Provenance -->
+            <section class="section-box">
+                <h3 class="section-title">Source Provenance</h3>
+                <div class="form-row">
+                    <span class="form-label">MD5 Checksum</span>
+                    <div class="form-value">7e4d8f8a1b2c3d4e5f6a7b8c9d0e1f2a</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Ingest Timestamp</span>
+                    <div class="form-value">2023-11-24 08:00:45</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Capture Hardware</span>
+                    <div class="form-value">Arri RAW Ingest - Node 42</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Legal Sign-off</span>
+                    <div class="form-value" style="color: var(--status-success);">VERIFIED - LAW-DEPT-88</div>
+                </div>
+            </section>
+
+            <!-- Section 4: Technical Pipeline (Skeleton) -->
+            <section class="section-box">
+                <h3 class="section-title">Transcode Pipeline State</h3>
+                <div class="form-row">
+                    <span class="form-label">Container</span>
+                    <div class="skeleton" style="width: 100%;"></div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Video Codec</span>
+                    <div class="skeleton" style="width: 80%;"></div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Audio Tracks</span>
+                    <div class="skeleton" style="width: 90%;"></div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Subtitle Map</span>
+                    <div class="skeleton" style="width: 60%;"></div>
+                </div>
+            </section>
+
+            <!-- Section 5: Compliance Tracing (Skeleton) -->
+            <section class="section-box">
+                <h3 class="section-title">Compliance Verification</h3>
+                <div class="form-row">
+                    <span class="form-label">Geo-fencing Status</span>
+                    <div class="skeleton" style="width: 40%;"></div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Rights Expiry</span>
+                    <div class="skeleton" style="width: 70%;"></div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Rating Metadata</span>
+                    <div class="skeleton" style="width: 100%;"></div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Encryption Key</span>
+                    <div class="skeleton" style="width: 85%;"></div>
+                </div>
+            </section>
+
+            <!-- Section 6: Distribution Hierarchy -->
+            <section class="section-box">
+                <h3 class="section-title">Distribution Parameters</h3>
+                <div class="form-row">
+                    <span class="form-label">Primary CDN</span>
+                    <div class="form-value">Akamai-L3-Secure</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Edge TTL</span>
+                    <div class="form-value">3600s</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Retry Policy</span>
+                    <div class="form-value">Exp-Backoff (Max 5)</div>
+                </div>
+                <div class="form-row">
+                    <span class="form-label">Failover Zone</span>
+                    <div class="form-value">EU-CENTRAL-01</div>
+                </div>
+            </section>
+
+            <!-- Section 7: Audit Log (Loaded) -->
+            <section class="section-box full-width">
+                <h3 class="section-title">Job Audit Trail</h3>
+                <table class="audit-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Node ID</th>
+                            <th>Event Type</th>
+                            <th>Operator/System</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="mono">14:22:01</td>
+                            <td class="mono">TR-042</td>
+                            <td>Packet Header Validation</td>
+                            <td>SYS-AUTO</td>
+                            <td style="color: var(--status-success);">SUCCESS</td>
+                        </tr>
+                        <tr>
+                            <td class="mono">14:20:15</td>
+                            <td class="mono">TR-042</td>
+                            <td>Stream Buffer Allocated</td>
+                            <td>SYS-AUTO</td>
+                            <td style="color: var(--status-success);">SUCCESS</td>
+                        </tr>
+                        <tr>
+                            <td class="mono">14:15:33</td>
+                            <td class="mono">AMS-01</td>
+                            <td>Route Initiation</td>
+                            <td>j.hawkins_adm</td>
+                            <td style="color: var(--status-success);">SUCCESS</td>
+                        </tr>
+                        <tr>
+                            <td class="mono">14:10:00</td>
+                            <td class="mono">SEC-OFF</td>
+                            <td>Integrity Check (MD5)</td>
+                            <td>compliance_bot_v2</td>
+                            <td style="color: var(--status-success);">VERIFIED</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 8: Edge Node Status (Skeleton) -->
+            <section class="section-box full-width">
+                <h3 class="section-title">Real-time Node Telemetry</h3>
+                <div style="display: flex; gap: var(--spacing-md);">
+                    <div style="flex: 1;">
+                        <div class="form-label" style="margin-bottom: 4px;">CPU Load (Node Avg)</div>
+                        <div class="skeleton" style="width: 100%; height: 40px;"></div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="form-label" style="margin-bottom: 4px;">Network Egress</div>
+                        <div class="skeleton" style="width: 100%; height: 40px;"></div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="form-label" style="margin-bottom: 4px;">Buffer Saturation</div>
+                        <div class="skeleton" style="width: 100%; height: 40px;"></div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // Page is read-only as per brief. 
+        // No interactive scripts required.
+        console.log("TGMC Audit Interface Loaded. State: Partially Synchronized.");
+    </script>
+</body>
+</html>

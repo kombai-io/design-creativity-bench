@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patchbay Cloud — Test & Debug Webhook Integrations</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f;
+    --bg-soft: #11121a;
+    --bg-card: #161823;
+    --border: #232634;
+    --border-soft: #1c1e2c;
+    --text: #e6e8ee;
+    --text-dim: #9aa0b4;
+    --text-mute: #6b7185;
+    --accent: #6ee7b7;
+    --accent-2: #a78bfa;
+    --accent-3: #38bdf8;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --success: #4ade80;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+  /* Background gradient */
+  body::before {
+    content: '';
+    position: fixed; top: 0; left: 0; right: 0; height: 700px;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(167,139,250,0.18), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 10%, rgba(56,189,248,0.12), transparent),
+                radial-gradient(ellipse 50% 40% at 20% 10%, rgba(110,231,183,0.10), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAV */
+  nav.top {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    background: rgba(10,10,15,0.72);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  nav.top .inner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+  .logo-mark {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+    display: grid; place-items: center; position: relative; overflow: hidden;
+  }
+  .logo-mark::before {
+    content: ''; position: absolute; inset: 4px;
+    background: var(--bg); border-radius: 4px;
+  }
+  .logo-mark::after {
+    content: ''; position: absolute; width: 8px; height: 8px;
+    background: var(--accent); border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .nav-links { display: flex; gap: 32px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { display: flex; gap: 12px; align-items: center; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 8px;
+    font-size: 14px; font-weight: 500;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: var(--text); color: var(--bg);
+  }
+  .btn-primary:hover { background: #fff; transform: translateY(-1px); }
+  .btn-ghost {
+    color: var(--text-dim); border-color: var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: #3a3d4f; }
+  .btn-accent {
+    background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+    color: #0a0a0f; font-weight: 600;
+  }
+  .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 10px 30px -10px rgba(167,139,250,0.5); }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 999px;
+    background: rgba(110,231,183,0.08);
+    border: 1px solid rgba(110,231,183,0.2);
+    color: var(--accent);
+    font-size: 12px; font-weight: 500;
+  }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .badge-dot.live { box-shadow: 0 0 0 0 rgba(110,231,183,0.7); animation: ring 2s infinite; }
+  @keyframes ring {
+    0% { box-shadow: 0 0 0 0 rgba(110,231,183,0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(110,231,183,0); }
+    100% { box-shadow: 0 0 0 0 rgba(110,231,183,0); }
+  }
+
+  /* HERO */
+  .hero { padding: 80px 0 60px; position: relative; z-index: 1; }
+  .hero-inner { display: grid; grid-template-columns: 1fr; gap: 60px; text-align: center; max-width: 820px; margin: 0 auto; }
+  .hero h1 {
+    font-size: clamp(40px, 6vw, 64px);
+    font-weight: 700; letter-spacing: -0.03em; line-height: 1.05;
+    margin-top: 24px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(135deg, var(--accent-3) 0%, var(--accent-2) 50%, var(--accent) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p.sub {
+    font-size: 19px; color: var(--text-dim); max-width: 620px; margin: 24px auto 0;
+  }
+  .hero .ctas { display: flex; gap: 12px; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
+  .hero .ctas .btn { padding: 14px 24px; font-size: 15px; }
+  .hero .meta { display: flex; gap: 24px; justify-content: center; margin-top: 24px; font-size: 13px; color: var(--text-mute); flex-wrap: wrap; }
+  .hero .meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .check { color: var(--accent); }
+
+  /* HERO PREVIEW / TERMINAL */
+  .preview { position: relative; z-index: 1; margin-top: 60px; }
+  .preview-window {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px -20px rgba(0,0,0,0.6),
+                0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .preview-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-soft);
+    background: rgba(255,255,255,0.02);
+  }
+  .window-dots { display: flex; gap: 6px; }
+  .window-dots span { width: 11px; height: 11px; border-radius: 50%; }
+  .window-dots span:nth-child(1) { background: #ff5f57; }
+  .window-dots span:nth-child(2) { background: #febc2e; }
+  .window-dots span:nth-child(3) { background: #28c840; }
+  .window-url {
+    font-family: var(--mono); font-size: 12px; color: var(--text-mute);
+    background: var(--bg); padding: 5px 14px; border-radius: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .window-url .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .preview-body { display: grid; grid-template-columns: 220px 1fr; min-height: 460px; }
+  .sidebar {
+    background: var(--bg-soft);
+    border-right: 1px solid var(--border-soft);
+    padding: 16px 12px;
+    font-size: 13px;
+  }
+  .sidebar h6 {
+    color: var(--text-mute); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 12px 10px 6px;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .sidebar-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+  .sidebar-item.active { background: rgba(167,139,250,0.1); color: var(--text); }
+  .sidebar-item .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .sidebar-item .count { margin-left: auto; color: var(--text-mute); font-size: 11px; font-family: var(--mono); }
+
+  .main { padding: 20px 24px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+  .toolbar-left { display: flex; gap: 8px; align-items: center; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 6px;
+    background: var(--bg-soft); border: 1px solid var(--border-soft);
+    font-size: 12px; color: var(--text-dim);
+    font-family: var(--mono);
+  }
+  .pill svg { width: 12px; height: 12px; }
+  .toolbar-right { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    display: grid; place-items: center;
+    background: var(--bg-soft); border: 1px solid var(--border-soft);
+    color: var(--text-dim);
+  }
+
+  /* EVENT TABLE */
+  table.events {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+  table.events thead th {
+    text-align: left; font-weight: 500; color: var(--text-mute);
+    padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  table.events tbody tr {
+    border-bottom: 1px solid var(--border-soft);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  table.events tbody tr:hover { background: rgba(255,255,255,0.02); }
+  table.events tbody tr.selected { background: rgba(167,139,250,0.06); }
+  table.events tbody tr.selected td:first-child { box-shadow: inset 2px 0 0 var(--accent-2); }
+  table.events td { padding: 11px 12px; }
+  .method {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 11px; font-weight: 600;
+  }
+  .method.post { background: rgba(56,189,248,0.15); color: var(--accent-3); }
+  .method.put { background: rgba(251,191,36,0.15); color: var(--warn); }
+  .status-ok { color: var(--success); }
+  .status-warn { color: var(--warn); }
+  .status-err { color: var(--danger); }
+  .tag-source {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px; border-radius: 4px;
+    background: var(--bg-soft); border: 1px solid var(--border-soft);
+    font-size: 11px; color: var(--text-dim);
+  }
+  .tag-source .logo-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* SECTION */
+  section { padding: 100px 0; position: relative; z-index: 1; }
+  .sec-head { text-align: center; max-width: 680px; margin: 0 auto 60px; }
+  .sec-head .eyebrow {
+    color: var(--accent-2); font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+  .sec-head h2 {
+    font-size: clamp(30px, 4vw, 44px); font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1.15;
+  }
+  .sec-head p {
+    color: var(--text-dim); font-size: 17px; margin-top: 16px;
+  }
+
+  /* LOGOS STRIP */
+  .strip {
+    display: flex; gap: 60px; justify-content: center; align-items: center;
+    flex-wrap: wrap; opacity: 0.65;
+  }
+  .strip span {
+    font-weight: 600; font-size: 18px; color: var(--text-dim);
+    letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .strip span svg { width: 22px; height: 22px; }
+
+  /* FEATURE GRID */
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .feature {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 28px;
+    transition: all 0.2s;
+  }
+  .feature:hover { border-color: var(--border); transform: translateY(-2px); }
+  .feature-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center;
+    background: rgba(167,139,250,0.1);
+    color: var(--accent-2);
+    margin-bottom: 20px;
+  }
+  .feature h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .feature p { color: var(--text-dim); font-size: 14px; }
+  .feature .extra {
+    margin-top: 18px; padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 12px; color: var(--text-mute);
+    font-family: var(--mono);
+    display: flex; justify-content: space-between;
+  }
+  .feature .extra strong { color: var(--text-dim); font-weight: 500; }
+
+  /* WORKFLOW SECTION */
+  .workflow {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 40px;
+  }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; position: relative; }
+  .step { position: relative; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+    color: var(--bg); font-weight: 700; font-size: 14px;
+    display: grid; place-items: center;
+    margin-bottom: 16px;
+    font-family: var(--mono);
+  }
+  .step h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .step p { font-size: 13px; color: var(--text-dim); }
+  .step .step-snippet {
+    margin-top: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent-3);
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+
+  /* CODE SECTION */
+  .code-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: stretch; }
+  .code-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .code-tabs {
+    display: flex; gap: 0;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--border-soft);
+    padding: 0 8px;
+  }
+  .code-tab {
+    padding: 12px 16px; font-size: 13px;
+    color: var(--text-mute);
+    border-bottom: 2px solid transparent;
+    font-family: var(--mono);
+  }
+  .code-tab.active { color: var(--text); border-bottom-color: var(--accent-2); }
+  pre.code {
+    margin: 0; padding: 22px;
+    font-family: var(--mono); font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    overflow-x: auto;
+    background: var(--bg-card);
+  }
+  .code .c-comment { color: var(--text-mute); font-style: italic; }
+  .code .c-key { color: var(--accent-2); }
+  .code .c-str { color: var(--success); }
+  .code .c-fn { color: var(--accent-3); }
+  .code .c-num { color: var(--warn); }
+  .code .c-pun { color: var(--text-dim); }
+  .code .c-tag { color: var(--danger); }
+
+  .use-cases { display: flex; flex-direction: column; gap: 14px; }
+  .use-case {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+  .use-case-num {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--bg-soft); border: 1px solid var(--border-soft);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 12px; color: var(--accent-2);
+    flex-shrink: 0;
+  }
+  .use-case h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .use-case p { font-size: 13px; color: var(--text-dim); }
+
+  /* DETAIL PANEL */
+  .detail-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .detail-head {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.01);
+  }
+  .detail-head .left { display: flex; align-items: center; gap: 12px; }
+  .detail-head h4 { font-size: 14px; font-weight: 600; }
+  .detail-head .meta { font-size: 12px; color: var(--text-mute); font-family: var(--mono); }
+  .detail-body { display: grid; grid-template-columns: 1.3fr 1fr; min-height: 320px; }
+  .detail-body .col { padding: 20px 24px; }
+  .detail-body .col + .col { border-left: 1px solid var(--border-soft); }
+  .kv-list { font-family: var(--mono); font-size: 12.5px; }
+  .kv-list .kv {
+    display: grid; grid-template-columns: 140px 1fr;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border-soft);
+    gap: 12px;
+  }
+  .kv-list .kv:last-child { border-bottom: none; }
+  .kv .k { color: var(--text-mute); }
+  .kv .v { color: var(--text); word-break: break-all; }
+  .kv .v.ok { color: var(--success); }
+  .kv .v.warn { color: var(--warn); }
+  .kv .v.acc { color: var(--accent-2); }
+
+  pre.payload {
+    background: var(--bg); border: 1px solid var(--border-soft);
+    border-radius: 8px; padding: 16px;
+    font-family: var(--mono); font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    max-height: 260px; overflow: auto;
+  }
+  .payload .pkey { color: var(--accent-3); }
+  .payload .pstr { color: var(--success); }
+  .payload .pnum { color: var(--warn); }
+  .payload .pbool { color: var(--accent-2); }
+  .payload .pnull { color: var(--danger); }
+
+  /* STATS */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  }
+  .stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative; overflow: hidden;
+  }
+  .stat::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent-3), var(--accent-2));
+    opacity: 0.5;
+  }
+  .stat .label { font-size: 12px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.08em; }
+  .stat .value {
+    font-size: 36px; font-weight: 700; letter-spacing: -0.02em;
+    margin-top: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .delta { font-size: 12px; color: var(--success); margin-top: 6px; font-family: var(--mono); }
+  .stat .delta.down { color: var(--danger); }
+
+  /* ACTIVITY FEED */
+  .feed {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 6px;
+  }
+  .feed-item {
+    display: grid; grid-template-columns: 32px 1fr auto;
+    gap: 12px; padding: 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    align-items: center;
+  }
+  .feed-item + .feed-item { border-top: 1px solid var(--border-soft); }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: 600; font-size: 12px;
+    color: var(--bg);
+  }
+  .feed-item .text strong { font-weight: 600; }
+  .feed-item .text span { color: var(--text-mute); }
+  .feed-item time { font-size: 11px; color: var(--text-mute); font-family: var(--mono); }
+  .feed-item .tag {
+    display: inline-block; margin-left: 6px;
+    padding: 1px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+    background: rgba(255,255,255,0.04);
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  /* TESTIMONIALS */
+  .quotes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .quote {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex; flex-direction: column;
+  }
+  .quote p {
+    color: var(--text); font-size: 14px; line-height: 1.6;
+    margin-bottom: 22px; flex: 1;
+  }
+  .quote .who { display: flex; align-items: center; gap: 12px; }
+  .quote .who .av {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 13px;
+    color: var(--bg);
+  }
+  .quote .who strong { font-size: 13px; font-weight: 600; }
+  .quote .who span { font-size: 12px; color: var(--text-mute); display: block; }
+  .quote .stars { color: var(--warn); font-size: 12px; margin-bottom: 14px; letter-spacing: 2px; }
+
+  /* PRICING / PLANS */
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .plan {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 32px;
+    display: flex; flex-direction: column;
+  }
+  .plan.featured {
+    border-color: var(--accent-2);
+    background: linear-gradient(180deg, rgba(167,139,250,0.06), transparent);
+    position: relative;
+  }
+  .plan.featured::before {
+    content: 'Most flexible';
+    position: absolute; top: -10px; left: 32px;
+    background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+    color: var(--bg); font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 6px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .plan h3 { font-size: 14px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .plan .price {
+    font-size: 42px; font-weight: 700; letter-spacing: -0.02em;
+    margin: 12px 0 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .plan .price small { font-size: 14px; color: var(--text-mute); font-weight: 400; }
+  .plan .desc { color: var(--text-dim); font-size: 13px; margin-bottom: 22px; min-height: 38px; }
+  .plan ul { list-style: none; margin-bottom: 24px; flex: 1; }
+  .plan ul li {
+    padding: 6px 0; font-size: 13px; color: var(--text-dim);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .plan ul li::before {
+    content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0;
+  }
+
+  /* FAQ */
+  .faq { max-width: 760px; margin: 0 auto; }
+  .faq-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .faq-q {
+    padding: 18px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    font-weight: 500; font-size: 15px;
+  }
+  .faq-q .plus {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--bg-soft); border: 1px solid var(--border-soft);
+    display: grid; place-items: center;
+    color: var(--text-mute); font-size: 14px;
+    transition: transform 0.2s;
+  }
+  .faq-item.open .faq-q .plus { transform: rotate(45deg); color: var(--accent-2); }
+  .faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease;
+    color: var(--text-dim); font-size: 14px;
+    padding: 0 22px;
+  }
+  .faq-item.open .faq-a { max-height: 220px; padding: 0 22px 18px; }
+
+  /* WAITLIST CTA */
+  .waitlist {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 56px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .waitlist::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at top, rgba(167,139,250,0.15), transparent 60%);
+    pointer-events: none;
+  }
+  .waitlist h2 { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; position: relative; }
+  .waitlist p { color: var(--text-dim); margin-top: 12px; position: relative; }
+  .waitlist-form {
+    display: flex; gap: 10px; max-width: 480px; margin: 28px auto 0;
+    position: relative;
+  }
+  .waitlist-form input {
+    flex: 1;
+    padding: 13px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit; font-size: 14px;
+    outline: none;
+  }
+  .waitlist-form input:focus { border-color: var(--accent-2); }
+  .waitlist-form button {
+    padding: 13px 22px;
+    border-radius: 8px;
+    background: var(--text); color: var(--bg);
+    font-weight: 600; font-size: 14px;
+  }
+  .waitlist-form button:hover { background: #fff; }
+  .waitlist .meta {
+    margin-top: 18px; font-size: 12px; color: var(--text-mute);
+    display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border-soft);
+    padding: 50px 0 36px;
+    margin-top: 80px;
+    position: relative; z-index: 1;
+  }
+  .foot {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
+    margin-bottom: 36px;
+  }
+  .foot .about p { color: var(--text-mute); font-size: 13px; margin-top: 14px; max-width: 320px; }
+  .foot h6 { font-size: 12px; font-weight: 600; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+  .foot ul { list-style: none; }
+  .foot ul li { margin-bottom: 8px; }
+  .foot ul li a { color: var(--text-dim); font-size: 13px; }
+  .foot ul li a:hover { color: var(--text); }
+  .foot-bottom {
+    border-top: 1px solid var(--border-soft);
+    padding-top: 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--text-mute);
+    flex-wrap: wrap; gap: 12px;
+  }
+  .foot-bottom .status { display: inline-flex; align-items: center; gap: 6px; }
+  .foot-bottom .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
+
+  /* INTEGRATIONS */
+  .integ-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+  }
+  .integ {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 20px 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .integ:hover { border-color: var(--border); transform: translateY(-2px); }
+  .integ-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 14px;
+    color: #fff;
+  }
+  .integ-name { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+  .integ .count { font-size: 10px; color: var(--text-mute); font-family: var(--mono); }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .preview-body { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .feature-grid, .quotes, .plans, .stats-grid { grid-template-columns: 1fr 1fr; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .code-row { grid-template-columns: 1fr; }
+    .detail-body { grid-template-columns: 1fr; }
+    .detail-body .col + .col { border-left: none; border-top: 1px solid var(--border-soft); }
+    .integ-grid { grid-template-columns: repeat(3, 1fr); }
+    .foot { grid-template-columns: 1fr 1fr; }
+    .nav-links { display: none; }
+  }
+  @media (max-width: 600px) {
+    .feature-grid, .quotes, .plans, .stats-grid, .steps { grid-template-columns: 1fr; }
+    .integ-grid { grid-template-columns: repeat(2, 1fr); }
+    .foot { grid-template-columns: 1fr; }
+    .waitlist { padding: 36px 24px; }
+    .waitlist-form { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top">
+  <div class="container inner">
+    <a href="#" class="logo">
+      <span class="logo-mark"></span>
+      <span>Patchbay Cloud</span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#code">Code samples</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-cta">
+      <a href="#" class="btn btn-ghost">Sign in</a>
+      <a href="#waitlist" class="btn btn-primary">Join waitlist</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container hero-inner">
+    <span class="badge"><span class="badge-dot live"></span> Private beta — 1,284 developers on the list</span>
+    <h1>Test and debug webhooks <span class="grad">before they hit production.</span></h1>
+    <p class="sub">Patchbay Cloud gives every engineer on your team a temporary endpoint to capture, replay, and inspect webhook events — so you ship integrations with confidence instead of crossed fingers.</p>
+    <div class="ctas">
+      <a href="#waitlist" class="btn btn-accent">Request beta access →</a>
+      <a href="#how" class="btn btn-ghost">See it in action</a>
+    </div>
+    <div class="meta">
+      <span><span class="check">✓</span> No credit card required</span>
+      <span><span class="check">✓</span> Free during private beta</span>
+      <span><span class="check">✓</span> SOC 2 in progress</span>
+    </div>
+  </div>
+
+  <!-- PREVIEW WINDOW -->
+  <div class="container preview">
+    <div class="preview-window">
+      <div class="preview-header">
+        <div class="window-dots"><span></span><span></span><span></span></div>
+        <div class="window-url">
+          <span class="status-dot"></span>
+          app.patchbay.cloud/endpoints/ep_8f2a1c
+        </div>
+        <div style="display:flex; gap:8px;">
+          <span class="badge" style="font-size:11px;"><span class="badge-dot live"></span> Live</span>
+        </div>
+      </div>
+      <div class="preview-body">
+        <aside class="sidebar">
+          <h6>Workspace · Vercel Integration</h6>
+          <div class="sidebar-item active">
+            <span class="dot" style="background:var(--accent)"></span> All events
+            <span class="count">428</span>
+          </div>
+          <div class="sidebar-item">
+            <span class="dot" style="background:var(--accent-3)"></span> Captured
+            <span class="count">401</span>
+          </div>
+          <div class="sidebar-item">
+            <span class="dot" style="background:var(--warn)"></span> Retried
+            <span class="count">19</span>
+          </div>
+          <div class="sidebar-item">
+            <span class="dot" style="background:var(--danger)"></span> Failed
+            <span class="count">8</span>
+          </div>
+
+          <h6>Endpoints</h6>
+          <div class="sidebar-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1"/></svg>
+            stripe-checkout
+            <span class="count">184</span>
+          </div>
+          <div class="sidebar-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1"/></svg>
+            github-webhooks
+            <span class="count">142</span>
+          </div>
+          <div class="sidebar-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1"/></svg>
+            shopify-orders
+            <span class="count">102</span>
+          </div>
+
+          <h6>Shared with</h6>
+          <div style="display:flex; padding: 8px 10px; gap: -8px;">
+            <div class="avatar" style="background:var(--accent-3); width:26px; height:26px; font-size:10px; margin-right:-8px;">MK</div>
+            <div class="avatar" style="background:var(--accent-2); width:26px; height:26px; font-size:10px; margin-right:-8px;">JL</div>
+            <div class="avatar" style="background:var(--warn); width:26px; height:26px; font-size:10px; margin-right:-8px;">RA</div>
+            <div class="avatar" style="background:var(--bg-soft); color:var(--text-dim); width:26px; height:26px; font-size:10px; border: 1px solid var(--border);">+4</div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg> filter: source = stripe</span>
+              <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> search…</span>
+            </div>
+            <div class="toolbar-right">
+              <button class="icon-btn" title="Replay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+              <button class="icon-btn" title="Download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+              <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New endpoint</button>
+            </div>
+          </div>
+          <table class="events">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Source</th>
+                <th>Event</th>
+                <th>Status</th>
+                <th>Latency</th>
+                <th>Received</th>
+              </tr>
+            </thead>
+            <tbody id="eventTable">
+              <tr class="selected">
+                <td><span class="method post">POST</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#635bff"></span>Stripe</span></td>
+                <td>payment_intent.succeeded</td>
+                <td><span class="status-ok">200 OK</span></td>
+                <td>142ms</td>
+                <td>2s ago</td>
+              </tr>
+              <tr>
+                <td><span class="method post">POST</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#635bff"></span>Stripe</span></td>
+                <td>invoice.payment_failed</td>
+                <td><span class="status-warn">402 · retried 2×</span></td>
+                <td>2.4s</td>
+                <td>14s ago</td>
+              </tr>
+              <tr>
+                <td><span class="method post">POST</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#24292e"></span>GitHub</span></td>
+                <td>pull_request.synchronize</td>
+                <td><span class="status-ok">200 OK</span></td>
+                <td>88ms</td>
+                <td>31s ago</td>
+              </tr>
+              <tr>
+                <td><span class="method post">POST</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#95bf47"></span>Shopify</span></td>
+                <td>orders/create</td>
+                <td><span class="status-ok">200 OK</span></td>
+                <td>311ms</td>
+                <td>1m ago</td>
+              </tr>
+              <tr>
+                <td><span class="method put">PUT</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#00457C"></span>SAP</span></td>
+                <td>vendor.updated</td>
+                <td><span class="status-err">500 · flagged</span></td>
+                <td>5.0s</td>
+                <td>2m ago</td>
+              </tr>
+              <tr>
+                <td><span class="method post">POST</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#635bff"></span>Stripe</span></td>
+                <td>customer.subscription.deleted</td>
+                <td><span class="status-ok">200 OK</span></td>
+                <td>176ms</td>
+                <td>3m ago</td>
+              </tr>
+              <tr>
+                <td><span class="method post">POST</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#E01E5A"></span>Slack</span></td>
+                <td>event_callback</td>
+                <td><span class="status-warn">408 · timeout</span></td>
+                <td>30.0s</td>
+                <td>5m ago</td>
+              </tr>
+              <tr>
+                <td><span class="method post">POST</span></td>
+                <td><span class="tag-source"><span class="logo-dot" style="background:#24292e"></span>GitHub</span></td>
+                <td>check_run.completed</td>
+                <td><span class="status-ok">200 OK</span></td>
+                <td>102ms</td>
+                <td>7m ago</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- TRUSTED BY -->
+<section style="padding: 50px 0;">
+  <div class="container">
+    <div class="strip">
+      <span>◆ Linear</span>
+      <span>● Plaid</span>
+      <span>▲ Vercel</span>
+      <span>◇ Mercury</span>
+      <span>■ Ramp</span>
+      <span>★ Notion</span>
+      <span>⬢ Supabase</span>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">Everything you need before shipping</div>
+      <h2>A complete webhook workshop in your browser</h2>
+      <p>Stop tailing logs, pinging teammates in Slack, and re-triggering production events. Patchbay Cloud gives your whole team a single place to capture, replay, and discuss every webhook.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3>Temporary endpoints, ready in seconds</h3>
+        <p>Spin up an HTTPS endpoint with a unique URL. Send it to any provider — Stripe, GitHub, Shopify, your custom service — and Patchbay Cloud starts capturing immediately.</p>
+        <div class="extra"><span>Generated URL</span><strong>ep_8f2a1c.patchbay.cloud</strong></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(56,189,248,0.1); color: var(--accent-3);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <h3>Replay and mutate events</h3>
+        <p>Resend any captured event to your real handler with one click — or edit the payload, headers, or signing secret first. Validate how your code reacts to edge cases without touching production.</p>
+        <div class="extra"><span>Replays today</span><strong>12,481</strong></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(110,231,183,0.1); color: var(--accent);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h3>Failure &amp; chaos scenarios</h3>
+        <p>Inject 4xx, 5xx, network drops, slow responses, or signature mismatches. Watch how your retry logic and circuit breakers respond — all without staging envs.</p>
+        <div class="extra"><span>Chaos rules</span><strong>14 built-in</strong></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(251,191,36,0.1); color: var(--warn);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Share sessions across teams</h3>
+        <p>Engineering, support, and product can all inspect the same event timeline. Comment on payloads, tag teammates, and link straight to a specific delivery.</p>
+        <div class="extra"><span>Avg. collaborators</span><strong>4.2 per session</strong></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(248,113,113,0.1); color: var(--danger);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3>Generated code snippets</h3>
+        <p>Pick your stack and Patchbay Cloud writes the handler: signature verification, parsing, idempotency, and error handling. Drop it into your repo and ship.</p>
+        <div class="extra"><span>Languages</span><strong>Node, Python, Go, Ruby, Rust</strong></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background: rgba(167,139,250,0.1); color: var(--accent-2);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>Signing &amp; verification tools</h3>
+        <p>First-class support for HMAC-SHA256, Stripe-style signatures, GitHub-style signatures, and custom schemes. Inspect and verify every header byte by byte.</p>
+        <div class="extra"><span>Schemes supported</span><strong>7</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" style="padding-top: 20px;">
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">From signup to first replay in 4 minutes</div>
+      <h2>How Patchbay Cloud fits your workflow</h2>
+      <p>No new agents, no proxy configuration, no DNS changes. Just an HTTPS URL you can hand to any provider.</p>
+    </div>
+    <div class="workflow">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <h4>Create an endpoint</h4>
+          <p>Pick a project and click <em>New endpoint</em>. Copy the URL it gives you.</p>
+          <div class="step-snippet">ep_8f2a1c.patchbay.cloud</div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <h4>Point a provider at it</h4>
+          <p>Drop the URL into Stripe, GitHub, or any HTTP webhook configuration.</p>
+          <div class="step-snippet">stripe.com/dashboard/webhooks</div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <h4>Inspect every delivery</h4>
+          <p>Headers, payloads, signatures, timing — searchable, filterable, replayable.</p>
+          <div class="step-snippet">status 200 · 142ms · 2s ago</div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <h4>Generate &amp; ship code</h4>
+          <p>Copy a verified handler for your stack and move it into your real repo.</p>
+          <div class="step-snippet">stripe.handler.ts ✓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CODE SAMPLES + USE CASES -->
+<section id="code">
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">Generated for your stack</div>
+      <h2>Verified handler code, ready to commit</h2>
+      <p>Patchbay Cloud learns the shape of your events and emits handlers with signature checks, idempotency, and structured logging baked in.</p>
+    </div>
+    <div class="code-row">
+      <div class="code-card">
+        <div class="code-tabs">
+          <button class="code-tab active">stripe.ts</button>
+          <button class="code-tab">github.py</button>
+          <button class="code-tab">shopify.go</button>
+          <button class="code-tab">custom.rb</button>
+        </div>
+<pre class="code"><span class="c-comment">// Generated by Patchbay Cloud from ep_8f2a1c</span>
+<span class="c-key">import</span> Stripe <span class="c-key">from</span> <span class="c-str">'stripe'</span>;
+<span class="c-key">import</span> { headers } <span class="c-key">from</span> <span class="c-str">'next/headers'</span>;
+
+<span class="c-key">const</span> stripe = <span class="c-key">new</span> <span class="c-fn">Stripe</span>(process.env.STRIPE_SECRET_KEY!);
+<span class="c-key">const</span> webhookSecret = process.env.PATCHBAY_SIGNING_SECRET!;
+
+<span class="c-key">export async function</span> <span class="c-fn">POST</span>(req: Request) {
+  <span class="c-key">const</span> body = <span class="c-key">await</span> req.<span class="c-fn">text</span>();
+  <span class="c-key">const</span> sig = headers().<span class="c-fn">get</span>(<span class="c-str">'stripe-signature'</span>)!;
+
+  <span class="c-key">let</span> event: Stripe.Event;
+  <span class="c-key">try</span> {
+    event = stripe.webhooks.<span class="c-fn">constructEvent</span>(body, sig, webhookSecret);
+  } <span class="c-key">catch</span> (err) {
+    <span class="c-key">return new</span> <span class="c-fn">Response</span>(<span class="c-str">`Webhook error: <span class="c-tag">${err}</span>`</span>,
+      { status: <span class="c-num">400</span> });
+  }
+
+  <span class="c-key">switch</span> (event.type) {
+    <span class="c-key">case</span> <span class="c-str">'payment_intent.succeeded'</span>:
+      <span class="c-key">await</span> <span class="c-fn">fulfillOrder</span>(event.data.object);
+      <span class="c-key">break</span>;
+    <span class="c-key">case</span> <span class="c-str">'invoice.payment_failed'</span>:
+      <span class="c-key">await</span> <span class="c-fn">notifyBilling</span>(event.data.object);
+      <span class="c-key">break</span>;
+  }
+
+  <span class="c-key">return new</span> <span class="c-fn">Response</span>(<span class="c-str">'ok'</span>, { status: <span class="c-num">200</span> });
+}</pre>
+      </div>
+      <div class="use-cases">
+        <div class="use-case">
+          <div class="use-case-num">01</div>
+          <div>
+            <h4>Verify a new Stripe integration before launch</h4>
+            <p>Replay 12 historical events from your staging account and confirm your handler treats every edge case — 3DS required, dispute opened, refund issued — the way your team expects.</p>
+          </div>
+        </div>
+        <div class="use-case">
+          <div class="use-case-num">02</div>
+          <div>
+            <h4>Debug a customer-reported webhook failure</h4>
+            <p>Ask support to paste the failed delivery ID. They see the full payload, status, and timeline — no need to grant database access or guess at retry counts.</p>
+          </div>
+        </div>
+        <div class="use-case">
+          <div class="use-case-num">03</div>
+          <div>
+            <h4>Train a new engineer on your event contracts</h4>
+            <p>Share a workspace of curated replays so new hires can see real production traffic (redacted) and read your handlers alongside it.</p>
+          </div>
+        </div>
+        <div class="use-case">
+          <div class="use-case-num">04</div>
+          <div>
+            <h4>Validate a vendor migration safely</h4>
+            <p>Replay a week of webhook traffic at the new vendor's endpoint and compare responses before flipping the DNS.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DETAIL PANEL DEMO -->
+<section>
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">Inspect everything, byte by byte</div>
+      <h2>Click an event. See the whole story.</h2>
+      <p>Headers, signatures, payload, latency, retries — every detail you need to understand what your handler received and why.</p>
+    </div>
+    <div class="detail-panel">
+      <div class="detail-head">
+        <div class="left">
+          <span class="method post">POST</span>
+          <div>
+            <h4>payment_intent.succeeded</h4>
+            <div class="meta">evt_3OqK7B2eZvKYlo2C1aBCdEf · from ep_8f2a1c</div>
+          </div>
+        </div>
+        <div style="display:flex; gap: 8px;">
+          <button class="btn btn-ghost" style="font-size: 12px; padding: 6px 12px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Replay
+          </button>
+          <button class="btn btn-ghost" style="font-size: 12px; padding: 6px 12px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Mutate &amp; resend
+          </button>
+          <button class="btn btn-accent" style="font-size: 12px; padding: 6px 12px;">Copy as cURL</button>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div class="col">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-mute); margin-bottom: 12px; font-weight: 600;">Request</div>
+          <div class="kv-list">
+            <div class="kv"><span class="k">content-type</span><span class="v">application/json</span></div>
+            <div class="kv"><span class="k">stripe-signature</span><span class="v">t=1714661234,v1=a3f2…91c</span></div>
+            <div class="kv"><span class="k">user-agent</span><span class="v">Stripe/1.0 (+stripe.com)</span></div>
+            <div class="kv"><span class="k">x-patchbay-id</span><span class="v acc">evt_3OqK7B2eZvKYlo2C1aBCdEf</span></div>
+            <div class="kv"><span class="k">signature check</span><span class="v ok">✓ valid (HMAC-SHA256)</span></div>
+            <div class="kv"><span class="k">timestamp drift</span><span class="v ok">+1.2s within tolerance</span></div>
+            <div class="kv"><span class="k">duplicate?</span><span class="v warn">seen 2× in last 24h</span></div>
+            <div class="kv"><span class="k">replay count</span><span class="v">3 (you + 2 teammates)</span></div>
+          </div>
+        </div>
+        <div class="col">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-mute); margin-bottom: 12px; font-weight: 600;">Payload <span style="text-transform: none; letter-spacing: 0; color: var(--text-mute); font-weight: 400;">· 1.4 KB</span></div>
+<pre class="payload">{
+  <span class="pkey">"id"</span>: <span class="pstr">"evt_3OqK7B2eZvKYlo2C1aBCdEf"</span>,
+  <span class="pkey">"object"</span>: <span class="pstr">"event"</span>,
+  <span class="pkey">"type"</span>: <span class="pstr">"payment_intent.succeeded"</span>,
+  <span class="pkey">"created"</span>: <span class="pnum">1714661232</span>,
+  <span class="pkey">"livemode"</span>: <span class="pbool">false</span>,
+  <span class="pkey">"data"</span>: {
+    <span class="pkey">"object"</span>: {
+      <span class="pkey">"id"</span>: <span class="pstr">"pi_3OqK7B2eZvKYlo2C0Xyz"</span>,
+      <span class="pkey">"amount"</span>: <span class="pnum">4200</span>,
+      <span class="pkey">"currency"</span>: <span class="pstr">"usd"</span>,
+      <span class="pkey">"customer"</span>: <span class="pstr">"cus_NffrFeUfNV2Hib"</span>,
+      <span class="pkey">"status"</span>: <span class="pstr">"succeeded"</span>,
+      <span class="pkey">"metadata"</span>: {
+        <span class="pkey">"order_id"</span>: <span class="pstr">"ord_2024_8831"</span>,
+        <span class="pkey">"plan"</span>: <span class="pstr">"team-annual"</span>
+      }
+    }
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section>
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">Works with your stack</div>
+      <h2>Test webhooks from 60+ providers</h2>
+      <p>Pre-configured signing schemes and event taxonomies for the services you already use. Plus raw HTTP for everything else.</p>
+    </div>
+    <div class="integ-grid">
+      <div class="integ"><div class="integ-icon" style="background:#635bff">S</div><div class="integ-name">Stripe</div><div class="count">48 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#24292e">G</div><div class="integ-name">GitHub</div><div class="count">120 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#95bf47">S</div><div class="integ-name">Shopify</div><div class="count">94 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#4A154B">S</div><div class="integ-name">Slack</div><div class="count">32 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#0052CC">J</div><div class="integ-name">Jira</div><div class="count">28 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#000000; border:1px solid var(--border);">▲</div><div class="integ-name">Vercel</div><div class="count">19 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#FF4F00">S</div><div class="integ-name">Segment</div><div class="count">22 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#1A1F36">H</div><div class="integ-name">HubSpot</div><div class="count">46 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#FF6C37">P</div><div class="integ-name">PagerDuty</div><div class="count">18 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#17202b">T</div><div class="integ-name">Twilio</div><div class="count">37 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:#5865F2">D</div><div class="integ-name">Discord</div><div class="count">14 events</div></div>
+      <div class="integ"><div class="integ-icon" style="background:var(--bg-soft); border:1px dashed var(--border);">+</div><div class="integ-name">Custom HTTP</div><div class="count">unlimited</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section>
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">What beta teams are doing</div>
+      <h2>Quietly becoming the team's debug console</h2>
+      <p>Across 312 workspaces running Patchbay Cloud in the last 30 days.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="label">Events captured</div>
+        <div class="value">2.84M</div>
+        <div class="delta">↑ 38% week over week</div>
+      </div>
+      <div class="stat">
+        <div class="label">Avg. catch rate</div>
+        <div class="value">96.4%</div>
+        <div class="delta">↑ 1.2 pts vs. local tunnels</div>
+      </div>
+      <div class="stat">
+        <div class="label">Mean time to debug</div>
+        <div class="value">4.2m</div>
+        <div class="delta down">↓ from 47m before</div>
+      </div>
+      <div class="stat">
+        <div class="label">Beta workspaces</div>
+        <div class="value">312</div>
+        <div class="delta">↑ 41 new this week</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACTIVITY FEED -->
+<section>
+  <div class="container">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+      <div>
+        <div class="sec-head" style="text-align: left; margin: 0 0 32px;">
+          <div class="eyebrow">Live from beta workspaces</div>
+          <h2 style="font-size: 32px;">What teams shipped this week</h2>
+          <p>Real activity from private-beta accounts. Names anonymized, payloads redacted.</p>
+        </div>
+        <div class="feed">
+          <div class="feed-item">
+            <div class="avatar" style="background:var(--accent)">MK</div>
+            <div class="text"><strong>Maya K.</strong> replayed <strong>checkout.session.completed</strong> 4× <span>on stripe-prod-mirror</span></div>
+            <time>3m ago</time>
+          </div>
+          <div class="feed-item">
+            <div class="avatar" style="background:var(--accent-2)">JL</div>
+            <div class="text"><strong>Jorge L.</strong> flagged <strong>invoice.payment_failed</strong> as 500 <span>tag</span><span class="tag">needs-review</span></div>
+            <time>11m ago</time>
+          </div>
+          <div class="feed-item">
+            <div class="avatar" style="background:var(--accent-3)">RP</div>
+            <div class="text"><strong>Rhea P.</strong> generated <strong>github.go</strong> handler <span>· copied to clipboard</span></div>
+            <time>22m ago</time>
+          </div>
+          <div class="feed-item">
+            <div class="avatar" style="background:var(--warn)">RA</div>
+            <div class="text"><strong>Ravi A.</strong> shared session <strong>ep_8f2a1c</strong> with <strong>support@</strong> <span>· 3 viewers</span></div>
+            <time>47m ago</time>
+          </div>
+          <div class="feed-item">
+            <div class="avatar" style="background:var(--danger)">SO</div>
+            <div class="text"><strong>Soren O.</strong> added chaos rule <strong>inject-5xx-after-200</strong> <span>to stripe-checkout</span></div>
+            <time>1h ago</time>
+          </div>
+          <div class="feed-item">
+            <div class="avatar" style="background:var(--accent)">TC</div>
+            <div class="text"><strong>Tess C.</strong> commented on payload <strong>order #8831</strong> <span>"looks like the retry race we hit last sprint"</span></div>
+            <time>2h ago</time>
+          </div>
+          <div class="feed-item">
+            <div class="avatar" style="background:var(--accent-2)">DW</div>
+            <div class="text"><strong>Devon W.</strong> exported <strong>214 events</strong> as Postman collection <span>· for QA</span></div>
+            <time>3h ago</time>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-head" style="text-align: left; margin: 0 0 32px;">
+          <div class="eyebrow">Why teams switch</div>
+          <h2 style="font-size: 32px;">Built for the people on call</h2>
+          <p>Early feedback from platform, growth, and integrations engineers.</p>
+        </div>
+        <div class="quotes" style="grid-template-columns: 1fr; gap: 12px;">
+          <div class="quote" style="padding: 20px;">
+            <div class="stars">★★★★★</div>
+            <p>"We caught a duplicate-charge race condition in our Stripe handler during a 30-minute replay session. Would've shipped it to prod otherwise."</p>
+            <div class="who">
+              <div class="av" style="background:var(--accent)">PR</div>
+              <div><strong>Priya Raman</strong><span>Staff Engineer · Lattice</span></div>
+            </div>
+          </div>
+          <div class="quote" style="padding: 20px;">
+            <div class="stars">★★★★★</div>
+            <p>"Support can now answer webhook tickets without paging engineering. The shared timelines are the killer feature."</p>
+            <div class="who">
+              <div class="av" style="background:var(--accent-2)">EM</div>
+              <div><strong>Eli Mendes</strong><span>Head of Support · Outset</span></div>
+            </div>
+          </div>
+          <div class="quote" style="padding: 20px;">
+            <div class="stars">★★★★★</div>
+            <p>"Replacing ngrok + a half-working Postman collection with one tool made our integration PRs actually reviewable."</p>
+            <div class="who">
+              <div class="av" style="background:var(--accent-3)">JK</div>
+              <div><strong>Jules Kowalski</strong><span>Founding Eng · Cobalt</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">Free during private beta</div>
+      <h2>Pay only when you're ready</h2>
+      <p>Every plan is free until general availability. Lock in beta pricing now — we won't raise it for the lifetime of your account.</p>
+    </div>
+    <div class="plans">
+      <div class="plan">
+        <h3>Hobby</h3>
+        <div class="price">$0<small> /forever</small></div>
+        <p class="desc">For solo developers and weekend projects.</p>
+        <ul>
+          <li>3 active endpoints</li>
+          <li>1,000 events / month</li>
+          <li>7-day event history</li>
+          <li>Replay &amp; mutate payloads</li>
+          <li>Community Discord support</li>
+        </ul>
+        <a href="#waitlist" class="btn btn-ghost" style="justify-content: center;">Join waitlist</a>
+      </div>
+      <div class="plan featured">
+        <h3>Team</h3>
+        <div class="price">$24<small> /seat /mo</small></div>
+        <p class="desc">For engineering teams shipping integrations in production.</p>
+        <ul>
+          <li>Unlimited endpoints</li>
+          <li>50,000 events / month</li>
+          <li>90-day event history</li>
+          <li>Shared workspaces &amp; comments</li>
+          <li>All signing schemes &amp; chaos rules</li>
+          <li>SSO (Google, Okta) — Q2</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#waitlist" class="btn btn-accent" style="justify-content: center;">Request access</a>
+      </div>
+      <div class="plan">
+        <h3>Platform</h3>
+        <div class="price">Custom</div>
+        <p class="desc">For larger orgs with compliance &amp; volume needs.</p>
+        <ul>
+          <li>Everything in Team</li>
+          <li>1M+ events / month</li>
+          <li>2-year retention &amp; audit log</li>
+          <li>Self-hosted relay (Q3)</li>
+          <li>SOC 2 Type II report</li>
+          <li>Dedicated solutions engineer</li>
+          <li>99.9% SLA</li>
+        </ul>
+        <a href="#waitlist" class="btn btn-ghost" style="justify-content: center;">Talk to us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="container">
+    <div class="sec-head">
+      <div class="eyebrow">Frequently asked</div>
+      <h2>Everything you wanted to ask</h2>
+    </div>
+    <div class="faq" id="faqList">
+      <div class="faq-item open">
+        <div class="faq-q">How is Patchbay Cloud different from ngrok or a local tunnel? <span class="plus">+</span></div>
+        <div class="faq-a"><p>Local tunnels give you a URL — Patchbay Cloud gives you a workflow. You get permanent event history, searchable timelines, team sharing, payload mutation, chaos rules, and generated handler code. It's the difference between a hose and a water treatment plant.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Will it work with providers you haven't pre-integrated? <span class="plus">+</span></div>
+        <div class="faq-a"><p>Yes. Any HTTP webhook works out of the box. We add first-class signing schemes and event schemas for popular providers, but the underlying endpoint is just HTTPS — you can inspect, replay, and verify anything.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I use it for production traffic, or only during development? <span class="plus">+</span></div>
+        <div class="faq-a"><p>During the private beta we recommend using Patchbay Cloud for pre-production and debugging only — endpoints are temporary and have retention limits. The Team and Platform plans add longer retention and SSO so you can use it as a managed observability layer too.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How do you handle webhook payloads that contain PII? <span class="plus">+</span></div>
+        <div class="faq-a"><p>Payloads are encrypted at rest with per-workspace keys, scoped to your team, and never used to train models. You can redact fields automatically (e.g. <code>email</code>, <code>ssn_last4</code>) before they're stored. We're pursuing SOC 2 Type II in Q3.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What signing methods are supported at launch? <span class="plus">+</span></div>
+        <div class="faq-a"><p>HMAC-SHA256 (raw and base64-encoded), Stripe-style <code>t=…,v1=…</code>, GitHub-style <code>sha256=…</code>, Svix-style, Shopify-style, and custom header schemes via the dashboard. AMQP and gRPC webhooks are on the roadmap for later in 2024.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">When does the private beta end? <span class="plus">+</span></div>
+        <div class="faq-a"><p>We're onboarding cohorts of ~200 workspaces every two weeks. We expect general availability in Q3 2024. Everyone on the waitlist today keeps free Team-tier access for 6 months after GA.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I invite my whole team to a workspace? <span class="plus">+</span></div>
+        <div class="faq-a"><p>Yes. The Team plan includes unlimited collaborators per workspace with role-based permissions (Owner, Engineer, Read-only). Useful for letting support and product read the same event timeline without write access.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAITLIST CTA -->
+<section id="waitlist">
+  <div class="container">
+    <div class="waitlist">
+      <span class="badge" style="margin-bottom: 18px;"><span class="badge-dot live"></span> Next cohort opens in 4 days</span>
+      <h2>Get a Patchbay Cloud endpoint</h2>
+      <p>Join 1,284 engineers on the private-beta list. We'll email you the moment your workspace is ready — usually within a week.</p>
+      <form class="waitlist-form" onsubmit="event.preventDefault(); document.getElementById('waitlistMsg').style.display='block'; this.style.display='none';">
+        <input type="email" placeholder="you@company.com" value="alex.morgan@acme.dev" required>
+        <button type="submit">Request access →</button>
+      </form>
+      <div id="waitlistMsg" style="display:none; margin-top: 20px; color: var(--accent); font-size: 14px; position: relative;">
+        ✓ You're on the list. We'll be in touch within 4 days.
+      </div>
+      <div class="meta">
+        <span>🔒 We email once. No drip campaigns.</span>
+        <span>📨 Referral links available after signup</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="foot">
+      <div class="about">
+        <a href="#" class="logo">
+          <span class="logo-mark"></span>
+          <span>Patchbay Cloud</span>
+        </a>
+        <p>Capture, replay, and debug webhooks without touching production. Built in Brooklyn, hosted globally.</p>
+      </div>
+      <div>
+        <h6>Product</h6>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#code">Code samples</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6>Resources</h6>
+        <ul>
+          <li><a href="#">Documentation</a></li>
+          <li><a href="#">API reference</a></li>
+          <li><a href="#">Webhook taxonomy</a></li>
+          <li><a href="#">Community</a></li>
+          <li><a href="#">Security</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6>Company</h6>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers <span style="font-size:10px; background:rgba(110,231,183,0.15); color:var(--accent); padding: 1px 6px; border-radius: 4px; margin-left:4px;">3 open</span></a></li>
+          <li><a href="#">Privacy</a></li>
+          <li><a href="#">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div>© 2024 Patchbay Cloud, Inc. · 55 Washington St, Brooklyn NY 11201</div>
+      <div class="status"><span class="dot"></span> All systems operational · 99.98% uptime, 30d</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // FAQ toggle
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.parentElement;
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+
+  // Code tabs (visual toggle)
+  document.querySelectorAll('.code-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      t.parentElement.querySelectorAll('.code-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+
+  // Event row selection
+  document.querySelectorAll('#eventTable tr').forEach(tr => {
+    tr.addEventListener('click', () => {
+      document.querySelectorAll('#eventTable tr').forEach(r => r.classList.remove('selected'));
+      tr.classList.add('selected');
+    });
+  });
+
+  // Sidebar item active toggle
+  document.querySelectorAll('.sidebar-item').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+    });
+  });
+
+  // Stat count-up animation
+  document.querySelectorAll('.stat .value').forEach(el => {
+    const target = el.textContent.trim();
+    el.textContent = '0';
+    let start = 0;
+    const duration = 1200;
+    const startTime = performance.now();
+    const isFloat = target.includes('.');
+    const numericPart = parseFloat(target.replace(/[^\d.]/g, ''));
+    const suffix = target.replace(/[\d.,]+/g, '');
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const val = numericPart * eased;
+      if (isFloat) {
+        el.textContent = val.toFixed(1) + suffix;
+      } else if (numericPart >= 1000000) {
+        el.textContent = (val / 1000000).toFixed(2) + 'M';
+      } else if (numericPart >= 1000) {
+        el.textContent = Math.round(val).toLocaleString();
+      } else {
+        el.textContent = Math.round(val).toString();
+      }
+      if (progress < 1) requestAnimationFrame(animate);
+      else el.textContent = target;
+    };
+    requestAnimationFrame(animate);
+  });
+</script>
+
+</body>
+</html>

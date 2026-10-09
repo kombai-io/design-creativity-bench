@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440">
+  <title>Conduit Lake — Integrations</title>
+  <style>
+    :root {
+      --bg: #071110;
+      --bg-panel: #0b1a1c;
+      --bg-node: #102326;
+      --bg-node-hot: #163033;
+      --brass: #c4a574;
+      --brass-dim: rgba(196, 165, 116, 0.28);
+      --brass-line: rgba(196, 165, 116, 0.45);
+      --water: #3e7f86;
+      --water-bright: #8ec9c8;
+      --foam: #e7f1ec;
+      --ink: #ece7db;
+      --muted: #8a9e98;
+      --quiet: #5d736e;
+      --danger-soft: #c9896a;
+      --font-display: "Iowan Old Style", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      --font-sans: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono: "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: #050a0b;
+      color: var(--ink);
+      font-family: var(--font-sans);
+    }
+
+    body {
+      min-width: 1440px;
+    }
+
+    button, input {
+      font-family: inherit;
+    }
+
+    .integrations {
+      width: 1440px;
+      margin: 0 auto;
+      background:
+        radial-gradient(ellipse 900px 520px at 18% 12%, rgba(62, 127, 134, 0.14), transparent 70%),
+        radial-gradient(ellipse 700px 480px at 88% 78%, rgba(196, 165, 116, 0.07), transparent 65%),
+        var(--bg);
+      padding: 72px 72px 80px;
+      position: relative;
+      overflow: hidden;
+      color: var(--ink);
+    }
+
+    .bathymetry {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.38;
+    }
+
+    .chart-frame {
+      position: absolute;
+      inset: 20px;
+      border: 1px solid var(--brass-dim);
+      pointer-events: none;
+    }
+
+    .chart-frame::before,
+    .chart-frame::after {
+      content: "";
+      position: absolute;
+      width: 11px;
+      height: 11px;
+      border: 1px solid var(--brass);
+      opacity: 0.7;
+    }
+
+    .chart-frame::before { top: -6px; left: -6px; }
+    .chart-frame::after { bottom: -6px; right: -6px; }
+
+    .reg-mark {
+      position: absolute;
+      top: 28px;
+      right: 36px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--quiet);
+    }
+
+    .inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .mast {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 64px;
+      align-items: end;
+      margin-bottom: 56px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--brass-dim);
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--brass);
+      margin-bottom: 18px;
+    }
+
+    .eyebrow .rule {
+      width: 36px;
+      height: 1px;
+      background: var(--brass);
+      opacity: 0.7;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: 52px;
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -0.018em;
+      color: var(--foam);
+      max-width: 16ch;
+    }
+
+    .lead {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--muted);
+      max-width: 42ch;
+      padding-bottom: 6px;
+    }
+
+    .lead strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* Hydrograph / stack map */
+    .hydrograph {
+      display: grid;
+      grid-template-columns: 280px 1fr 300px 1fr 340px;
+      gap: 0;
+      align-items: stretch;
+      min-height: 420px;
+      margin-bottom: 56px;
+    }
+
+    .bank {
+      background: var(--bg-panel);
+      border: 1px solid rgba(142, 201, 200, 0.12);
+      padding: 22px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .bank--in { border-radius: 2px 0 0 2px; }
+    .bank--out { border-radius: 0 2px 2px 0; }
+
+    .bank-kicker {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--brass);
+    }
+
+    .bank-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--foam);
+      margin-top: -6px;
+    }
+
+    .bank-copy {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .nodes {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .node {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--bg-node);
+      border: 1px solid rgba(142, 201, 200, 0.1);
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+    }
+
+    .node:hover,
+    .node:focus-visible,
+    .node.is-hot {
+      background: var(--bg-node-hot);
+      border-color: var(--brass-line);
+      outline: none;
+    }
+
+    .node.is-active {
+      border-color: var(--brass);
+      background: #1a383c;
+      box-shadow: inset 0 0 0 1px rgba(196, 165, 116, 0.25);
+    }
+
+    .node-mark {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      color: var(--water-bright);
+    }
+
+    .node-mark svg {
+      width: 28px;
+      height: 28px;
+      display: block;
+    }
+
+    .node-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--foam);
+    }
+
+    .node-role {
+      font-size: 11px;
+      color: var(--quiet);
+      letter-spacing: 0.04em;
+    }
+
+    .node-tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--brass);
+    }
+
+    .out-group + .out-group {
+      margin-top: 8px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(142, 201, 200, 0.16);
+    }
+
+    .out-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      margin-bottom: 8px;
+    }
+
+    .channel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+    }
+
+    .channel svg {
+      width: 100%;
+      height: 220px;
+      overflow: visible;
+    }
+
+    .flow-line {
+      fill: none;
+      stroke: var(--water);
+      stroke-width: 1.5;
+      stroke-dasharray: 6 8;
+      animation: drift 2.8s linear infinite;
+    }
+
+    .flow-line.alt {
+      stroke: var(--brass);
+      stroke-opacity: 0.55;
+      animation-duration: 3.6s;
+      animation-direction: reverse;
+    }
+
+    .channel.is-hot .flow-line {
+      stroke: var(--water-bright);
+      stroke-width: 2;
+    }
+
+    @keyframes drift {
+      to { stroke-dashoffset: -56; }
+    }
+
+    .lake {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px 20px;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(62, 127, 134, 0.28), transparent 62%),
+        var(--bg-panel);
+      border-top: 1px solid rgba(142, 201, 200, 0.14);
+      border-bottom: 1px solid rgba(142, 201, 200, 0.14);
+      position: relative;
+    }
+
+    .lake-emblem {
+      width: 168px;
+      height: 168px;
+      margin-bottom: 16px;
+    }
+
+    .lake-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--foam);
+    }
+
+    .lake-role {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--brass);
+      margin-top: 6px;
+    }
+
+    .lake-note {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted);
+      margin-top: 12px;
+      max-width: 28ch;
+    }
+
+    /* Outcomes */
+    .possibilities {
+      display: grid;
+      grid-template-columns: 220px 1fr 1fr 1fr;
+      gap: 28px;
+      padding: 36px 0 40px;
+      border-top: 1px solid var(--brass-dim);
+      border-bottom: 1px solid var(--brass-dim);
+      margin-bottom: 40px;
+    }
+
+    .poss-intro .kicker {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--brass);
+      margin-bottom: 10px;
+    }
+
+    .poss-intro h3 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 400;
+      line-height: 1.15;
+      color: var(--foam);
+    }
+
+    .outcome {
+      padding-left: 18px;
+      border-left: 1px solid rgba(142, 201, 200, 0.18);
+    }
+
+    .outcome-index {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      color: var(--brass);
+      margin-bottom: 10px;
+    }
+
+    .outcome h4 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--foam);
+      margin-bottom: 10px;
+    }
+
+    .outcome p {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    /* Catalog */
+    .catalog {
+      background: var(--bg-panel);
+      border: 1px solid rgba(142, 201, 200, 0.12);
+      padding: 28px 28px 24px;
+    }
+
+    .catalog-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    .catalog-head h3 {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--foam);
+    }
+
+    .catalog-head p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+      max-width: 62ch;
+    }
+
+    .explore-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .search {
+      position: relative;
+    }
+
+    .search input {
+      width: 220px;
+      background: var(--bg-node);
+      border: 1px solid rgba(142, 201, 200, 0.16);
+      color: var(--ink);
+      padding: 9px 12px 9px 34px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search input:focus {
+      border-color: var(--brass-line);
+    }
+
+    .search input::placeholder { color: var(--quiet); }
+
+    .search svg {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--quiet);
+      pointer-events: none;
+    }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .chip {
+      background: transparent;
+      border: 1px solid rgba(142, 201, 200, 0.18);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+    }
+
+    .chip:hover,
+    .chip:focus-visible {
+      border-color: var(--brass-line);
+      color: var(--ink);
+      outline: none;
+    }
+
+    .chip.is-on {
+      background: rgba(196, 165, 116, 0.12);
+      border-color: var(--brass);
+      color: var(--brass);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .card {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 14px;
+      background: var(--bg-node);
+      border: 1px solid rgba(142, 201, 200, 0.1);
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      min-height: 78px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .card:hover,
+    .card:focus-visible {
+      border-color: var(--brass-line);
+      outline: none;
+    }
+
+    .card.is-active {
+      border-color: var(--brass);
+      background: #1a383c;
+    }
+
+    .card.is-hidden { display: none; }
+
+    .card-mark {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(142, 201, 200, 0.14);
+      color: var(--water-bright);
+    }
+
+    .card-mark svg { width: 26px; height: 26px; }
+
+    .card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--foam);
+    }
+
+    .card-cat {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--quiet);
+      margin-top: 3px;
+    }
+
+    .detail {
+      display: grid;
+      grid-template-columns: 160px 1fr auto;
+      gap: 28px;
+      align-items: start;
+      margin-top: 16px;
+      padding: 18px 18px;
+      border: 1px solid var(--brass-dim);
+      background: rgba(7, 17, 16, 0.55);
+      min-height: 92px;
+    }
+
+    .detail-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--brass);
+      margin-bottom: 8px;
+    }
+
+    .detail-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--foam);
+    }
+
+    .detail-body {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--muted);
+      max-width: 72ch;
+      padding-top: 18px;
+    }
+
+    .detail-cta {
+      align-self: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--bg);
+      background: var(--brass);
+      border: none;
+      padding: 12px 16px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .detail-cta:hover,
+    .detail-cta:focus-visible {
+      background: #d4b88a;
+      outline: none;
+    }
+
+    .catalog-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(142, 201, 200, 0.12);
+      font-size: 12px;
+      color: var(--quiet);
+    }
+
+    .catalog-foot a {
+      color: var(--brass);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .catalog-foot a:hover { color: var(--foam); }
+
+    .empty {
+      display: none;
+      grid-column: 1 / -1;
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .empty.is-shown { display: block; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .flow-line { animation: none; }
+      .node, .card { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <section class="integrations" id="integrations" aria-labelledby="integrations-heading">
+    <svg class="bathymetry" viewBox="0 0 1440 1100" preserveAspectRatio="none" aria-hidden="true">
+      <g fill="none" stroke="#3e7f86" stroke-width="0.8" opacity="0.55">
+        <ellipse cx="720" cy="430" rx="620" ry="280"/>
+        <ellipse cx="720" cy="430" rx="500" ry="220"/>
+        <ellipse cx="720" cy="430" rx="380" ry="160"/>
+        <ellipse cx="240" cy="180" rx="220" ry="90"/>
+        <ellipse cx="1180" cy="860" rx="260" ry="110"/>
+        <path d="M80 980 C 280 820, 420 900, 640 860 S 980 780, 1360 920"/>
+        <path d="M40 120 C 180 80, 300 140, 480 90"/>
+      </g>
+    </svg>
+    <div class="chart-frame" aria-hidden="true"></div>
+    <div class="reg-mark">CL–INT–01 · 1440 · SOUNDING</div>
+
+    <div class="inner">
+      <header class="mast">
+        <div>
+          <div class="eyebrow"><span class="rule"></span> Integrations · The existing stack</div>
+          <h2 id="integrations-heading">The movement layer for a stack you already own.</h2>
+        </div>
+        <p class="lead">
+          Conduit Lake does not replace PostgreSQL, Snowflake, dbt, or Looker.
+          <strong>It is the current between them</strong>—drawing operational data from the systems that create it, and landing it, continuously, in the warehouses, models, and dashboards that depend on it.
+        </p>
+      </header>
+
+      <div class="hydrograph" id="hydrograph" aria-label="How Conduit Lake sits in a data stack">
+        <div class="bank bank--in">
+          <div class="bank-kicker">Inflow · Fig. A</div>
+          <div class="bank-title">Sources</div>
+          <p class="bank-copy">Operational systems where records, events, and objects are born. Conduit Lake reads them in place.</p>
+          <div class="nodes">
+            <button class="node" type="button" data-id="postgresql" data-side="source">
+              <span class="node-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <ellipse cx="16" cy="9" rx="9" ry="4"/>
+                  <path d="M7 9 v10 c0 2.4 4 4.4 9 4.4s9-2 9-4.4V9"/>
+                  <path d="M7 14 c0 2.4 4 4.4 9 4.4s9-2 9-4.4"/>
+                  <path d="M20 18 c3 2 5 6 2 9"/>
+                </svg>
+              </span>
+              <span>
+                <span class="node-name">PostgreSQL</span><br>
+                <span class="node-role">OLTP · change data</span>
+              </span>
+              <span class="node-tag">Src</span>
+            </button>
+            <button class="node" type="button" data-id="kafka" data-side="source">
+              <span class="node-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M6 8 h14 M6 16 h20 M6 24 h12"/>
+                  <circle cx="24" cy="8" r="2.2"/>
+                  <circle cx="10" cy="16" r="2.2"/>
+                  <circle cx="22" cy="24" r="2.2"/>
+                </svg>
+              </span>
+              <span>
+                <span class="node-name">Apache Kafka</span><br>
+                <span class="node-role">Events · topics</span>
+              </span>
+              <span class="node-tag">Src</span>
+            </button>
+            <button class="node" type="button" data-id="s3" data-side="source">
+              <span class="node-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M8 12 l8-5 8 5 v11 l-8 5 -8-5 z"/>
+                  <path d="M8 12 l8 5 8-5"/>
+                  <path d="M16 17 v11"/>
+                </svg>
+              </span>
+              <span>
+                <span class="node-name">Amazon S3</span><br>
+                <span class="node-role">Objects · files</span>
+              </span>
+              <span class="node-tag">Src</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="channel" id="channel-in" aria-hidden="true">
+          <svg viewBox="0 0 120 220" preserveAspectRatio="none">
+            <path class="flow-line" d="M0 40 C 40 40, 80 110, 120 110"/>
+            <path class="flow-line alt" d="M0 110 C 40 110, 80 110, 120 110"/>
+            <path class="flow-line" d="M0 180 C 40 180, 80 110, 120 110"/>
+          </svg>
+        </div>
+
+        <div class="lake">
+          <svg class="lake-emblem" viewBox="0 0 168 168" aria-hidden="true">
+            <circle cx="84" cy="84" r="78" fill="none" stroke="rgba(196,165,116,0.35)" stroke-width="1"/>
+            <circle cx="84" cy="84" r="62" fill="none" stroke="#3e7f86" stroke-width="1.2"/>
+            <circle cx="84" cy="84" r="46" fill="none" stroke="#8ec9c8" stroke-width="1" opacity="0.7"/>
+            <path d="M18 84 H150" stroke="#c4a574" stroke-width="3"/>
+            <path d="M18 78 H150 M18 90 H150" stroke="#c4a574" stroke-width="1" opacity="0.7"/>
+            <circle cx="84" cy="84" r="10" fill="#0b1a1c" stroke="#8ec9c8" stroke-width="1.5"/>
+            <circle cx="84" cy="84" r="3" fill="#c4a574"/>
+          </svg>
+          <div class="lake-name">Conduit Lake</div>
+          <div class="lake-role">Movement layer</div>
+          <p class="lake-note">Translation and transport. Not a warehouse. Not a BI tool. The water between banks.</p>
+        </div>
+
+        <div class="channel" id="channel-out" aria-hidden="true">
+          <svg viewBox="0 0 120 220" preserveAspectRatio="none">
+            <path class="flow-line" d="M0 110 C 40 110, 70 36, 120 36"/>
+            <path class="flow-line alt" d="M0 110 C 40 110, 70 88, 120 88"/>
+            <path class="flow-line" d="M0 110 C 40 110, 70 150, 120 168"/>
+          </svg>
+        </div>
+
+        <div class="bank bank--out">
+          <div class="bank-kicker">Outflow · Fig. B</div>
+          <div class="bank-title">Where it lands</div>
+          <p class="bank-copy">Warehouses you already chose, then the transform and analytics tools that sit on top of them.</p>
+          <div class="nodes">
+            <div class="out-group">
+              <div class="out-label">Warehouses</div>
+              <button class="node" type="button" data-id="snowflake" data-side="warehouse">
+                <span class="node-mark" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path d="M16 4 v24 M4 16 h24"/>
+                    <path d="M8 8 l16 16 M24 8 l-16 16"/>
+                    <circle cx="16" cy="16" r="3"/>
+                  </svg>
+                </span>
+                <span>
+                  <span class="node-name">Snowflake</span><br>
+                  <span class="node-role">Cloud warehouse</span>
+                </span>
+                <span class="node-tag">Wh</span>
+              </button>
+              <button class="node" type="button" data-id="bigquery" data-side="warehouse">
+                <span class="node-mark" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path d="M16 5 l11 6.5 v9 L16 27 5 20.5 v-9 z"/>
+                    <path d="M12 18 v-5 h3 c2 0 3 1 3 2.5 S17 18 15 18 z"/>
+                  </svg>
+                </span>
+                <span>
+                  <span class="node-name">Google BigQuery</span><br>
+                  <span class="node-role">Serverless warehouse</span>
+                </span>
+                <span class="node-tag">Wh</span>
+              </button>
+              <button class="node" type="button" data-id="databricks" data-side="warehouse">
+                <span class="node-mark" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path d="M6 22 l10-14 10 14"/>
+                    <path d="M10 22 l6-8 6 8"/>
+                    <path d="M6 22 h20"/>
+                  </svg>
+                </span>
+                <span>
+                  <span class="node-name">Databricks</span><br>
+                  <span class="node-role">Lakehouse</span>
+                </span>
+                <span class="node-tag">Wh</span>
+              </button>
+            </div>
+            <div class="out-group">
+              <div class="out-label">Transform &amp; analytics</div>
+              <button class="node" type="button" data-id="dbt" data-side="transform">
+                <span class="node-mark" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="8" cy="16" r="3"/>
+                    <circle cx="22" cy="8" r="3"/>
+                    <circle cx="22" cy="24" r="3"/>
+                    <path d="M11 16 h8 M19 10 l-8 5 M19 22 l-8-5"/>
+                  </svg>
+                </span>
+                <span>
+                  <span class="node-name">dbt</span><br>
+                  <span class="node-role">Transformation</span>
+                </span>
+                <span class="node-tag">Tx</span>
+              </button>
+              <button class="node" type="button" data-id="looker" data-side="analytics">
+                <span class="node-mark" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="16" cy="16" r="9"/>
+                    <circle cx="16" cy="16" r="3.5"/>
+                    <path d="M16 4 v3 M16 25 v3 M4 16 h3 M25 16 h3"/>
+                  </svg>
+                </span>
+                <span>
+                  <span class="node-name">Looker</span><br>
+                  <span class="node-role">BI · exploration</span>
+                </span>
+                <span class="node-tag">Bi</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="possibilities">
+        <div class="poss-intro">
+          <div class="kicker">Once connected</div>
+          <h3>What the current makes possible.</h3>
+        </div>
+        <article class="outcome">
+          <div class="outcome-index">01 — Continuity</div>
+          <h4>Warehouses that match production</h4>
+          <p>Change data from PostgreSQL, topics from Kafka, and objects from S3 arrive in Snowflake, BigQuery, or Databricks as governed tables—without a lattice of cron jobs.</p>
+        </article>
+        <article class="outcome">
+          <div class="outcome-index">02 — Fresh models</div>
+          <h4>dbt on live ground</h4>
+          <p>Transformations compile against data that landed minutes ago. Tests, freshness checks, and downstream metrics stop arguing with last night’s dump.</p>
+        </article>
+        <article class="outcome">
+          <div class="outcome-index">03 — Pace</div>
+          <h4>Analytics that keep up</h4>
+          <p>Looker explores a lakehouse that is still filling. Dashboards reflect operations in motion, not the last batch window you could afford to wait for.</p>
+        </article>
+      </div>
+
+      <div class="catalog" id="catalog">
+        <div class="catalog-head">
+          <div>
+            <h3>Explore the ecosystem</h3>
+            <p>Filter the catalog by where a system sits in the stack, or search by name. Select any integration to see how Conduit Lake uses it—and how it fits beside the others.</p>
+          </div>
+          <div class="explore-tools">
+            <label class="search">
+              <span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Search integrations</span>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 L14 14"/></svg>
+              <input type="search" id="catalog-search" placeholder="Search connectors" autocomplete="off">
+            </label>
+          </div>
+        </div>
+
+        <div class="chips" role="tablist" aria-label="Filter by category">
+          <button class="chip is-on" type="button" data-filter="all">All</button>
+          <button class="chip" type="button" data-filter="source">Sources</button>
+          <button class="chip" type="button" data-filter="warehouse">Warehouses</button>
+          <button class="chip" type="button" data-filter="transform">Transform</button>
+          <button class="chip" type="button" data-filter="analytics">Analytics</button>
+        </div>
+
+        <div class="grid" id="catalog-grid">
+          <button class="card is-active" type="button" data-id="postgresql" data-cat="source">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="16" cy="9" rx="9" ry="4"/><path d="M7 9 v10 c0 2.4 4 4.4 9 4.4s9-2 9-4.4V9"/><path d="M7 14 c0 2.4 4 4.4 9 4.4s9-2 9-4.4"/><path d="M20 18 c3 2 5 6 2 9"/></svg></span>
+            <span><span class="card-name">PostgreSQL</span><div class="card-cat">Source · OLTP</div></span>
+          </button>
+          <button class="card" type="button" data-id="kafka" data-cat="source">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8 h14 M6 16 h20 M6 24 h12"/><circle cx="24" cy="8" r="2.2"/><circle cx="10" cy="16" r="2.2"/><circle cx="22" cy="24" r="2.2"/></svg></span>
+            <span><span class="card-name">Apache Kafka</span><div class="card-cat">Source · Events</div></span>
+          </button>
+          <button class="card" type="button" data-id="s3" data-cat="source">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 12 l8-5 8 5 v11 l-8 5 -8-5 z"/><path d="M8 12 l8 5 8-5"/><path d="M16 17 v11"/></svg></span>
+            <span><span class="card-name">Amazon S3</span><div class="card-cat">Source · Objects</div></span>
+          </button>
+          <button class="card" type="button" data-id="snowflake" data-cat="warehouse">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 4 v24 M4 16 h24"/><path d="M8 8 l16 16 M24 8 l-16 16"/><circle cx="16" cy="16" r="3"/></svg></span>
+            <span><span class="card-name">Snowflake</span><div class="card-cat">Warehouse</div></span>
+          </button>
+          <button class="card" type="button" data-id="bigquery" data-cat="warehouse">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 5 l11 6.5 v9 L16 27 5 20.5 v-9 z"/><path d="M12 18 v-5 h3 c2 0 3 1 3 2.5 S17 18 15 18 z"/></svg></span>
+            <span><span class="card-name">Google BigQuery</span><div class="card-cat">Warehouse</div></span>
+          </button>
+          <button class="card" type="button" data-id="databricks" data-cat="warehouse">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 22 l10-14 10 14"/><path d="M10 22 l6-8 6 8"/><path d="M6 22 h20"/></svg></span>
+            <span><span class="card-name">Databricks</span><div class="card-cat">Lakehouse</div></span>
+          </button>
+          <button class="card" type="button" data-id="dbt" data-cat="transform">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="16" r="3"/><circle cx="22" cy="8" r="3"/><circle cx="22" cy="24" r="3"/><path d="M11 16 h8 M19 10 l-8 5 M19 22 l-8-5"/></svg></span>
+            <span><span class="card-name">dbt</span><div class="card-cat">Transform</div></span>
+          </button>
+          <button class="card" type="button" data-id="looker" data-cat="analytics">
+            <span class="card-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="16" cy="16" r="9"/><circle cx="16" cy="16" r="3.5"/><path d="M16 4 v3 M16 25 v3 M4 16 h3 M25 16 h3"/></svg></span>
+            <span><span class="card-name">Looker</span><div class="card-cat">Analytics</div></span>
+          </button>
+          <p class="empty" id="catalog-empty">No connectors match that search. Try a product name or a stack layer.</p>
+        </div>
+
+        <div class="detail" id="detail" aria-live="polite">
+          <div>
+            <div class="detail-label" id="detail-cat">Source · OLTP</div>
+            <div class="detail-name" id="detail-name">PostgreSQL</div>
+          </div>
+          <p class="detail-body" id="detail-body">Logical replication from the database you already run. Inserts, updates, and deletes become a consistent warehouse replica—no locking production for a nightly extract, no handmade dumps.</p>
+          <button class="detail-cta" type="button" id="detail-cta">View connector notes</button>
+        </div>
+
+        <div class="catalog-foot">
+          <span>Eight connectors on this chart. The catalog is the map, not the shoreline.</span>
+          <a href="#catalog">Request a connector →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var copy = {
+        postgresql: {
+          name: "PostgreSQL",
+          cat: "Source · OLTP",
+          side: "source",
+          body: "Logical replication from the database you already run. Inserts, updates, and deletes become a consistent warehouse replica—no locking production for a nightly extract, no handmade dumps."
+        },
+        kafka: {
+          name: "Apache Kafka",
+          cat: "Source · Events",
+          side: "source",
+          body: "Subscribe to topics once. Events land as ordered, queryable tables in the warehouse, so every analyst does not need their own consumer group and offset folklore."
+        },
+        s3: {
+          name: "Amazon S3",
+          cat: "Source · Objects",
+          side: "source",
+          body: "Files, dumps, and data-lake objects load on arrival or on a schedule. Conduit Lake infers schema, versions what changed, and hands downstream systems tables instead of prefixes."
+        },
+        snowflake: {
+          name: "Snowflake",
+          cat: "Warehouse",
+          side: "warehouse",
+          body: "A first-class landing zone. Conduit Lake writes with Snowflake-native patterns so sharing, governance, and compute remain yours—the movement layer does not become a second warehouse."
+        },
+        bigquery: {
+          name: "Google BigQuery",
+          cat: "Warehouse",
+          side: "warehouse",
+          body: "Stream or batch into datasets you already permission. Partitioning and clustering stay intact, so the warehouse you tuned does not have to be fought by the pipeline that feeds it."
+        },
+        databricks: {
+          name: "Databricks",
+          cat: "Lakehouse",
+          side: "warehouse",
+          body: "Feed the lakehouse. Delta-ready tables arrive for notebooks, SQL warehouses, and models, so operational systems and the lake stop living on different calendars."
+        },
+        dbt: {
+          name: "dbt",
+          cat: "Transform",
+          side: "transform",
+          body: "Freshness you can test. Conduit Lake keeps sources current so dbt builds are about transformation and contracts—not waiting on extract jobs or reconciling stale seeds."
+        },
+        looker: {
+          name: "Looker",
+          cat: "Analytics",
+          side: "analytics",
+          body: "Explores data that is still moving. Looks and dashboards read warehouse tables Conduit Lake continues to fill, so metrics describe operations rather than last night’s batch window."
+        }
+      };
+
+      var nodes = Array.prototype.slice.call(document.querySelectorAll(".node"));
+      var cards = Array.prototype.slice.call(document.querySelectorAll(".card"));
+      var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+      var channelIn = document.getElementById("channel-in");
+      var channelOut = document.getElementById("channel-out");
+      var search = document.getElementById("catalog-search");
+      var empty = document.getElementById("catalog-empty");
+      var filter = "all";
+      var active = "postgresql";
+
+      function setActive(id) {
+        if (!copy[id]) return;
+        active = id;
+        var item = copy[id];
+        nodes.forEach(function (n) {
+          n.classList.toggle("is-active", n.getAttribute("data-id") === id);
+        });
+        cards.forEach(function (c) {
+          c.classList.toggle("is-active", c.getAttribute("data-id") === id);
+        });
+        document.getElementById("detail-name").textContent = item.name;
+        document.getElementById("detail-cat").textContent = item.cat;
+        document.getElementById("detail-body").textContent = item.body;
+        channelIn.classList.toggle("is-hot", item.side === "source");
+        channelOut.classList.toggle("is-hot", item.side !== "source");
+      }
+
+      function applyFilter() {
+        var q = (search.value || "").toLowerCase().trim();
+        var shown = 0;
+        cards.forEach(function (c) {
+          var cat = c.getAttribute("data-cat");
+          var id = c.getAttribute("data-id");
+          var name = copy[id] ? copy[id].name.toLowerCase() : "";
+          var catOk = filter === "all" || cat === filter;
+          var qOk = !q || name.indexOf(q) !== -1 || cat.indexOf(q) !== -1;
+          var vis = catOk && qOk;
+          c.classList.toggle("is-hidden", !vis);
+          if (vis) shown += 1;
+        });
+        empty.classList.toggle("is-shown", shown === 0);
+      }
+
+      nodes.forEach(function (n) {
+        n.addEventListener("click", function () {
+          setActive(n.getAttribute("data-id"));
+        });
+        n.addEventListener("mouseenter", function () {
+          n.classList.add("is-hot");
+          var side = n.getAttribute("data-side");
+          channelIn.classList.toggle("is-hot", side === "source");
+          channelOut.classList.toggle("is-hot", side !== "source");
+        });
+        n.addEventListener("mouseleave", function () {
+          n.classList.remove("is-hot");
+          var item = copy[active];
+          channelIn.classList.toggle("is-hot", item.side === "source");
+          channelOut.classList.toggle("is-hot", item.side !== "source");
+        });
+      });
+
+      cards.forEach(function (c) {
+        c.addEventListener("click", function () {
+          setActive(c.getAttribute("data-id"));
+        });
+      });
+
+      chips.forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          filter = chip.getAttribute("data-filter");
+          chips.forEach(function (x) { x.classList.toggle("is-on", x === chip); });
+          applyFilter();
+        });
+      });
+
+      search.addEventListener("input", applyFilter);
+
+      document.getElementById("detail-cta").addEventListener("click", function () {
+        document.getElementById("catalog").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      setActive("postgresql");
+    })();
+  </script>
+</body>
+</html>

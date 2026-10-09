@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fieldline HVAC — Dispatch Board</title>
+<style>
+  :root{
+    --bg:#eef1f6;
+    --panel:#ffffff;
+    --ink:#16233a;
+    --ink2:#5b6b84;
+    --ink3:#8a97ab;
+    --line:#dde3ec;
+    --line2:#e8ecf2;
+    --blue:#1f5eff;
+    --blue-soft:#e8efff;
+    --red:#d92d20;
+    --red-soft:#fdeae8;
+    --orange:#d9740f;
+    --orange-soft:#fdf0e3;
+    --teal:#0e9388;
+    --teal-soft:#e3f4f2;
+    --amber:#b54708;
+    --violet:#7c5cff;
+    --grid:#eceff4;
+    --shadow:0 1px 2px rgba(22,35,58,.06),0 8px 24px rgba(22,35,58,.07);
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:13px;overflow:hidden;
+  }
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  .app{display:flex;flex-direction:column;height:100vh}
+
+  /* ---------- header ---------- */
+  header{
+    height:54px;background:#122040;color:#fff;display:flex;align-items:center;gap:14px;
+    padding:0 16px;flex:none;border-bottom:1px solid #0d1934;
+  }
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#3b82f6,#0e9388);
+    display:flex;align-items:center;justify-content:center;flex:none}
+  .logo-name{font-weight:700;font-size:15px;letter-spacing:.2px}
+  .logo-sub{font-size:10px;color:#93a4c6;letter-spacing:1.2px;text-transform:uppercase;margin-top:1px}
+  .date-chip{display:flex;align-items:center;gap:6px;background:#1c2d55;border:1px solid #2a3f6e;border-radius:8px;padding:5px 10px}
+  .date-chip b{font-weight:600}
+  .date-chip .arrow{color:#93a4c6;padding:0 2px}
+  .hsearch{flex:1;max-width:340px;display:flex;align-items:center;gap:8px;background:#1c2d55;border:1px solid #2a3f6e;border-radius:8px;padding:6px 10px;color:#93a4c6}
+  .hsearch input{background:none;border:none;outline:none;color:#fff;font:inherit;width:100%}
+  .hsearch input::placeholder{color:#7387ad}
+  .hspace{flex:1}
+  .hbtn{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#c4d0e8;position:relative}
+  .hbtn:hover{background:#1c2d55}
+  .hbtn .dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid #122040}
+  .me{display:flex;align-items:center;gap:9px;padding-left:12px;border-left:1px solid #2a3f6e}
+  .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f79009,#d92d20);color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center}
+  .me .who{line-height:1.25}
+  .me .who b{font-size:12px;font-weight:600}
+  .me .who span{display:block;font-size:10px;color:#93a4c6}
+
+  /* ---------- alert bar ---------- */
+  .alerts{flex:none;display:flex;align-items:center;gap:10px;padding:8px 16px;background:#f7f9fc;border-bottom:1px solid var(--line)}
+  .alerts .lbl{font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;flex:none}
+  .alert{
+    display:flex;align-items:center;gap:8px;padding:5px 12px 5px 9px;border-radius:999px;font-size:12px;font-weight:500;
+    border:1px solid transparent;cursor:pointer;transition:transform .12s, box-shadow .12s;
+  }
+  .alert:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(22,35,58,.10)}
+  .alert.red{background:var(--red-soft);color:#93231a;border-color:#f3c7c3}
+  .alert.amber{background:var(--orange-soft);color:var(--amber);border-color:#f0d9bf}
+  .alert.blue{background:var(--blue-soft);color:#1d48c8;border-color:#c8d8fb}
+  .alert .cnt{background:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 6px}
+  .alert.done{background:#e9f7ef;color:#177245;border-color:#c6ead4;text-decoration:line-through;opacity:.75}
+  .alert .go{font-size:10px;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+
+  /* ---------- layout ---------- */
+  main{flex:1;display:grid;grid-template-columns:252px minmax(0,1fr) 344px;min-height:0}
+
+  /* ---------- technician roster ---------- */
+  .roster{border-right:1px solid var(--line);background:#fafbfd;overflow-y:auto;padding:12px 12px 20px}
+  .roster h2{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--ink3);display:flex;align-items:center;gap:8px;margin:4px 2px 10px}
+  .roster h2 .n{background:var(--line);color:var(--ink2);border-radius:999px;padding:0 7px;font-size:10px;font-weight:700}
+  .tcard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+  .tcard:hover{box-shadow:var(--shadow)}
+  .tcard.hl{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+  .tcard .row1{display:flex;align-items:center;gap:9px}
+  .tav{width:32px;height:32px;border-radius:9px;color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+  .tcard .nm{font-weight:700;font-size:12.5px}
+  .tcard .sh{font-size:11px;color:var(--ink2);margin-top:1px}
+  .tcard .status{margin-left:auto;font-size:10px;font-weight:700;border-radius:5px;padding:2px 6px}
+  .st-ok{background:#e9f7ef;color:#177245}
+  .st-full{background:var(--orange-soft);color:var(--amber)}
+  .tcard .terr{font-size:11px;color:var(--ink2);margin:8px 0 7px;display:flex;align-items:center;gap:5px}
+  .certs{display:flex;flex-wrap:wrap;gap:4px}
+  .cert{font-size:9.5px;font-weight:600;background:#eef2f8;color:#4a5a76;border-radius:5px;padding:2px 6px}
+  .cap{margin-top:9px}
+  .cap .caplbl{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-bottom:3px}
+  .cap .caplbl b{color:var(--ink2)}
+  .bar{height:5px;border-radius:99px;background:#e6eaf1;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:99px}
+
+  /* ---------- board ---------- */
+  .board{display:flex;flex-direction:column;min-width:0;background:var(--panel)}
+  .board-head{flex:none;display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .board-head h1{font-size:15px;font-weight:700}
+  .board-head .stats{font-size:11px;color:var(--ink2);display:flex;gap:12px;margin-left:2px}
+  .board-head .stats span b{color:var(--ink)}
+  .filters{display:flex;gap:6px;margin-left:auto}
+  .fchip{font-size:11px;font-weight:600;color:var(--ink2);background:#f1f4f9;border:1px solid var(--line);border-radius:999px;padding:4px 11px}
+  .fchip:hover{background:#e9edf4}
+  .fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .viewtog{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:8px}
+  .viewtog button{font-size:11px;font-weight:600;padding:4px 11px;color:var(--ink2);background:#fff}
+  .viewtog button.on{background:var(--ink);color:#fff}
+
+  .board-scroll{flex:1;overflow:auto;position:relative}
+
+  /* queue */
+  .queue{padding:12px 16px 4px 226px;display:flex;gap:12px;align-items:flex-start}
+  .qcard{
+    flex:none;display:flex;gap:12px;align-items:center;background:linear-gradient(0deg,#fff,#fff) padding-box,#fff padding-box;
+    border:1.5px dashed #f0a9a3;border-radius:12px;padding:10px 14px;cursor:grab;background:var(--red-soft);
+    transition:box-shadow .15s;
+  }
+  .qcard:hover{box-shadow:var(--shadow)}
+  .qcard.dragging{opacity:.45}
+  .qbadge{background:var(--red);color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.8px;border-radius:5px;padding:3px 7px;flex:none}
+  .qsite{font-weight:700;font-size:13px}
+  .qsub{font-size:11.5px;color:#7a4038;margin-top:2px}
+  .qchips{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+  .qchip{font-size:10px;font-weight:600;background:#fff;border:1px solid #f0c8c3;color:#93231a;border-radius:5px;padding:1px 6px;display:flex;align-items:center;gap:4px}
+  .qhint{font-size:11px;color:var(--ink3);align-self:center;display:flex;align-items:center;gap:6px}
+  .qassigned{display:flex;gap:12px;align-items:center;border:1.5px solid #c6ead4;background:#e9f7ef;border-radius:12px;padding:10px 14px;color:#177245;font-weight:600}
+
+  /* timeline */
+  .tl{position:relative;margin:10px 0 0;min-width:1134px;padding-bottom:8px}
+  .nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--red);z-index:30;opacity:.85}
+  .nowline .tag{position:absolute;top:-2px;left:4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:1px 5px;white-space:nowrap}
+  .thead{display:grid;grid-template-columns:210px 924px;position:sticky;top:0;background:var(--panel);z-index:20;border-bottom:1px solid var(--line)}
+  .thead .hours{position:relative;height:30px}
+  .hlabel{position:absolute;top:7px;transform:translateX(-50%);font-size:10.5px;font-weight:600;color:var(--ink3)}
+  .hlabel.maj{color:var(--ink2)}
+  .trow{display:grid;grid-template-columns:210px 924px;border-bottom:1px solid var(--line2);position:relative}
+  .trow:last-of-type{border-bottom:1px solid var(--line)}
+  .trow.dropok .track{background-color:#f4f9ff}
+  .trow .lbl{padding:9px 14px 9px 16px;border-right:1px solid var(--line);display:flex;gap:9px;align-items:center;cursor:pointer}
+  .trow .lbl:hover{background:#f7f9fc}
+  .trow .lbl .who b{font-size:12px;display:block;font-weight:700}
+  .trow .lbl .who span{font-size:10.5px;color:var(--ink2)}
+  .track{position:relative;height:62px;background-image:repeating-linear-gradient(to right,var(--grid) 0 1px,transparent 1px 84px)}
+  .track::before{content:"";position:absolute;top:0;bottom:0;left:0;width:84px;background:rgba(18,32,64,.035)}
+  .shiftband{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,rgba(31,94,255,.05),rgba(31,94,255,.02));border-left:1px solid rgba(31,94,255,.25);border-right:1px solid rgba(31,94,255,.25)}
+  .lblshift{position:absolute;top:3px;font-size:9px;font-weight:600;color:rgba(31,94,255,.65);letter-spacing:.4px;transform:translateX(6px)}
+
+  .blk{position:absolute;border-radius:7px;padding:4px 8px;overflow:hidden;color:#fff;z-index:5;line-height:1.25}
+  .blk .b1{font-weight:700;font-size:11px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+  .blk .b2{font-size:9.5px;opacity:.92;white-space:nowrap}
+  .blk .icn{display:inline-flex;opacity:.95;flex:none}
+  .blk.emergency{background:var(--red)}
+  .blk.high{background:#e07a16}
+  .blk.normal{background:var(--blue)}
+  .blk.pm{background:var(--teal)}
+  .blk.travel{background:repeating-linear-gradient(45deg,#e8ecf2 0 6px,#f4f6fa 6px 12px);color:var(--ink2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;z-index:4}
+  .blk.break{background:#f1f3f7;color:var(--ink3);border:1px dashed #d5dbe5;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:600;z-index:3}
+  .blk.click{cursor:pointer;transition:box-shadow .12s}
+  .blk.click:hover{box-shadow:0 3px 10px rgba(22,35,58,.28);z-index:8}
+  .blk.sel{outline:2.5px solid var(--ink);outline-offset:1px;z-index:9}
+  .blk.dim{opacity:.14;pointer-events:none}
+  .blk.conflicted::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px)}
+  .flag{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:#fff;color:var(--red);border:1px solid #f0b4ae;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .overrun{position:absolute;border:2px dashed var(--red);background:rgba(217,45,32,.09);border-radius:7px;z-index:6;padding:4px 8px;color:#93231a;font-size:9.5px;font-weight:700;pointer-events:auto;cursor:pointer}
+  .overrun .o1{display:flex;align-items:center;gap:5px;font-size:10.5px}
+
+  .legend{flex:none;display:flex;align-items:center;gap:14px;padding:9px 16px;border-top:1px solid var(--line);background:#fafbfd;font-size:11px;color:var(--ink2);flex-wrap:wrap}
+  .lg{display:flex;align-items:center;gap:6px}
+  .sw{width:14px;height:10px;border-radius:3px}
+  .sw.emergency{background:var(--red)} .sw.high{background:#e07a16} .sw.normal{background:var(--blue)} .sw.pm{background:var(--teal)}
+  .sw.travel{background:repeating-linear-gradient(45deg,#d7dde7 0 4px,#eef1f6 4px 8px)}
+  .sw.over{border:2px dashed var(--red);width:14px;height:10px;background:rgba(217,45,32,.08)}
+
+  /* ---------- details panel ---------- */
+  .details{border-left:1px solid var(--line);overflow-y:auto;background:#fff;display:flex;flex-direction:column}
+  .dhead{flex:none;padding:14px 16px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .dhead h3{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--ink3)}
+  .dhead .pinbtn{margin-left:auto;font-size:11px;font-weight:600;color:var(--blue);display:flex;align-items:center;gap:5px}
+  .dbody{padding:14px 16px 24px}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;border-radius:5px;padding:3px 8px}
+  .badge.emergency{background:var(--red-soft);color:#93231a}
+  .badge.high{background:var(--orange-soft);color:var(--amber)}
+  .badge.normal{background:var(--blue-soft);color:#1d48c8}
+  .badge.pm{background:var(--teal-soft);color:#0b6f66}
+  .badge.neutral{background:#eef2f8;color:#4a5a76}
+  .dsite{font-size:17px;font-weight:800;margin:9px 0 2px;letter-spacing:-.2px}
+  .dvid{font-size:11px;color:var(--ink3);font-weight:600}
+  .kv{display:grid;grid-template-columns:86px 1fr;gap:8px 10px;margin-top:14px}
+  .kv dt{font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;padding-top:2px}
+  .kv dd{font-size:12.5px;line-height:1.45}
+  .kv dd small{display:block;color:var(--ink2);font-size:11px;margin-top:1px}
+  .dsec{margin-top:18px;border-top:1px solid var(--line2);padding-top:12px}
+  .dsec h4{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .chiprow{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{font-size:11px;font-weight:600;border-radius:6px;padding:3px 8px;display:inline-flex;align-items:center;gap:5px}
+  .chip.part{background:#fdf6e7;border:1px solid #f0dcae;color:#8a5b0a}
+  .chip.tool{background:#edf3fe;border:1px solid #cfdcfb;color:#1d48c8}
+  .chip.crew{background:#f1ecfe;border:1px solid #d9cdfa;color:#5b3fd6}
+  .problem{background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12.5px;line-height:1.5}
+  .note{display:flex;gap:8px;border-radius:8px;padding:9px 11px;font-size:12px;line-height:1.45}
+  .note.red{background:var(--red-soft);color:#7a221b}
+  .note.amber{background:var(--orange-soft);color:#7c4a08}
+  .note.blue{background:var(--blue-soft);color:#1c3fa8}
+  .note .ni{flex:none;margin-top:1px}
+  .asstechs{display:flex;flex-direction:column;gap:7px}
+  .assrow{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  .assrow .nm{font-weight:700;font-size:12px}
+  .assrow .rl{font-size:10.5px;color:var(--ink2)}
+  .assrow .ok{margin-left:auto;font-size:10px;font-weight:700;color:#177245;background:#e9f7ef;border-radius:5px;padding:2px 7px}
+  .cands{display:flex;flex-direction:column;gap:7px}
+  .cand{border:1px solid var(--line);border-radius:9px;padding:9px 10px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+  .cand:hover{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+  .cand.best{border-color:#8fce9f;background:#fbfffc}
+  .cand.no{opacity:.62;cursor:not-allowed}
+  .cand .c1{display:flex;align-items:center;gap:8px}
+  .cand .cn{font-weight:700;font-size:12.5px}
+  .cand .fit{margin-left:auto;font-size:10px;font-weight:800;border-radius:5px;padding:2px 7px;letter-spacing:.3px}
+  .fit.yes{background:#e9f7ef;color:#177245}
+  .fit.warn{background:var(--orange-soft);color:var(--amber)}
+  .fit.no{background:var(--red-soft);color:#93231a}
+  .cand .why{font-size:11px;color:var(--ink2);margin-top:5px;line-height:1.45;padding-left:41px}
+  .cand .assign{margin-top:7px;margin-left:41px;font-size:11px;font-weight:700;background:var(--ink);color:#fff;border-radius:6px;padding:4px 12px}
+  .cand .assign:hover{background:#22355c}
+  .actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+  .btn{font-size:12px;font-weight:700;border-radius:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:7px}
+  .btn.primary{background:var(--blue);color:#fff}
+  .btn.primary:hover{background:#1a4fe0}
+  .btn.ghost{border:1px solid var(--line);color:var(--ink2);background:#fff}
+  .btn.ghost:hover{border-color:var(--ink3);color:var(--ink)}
+
+  /* toast */
+  .toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{display:flex;align-items:center;gap:9px;background:#122040;color:#fff;font-size:12.5px;font-weight:500;border-radius:10px;
+    padding:10px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:tin .25s ease;max-width:640px}
+  .toast.warn{background:#7c4a08}
+  .toast.err{background:#93231a}
+  .toast.ok{background:#0f6b3f}
+  @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  svg{display:block;flex:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M5 8l7-6 7 6M5 16l7 6 7-6" transform="scale(.85) translate(2,0)"/></svg>
+      </div>
+      <div>
+        <div class="logo-name">Fieldline HVAC</div>
+        <div class="logo-sub">Dispatch Console</div>
+      </div>
+    </div>
+    <div class="date-chip">
+      <button class="arrow" title="Previous day">‹</button>
+      <b>Tuesday, March 12</b>
+      <span style="color:#7387ad">· 10:20 AM</span>
+      <button class="arrow" title="Next day">›</button>
+    </div>
+    <div class="hsearch">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input placeholder="Search sites, visits, technicians…">
+    </div>
+    <div class="hspace"></div>
+    <button class="hbtn" title="Notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span class="dot"></span></button>
+    <button class="hbtn" title="Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.2a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.5 1z"/></svg></button>
+    <div class="me">
+      <div class="avatar">KO</div>
+      <div class="who"><b>Karen Osei</b><span>Lead Dispatcher</span></div>
+    </div>
+  </header>
+
+  <div class="alerts" id="alerts"></div>
+
+  <main>
+    <!-- ============ technician roster ============ -->
+    <aside class="roster" id="roster"></aside>
+
+    <!-- ============ schedule board ============ -->
+    <section class="board">
+      <div class="board-head">
+        <h1>Day Schedule</h1>
+        <div class="stats">
+          <span><b>12</b> visits</span>
+          <span><b>5</b> techs</span>
+          <span><b id="confCount">2</b> conflicts</span>
+          <span><b>1</b> unassigned</span>
+        </div>
+        <div class="filters" id="filters">
+          <button class="fchip on" data-f="all">All work</button>
+          <button class="fchip" data-f="emergency">Emergency</button>
+          <button class="fchip" data-f="pm">Maintenance</button>
+          <button class="fchip" data-f="conflict">Conflicts</button>
+        </div>
+        <div class="viewtog">
+          <button class="on">Timeline</button><button>Grid</button>
+        </div>
+      </div>
+
+      <div class="board-scroll" id="boardscroll">
+        <div class="queue" id="queue"></div>
+        <div class="tl" id="tl"></div>
+        <div class="legend">
+          <span class="lg"><i class="sw emergency"></i>Emergency</span>
+          <span class="lg"><i class="sw high"></i>Repair — high</span>
+          <span class="lg"><i class="sw normal"></i>Standard repair</span>
+          <span class="lg"><i class="sw pm"></i>Planned maintenance</span>
+          <span class="lg"><i class="sw travel"></i>Travel / break</span>
+          <span class="lg"><i class="sw over"></i>Overrun risk</span>
+          <span class="lg"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5b6b84" stroke-width="2.5"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Restricted access</span>
+          <span class="lg"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5b6b84" stroke-width="2.5"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9.5" r="2.6"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5M15 20c0-2.2 1.4-3.6 3.4-3.6S22 17.8 22 20"/></svg>Crew of 2+</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ details panel ============ -->
+    <aside class="details" id="details"></aside>
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ================= icons ================= */
+const I = {
+  warn:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><path d="M12 18.2v.1"/></svg>',
+  lock:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+  users:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><circle cx="17" cy="9.5" r="2.6" opacity=".7"/><path d="M16.5 14.9c2.6.3 4.5 2 4.5 5.1" opacity=".7"/></svg>',
+  box:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+  tool:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a4 4 0 00-5.4 5L3 17.6V21h3.4l6.3-6.3a4 4 0 005-5.4l-3 3-2.7-2.7 3-3z"/></svg>',
+  truck:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 6h13v10H1zM14 9h5l3 4v3h-8z"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="18.5" r="2"/></svg>',
+  pin:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s-7-6.1-7-11a7 7 0 0114 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  clock:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+  check:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>',
+  cross:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  bolt:'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>',
+  cal:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  info:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.3v.1"/></svg>',
+  drag:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01"/></svg>'
+};
+
+/* ================= time helpers ================= */
+const DAY_START = 7, DAY_END = 18, PXH = 84;
+const t2x = t => (t - DAY_START) * PXH;
+const fmt = t => {
+  const h = Math.floor(t), m = Math.round((t - h) * 60);
+  const ap = h >= 12 ? 'PM' : 'AM'; const hh = ((h + 11) % 12) + 1;
+  return m ? `${hh}:${String(m).padStart(2,'0')} ${ap}` : `${hh} ${ap}`;
+};
+
+/* ================= technicians ================= */
+const techs = {
+  dana:  {id:'dana',  name:'Dana Ruiz',    ini:'DR', color:'#1f5eff', shift:[7,15.5], territory:'North Metro',
+          certs:['EPA 608 Univ.','Chiller','Boiler B2'], systems:'Chillers · Rooftop · Boilers', booked:6.75, shiftH:8.5},
+  marcus:{id:'marcus',name:'Marcus Okafor',ini:'MO', color:'#0d9488', shift:[8,16.5], territory:'East Industrial',
+          certs:['EPA 608 Univ.','VRF Level 2'], systems:'Rooftop · VRF', booked:6.0, shiftH:8.5},
+  priya: {id:'priya', name:'Priya Shah',   ini:'PS', color:'#b45309', shift:[9,17.5], territory:'Downtown Core',
+          certs:['EPA 608 Univ.','IAQ / Cleanroom'], systems:'AHUs · Exhaust · VRF', booked:6.0, shiftH:8.5},
+  tom:   {id:'tom',   name:'Tom Bergman',  ini:'TB', color:'#7c5cff', shift:[7.5,16], territory:'West & Airport',
+          certs:['EPA 608 Univ.','Chiller','Refrigeration'], systems:'Chillers · Refrigeration · Boilers', booked:7.75, shiftH:8.5},
+  lena:  {id:'lena',  name:'Lena Alvarez', ini:'LA', color:'#d92d20', shift:[10,18], territory:'South Metro',
+          certs:['EPA 608 Univ.','VRF Level 2','Boiler B2'], systems:'VRF · Rooftop · Boilers', booked:3.75, shiftH:8}
+};
+
+/* ================= visits ================= */
+const V = {
+  v101:{id:'V-101', site:'Meridian Plumbing Supply', techs:['dana'], prio:'high', type:'Repair',
+    window:[8,10], dur:'2.0 h planned', equip:'Rooftop unit RTU-3 (15-ton package)', area:'North Metro',
+    problem:'No cooling on the 2nd floor since Friday. Compressor short-cycling; suspected failed run capacitor or contactor.',
+    parts:['Run capacitor kit','Contactor (spare)'], tools:['Recovery machine','Clamp meter'],
+    crew:1, access:'Roof hatch key held by site manager — call on arrival.',
+    contact:'R. Dell · Site manager · (204) 555-0182', travel:'35 min drive to next site (Crescent Food)',
+    conflict:true,
+    risk:'Reported symptoms match an aging compressor. Parts run likely — supervisor estimate is +2 h (finish ~12:00 PM), which overlaps Dana’s 10:45 AM crew visit at Crescent Food.'},
+  v102:{id:'V-102', site:'Halstead Print Co.', techs:['tom'], prio:'pm', type:'Planned maintenance',
+    window:[8,10], dur:'2.0 h', equip:'2× condensing boiler (Lochinvar)', area:'West & Airport',
+    problem:'Quarterly boiler inspection and combustion tune per contract.',
+    parts:[], tools:['Flue gas analyzer','Manometer'],
+    crew:1, access:'Plant room badge access; front desk sign-in.',
+    contact:'Facilities desk · x114', travel:'45 min drive to next site (Aurora Cold Storage)'},
+  v103:{id:'V-103', site:'Crescent Food Processing', techs:['dana','lena'], prio:'high', type:'Repair',
+    window:[10.75,13], dur:'2.25 h', equip:'Chiller #2 (200-ton screw)', area:'North Metro',
+    problem:'Chiller tripping on low refrigerant pressure; production line losing cooling capacity.',
+    parts:['R-134a refrigerant (30 lb)','Filter-drier shell'], tools:['Recovery machine','Digital manifold'],
+    crew:2, access:'Loading dock only — hard entry window 8:30–11:30 AM.',
+    contact:'M. Osei · Plant manager must escort crew on floor', travel:'Dana: 35 min from Meridian · Lena: 35 min from depot',
+    conflict:true,
+    risk:'Crew of 2 — if Dana’s Meridian repair overruns, this visit cannot start on time and the 11:30 AM dock window may be missed.'},
+  v104:{id:'V-104', site:'Gateway Medical Clinic', techs:['priya'], prio:'normal', type:'Repair',
+    window:[10,12], dur:'2.0 h', equip:'VRF system, FCU zone 4', area:'Downtown Core',
+    problem:'Zone 4 not heating; FCU controller showing error E5.',
+    parts:[], tools:['VRF service checker','Manifold'],
+    crew:1, access:'Clinical suite — escorted access only.',
+    contact:'D. Whitfield · Facilities director must be present (10–12 confirmed)', travel:'20 min drive to next site (Union Tower)'},
+  v105:{id:'V-105', site:'Lakeside Logistics Hub', techs:['marcus'], prio:'normal', type:'Repair',
+    window:[12.5,14], dur:'1.5 h', equip:'Rooftop unit RTU-2 (10-ton)', area:'East Industrial',
+    problem:'Supply fan vibration reported by night crew; possible bearing wear.',
+    parts:['Fan motor (on van)','Bearing kit'], tools:['Vibration meter'],
+    crew:1, access:'Roof access via east stairwell — key at security.',
+    contact:'Security desk · 24/7', travel:'30 min drive to next site (Elm Crossing)'},
+  v106:{id:'V-106', site:'Summit Grand Hotel', techs:[], prio:'emergency', type:'Emergency',
+    window:[13.5,17], dur:'2.5 h est.', equip:'Centrifugal chiller (250-ton)', area:'Downtown Core',
+    problem:'Banquet hall at 58°F. Chiller not holding setpoint; corporate event tonight at 6:00 PM. Response required by 3:00 PM.',
+    parts:['Surge-kit (reserved, West depot)'], tools:['Recovery machine','Chiller vibration kit'],
+    crew:1, access:'Plant room B2 — engineer escort required.',
+    contact:'A. Fontaine · Chief engineer · (204) 555-0771', travel:'Downtown Core — 30–40 min from most territories',
+    req:'Requires Chiller certification + EPA 608 Universal.'},
+  v107:{id:'V-107', site:'Aurora Cold Storage', techs:['tom'], prio:'high', type:'Repair',
+    window:[11.5,14], dur:'2.5 h', equip:'Walk-in freezer rack system (refrigeration)', area:'West & Airport',
+    problem:'Walk-in freezer drifting +8°F; product hold risk flagged by client.',
+    parts:['TXV valve','Receiver gasket set'], tools:['Recovery machine','Leak detector'],
+    crew:1, access:'HARD WINDOW 11:30 AM–2:00 PM only — USDA inspection on site; no entry outside window.',
+    contact:'QA lead must be onsite for any refrigeration work', travel:'45 min drive back to depot',
+    conflict:false},
+  v108:{id:'V-108', site:'Riverbend Office Park', techs:['marcus'], prio:'pm', type:'Planned maintenance',
+    window:[9,10.5], dur:'1.5 h', equip:'4× rooftop units (semi-annual PM)', area:'East Industrial',
+    problem:'Contract semi-annual PM: filters, belts, coil rinse, controls check.',
+    parts:['Filter set (12)','Belts (4)'], tools:[],
+    crew:1, access:'Roof ladder padlocked — key in lockbox 4417.',
+    contact:'Property manager · (204) 555-0130', travel:'40 min drive to next site (Lakeside)'},
+  v109:{id:'V-109', site:'Harbor Point Hotel', techs:['lena'], prio:'pm', type:'Planned maintenance',
+    window:[14.5,16], dur:'1.5 h', equip:'Rooftop units (annual PM)', area:'South Metro',
+    problem:'Annual rooftop PM per contract: coil clean, refrigerant check, electrical tighten.',
+    parts:['Coil cleaner'], tools:[],
+    crew:1, access:'Service elevator to roof — check in with front desk.',
+    contact:'Chief engineer · x5', travel:'30 min drive from Crescent Food'},
+  v110:{id:'V-110', site:'Union Tower', techs:['priya'], prio:'pm', type:'Planned maintenance',
+    window:[13.5,15], dur:'1.5 h', equip:'AHU-7 + exhaust fans (IAQ audit)', area:'Downtown Core',
+    problem:'Filter change and IAQ audit — report needed for lease compliance.',
+    parts:['HEPA set (6)'], tools:['IAQ meter'],
+    crew:1, access:'Mechanical floor 14 — building engineer escorts.',
+    contact:'Building engineer · 2:00 PM confirmed', travel:'30 min drive to next site (Cedar Lane)'},
+  v111:{id:'V-111', site:'Brookside Gymnasium', techs:['dana'], prio:'pm', type:'Planned maintenance',
+    window:[14,15.25], dur:'1.25 h', equip:'Rooftop unit (filter + belt PM)', area:'North Metro',
+    problem:'Monthly PM: filters, belt tension, thermostat test.',
+    parts:['Filter set (4)'], tools:[],
+    crew:1, access:'Roof hatch from locker room corridor.',
+    contact:'Ops manager · (204) 555-0164', travel:'15 min drive to depot'},
+  v113:{id:'V-113', site:'Elm Crossing Retail', techs:['marcus'], prio:'pm', type:'Planned maintenance',
+    window:[14.5,16], dur:'1.5 h', equip:'2× rooftop units (quarterly PM)', area:'East Industrial',
+    problem:'Quarterly PM per contract.',
+    parts:['Filter set (6)'], tools:[],
+    crew:1, access:'Loading-dock roof ladder.',
+    contact:'Store manager · on shift to 6 PM', travel:'20 min drive back to depot'},
+  v114:{id:'V-114', site:'Cedar Lane Clinic', techs:['priya'], prio:'pm', type:'Planned maintenance',
+    window:[15.5,17], dur:'1.5 h', equip:'Exhaust fans EF-2/EF-3', area:'Downtown Core',
+    problem:'Exhaust fan PM and airflow balance check.',
+    parts:[], tools:['Anemometer'],
+    crew:1, access:'After-hours key — clinic closes at 5 PM.',
+    contact:'D. Whitfield · Facilities director', travel:'15 min drive back to depot'}
+};
+
+/* ================= timeline blocks ================= */
+const schedule = {
+  dana:[
+    {t:'travel', a:7.15, b:8,    label:'Depot · parts pickup'},
+    {v:'v101',   a:8,    b:10},
+    {t:'travel', a:10,   b:10.75,label:'35 min drive'},
+    {v:'v103',   a:10.75,b:13},
+    {t:'travel', a:13,   b:13.5, label:'30 min drive'},
+    {v:'v111',   a:14,   b:15.25}
+  ],
+  marcus:[
+    {t:'travel', a:8.25, b:9,    label:'45 min drive'},
+    {v:'v108',   a:9,    b:10.5},
+    {t:'travel', a:10.5, b:11.25,label:'40 min drive'},
+    {t:'break',  a:11.25,b:12.25,label:'Lunch'},
+    {t:'travel', a:12.25,b:12.5, label:'25 min drive'},
+    {v:'v105',   a:12.5, b:14},
+    {t:'travel', a:14,   b:14.5, label:'30 min drive'},
+    {v:'v113',   a:14.5, b:16}
+  ],
+  priya:[
+    {t:'travel', a:9.25, b:10,   label:'35 min drive'},
+    {v:'v104',   a:10,   b:12},
+    {t:'break',  a:12,   b:13,   label:'Lunch'},
+    {t:'travel', a:13,   b:13.5, label:'30 min drive'},
+    {v:'v110',   a:13.5, b:15},
+    {t:'travel', a:15,   b:15.5, label:'20 min drive'},
+    {v:'v114',   a:15.5, b:17}
+  ],
+  tom:[
+    {t:'travel', a:7.5,  b:8,    label:'30 min drive'},
+    {v:'v102',   a:8,    b:10},
+    {t:'travel', a:10,   b:10.75,label:'45 min drive'},
+    {t:'admin',  a:10.75,b:11.5, label:'Depot · chiller kit pickup'},
+    {v:'v107',   a:11.5, b:14},
+    {t:'travel', a:14,   b:14.75,label:'45 min drive'},
+    {t:'admin',  a:14.75,b:16,   label:'Service notes'}
+  ],
+  lena:[
+    {t:'travel', a:10.15,b:10.75,label:'35 min drive'},
+    {v:'v103',   a:10.75,b:13},
+    {t:'break',  a:13,   b:14,   label:'Lunch'},
+    {t:'travel', a:14,   b:14.5, label:'30 min drive'},
+    {v:'v109',   a:14.5, b:16}
+  ]
+};
+
+/* ================= state ================= */
+const state = {
+  selected:'v106', filter:'all', assigned106:null, resolved:{}, displaced:[]
+};
+
+/* ================= toasts ================= */
+function toast(msg, kind){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind||'');
+  const ic = kind==='err'?I.cross:(kind==='warn'?I.warn:I.check);
+  el.innerHTML = ic + '<span>' + msg + '</span>';
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .4s'; el.style.opacity='0'; setTimeout(()=>el.remove(),420); }, 4200);
+}
+
+/* ================= alerts ================= */
+function renderAlerts(){
+  const a = document.getElementById('alerts');
+  const done106 = !!state.assigned106;
+  a.innerHTML = '<span class="lbl">Attention</span>' +
+    (done106
+      ? `<div class="alert done"><span>${I.check}</span> V-106 Summit Grand — assigned to ${techs[state.assigned106].name}</div>`
+      : `<div class="alert red" data-v="v106"><span>${I.bolt}</span><b>Emergency unassigned</b> — V-106 Summit Grand Hotel, response by 3:00 PM <span class="cnt">1 site waiting</span><span class="go">Open</span></div>`) +
+    `<div class="alert amber" data-v="v101"><span>${I.warn}</span>V-101 Meridian repair trending <b>+2 h</b> — conflicts with 10:45 AM crew visit V-103<span class="go">Open</span></div>` +
+    `<div class="alert blue" data-v="v107"><span>${I.clock}</span>Tom at <b>91% capacity</b> — Aurora access window (11:30–2:00) is a hard stop<span class="go">Open</span></div>`;
+  a.querySelectorAll('.alert[data-v]').forEach(el=>{
+    el.onclick = ()=>{ select(el.dataset.v); highlightRow(V[el.dataset.v].techs[0]); };
+  });
+}
+
+/* ================= roster ================= */
+function renderRoster(){
+  const r = document.getElementById('roster');
+  r.innerHTML = '<h2>Technicians <span class="n">5</span></h2>';
+  for(const t of Object.values(techs)){
+    const pct = Math.round(t.booked/t.shiftH*100);
+    const st = pct>=88 ? ['st-full','Near cap.'] : ['st-ok','Open'];
+    const card = document.createElement('div');
+    card.className = 'tcard'; card.dataset.tech = t.id;
+    card.innerHTML = `
+      <div class="row1">
+        <div class="tav" style="background:${t.color}">${t.ini}</div>
+        <div><div class="nm">${t.name}</div><div class="sh">${fmt(t.shift[0])} – ${fmt(t.shift[1])}</div></div>
+        <span class="status ${st[0]}">${st[1]}</span>
+      </div>
+      <div class="terr">${I.pin}${t.territory}</div>
+      <div class="certs">${t.certs.map(c=>`<span class="cert">${c}</span>`).join('')}</div>
+      <div class="cap">
+        <div class="caplbl"><span>Capacity</span><b>${t.booked} h / ${t.shiftH} h</b></div>
+        <div class="bar"><i style="width:${pct}%;background:${pct>=88?'#e07a16':(pct>=75?'#1f5eff':'#0e9388')}"></i></div>
+      </div>`;
+    card.onclick = ()=>highlightRow(t.id);
+    r.appendChild(card);
+  }
+}
+function highlightRow(id){
+  document.querySelectorAll('.trow').forEach(r=>r.style.boxShadow='');
+  const row = document.querySelector('.trow[data-tech="'+id+'"]');
+  if(row){ row.style.boxShadow='inset 0 0 0 2px var(--blue)'; row.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  document.querySelectorAll('.tcard').forEach(c=>c.classList.toggle('hl', c.dataset.tech===id));
+}
+
+/* ================= queue ================= */
+function renderQueue(){
+  const q = document.getElementById('queue');
+  if(state.assigned106){
+    q.innerHTML = `<div class="qassigned">${I.check} V-106 Summit Grand assigned to <u>${techs[state.assigned106].name}</u> — window ${fmt(13.5)}–${fmt(17)}</div>`;
+    return;
+  }
+  q.innerHTML = `
+    <div class="qcard" id="qcard" draggable="true">
+      <span class="qbadge">${I.bolt} EMERGENCY</span>
+      <div>
+        <div class="qsite">Summit Grand Hotel — V-106 <span style="font-weight:500;color:#93231a">· Response by 3:00 PM</span></div>
+        <div class="qsub">Banquet hall at 58°F · centrifugal chiller (250-ton) · Downtown Core</div>
+        <div class="qchips">
+          <span class="qchip">${I.users}Crew 1</span>
+          <span class="qchip">${I.lock}Escort required</span>
+          <span class="qchip">${I.box}Surge-kit — West depot</span>
+          <span class="qchip">${I.tool}Chiller cert + EPA 608</span>
+        </div>
+      </div>
+    </div>
+    <span class="qhint">${I.drag} Drag onto a technician’s row, or use the assignment panel →</span>`;
+  const card = document.getElementById('qcard');
+  card.addEventListener('dragstart', e=>{ card.classList.add('dragging'); e.dataTransfer.setData('text/plain','v106'); });
+  card.addEventListener('dragend', ()=>card.classList.remove('dragging'));
+  card.onclick = ()=>select('v106');
+}
+
+/* ================= timeline ================= */
+function prioClass(p){ return p==='emergency'?'emergency':(p==='pm'?'pm':(p==='high'?'high':'normal')); }
+
+function blockHTML(v, dim){
+  const d = V[v];
+  const icons = [];
+  if(d.crew>1) icons.push(`<span class="icn" title="Crew of ${d.crew}">${I.users}</span>`);
+  if(d.access && /HARD WINDOW|escort|dock only/i.test(d.access)) icons.push(`<span class="icn" title="Restricted access">${I.lock}</span>`);
+  if(d.parts && d.parts.length) icons.push(`<span class="icn" title="Parts required">${I.box}</span>`);
+  const conflicted = state.displaced.includes(v) ? ' conflicted' : '';
+  return `<div class="blk click ${prioClass(d.prio)}${dim?' dim':''}${conflicted} ${d.prio}" data-v="${v}"
+      style="left:${t2x(scheduleOf(v).a)}px;width:${(scheduleOf(v).b-scheduleOf(v).a)*PXH}px;top:9px;height:44px"
+      title="${d.id} · ${d.site}">
+      <span class="b1">${icons.join('')}${d.site.length>20?d.site.slice(0,20)+'…':d.site}</span>
+      <span class="b2">${fmt(scheduleOf(v).a)}–${fmt(scheduleOf(v).b)}</span>
+    </div>`;
+}
+/* find a schedule slot for a visit (first tech slot that holds it) */
+function scheduleOf(v){
+  for(const [tid,blocks] of Object.entries(schedule)){
+    for(const b of blocks){ if(b.v===v) return b; }
+  }
+  return null;
+}
+
+function matchesFilter(d){
+  if(state.filter==='all') return true;
+  if(state.filter==='emergency') return d.prio==='emergency';
+  if(state.filter==='pm') return d.type==='Planned maintenance';
+  if(state.filter==='conflict') return d.conflict;
+  return true;
+}
+
+function renderTimeline(){
+  const tl = document.getElementById('tl');
+  let hours = '<div class="hours">';
+  for(let h=DAY_START; h<=DAY_END; h++){
+    hours += `<span class="hlabel ${h%3===0?'maj':''}" style="left:${t2x(h)}px">${fmt(h)}</span>`;
+  }
+  hours += '</div>';
+  let html = `<div class="thead"><div style="border-right:1px solid var(--line);display:flex;align-items:center;padding-left:16px"><span style="font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.7px">Technician</span></div>${hours}</div>`;
+
+  for(const [tid,blocks] of Object.entries(schedule)){
+    const t = techs[tid];
+    html += `<div class="trow" data-tech="${tid}">
+      <div class="lbl" data-tech="${tid}">
+        <div class="tav" style="background:${t.color};width:28px;height:28px;font-size:10.5px">${t.ini}</div>
+        <div class="who"><b>${t.name}</b><span>${fmt(t.shift[0])}–${fmt(t.shift[1])}</span></div>
+      </div>
+      <div class="track" data-tech="${tid}">
+        <div class="shiftband" style="left:${t2x(t.shift[0])}px;width:${(t.shift[1]-t.shift[0])*PXH}px">
+          <span class="lblshift">${t.territory}</span>
+        </div>`;
+    for(const b of blocks){
+      const w = (b.b-b.a)*PXH, x = t2x(b.a);
+      if(b.v){
+        const d = V[b.v];
+        const dim = !matchesFilter(d);
+        const icons = [];
+        if(d.crew>1) icons.push(`<span class="icn" title="Crew of ${d.crew}">${I.users}</span>`);
+        if(d.access && /HARD WINDOW|escort|dock only/i.test(d.access)) icons.push(`<span class="icn" title="Restricted access">${I.lock}</span>`);
+        if(d.parts && d.parts.length) icons.push(`<span class="icn" title="Parts: ${d.parts.join(', ')}">${I.box}</span>`);
+        const flag = d.risk || state.displaced.includes(b.v) ? `<span class="flag">${I.warn}</span>` : '';
+        const conf = state.displaced.includes(b.v) ? ' conflicted' : '';
+        html += `<div class="blk click ${prioClass(d.prio)}${dim?' dim':''}${conf}" data-v="${b.v}"
+            style="left:${x}px;width:${w}px;top:9px;height:44px" title="${d.id} · ${d.site} · ${fmt(b.a)}–${fmt(b.b)}">
+            ${flag}<span class="b1">${icons.join('')}${w<95?d.site.split(' ')[0]:d.site}</span>
+            ${w>=110?`<span class="b2">${fmt(b.a)}–${fmt(b.b)}${d.crew>1?' · crew of '+d.crew:''}</span>`:''}
+          </div>`;
+      } else if(b.t==='travel'){
+        html += `<div class="blk travel" style="left:${x}px;width:${w}px;top:9px;height:44px" title="${b.label}">${I.truck}${w>=70?` ${b.label}`:''}</div>`;
+      } else {
+        html += `<div class="blk break" style="left:${x}px;width:${w}px;top:9px;height:44px" title="${b.label}">${b.label}</div>`;
+      }
+    }
+    /* Dana's overrun ghost */
+    if(tid==='dana' && !state.assigned106){
+      html += `<div class="overrun" data-v="v101" style="left:${t2x(10)}px;width:${2*PXH}px;top:2px;height:20px;z-index:7"
+        title="Meridian repair likely overruns to ~12:00 PM — conflicts with 10:45 AM Crescent crew visit">
+        <span class="o1">${I.warn} overrun risk +2 h</span></div>`;
+    }
+    /* assigned emergency block */
+    if(state.assigned106===tid){
+      html += `<div class="blk click emergency" data-v="v106" style="left:${t2x(13.5)}px;width:${2.5*PXH}px;top:9px;height:44px;z-index:8"
+        title="V-106 · Summit Grand Hotel"><span class="b1">${I.bolt}Summit Grand Hotel</span><span class="b2">${fmt(13.5)}–${fmt(17)} · emergency</span></div>`;
+    }
+    html += `</div></div>`;
+  }
+  /* now line */
+  const now = 10 + 20/60;
+  html += `<div class="nowline" style="left:${210 + t2x(now)}px;top:30px"><span class="tag">Now 10:20</span></div>`;
+  tl.innerHTML = html;
+
+  /* interactions */
+  tl.querySelectorAll('.blk.click[data-v]').forEach(el=>{
+    el.onclick = e=>{ e.stopPropagation(); select(el.dataset.v); };
+  });
+  tl.querySelectorAll('.overrun').forEach(el=>{
+    el.onclick = ()=>select('v101');
+  });
+  tl.querySelectorAll('.trow .lbl').forEach(el=>{
+    el.onclick = ()=>highlightRow(el.dataset.tech);
+  });
+  tl.querySelectorAll('.track').forEach(tr=>{
+    tr.addEventListener('dragover', e=>{ e.preventDefault(); tr.parentElement.classList.add('dropok'); });
+    tr.addEventListener('dragleave', ()=>tr.parentElement.classList.remove('dropok'));
+    tr.addEventListener('drop', e=>{
+      e.preventDefault(); tr.parentElement.classList.remove('dropok');
+      const v = e.dataTransfer.getData('text/plain');
+      if(v==='v106') tryAssign(tr.dataset.tech);
+    });
+  });
+  markSelection();
+}
+
+/* ================= assignment logic ================= */
+const fit = {
+  dana:{ level:'yes', head:'Best fit — arrives 1:30 PM',
+    why:'Chiller cert ✓ · 30 min travel from Crescent Food → on-site 1:30 PM, inside the 3:00 PM response window. Note: displaces Brookside PM (V-111, 2:00 PM) — reassign or move to tomorrow.'},
+  tom:{ level:'warn', head:'Arrives 3:25 PM — late',
+    why:'Chiller cert ✓ · free at 2:00 PM (Aurora hard window) + 45 min travel → on-site 3:25 PM, after the 3:00 PM response deadline. Guest impact likely.'},
+  lena:{ level:'no', head:'Certification gap',
+    why:'No Chiller certification (VRF / Boiler B2 only) — Summit Grand runs a 250-ton centrifugal chiller. Cannot be assigned.'},
+  priya:{ level:'no', head:'Certification gap',
+    why:'No Chiller certification · also booked at Union Tower until 3:00 PM. Downtown territory, but not qualified for this system.'},
+  marcus:{level:'no', head:'Certification gap',
+    why:'No Chiller certification (rooftop / VRF only) and East Industrial territory — 55 min travel.'}
+};
+
+function tryAssign(tid){
+  const f = fit[tid];
+  if(!f){ toast('Unknown technician','err'); return; }
+  if(f.level==='no'){
+    toast(`${techs[tid].name}: ${f.head}. ${techs[tid].name} lacks the required certification for the Summit Grand chiller.`,'err');
+    return;
+  }
+  state.assigned106 = tid;
+  if(tid==='dana'){
+    state.displaced.push('v111');
+    toast('V-106 assigned to Dana Ruiz (1:30–4:00 PM). Brookside Gym PM (V-111) now conflicts — reassign it from the details panel.','ok');
+  } else {
+    toast('V-106 assigned to Tom Bergman — arrives 3:25 PM, past the 3:00 PM response deadline. Site notified of late arrival.','warn');
+  }
+  renderAlerts(); renderQueue(); renderTimeline();
+  select('v106');
+}
+
+/* ================= details panel ================= */
+function detailHead(d){
+  const p = d.prio;
+  const label = p==='emergency'?'Emergency':(p==='pm'?'Planned maintenance':(p==='high'?'Repair — high':'Standard repair'));
+  return `<span class="badge ${prioClass(p)==='emergency'?'emergency':prioClass(p)}">${p==='emergency'?I.bolt+label:label}</span>`;
+}
+
+function renderDetails(){
+  const d = V[state.selected];
+  const el = document.getElementById('details');
+  const assigned = d.techs.length>0;
+  let html = `
+    <div class="dhead"><h3>Site Visit</h3><span class="pinbtn" id="pinit">${I.pin}${d.area}</span></div>
+    <div class="dbody">
+      ${detailHead(d)}
+      <div class="dsite">${d.site}</div>
+      <div class="dvid">${d.id} · ${d.type} · ${d.area}</div>
+      <dl class="kv">
+        <dt>Address</dt><dd>${d.address || addressOf(d.area)}</dd>
+        <dt>Window</dt><dd><b>${fmt(d.window[0])} – ${fmt(d.window[1])}</b><small>Expected duration: ${d.dur}${d.prio==='emergency'?' · response required by 3:00 PM':''}</small></dd>
+        <dt>Equipment</dt><dd>${d.equip}</dd>
+      </dl>
+      <div class="dsec"><h4>${I.info}Reported problem</h4><div class="problem">${d.problem}</div></div>
+      <div class="dsec"><h4>${I.box}Requirements</h4>
+        <div class="chiprow">
+          <span class="chip crew">${I.users}Crew of ${d.crew}${d.crew>1?' (two technicians required)':''}</span>
+          ${d.parts.map(p=>`<span class="chip part">${I.box}${p}</span>`).join('')}
+          ${d.tools.map(t=>`<span class="chip tool">${I.tool}${t}</span>`).join('')}
+        </div>
+      </div>
+      <div class="dsec"><h4>${I.lock}Access &amp; contact</h4>
+        <div class="note blue" style="margin-bottom:8px"><span class="ni">${I.lock}</span><span>${d.access}</span></div>
+        <div class="kv" style="margin-top:4px">
+          <dt>Onsite</dt><dd>${d.contact}</dd>
+          <dt>Travel</dt><dd>${d.travel}</dd>
+        </div>
+      </div>`;
+
+  if(d.risk){
+    html += `<div class="dsec"><h4>${I.warn}Overrun risk</h4>
+      <div class="note red"><span class="ni">${I.warn}</span><span>${d.risk}</span></div></div>`;
+  }
+
+  if(state.selected==='v106'){
+    if(!state.assigned106){
+      html += `<div class="dsec"><h4>${I.users}Assignment — who can take this?</h4><div class="cands">`;
+      for(const tid of ['dana','tom','lena','priya','marcus']){
+        const f = fit[tid], t = techs[tid];
+        const cls = f.level==='yes'?'best':(f.level==='no'?'no':'');
+        const tag = f.level==='yes'?'<span class="fit yes">RECOMMENDED</span>':(f.level==='warn'?'<span class="fit warn">LATE ARRIVAL</span>':'<span class="fit no">NOT QUALIFIED</span>');
+        html += `<div class="cand ${cls}" data-t="${tid}">
+          <div class="c1"><div class="tav" style="background:${t.color};width:28px;height:28px;font-size:10.5px">${t.ini}</div>
+            <span class="cn">${t.name}</span>${tag}</div>
+          <div class="why"><b>${f.head}.</b> ${f.why}</div>
+          ${f.level!=='no'?`<button class="assign" data-t="${tid}">Assign to ${t.name.split(' ')[0]}</button>`:''}
+        </div>`;
+      }
+      html += `</div></div>`;
+    } else {
+      const t = techs[state.assigned106];
+      html += `<div class="dsec"><h4>${I.users}Assigned</h4>
+        <div class="assrow"><div class="tav" style="background:${t.color}">${t.ini}</div>
+          <div><div class="nm">${t.name}</div><div class="rl">${t.certs.join(' · ')}</div></div>
+          <span class="ok">Dispatched</span></div>
+        ${state.assigned106==='dana'?`
+        <div class="note amber" style="margin-top:9px"><span class="ni">${I.warn}</span>
+          <span><b>Knock-on conflict:</b> Brookside Gymnasium PM (V-111, 2:00–3:15 PM) no longer fits Dana’s route.
+          Options: move to tomorrow’s board, or reassign — Lena covers rooftop PMs but is outside her South Metro territory (38 min travel).</span></div>
+        <div class="actions">
+          <button class="btn ghost" id="move111">Move V-111 to tomorrow</button>
+          <button class="btn ghost" id="give111">Reassign V-111 to Lena</button>
+        </div>`:''}
+      </div>`;
+    }
+  } else if(assigned){
+    html += `<div class="dsec"><h4>${I.users}Assigned technicians</h4><div class="asstechs">`;
+    for(const tid of d.techs){
+      const t = techs[tid];
+      html += `<div class="assrow"><div class="tav" style="background:${t.color};width:28px;height:28px;font-size:10.5px">${t.ini}</div>
+        <div><div class="nm">${t.name}</div><div class="rl">${d.crew>1?'Crew member · ':'Lead · '}${t.territory} · ${t.certs[0]}</div></div>
+        <span class="ok">${I.check}Confirmed</span></div>`;
+    }
+    html += `</div></div>`;
+    if(state.displaced.includes(state.selected)){
+      html += `<div class="note amber" style="margin-top:9px"><span class="ni">${I.warn}</span><span><b>Needs reassignment:</b> this visit overlaps with the new emergency assignment (V-106). Move it to tomorrow or reassign within North Metro.</span></div>`;
+    }
+    html += `<div class="actions">
+      <button class="btn primary" data-act="route">Open route</button>
+      <button class="btn ghost" data-act="reassign">Reassign technician</button>
+      <button class="btn ghost" data-act="window">Adjust window</button>
+      <button class="btn ghost" data-act="flag">Flag for review</button>
+    </div>`;
+  } else {
+    html += `<div class="dsec"><h4>${I.users}Assignment</h4>
+      <div class="note red"><span class="ni">${I.warn}</span><span>Unassigned. ${d.req||''}</span></div></div>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+
+  /* wiring */
+  el.querySelectorAll('.cand .assign').forEach(b=>{
+    b.onclick = e=>{ e.stopPropagation(); tryAssign(b.dataset.t); };
+  });
+  el.querySelectorAll('.cand').forEach(c=>{
+    c.onclick = ()=>highlightRow(c.dataset.t);
+  });
+  el.querySelectorAll('.btn[data-act]').forEach(b=>{
+    b.onclick = ()=>{
+      const a = b.dataset.act;
+      if(a==='route'){ highlightRow(d.techs[0]); toast(`Route opened for ${d.id} — ${d.site}.`); }
+      if(a==='reassign') toast(`Reassign dialog for ${d.id}: pick a technician with matching certification and territory.`,'warn');
+      if(a==='window') toast(`Window adjust for ${d.id}: notify site contact ${d.contact.split('·')[0]} of the new time.`);
+      if(a==='flag') toast(`${d.id} flagged for supervisor review.`,'warn');
+    };
+  });
+  const mv = document.getElementById('move111');
+  if(mv) mv.onclick = ()=>{
+    state.displaced = state.displaced.filter(v=>v!=='v111');
+    ['dana'].forEach(t=>{ schedule[t] = schedule[t].filter(b=>b.v!=='v111'); });
+    techs.dana.booked -= 1.25;
+    toast('V-111 Brookside Gymnasium PM moved to tomorrow, 8:00 AM. Dana’s route now closes at 4:00 PM.','ok');
+    renderRoster(); renderTimeline(); renderDetails();
+  };
+  const gv = document.getElementById('give111');
+  if(gv) gv.onclick = ()=>{
+    state.displaced = state.displaced.filter(v=>v!=='v111');
+    schedule.dana = schedule.dana.filter(b=>b.v!=='v111');
+    schedule.lena.push({t:'travel', a:16, b:16.6, label:'38 min drive'});
+    schedule.lena.push({v:'v111', a:16.6, b:17.85});
+    techs.dana.booked -= 1.25; techs.lena.booked += 1.25;
+    toast('V-111 reassigned to Lena Alvarez (4:36–5:51 PM) — territory exception approved; 38 min travel from Harbor Point.','warn');
+    renderRoster(); renderTimeline(); renderDetails();
+  };
+}
+
+function addressOf(area){
+  const m = {'North Metro':'1420 Kildeer Rd, North Metro','Downtown Core':'88 Summit Ave, Downtown Core','West & Airport':'77 Cargo Way, West District','East Industrial':'310 Foundry Line, East Industrial','South Metro':'9 Harborview Dr, South Metro'};
+  return m[area]||'—';
+}
+V.v101.address = '418 Callahan Ave, North Metro';
+V.v102.address = '255 Halstead St, West District';
+V.v103.address = '900 Crescent Rd, North Metro';
+V.v104.address = '12 Gateway Blvd, Downtown Core';
+V.v105.address = '6 Lakeside Terminal Dr, East Industrial';
+V.v106.address = '88 Summit Ave, Downtown Core';
+V.v107.address = '45 Aurora Park Rd, West District';
+V.v108.address = '200 Riverbend Way, East Industrial';
+V.v109.address = '3 Harbor Point Cres, South Metro';
+V.v110.address = '1 Union Plaza, Downtown Core';
+V.v111.address = '76 Brookside Ln, North Metro';
+V.v113.address = '518 Elm Crossing Dr, East Industrial';
+V.v114.address = '40 Cedar Ln, Downtown Core';
+
+/* ================= selection & filters ================= */
+function markSelection(){
+  document.querySelectorAll('.blk.click').forEach(b=>b.classList.toggle('sel', b.dataset.v===state.selected));
+}
+function select(v){
+  state.selected = v;
+  markSelection();
+  renderDetails();
+  document.getElementById('details').scrollTop = 0;
+}
+document.getElementById('filters').addEventListener('click', e=>{
+  const b = e.target.closest('.fchip'); if(!b) return;
+  state.filter = b.dataset.f;
+  document.querySelectorAll('.fchip').forEach(f=>f.classList.toggle('on', f===b));
+  renderTimeline();
+});
+
+/* ================= boot ================= */
+renderRoster();
+renderAlerts();
+renderQueue();
+renderTimeline();
+renderDetails();
+toast('Good morning, Karen — 3 items need attention before the 11:30 AM access windows.','warn');
+</script>
+</body>
+</html>

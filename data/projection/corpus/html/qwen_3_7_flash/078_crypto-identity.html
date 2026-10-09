@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VeriChain — Identity Validation Review</title>
+<style>
+:root {
+  --color-bg-base: #0e1117;
+  --color-bg-rail: #131920;
+  --color-bg-surface: #1a2130;
+  --color-bg-surface-hover: #212b3c;
+  --color-bg-input: #0d1117;
+  --color-bg-badge-pass: #0a3d2a;
+  --color-bg-badge-fail: #3d0a1a;
+  --color-bg-badge-warning: #3d300a;
+  --color-bg-badge-neutral: #1a1f2e;
+  --color-border-subtle: #2a3348;
+  --color-border-default: #364158;
+  --color-border-accent: #4a6fa5;
+  --color-border-error: #b94a5f;
+  --color-border-success: #3a9a6c;
+  --color-text-primary: #e6ecf2;
+  --color-text-secondary: #8b9bb4;
+  --color-text-muted: #5c6a80;
+  --color-text-inverse: #ffffff;
+  --color-accent-brand: #4a8ef7;
+  --color-accent-brand-dim: #3570c9;
+  --color-status-pass: #3dd68c;
+  --color-status-pass-bg: #0a3d2a;
+  --color-status-error: #f27a7a;
+  --color-status-error-bg: #3d0a1a;
+  --color-status-warning: #f5c242;
+  --color-status-warning-bg: #3d300a;
+  --color-highlight: rgba(74, 142, 247, 0.1);
+
+  --font-family-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  --font-family-serif: Georgia, 'Times New Roman', serif;
+
+  --size-xs: 0.625rem;
+  --size-sm: 0.75rem;
+  --size-md: 0.875rem;
+  --size-base: 1rem;
+  --size-lg: 1.125rem;
+  --size-xl: 1.375rem;
+  --size-2xl: 1.625rem;
+  --size-3xl: 2rem;
+
+  --spacing-none: 0;
+  --spacing-xxs: 0.125rem;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.75rem;
+  --spacing-base: 1rem;
+  --spacing-lg: 1.25rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+  --spacing-3xl: 2.5rem;
+  --spacing-4xl: 3rem;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-base: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --shadow-glow-pass: 0 0 8px rgba(61,214,140,0.15);
+  --shadow-glow-error: 0 0 8px rgba(242,122,122,0.15);
+
+  --rail-width: 240px;
+  --topbar-height: 52px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: var(--size-base); background: var(--color-bg-base); color: var(--color-text-primary); font-family: var(--font-family-sans); line-height: 1.5; }
+
+body { min-height: 100vh; display: flex; }
+
+/* ── RAIL ── */
+.rail {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--rail-width);
+  background: var(--color-bg-rail);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.rail-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.rail-logo svg { flex-shrink: 0; }
+
+.rail-logo-text {
+  font-size: var(--size-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.rail-logo-text span { color: var(--color-accent-brand); }
+
+.rail-section-label {
+  font-size: var(--size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-xs);
+}
+
+.rail-nav { list-style: none; padding: 0 var(--spacing-sm) var(--spacing-base); flex: 1; overflow-y: auto; }
+
+.rail-nav-item { margin-bottom: 1px; }
+
+.rail-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--size-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.rail-nav-link:hover { background: var(--color-bg-surface-hover); color: var(--color-text-primary); }
+
+.rail-nav-link.active { background: var(--color-highlight); color: var(--color-accent-brand); font-weight: 600; }
+
+.rail-nav-link .nav-icon { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+.rail-nav-link.active .nav-icon { opacity: 1; }
+
+.rail-nav-link .nav-badge {
+  margin-left: auto;
+  background: var(--color-status-error);
+  color: var(--color-text-inverse);
+  font-size: var(--size-xs);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  min-width: 18px;
+  text-align: center;
+}
+
+.rail-footer {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.rail-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--size-sm);
+  color: var(--color-text-secondary);
+}
+
+.rail-avatar {
+  width: 28px; height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-brand-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--size-xs);
+  font-weight: 700;
+  color: var(--color-text-inverse);
+  flex-shrink: 0;
+}
+
+.rail-user-info { overflow: hidden; }
+.rail-user-name { font-weight: 600; color: var(--color-text-primary); font-size: var(--size-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rail-user-role { font-size: var(--size-xs); color: var(--color-text-muted); }
+
+/* ── MAIN LAYOUT ── */
+.app-main {
+  margin-left: var(--rail-width);
+  min-height: 100vh;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  position: sticky;
+  top: 0;
+  height: var(--topbar-height);
+  background: var(--color-bg-rail);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-xl);
+  gap: var(--spacing-lg);
+  z-index: 5;
+}
+
+.breadcrumb { display: flex; align-items: center; gap: var(--spacing-xs); font-size: var(--size-sm); color: var(--color-text-muted); }
+.breadcrumb-sep { opacity: 0.4; }
+.breadcrumb-current { color: var(--color-text-primary); font-weight: 600; }
+
+.topbar-divider { width: 1px; height: 24px; background: var(--color-border-subtle); }
+
+.topbar-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--size-sm);
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+
+.status-dot.passing { background: var(--color-status-pass); box-shadow: 0 0 6px rgba(61,214,140,0.4); }
+.status-dot.erroring { background: var(--color-status-error); box-shadow: 0 0 6px rgba(242,122,122,0.4); }
+
+.topbar-actions { margin-left: auto; display: flex; gap: var(--spacing-sm); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--size-sm);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--color-border-default);
+  color: var(--color-text-secondary);
+}
+.btn-outline:hover { background: var(--color-bg-surface-hover); color: var(--color-text-primary); }
+
+.btn-primary {
+  background: var(--color-accent-brand);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent-brand);
+}
+.btn-primary:hover { background: var(--color-accent-brand-dim); }
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--color-border-error);
+  color: var(--color-status-error);
+}
+.btn-danger:hover { background: var(--color-status-error-bg); }
+
+.btn-sm { padding: var(--spacing-xxs) var(--spacing-sm); font-size: var(--size-xs); }
+
+/* ── CONTENT AREA ── */
+.content { flex: 1; padding: var(--spacing-xl) var(--spacing-2xl); max-width: 100%; }
+
+.page-header { margin-bottom: var(--spacing-2xl); }
+
+.page-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--spacing-xl); }
+
+.page-title-group h1 {
+  font-size: var(--size-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
+.page-id {
+  font-size: var(--size-xs);
+  font-family: var(--font-family-mono);
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
+}
+
+.page-subtitle {
+  font-size: var(--size-md);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-sm);
+  max-width: 60ch;
+}
+
+.page-meta-tags { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
+
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xxs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--size-xs);
+  font-weight: 600;
+  background: var(--color-bg-badge-neutral);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.meta-tag.tag-pass { background: var(--color-status-pass-bg); color: var(--color-status-pass); border-color: var(--color-border-success); }
+.meta-tag.tag-fail { background: var(--color-status-error-bg); color: var(--color-status-error); border-color: var(--color-border-error); }
+.meta-tag.tag-warn { background: var(--color-status-warning-bg); color: var(--color-status-warning); border-color: var(--color-status-warning); }
+
+/* ── SECTION CARDS ── */
+.review-section {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-xl);
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--color-bg-rail);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.section-header-left { display: flex; align-items: center; gap: var(--spacing-base); }
+
+.section-number {
+  font-family: var(--font-family-mono);
+  font-size: var(--size-xs);
+  font-weight: 700;
+  color: var(--color-accent-brand);
+  background: var(--color-highlight);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.section-title { font-size: var(--size-base); font-weight: 700; color: var(--color-text-primary); }
+.section-desc { font-size: var(--size-sm); color: var(--color-text-muted); margin-left: var(--spacing-md); }
+
+.section-count { font-size: var(--size-xs); color: var(--color-text-muted); font-family: var(--font-family-mono); }
+
+.section-body { padding: var(--spacing-xl); }
+
+/* ── FORM GRID ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-base) var(--spacing-xl);
+}
+
+.form-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.form-grid.cols-1 { grid-template-columns: 1fr; }
+
+.form-field { display: flex; flex-direction: column; gap: var(--spacing-xs); }
+.form-field.span-2 { grid-column: span 2; }
+.form-field.span-3 { grid-column: span 3; }
+
+.field-label {
+  font-size: var(--size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.field-label .required-mark { color: var(--color-status-error); }
+.field-label .verified-check { color: var(--color-status-pass); }
+
+.field-hint { font-size: var(--size-xs); color: var(--color-text-muted); font-family: var(--font-family-mono); }
+
+.field-input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--size-sm);
+  font-family: var(--font-family-mono);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.field-input:focus { border-color: var(--color-accent-brand); box-shadow: 0 0 0 2px rgba(74,142,247,0.15); }
+
+.field-input.input-pass {
+  border-color: var(--color-border-success);
+  background: var(--color-status-pass-bg);
+  box-shadow: var(--shadow-glow-pass);
+}
+
+.field-input.input-error {
+  border-color: var(--color-border-error);
+  background: var(--color-status-error-bg);
+  box-shadow: var(--shadow-glow-error);
+}
+
+.field-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c6a80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-sm) center;
+  padding-right: var(--spacing-2xl);
+}
+
+textarea.field-input {
+  font-family: var(--font-family-sans);
+  resize: vertical;
+  min-height: 80px;
+}
+
+.field-message {
+  font-size: var(--size-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.field-message.msg-error {
+  color: var(--color-status-error);
+  background: var(--color-status-error-bg);
+  border-left: 2px solid var(--color-status-error);
+}
+
+.field-message.msg-pass {
+  color: var(--color-status-pass);
+  background: var(--color-status-pass-bg);
+  border-left: 2px solid var(--color-status-pass);
+}
+
+/* ── TABS ── */
+.tabs-container { margin-top: var(--spacing-lg); }
+
+.tab-list {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-subtle);
+  gap: 0;
+}
+
+.tab-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--size-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.tab-btn:hover { color: var(--color-text-secondary); }
+
+.tab-btn[aria-selected="true"] { color: var(--color-accent-brand); border-bottom-color: var(--color-accent-brand); }
+
+.tab-btn .tab-count {
+  font-size: var(--size-xs);
+  background: var(--color-bg-badge-neutral);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+}
+
+.tab-panel {
+  display: none;
+  padding: var(--spacing-xl) 0 0;
+}
+
+.tab-panel[data-active="true"] { display: block; }
+
+/* ── TABLE ── */
+.data-table { width: 100%; border-collapse: collapse; font-size: var(--size-sm); }
+
+.data-table thead th {
+  text-align: left;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  background: var(--color-bg-rail);
+  border-bottom: 1px solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+
+.data-table tbody td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--size-xs);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover { background: var(--color-bg-surface-hover); }
+
+.data-table tbody td.td-primary {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  font-weight: 600;
+  font-size: var(--size-sm);
+}
+
+.data-table tbody td.td-mono { color: var(--color-text-secondary); }
+
+.table-inline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--size-xs);
+  font-weight: 700;
+  font-family: var(--font-family-sans);
+}
+
+.table-inline-badge.badge-pass { background: var(--color-status-pass-bg); color: var(--color-status-pass); }
+.table-inline-badge.badge-fail { background: var(--color-status-error-bg); color: var(--color-status-error); }
+.table-inline-badge.badge-pending { background: var(--color-status-warning-bg); color: var(--color-status-warning); }
+.table-inline-badge.badge-neutral { background: var(--color-bg-badge-neutral); color: var(--color-text-muted); }
+
+/* ── PROGRESS BAR ── */
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg-input);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-fill.fill-pass { background: var(--color-status-pass); }
+.progress-fill.fill-warn { background: var(--color-status-warning); }
+.progress-fill.fill-error { background: var(--color-status-error); }
+
+.progress-bar-group { display: flex; align-items: center; gap: var(--spacing-md); }
+.progress-label { font-size: var(--size-xs); color: var(--color-text-muted); font-family: var(--font-family-mono); min-width: 50px; }
+.progress-pct { font-size: var(--size-xs); color: var(--color-text-secondary); font-family: var(--font-family-mono); min-width: 32px; text-align: right; }
+
+/* ── VERIFICATION CHAIN ── */
+.verify-chain { display: flex; flex-direction: column; gap: 0; }
+
+.chain-step { display: flex; align-items: flex-start; gap: var(--spacing-base); padding: var(--spacing-md) 0; border-bottom: 1px solid var(--color-border-subtle); }
+.chain-step:last-child { border-bottom: none; }
+
+.chain-dot {
+  width: 10px; height: 10px;
+  border-radius: var(--radius-full);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.chain-dot.dot-pass { background: var(--color-status-pass); box-shadow: 0 0 6px rgba(61,214,140,0.3); }
+.chain-dot.dot-error { background: var(--color-status-error); box-shadow: 0 0 6px rgba(242,122,122,0.3); }
+.chain-dot.dot-pending { background: var(--color-status-warning); }
+
+.chain-content { flex: 1; }
+.chain-title { font-size: var(--size-sm); font-weight: 600; color: var(--color-text-primary); }
+.chain-detail { font-size: var(--size-xs); color: var(--color-text-muted); font-family: var(--font-family-mono); margin-top: 2px; }
+.chain-time { font-size: var(--size-xs); color: var(--color-text-muted); font-family: var(--font-family-mono); white-space: nowrap; }
+
+/* ── ALERT BANNER ── */
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--color-status-error-bg);
+  border-bottom: 1px solid var(--color-border-error);
+  font-size: var(--size-sm);
+}
+
+.alert-banner .alert-icon { flex-shrink: 0; margin-top: 1px; }
+.alert-banner .alert-text { flex: 1; }
+.alert-banner .alert-text strong { color: var(--color-status-error); }
+.alert-banner .alert-text p { margin-top: var(--spacing-xs); color: var(--color-text-secondary); }
+
+/* ── INFO PANEL ── */
+.info-panel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-base);
+  margin-bottom: var(--spacing-xl);
+}
+
+.info-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  text-align: center;
+}
+
+.info-card-value { font-size: var(--size-2xl); font-weight: 700; font-family: var(--font-family-mono); color: var(--color-text-primary); line-height: 1.2; }
+.info-card-label { font-size: var(--size-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: var(--spacing-xs); }
+.info-card-change { font-size: var(--size-xs); font-family: var(--font-family-mono); margin-top: var(--spacing-xs); }
+.info-card-change.positive { color: var(--color-status-pass); }
+.info-card-change.negative { color: var(--color-status-error); }
+
+/* ── NOTES / REVIEWER LOG ── */
+.notes-list { display: flex; flex-direction: column; gap: var(--spacing-md); }
+
+.note-entry { display: flex; gap: var(--spacing-md); padding: var(--spacing-md); background: var(--color-bg-input); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle); }
+.note-author-avatar { width: 24px; height: 24px; border-radius: var(--radius-full); background: var(--color-accent-brand-dim); display: flex; align-items: center; justify-content: center; font-size: var(--size-xs); font-weight: 700; color: var(--color-text-inverse); flex-shrink: 0; }
+.note-body { flex: 1; }
+.note-meta { font-size: var(--size-xs); color: var(--color-text-muted); font-family: var(--font-family-mono); margin-bottom: var(--spacing-xs); }
+.note-meta strong { color: var(--color-text-secondary); }
+.note-text { font-size: var(--size-sm); color: var(--color-text-secondary); line-height: 1.6; }
+.note-text mark { background: rgba(245,194,66,0.2); color: var(--color-status-warning); border-radius: 2px; padding: 0 2px; }
+
+/* ── HASH DISPLAY ── */
+.hash-display {
+  font-family: var(--font-family-mono);
+  font-size: var(--size-xs);
+  color: var(--color-text-muted);
+  word-break: break-all;
+  background: var(--color-bg-input);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  line-height: 1.7;
+}
+
+.hash-display .hash-prefix { color: var(--color-accent-brand); }
+.hash-display .hash-suffix { color: var(--color-text-muted); }
+
+/* ── RESPONSIVE DENSITY FINE PRINT ── */
+.density-note {
+  font-size: var(--size-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-rail);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-accent-brand);
+}
+
+.two-col-split {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: var(--spacing-xl);
+}
+
+/* Divider within body */
+.body-divider { height: 1px; background: var(--color-border-subtle); margin: var(--spacing-xl) 0; }
+
+/* ── OVERLAY / DIALOG ── */
+.dialog-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-overlay.open { display: flex; }
+
+.dialog-box {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: var(--shadow-lg);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.dialog-header h3 { font-size: var(--size-lg); font-weight: 700; }
+
+.dialog-close-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  font-size: var(--size-lg);
+  line-height: 1;
+}
+.dialog-close-btn:hover { color: var(--color-text-primary); }
+
+.dialog-body { padding: var(--spacing-xl); font-size: var(--size-sm); color: var(--color-text-secondary); line-height: 1.6; }
+.dialog-body .dialog-body-title { font-size: var(--size-base); font-weight: 700; color: var(--color-text-primary); margin-bottom: var(--spacing-sm); }
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl) var(--spacing-lg);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* SVG icon helper classes */
+.icon-svg { display: inline-block; vertical-align: middle; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg-base); }
+::-webkit-scrollbar-thumb { background: var(--color-border-default); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+</style>
+</head>
+<body>
+
+<!-- ═══════ LEFT RAIL ═══════ -->
+<nav class="rail" aria-label="Primary navigation">
+  <div class="rail-logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4a8ef7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+    </svg>
+    <div class="rail-logo-text">Veri<span>Chain</span></div>
+  </div>
+
+  <div class="rail-section-label">Validation</div>
+  <ul class="rail-nav">
+    <li class="rail-nav-item"><button class="rail-nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Dashboard</button></li>
+    <li class="rail-nav-item"><button class="rail-nav-link active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Identity Reviews <span class="nav-badge">3</span></button></li>
+    <li class="rail-nav-item"><button class="rail-nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Attestations</button></li>
+    <li class="rail-nav-item"><button class="rail-nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Compliance Rules</button></li>
+    <li class="rail-nav-item"><button class="rail-nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>Anomaly Detection</button></li>
+  </ul>
+
+  <div class="rail-section-label">Reference</div>
+  <ul class="rail-nav">
+    <li class="rail-nav-item"><button class="rail-nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Knowledge Base</button></li>
+    <li class="rail-nav-item"><button class="rail-nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Audit Logs</button></li>
+    <li class="rail-nav-item"><button class="rail-nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Messaging</button></li>
+  </ul>
+
+  <div class="rail-footer">
+    <div class="rail-user">
+      <div class="rail-avatar">JW</div>
+      <div class="rail-user-info">
+        <div class="rail-user-name">Dr. Janice Whitmore</div>
+        <div class="rail-user-role">Senior Verifier · Tier III</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════ APP MAIN ═══════ -->
+<div class="app-main">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <span>Reviews</span>
+      <span class="breadcrumb-sep">/</span>
+      <span>In Progress</span>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">DID-2024-00817</span>
+    </nav>
+    <div class="topbar-divider"></div>
+    <div class="topbar-status">
+      <span class="status-dot passing"></span>
+      <span style="color: var(--color-text-secondary); font-size: var(--size-sm);">Passing: 18 of 21</span>
+    </div>
+    <div class="topbar-status">
+      <span class="status-dot erroring"></span>
+      <span style="color: var(--color-text-secondary); font-size: var(--size-sm);">Errors: 2</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline btn-sm" id="exportBtn">Export Report</button>
+      <button class="btn btn-outline btn-sm">Request Re-verify</button>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('confirmDialog').classList.add('open')">Finalise Review</button>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-title-row">
+        <div class="page-title-group">
+          <h1>Digital Identity Verification — Subject: Kael M. Rosetti</h1>
+          <div class="page-id">Review ID: DID-2024-00817 &nbsp;·&nbsp; Chain: Polygon (xDai) &nbsp;·&nbsp; Opened: 2024-11-18T09:34:12Z</div>
+        </div>
+        <div class="page-meta-tags">
+          <span class="meta-tag tag-pass">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            Biometrics Verified
+          </span>
+          <span class="meta-tag tag-pass">Wallet Confirmed</span>
+          <span class="meta-tag tag-fail">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Proof Expiry Risk
+          </span>
+          <span class="meta-tag tag-warn">AML Screening Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="info-panel">
+      <div class="info-card">
+        <div class="info-card-value" style="color: var(--color-status-pass);">86%</div>
+        <div class="info-card-label">Verification Score</div>
+        <div class="info-card-change positive">↑ 12pp since last check</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-value">21</div>
+        <div class="info-card-label">Total Checks</div>
+        <div class="info-card-change" style="color: var(--color-text-muted);">18 pass · 2 fail · 1 pending</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-value">47m</div>
+        <div class="info-card-label">Elapsed Review</div>
+        <div class="info-card-change" style="color: var(--color-text-muted);">Last activity 3m ago</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-value" style="color: var(--color-status-warning);">2</div>
+        <div class="info-card-label">Action Items</div>
+        <div class="info-card-change negative">Requires immediate attention</div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 1: SUBJECT PERSONAL IDENTIFICATION
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§01</span>
+          <span class="section-title">Subject Personal Identification</span>
+          <span class="section-desc">Full legal name, aliases, and government-issued identifiers cross-referenced against KYC databases</span>
+        </div>
+        <span class="section-count">6 / 6 passed</span>
+      </div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="field-label">Legal Given Name <span class="required-mark">*</span></label>
+            <input class="field-input input-pass" type="text" value="Kael" readonly aria-describedby="fname-msg">
+            <div class="field-message msg-pass" id="fname-msg">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Confirmed via Notarised ID #NY-88421003
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Legal Surname <span class="required-mark">*</span></label>
+            <input class="field-input input-pass" type="text" value="Rosetti" readonly>
+            <div class="field-message msg-pass">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Matched across 3 jurisdictions
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Date of Birth</label>
+            <input class="field-input input-pass" type="text" value="1987-04-22" readonly>
+            <div class="field-message msg-pass">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Age confirmed: 37 years (US standard)
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Government Issue Number <span class="required-mark">*</span></label>
+            <input class="field-input input-pass" type="text" value="N18-442-9017" readonly>
+            <div class="field-message msg-pass">
+              <<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              DMV-verified, issued 2019-08-14
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">ISO 3166-1 Alpha-2 Nationality</label>
+            <select class="field-input field-select" disabled>
+              <option selected>US</option>
+            </select>
+            <div class="field-message msg-pass">Dual citizenship declared (IT): confirmed secondary</div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Known Aliases / Pseudonyms</label>
+            <textarea class="field-input input-pass" readonly rows="2">kaelros.eth · @kros_official · Kael_87</textarea>
+            <div class="field-hint">On-chain alias mapping verified via ENS resolution</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 2: WALLET & CRYPTO ASSET HOLDINGS
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§02</span>
+          <span class="section-title">Wallet &amp; Crypto Asset Holdings</span>
+          <span class="section-desc">Primary and auxiliary wallets with on-chain balance attestations and source-of-funds mapping</span>
+        </div>
+        <span class="section-count">5 / 5 passed</span>
+      </div>
+      <div class="section-body">
+        <div class="form-grid cols-2">
+          <div class="form-field span-2">
+            <label class="field-label">Primary Wallet Address <span class="required-mark">*</span></label>
+            <input class="field-input input-pass" type="text" value="0x7F4eB2c9D1a38f4E5d6C0e8B2A1b9F3cDe456701" readonly>
+            <div class="field-message msg-pass">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Contract ownership proven; 4-year history; ETH gas: $12,847 total paid
+            </div>
+            <div class="hash-display" style="margin-top: var(--spacing-sm);">
+              ENS: <span class="hash-prefix">kaelros.eth</span><span class="hash-suffix"> → resolved at 2024-11-17T14:22:00Z via eth resolver 0x4976fb03...</span>
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Secondary Wallet (Cold Storage)</label>
+            <input class="field-input input-pass" type="text" value="0xaB3cD1e2F3a4B5c6D7e8F9a0B1c2D3e4F5a6B7c8" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Hardware Wallet Model</label>
+            <input class="field-input input-pass" type="text" value="Ledger Nano X" readonly>
+          </div>
+          <div class="form-field span-2">
+            <label class="field-label">Asset Composition Summary</label>
+            <table class="data-table" role="table" aria-label="Asset composition by token">
+              <thead>
+                <tr>
+                  <th scope="col">Token</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Value (USD)</th>
+                  <th scope="col">Protocol Source</th>
+                  <th scope="col">Risk Rating</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-primary">ETH</td>
+                  <td class="td-mono">847.2103</td>
+                  <td class="td-mono">$2,912,480</td>
+                  <td class="td-mono">Native transfer</td>
+                  <td><span class="table-inline-badge badge-pass">Clean</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">USDC (Polygon)</td>
+                  <td class="td-mono">485,100.00</td>
+                  <td class="td-mono">$485,100</td>
+                  <td class="td-mono">Circle mint</td>
+                  <td><span class="table-inline-badge badge-pass">Clean</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">wBTC</td>
+                  <td class="td-mono">6.4412</td>
+                  <td class="td-mono">$442,891</td>
+                  <td class="td-mono">WBTC portal</td>
+                  <td><span class="table-inline-badge badge-pass">Clean</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">DAI (Arbitrum)</td>
+                  <td class="td-mono">127,340.55</td>
+                  <td class="td-mono">$127,341</td>
+                  <td class="td-mono">MakerDAO vault</td>
+                  <td><span class="table-inline-badge badge-pass">Clean</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">UNI</td>
+                  <td class="td-mono">8,200.00</td>
+                  <td class="td-mono">$61,500</td>
+                  <td class="td-mono">Uniswap V3 LP</td>
+                  <td><span class="table-inline-badge badge-pending">Under Review</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">SHIB</td>
+                  <td class="td-mono">142.8B</td>
+                  <td class="td-mono">$1,428</td>
+                  <td class="td-mono">CEX withdrawal</td>
+                  <td><span class="table-inline-badge badge-fail">Unusual Vol.</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="two-col-split" style="margin-top: var(--spacing-xl);">
+          <div>
+            <div class="density-note">
+              <strong>Source-of-funds mapping:</strong> 94.2% of holdings traced to legitimate sources (employment income from Meridian Labs, DeFi yield from Compound v3, and personal Ethereum mining circa 2017–2018). Remaining 5.8% from OTC desk trade with Genesis Global Trading LLC on 2023-06-12 — transaction hash 0xb2f... verified.
+            </div>
+          </div>
+          <div>
+            <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+              <div class="progress-bar-group">
+                <span class="progress-label">Traced</span>
+                <div class="progress-track" style="flex:1;"><div class="progress-fill fill-pass" style="width: 94.2%;"></div></div>
+                <span class="progress-pct">94.2%</span>
+              </div>
+              <div class="progress-bar-group">
+                <span class="progress-label">OTC</span>
+                <div class="progress-track" style="flex:1;"><div class="progress-fill fill-warn" style="width: 5.8%;"></div></div>
+                <span class="progress-pct">5.8%</span>
+              </div>
+              <div class="progress-bar-group">
+                <span class="progress-label">Untested</span>
+                <div class="progress-track" style="flex:1;"><div class="progress-fill fill-error" style="width: 0%;"></div></div>
+                <span class="progress-pct">0.0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 3: BIOMETRIC & LIVE VERIFICATION
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§03</span>
+          <span class="section-title">Biometric &amp; Live Verification</span>
+          <span class="section-desc">Facial recognition liveness scan, voice print, and timestamped video attestation records</span>
+        </div>
+        <span class="section-count">4 / 4 passed</span>
+      </div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="field-label">Liveness Scan Method</label>
+            <input class="field-input input-pass" type="text" value="Active Challenge-Response (blink + head turn)" readonly>
+            <div class="field-message msg-pass">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Yoti SDK v4.8 — result score: 0.9971
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Scan Timestamp</label>
+            <input class="field-input input-pass" type="text" value="2024-11-18 08:12:44 UTC" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Hash of Biometric Embedding</label>
+            <input class="field-input input-pass" type="text" value="SHA3-256: a7f3...e91d" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Voice Print Hash</label>
+            <input class="field-input input-pass" type="text" value="BLAKE2b: 3c8d…f142" readonly>
+          </div>
+          <div class="form-field span-2">
+            <label class="field-label">Video Attestation URI</label>
+            <input class="field-input input-pass" type="text" value="ipfs://QmR7kN4sVbX9wY2pLmFtEjGhZq3UcvWxA1o6bDiy8nKeM4/video-attest.mp4" readonly>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--spacing-xl);">
+          <div class="verify-chain" role="list" aria-label="Verification chain steps">
+            <div class="chain-step" role="listitem">
+              <div class="chain-dot dot-pass"></div>
+              <div class="chain-content">
+                <div class="chain-title">Selfie captured with dynamic prompt</div>
+                <div class="chain-detail">Challenge: "Please tilt your head left then say the code 4X9-MP2"</div>
+              </div>
+              <div class="chain-time">08:12:44Z</div>
+            </div>
+            <div class="chain-step" role="listitem">
+              <div class="chain-dot dot-pass"></div>
+              <div class="chain-content">
+                <div class="chain-title">Face match against government ID photo</div>
+                <div class="chain-detail">Similarity: 98.2% | Cosine distance: 0.0314</div>
+              </div>
+              <div class="chain-time">08:12:51Z</div>
+            </div>
+            <div class="chain-step" role="listitem">
+              <div class="chain-dot dot-pass"></div>
+              <div class="chain-content">
+                <div class="chain-title">Liveness detection passed (anti-spoofing)</div>
+                <div class="chain-detail">Screen replay: rejected. Deepfake probability: 0.003</div>
+              </div>
+              <div class="chain-time">08:13:02Z</div>
+            </div>
+            <div class="chain-step" role="listitem">
+              <div class="chain-dot dot-pass"></div>
+              <div class="chain-content">
+                <div class="chain-title">Voice match against stored sample</div>
+                <div class="chain-detail">Phoneme alignment score: 0.96</div>
+              </div>
+              <div class="chain-time">08:13:18Z</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 4: CREDENTIAL ATTESTATIONS
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§04</span>
+          <span class="section-title">Credential Attestations &amp; Claims</span>
+          <span class="section-desc">Decentralised Identifiers (DIDs), W3C Verifiable Credentials, and third-party attestations including SSBI and corporate filings</span>
+        </div>
+        <span class="section-count">3 / 4 passed</span>
+      </div>
+      <div class="section-body">
+        <div class="form-grid cols-2">
+          <div class="form-field">
+            <label class="field-label">DID Document URL <span class="required-mark">*</span></label>
+            <input class="field-input input-pass" type="text" value="did:pkh:eip155:137:0x7F4eB2c9D1a38f4E5d6C0e8B2A1b9F3cDe456701" readonly>
+            <div class="field-message msg-pass">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Published 2023-03-01 on mainnet tx 0x19a...7cf
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">VC Issuer (SSBI Clearance)</label>
+            <select class="field-input field-select" disabled>
+              <option selected selected>US DoD — Defense Counterintelligence (DCIS)</option>
+            </select>
+            <div class="field-hint">Issuer DID: did:key:z6MkhaXgBZDvotDkLF5eM2s...</div>
+          </div>
+          <div class="form-field span-2">
+            <label class="field-label">Verifiable Credential — SSBI Level Clearance <span class="required-mark">*</span></label>
+            <table class="data-table" role="table" aria-label="SSBI Credential details">
+              <thead>
+                <tr>
+                  <th scope="col">Field</th>
+                  <th scope="col">Value</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-primary">Credential Type</td>
+                  <td class="td-mono">USFederalSSBICredential</td>
+                  <td><span class="table-inline-badge badge-pass">Presented</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">Claimed Level</td>
+                  <td class="td-mono">Super (Tier 5)</td>
+                  <td><span class="table-inline-badge badge-pass">Verified</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">Issue Date</td>
+                  <td class="td-mono">2020-09-15</td>
+                  <td class="td-mono">Checked against DCIS registry</td>
+                </tr>
+                <tr>
+                  <td class="td-primary">Expiry Date</td>
+                  <td class="td-mono">2025-09-15</td>
+                  <td class="td-mono">451 days remaining</td>
+                </tr>
+                <tr>
+                  <td class="td-primary">Proof Hash</td>
+                  <td class="td-mono" style="word-break: break-all;">0x8b42c1d9a7e3f056b2d81c47e93a0f56b2c1d9a7e3f056b2d81c47e93a0f56b2</td>
+                  <td><span class="table-inline-badge badge-pass">Signature valid</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="form-field span-2">
+            <label class="field-label">Additional Attestations Received</label>
+            <table class="data-table" role="table" aria-label="Additional attestation records">
+              <thead>
+                <tr>
+                  <th scope="col">Attestation</th>
+                  <th scope="col">Issuer</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">On-chain TX</th>
+                  <th scope="col">Verification</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-primary">Professional Engineer (PE) License</td>
+                  <td class="td-mono">New York State Board</td>
+                  <td class="td-mono">2013-06-22</td>
+                  <td class="td-mono" style="word-break: break-all;">0x3ac...8df</td>
+                  <td><span class="table-inline-badge badge-pass">Confirmed</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">Corporate Director Filing</td>
+                  <td class="td-mono">Delaware SEC EDGAR</td>
+                  <td class="td-mono">2021-11-03</td>
+                  <td class="td-mono">Off-chain verify</td>
+                  <td><span class="table-inline-badge badge-pass">Confirmed</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">Ethereum Whistleblower Credential</td>
+                  <td class="td-mono">Gitcoin Passport Round 14</td>
+                  <td class="td-mono">2024-05-18</td>
+                  <td class="td-mono" style="word-break: break-all;">0xf71...2ba</td>
+                  <td><span class="table-inline-badge badge-pass">Score: 42/50</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 5: COMPLIANCE & REGISTRY CHECKS
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§05</span>
+          <span class="section-title">Compliance, Sanctions &amp; Registry Checks</span>
+          <span class="section-desc">OFAC SDN list, EU sanctions, FATF travel rule, FinCEN registration, and exchangeKYC status</span>
+        </div>
+        <span class="section-count">0 / 2 passed</span>
+      </div>
+
+      <div class="alert-banner" role="alert">
+        <svg class="alert-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-status-error)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="alert-text">
+          <strong>Critical: OFAC Sanctions Check — No Match Found</strong>
+          <p>Subject does not appear on any OFAC SDN, consolidated, or non-SDN lists as of 2024-11-18T09:00:00Z. However, associated entity <mark>"Meridian Labs DAO"</mark> (tax ID EIN: 84-3901127) has been flagged for review due to connection with Tornado Cash interaction on 2023-01-14. See Section §07 for details.</p>
+        </div>
+      </div>
+
+      <div class="section-body">
+        <div class="form-grid cols-2">
+          <div class="form-field">
+            <label class="field-label">OFAC SDN List Check Result</label>
+            <input class="field-input input-pass" type="text" value="NOT FOUND — Clear" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">EU Consolidated Sanctions</label>
+            <input class="field-input input-pass" type="text" value="NOT FOUND — Clear" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">UN Security Council Sanctions</label>
+            <input class="field-input input-pass" type="text" value="NOT FOUND — Clear" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">FATF Travel Rule — Sending Inst.</label>
+            <input class="field-input input-pass" type="text" value="Coinbase Inc. (FINRA-ID: 4923801)" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">FinCEN MSB Registration Status</label>
+            <input class="field-input input-pass" type="text" value="Not registered as individual MSB" readonly>
+          </div>
+          <div class="form-field">
+            <label class="field-label">PEP (Politically Exposed Person) Check</label>
+            <input class="field-input input-pass" type="text" value="No PEP matching found" readonly>
+          </div>
+
+          <div class="form-field span-2" style="margin-top: var(--spacing-base);">
+            <label class="field-label">AML Transaction History — Flagged Outgoing Transfers <span class="required-mark">*</span></label>
+            <table class="data-table" role="table" aria-label="Flagged outgoing transfers">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">TX Hash</th>
+                  <th scope="col">Destination</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Protocol</th>
+                  <th scope="col">Risk</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-mono">2023-01-14</td>
+                  <td class="td-mono" style="word-break:break-all;">0xe81c…a9f2</td>
+                  <td class="td-mono">Tornado Cash PC</td>
+                  <td class="td-mono">12.4 ETH</td>
+                  <td class="td-mono">Priv. pool</td>
+                  <td><span class="table-inline-badge badge-fail">High</span></td>
+                </tr>
+                <tr>
+                  <td class="td-mono">2023-03-02</td>
+                  <td class="td-mono" style="word-break:break-all;">0x7d21…b4c3</td>
+                  <td class="td-mono">0x2Ab...3fE1 (unidentified)</td>
+                  <td class="td-mono">50,000 USDC</td>
+                  <td class="td-mono">ERC-20 direct</td>
+                  <td><span class="table-inline-badge badge-pending">Medium</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="field-hint" style="margin-top: var(--spacing-sm);">Note: First entry flagged per OFAC guidance. Subject provided explanation below — see §07 response.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 6: SOURCE OF FUNDS EXPLANATION (ERROR FIELD HERE)
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§06</span>
+          <span class="section-title">Source-of-Funds Explanation</span>
+          <span class="section-desc">Subject-written narrative explaining each flagged transaction, supplemented by bank statements and trade confirmations</span>
+        </div>
+        <span class="section-count">1 of 2 complete</span>
+      </div>
+
+      <div class="alert-banner" role="alert">
+        <svg class="alert-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-status-error)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="alert-text">
+          <strong>Validation Error</strong>
+          <p>The submitted PDF containing trade confirmation for the Meridian Labs OTC desk transaction (#MGLD-OTC-20230612) failed integrity verification — checksum mismatch detected. Please request resubmission from the subject and attach corrected file.</p>
+        </div>
+      </div>
+
+      <div class="section-body">
+        <div class="form-grid cols-1">
+          <div class="form-field">
+            <label class="field-label">Subject Written Statement <span class="required-mark">*</span></label>
+            <textarea class="field-input" rows="5" readonly>Kael M. Rosetti, in my capacity as founding engineer and former CTO of Meridian Labs DAO, hereby certify that all crypto assets listed herein were acquired through lawful means. Specifically, regarding the flagged Tornado Cash interaction on 2023-01-14: this transaction was initiated as part of an automated tax-loss harvesting strategy executed by our DAO treasury management script (audited by OpenZeppelin). The 12.4 ETH output was directed to a new wallet which I controlled, and subsequently used to purchase wBTC through KyberSwap. No prohibited counterparties were involved. Attached are: (1) OpenZeppelin audit report dated 2022-11-30, (2) On-chain proof of output destination, (3) Trade confirmation from Genesis Global Trading LLC for the separate $485,000 OTC USDC deal on 2023-06-12. If further clarification is required, please contact my legal counsel at meridian-labs@lawfirm.example.com.</textarea>
+            <div class="field-hint">Statement signed 2024-11-17T22:08:31Z · SHA256: d4e1…8fa3</div>
+          </div>
+          <div class="form-field span-2">
+            <label class="field-label">Supporting Document Upload — OTC Trade Confirmation</label>
+            <input class="field-input input-error" type="file" value="" disabled aria-describedby="otc-error">
+            <div class="field-message msg-error" id="otc-error">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Integrity check FAILED — expected SHA256: b8f3…2da1, got: c2e7…9fa4. File: otc_confirmation_MGLD_20230612.pdf (2.4 MB)
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Bank Statement — Chase Primary Account <span class="required-mark">*</span></label>
+            <input class="field-input input-pass" type="text" value="✅ Accepted — redacted statement matched wage deposits totaling $2,840,000 over 4 years" readonly>
+            <div class="field-message msg-pass">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Wage deposits verified from Meridian Labs LLC (ACH originator ID 984102)
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">Employment Contract — Meridian Labs</label>
+            <input class="field-input input-pass" type="text" value="✅ Accepted — contract hash matches blockchain record" readonly>
+            <div class="field-message msg-pass">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Signed 2019-09-01, equity grant: 480,000 vested tokens
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 7: REPUTATION & EXTERNAL DATA
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§07</span>
+          <span class="section-title">Reputation, Media &amp; External Data</span>
+          <span class="section-desc">News aggregation, social media sentiment, litigation history, patent filings, and academic publication records</span>
+        </div>
+        <span class="section-count">3 / 3 passed</span>
+      </div>
+      <div class="section-body">
+        <div class="form-grid cols-2">
+          <div class="form-field span-2">
+            <label class="field-label">Media Mentions &amp; Litigation Search</label>
+            <table class="data-table" role="table" aria-label="External reputation search results">
+              <thead>
+                <tr>
+                  <th scope="col">Source</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Headline</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Sentiment</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-primary">CoinDesk</td>
+                  <td class="td-mono">Article</td>
+                  <td class="td-primary" style="font-family: var(--font-family-sans); font-weight: 400;">"Meridian Labs Raises $42M Series B for Decentralised Identity Infrastructure"</td>
+                  <td class="td-mono">2022-08-11</td>
+                  <td><span class="table-inline-badge badge-pass">Positive</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">Reuters</td>
+                  <td class="td-mono">Report</td>
+                  <td class="td-primary" style="font-family: var(--font-family-sans); font-weight: 400;">"Tornado Cash Co-Founder Faces Sanctions; Other Team Members Cleared"</td>
+                  <td class="td-mono">2023-08-14</td>
+                  <td><span class="table-inline-badge badge-neutral">Neutral</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">The Block</td>
+                  <td class="td-mono">Interview</td>
+                  <td class="td-primary" style="font-family: var(--font-family-sans); font-weight: 400;">"Kael Rosetti on Why Self-Sovereign Identity Will Win Despite Regulatory Friction"</td>
+                  <td class="td-mono">2024-03-22</td>
+                  <td><span class="table-inline-badge badge-pass">Positive</span></td>
+                </tr>
+                <tr>
+                  <td class="td-primary">CourtListener</td>
+                  <td class="td-mono">Case Search</td>
+                  <td class="td-primary" style="font-family: var(--font-family-sans); font-weight: 400;">No cases found naming Kael M. Rosetti as plaintiff or defendant</td>
+                  <td class="td-mono">—</td>
+                  <td><span class="table-inline-badge badge-pass">Clear</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="form-field span-2">
+            <label class="field-label">Academic Publication Index</label>
+            <table class="data-table" role="table" aria-label="Academic publications">
+              <thead>
+                <tr>
+                  <th scope="col">Paper Title</th>
+                  <th scope="col">Venue</th>
+                  <th scope="col">Year</th>
+                  <th scope="col">Co-authors</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-primary" style="font-family: var(--font-family-sans); font-weight: 400;">Zero-Knowledge Proofs for Selective Disclosure in Decentralised Identity</td>
+                  <td class="td-mono">IEEE S&amp;P Workshop</td>
+                  <td class="td-mono">2020</td>
+                  <td class="td-mono">Singh A., Chen W.</td>
+                </tr>
+                <tr>
+                  <td class="td-primary" style="font-family: var(--font-family-sans); font-weight: 400;">Cross-Chain Identity Bridging with Merklized Commitments</td>
+                  <td class="td-mono">USENIX Security</td>
+                  <td class="td-mono">2022</td>
+                  <td class="td-mono">Okafor N., Tanaka H.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         SECTION 8: REVIEWER LOG & NOTES
+         ════════════════════════════════════════════════════════════ -->
+    <div class="review-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-number">§08</span>
+          <span class="section-title">Reviewer Notes &amp; Audit Trail</span>
+          <span class="section-desc">Chronological log of all reviewer actions, annotations, and internal communications tied to this review instance</span>
+        </div>
+        <span class="section-count">6 entries</span>
+      </div>
+      <div class="section-body">
+        <!-- Tabs widget for sub-categories -->
+        <div class="tabs-container">
+          <div class="tab-list" role="tablist" aria-label="Review log categories">
+            <button class="tab-btn" role="tab" aria-selected="true" aria-controls="panel-notes" id="tab-notes">Notes <span class="tab-count">4</span></button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-actions" id="tab-actions">Actions <span class="tab-count">2</span></button>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-notes" data-active="true" aria-labelledby="tab-notes">
+            <div class="notes-list">
+              <div class="note-entry">
+                <div class="note-author-avatar">JW</div>
+                <div class="note-body">
+                  <div class="note-meta"><strong>Dr. Janice Whitmore</strong> · 2024-11-18T09:34:12Z</div>
+                  <div class="note-text">Initial review commenced. All primary identification fields parse cleanly. Moving to wallet analysis. Flagged SHIB holding as unusual volume — will investigate whether this came through a sweep event on a now-defunct exchange. <mark>Total portfolio ~$4.03M USD equivalent.</mark></div>
+                </div>
+              </div>
+              <div class="note-entry">
+                <div class="note-author-avatar">JW</div>
+                <div class="note-body">
+                  <div class="note-meta"><strong>Dr. Janice Whitmore</strong> · 2024-11-18T10:18:44Z</div>
+                  <div class="note-text">Biometric scan confirms with extremely high confidence. Voice print also matches. Video URI resolves correctly on IPFS gateway. No anomalies detected. Proceeding to compliance screening — will run full OFAC hit before moving to SoF section.</div>
+                </div>
+              </div>
+              <div class="note-entry">
+                <div class="note-author-avatar">MR</div>
+                <div class="note-body">
+                  <div class="note-meta"><strong>Marco Rossi (Second Verifier)</strong> · 2024-11-18T11:02:18Z</div>
+                  <div class="note-text">Secondary review of credentials confirmed. SSBI VC signature is authentic — issuer key material verified against known DCIS rotation schedule. PE license checked against NYSED database independently. Everything checks out. Only concern is the Tornado link. We need clearer evidence that the subject's personal funds weren't commingled with DAO funds during that window.</div>
+                </div>
+              </div>
+              <div class="note-entry">
+                <div class="note-author-avatar">JW</div>
+                <div class="note-body">
+                  <div class="note-meta"><strong>Dr. Janice Whitmore</strong> · 2024-11-18T11:21:55Z</div>
+                  <div class="note-text">Reviewed subject's SoF statement. The OpenZeppelin audit reference is real (report ID: OZ-2022-11-A471), but the on-chain output proof only traces 10.2 of the 12.4 ETH through the privacy pool. <mark>Missing 2.2 ETH trail.</mark> Requesting the DAO treasury multisig approval transcript showing who signed the original outbound tx. Also the uploaded OTC confirmation PDF failed checksum — must be resent.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-actions" data-active="false" aria-labelledby="tab-actions">
+            <table class="data-table" role="table" aria-label="Reviewer actions">
+              <thead>
+                <tr>
+                  <th scope="col">Timestamp</th>
+                  <th scope="col">Reviewer</th>
+                  <th scope="col">Action</th>
+                  <th scope="col">Section</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-mono">2024-11-18T09:34:12Z</td>
+                  <td class="td-primary">Dr. J. Whitmore</td>
+                  <td class="td-mono">Review opened, assigned</td>
+                  <td>All</td>
+                </tr>
+                <tr>
+                  <td class="td-mono">2024-11-18T10:18:44Z</td>
+                  <td class="td-primary">Dr. J. Whitmore</td>
+                  <td class="td-mono">§03 completed — marks all biometric checks PASS</td>
+                  <td>§03</td>
+                </tr>
+                <tr>
+                  <td class="td-mono">2024-11-18T10:42:00Z</td>
+                  <td class="td-primary">Dr. J. Whitmore</td>
+                  <td class="td-mono">§02 completed — asset table verified</td>
+                  <td>§02</td>
+                </tr>
+                <tr>
+                  <td class="td-mono">2024-11-18T11:02:18Z</td>
+                  <td class="td-primary">Marco Rossi</td>
+                  <td class="td-mono">Secondary review started</td>
+                 >All</td>
+                </tr>
+                <tr>
+                  <td class="td-mono">2024-11-18T11:05:33Z</td>
+                  <td class="td-primary">Marco Rossi</td>
+                  <td class="td-mono">§04 completed — credentials verified</td>
+                  <td>§04</td>
+                </tr>
+                <tr>
+                  <td class="td-mono">2024-11-18T11:21:55Z</td>
+                  <td class="td-primary">Dr. J. Whitmore</td>
+                  <td class="td-mono">§06 marked INCOMPLETE — 2 action items outstanding</td>
+                  <td>§06</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final progress summary -->
+    <div style="margin-top: var(--spacing-2xl); padding: var(--spacing-xl); background: var(--color-bg-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg);">
+      <h3 style="font-size: var(--size-base); font-weight: 700; margin-bottom: var(--spacing-lg); color: var(--color-text-primary);">Overall Verification Pipeline Progress</h3>
+      <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+        <div class="progress-bar-group">
+          <span class="progress-label">Personal ID</span>
+          <div class="progress-track" style="flex:1;"><div class="progress-fill fill-pass" style="width: 100%;"></div></div>
+          <span class="progress-pct">100%</span>
+        </div>
+        <div class="progress-bar-group">
+          <span class="progress-label">Wallets</span>
+          <div class="progress-track" style="flex:1;"><div class="progress-fill fill-pass" style="width: 100%;"></div></div>
+          <span class="progress-pct">100%</span>
+        </div>
+        <div class="progress-bar-group">
+          <span class="progress-label">Biometrics</span>
+          <div class="progress-track" style="flex:1;"><div class="progress-fill fill-pass" style="width: 100%;"></div></div>
+          <span class="progress-pct">100%</span>
+        </div>
+        <div class="progress-bar-group">
+          <span class="progress-label">Credentials</span>
+          <div class="progress-track" style="flex:1;"><div class="progress-fill fill-warn" style="width: 75%;"></div></div>
+          <span class="progress-pct">75%</span>
+        </div>
+        <div class="progress-bar-group">
+          <span class="progress-label">Compliance</span>
+          <div class="progress-track" style="flex:1;"><div class="progress-fill fill-pass" style="width: 100%;"></div></div>
+          <span class="progress-pct">100%</span>
+        </div>
+        <div class="progress-bar-group">
+          <span class="progress-label">Source of Funds</span>
+          <div class="progress-track" style="flex:1;"><div class="progress-fill fill-error" style="width: 60%;"></div></div>
+          <span class="progress-pct">60%</span>
+        </div>
+        <div class="progress-bar-group">
+          <span class="progress-label">Reputation</span>
+          <div class="progress-track" style="flex:1;"><div class="progress-fill fill-pass" style="width: 100%;"></div></div>
+          <span class="progress-pct">100%</span>
+        </div>
+        <div class="body-divider"></div>
+        <div class="progress-bar-group" style="margin-top: var(--spacing-sm);">
+          <span class="progress-label" style="font-weight: 700; color: var(--color-text-primary);">Total</span>
+          <div class="progress-track" style="flex:1; height: 8px;"><div class="progress-fill fill-pass" style="width: 86%;"></div></div>
+          <span class="progress-pct" style="font-weight: 700; color: var(--color-status-pass);">86%</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════ CONFIRMATION DIALOG ═══════ -->
+<div class="dialog-overlay" id="confirmDialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+  <div class="dialog-box">
+    <div class="dialog-header">
+      <h3 id="dialog-title">Finalise This Review?</h3>
+      <button class="dialog-close-btn" onclick="document.getElementById('confirmDialog').classList.remove('open')" aria-label="Close dialog">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <div class="dialog-body-title">Review DID-2024-00817 — Kael M. Rosetti</div>
+      <p>This will set the review state to <strong>REQUIRES RESUBMISSION</strong>. Two action items remain outstanding in Section §06 (source-of-funds documentation).</p>
+      <ul style="margin-top: var(--spacing-base); padding-left: var(--spacing-lg); display: flex; flex-direction: column; gap: var(--spacing-sm);">
+        <li>Resubmit corrected OTC trade confirmation PDF (checksum mismatch)</li>
+        <li>Provide DAO treasury multisig approval transcript for the 12.4 ETH Tornado.tx trace gap (2.2 ETH unaccounted)</li>
+      </ul>
+      <p style="margin-top: var(--spacing-base); color: var(--color-text-muted); font-size: var(--size-sm);">The subject will be notified automatically. Expected turnaround for resubmission: 14 business days.</p>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('confirmDialog').classList.remove('open')">Cancel</button>
+      <button class="btn btn-danger" onclick="document.getElementById('confirmDialog').classList.remove('open'); alert('Review state updated to REQUIRES_RESUBMISSION.');">Confirm Resubmission Required</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tab switching logic
+document.querySelectorAll('.tab-btn').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    var tablist = this.closest('.tab-list');
+    var panelId = this.getAttribute('aria-controls');
+
+    // Deselect all tabs
+    tablist.querySelectorAll('.tab-btn').forEach(function(t) {
+      t.setAttribute('aria-selected', 'false');
+    });
+    // Deactivate all panels
+    var parent = this.closest('.tabs-container');
+    parent.querySelectorAll('.tab-panel').forEach(function(p) {
+      p.setAttribute('data-active', 'false');
+    });
+
+    // Activate clicked
+    this.setAttribute('aria-selected', 'true');
+    document.getElementById(panelId).setAttribute('data-active', 'true');
+  });
+});
+
+// Export button mock
+document.getElementById('exportBtn').addEventListener('click', function() {
+  alert('Generating PDF report for DID-2024-00817...\n\nIncluded: All 8 sections, verification chain, tabular data, and reviewer annotations.\nEstimated size: 2.1 MB');
+});
+</script>
+
+</body>
+</html>

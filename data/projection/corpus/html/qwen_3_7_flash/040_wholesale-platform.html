@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform Compliance Review — Inbound Batch</title>
+<style>
+:root {
+  --clr-primary: #1a3a5c;
+  --clr-primary-light: #2a5a8c;
+  --clr-primary-dark: #0d2137;
+  --clr-accent: #e8a838;
+  --clr-success: #2b8a5e;
+  --clr-success-bg: #e6f4ec;
+  --clr-warning: #c47a1a;
+  --clr-warning-bg: #fdf3e2;
+  --clr-error: #c0392b;
+  --clr-error-bg: #fdecea;
+  --clr-info: #2d7dbb;
+  --clr-info-bg: #e8f2fb;
+  --clr-surface: #ffffff;
+  --clr-surface-alt: #f5f7fa;
+  --clr-border: #d1d9e0;
+  --clr-border-focus: #2d7dbb;
+  --clr-text: #1e293b;
+  --clr-text-secondary: #5a6b7e;
+  --clr-text-muted: #8899a6;
+  --clr-text-inverse: #ffffff;
+  --clr-highlight: #fef3c7;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --size-xs: 2px;
+  --size-sm: 4px;
+  --size-md: 8px;
+  --size-base: 12px;
+  --size-lg: 16px;
+  --size-xl: 20px;
+  --size-2xl: 24px;
+  --size-3xl: 32px;
+  --size-4xl: 40px;
+  --size-5xl: 48px;
+  --size-6xl: 64px;
+
+  --radius-sm: var(--size-xs);
+  --radius-md: var(--size-sm);
+  --radius-base: var(--size-md);
+  --radius-lg: var(--size-lg);
+  --radius-xl: var(--size-xl);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-base: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --tracking-wide: 0.025em;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--size-base);
+  line-height: var(--leading-normal);
+  color: var(--clr-text);
+  background: var(--clr-surface-alt);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell {
+  max-width: calc(1280px + var(--size-4xl));
+  margin: 0 auto;
+  padding: var(--size-xl) var(--size-3xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2xl);
+}
+
+/* ── Header Bar ── */
+.header-bar {
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+  padding: var(--size-md) var(--size-xl);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.header-bar h1 {
+  font-size: var(--size-xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--size-xl);
+  font-size: var(--size-base);
+  color: rgba(255,255,255,0.75);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-xs);
+  background: rgba(255,255,255,0.15);
+  padding: var(--size-xs) var(--size-md);
+  border-radius: var(--radius-xl);
+  font-size: var(--size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-chip .dot {
+  width: var(--size-sm);
+  height: var(--size-sm);
+  border-radius: 50%;
+  background: var(--clr-accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.operator-info {
+  display: flex;
+  align-items: center;
+  gap: var(--size-sm);
+  font-size: var(--size-xs);
+}
+
+.operator-avatar {
+  width: var(--size-xl);
+  height: var(--size-xl);
+  border-radius: 50%;
+  background: var(--clr-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--size-xs);
+  color: var(--clr-text-inverse);
+}
+
+/* ── Summary Strip ── */
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--size-base);
+}
+
+.stat-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: var(--size-lg) var(--size-xl);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-xs);
+}
+
+.stat-label {
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--clr-text-secondary);
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: var(--size-2xl);
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--clr-text);
+}
+
+.stat-value.success { color: var(--clr-success); }
+.stat-value.warning { color: var(--clr-warning); }
+.stat-value.error   { color: var(--clr-error); }
+
+/* ── Main Grid ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: var(--size-2xl);
+  align-items: start;
+}
+
+.col-main { display: flex; flex-direction: column; gap: var(--size-2xl); }
+.col-side { display: flex; flex-direction: column; gap: var(--size-2xl); }
+
+/* ── Card ── */
+.card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: var(--size-lg) var(--size-xl);
+  border-bottom: 1px solid var(--clr-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-md);
+  background: var(--clr-surface-alt);
+}
+
+.card-header h2 {
+  font-size: var(--size-base);
+  font-weight: 700;
+  color: var(--clr-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--size-sm);
+}
+
+.card-body { padding: var(--size-xl); }
+
+/* ── Tabs ── */
+.tabs-list {
+  display: flex;
+  border-bottom: 2px solid var(--clr-border);
+  background: var(--clr-surface-alt);
+}
+
+.tab-btn {
+  padding: var(--size-md) var(--size-lg);
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--size-base);
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: color var(--size-sm), background var(--size-sm);
+  border-radius: 0;
+}
+
+.tab-btn:hover { color: var(--clr-text); background: rgba(0,0,0,0.03); }
+
+.tab-btn[aria-selected="true"] {
+  color: var(--clr-primary);
+  background: var(--clr-surface);
+}
+
+.tab-btn[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: var(--size-lg);
+  right: var(--size-lg);
+  height: 2px;
+  background: var(--clr-primary);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Product Detail ── */
+.product-row {
+  display: flex;
+  gap: var(--size-xl);
+  margin-bottom: var(--size-xl);
+}
+
+.product-image {
+  width: var(--size-5xl);
+  height: var(--size-5xl);
+  border-radius: var(--radius-lg);
+  background: var(--clr-surface-alt);
+  border: 1px solid var(--clr-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.product-info { flex: 1; }
+
+.product-name {
+  font-size: var(--size-xl);
+  font-weight: 700;
+  color: var(--clr-text);
+  margin-bottom: var(--size-xs);
+}
+
+.product-sku {
+  font-family: var(--font-mono);
+  font-size: var(--size-xs);
+  color: var(--clr-text-muted);
+  margin-bottom: var(--size-lg);
+}
+
+.product-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--size-md) var(--size-xl);
+}
+
+.meta-item label {
+  display: block;
+  font-size: var(--size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-text-muted);
+  font-weight: 600;
+  margin-bottom: var(--size-xs);
+}
+
+.meta-item span {
+  font-size: var(--size-base);
+  font-weight: 500;
+  color: var(--clr-text);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-xs);
+  padding: var(--size-xs) var(--size-sm);
+  border-radius: var(--radius-xl);
+  font-size: var(--size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-new        { background: var(--clr-info-bg); color: var(--clr-info); }
+.badge-pending     { background: var(--clr-warning-bg); color: var(--clr-warning); }
+.badge-approved    { background: var(--clr-success-bg); color: var(--clr-success); }
+.badge-flagged     { background: var(--clr-error-bg); color: var(--clr-error); }
+.badge-cat         { background: var(--clr-surface-alt); color: var(--clr-text-secondary); border: 1px solid var(--clr-border); }
+
+/* ── Validation Checklist ── */
+.checklist { list-style: none; display: flex; flex-direction: column; gap: var(--size-base); }
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-md);
+  padding: var(--size-md) var(--size-lg);
+  border-radius: var(--radius-base);
+  border: 1px solid transparent;
+  transition: background var(--size-sm);
+}
+
+.checklist-item:hover { background: var(--clr-surface-alt); }
+
+.checklist-icon {
+  width: var(--size-xl);
+  height: var(--size-xl);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.checklist-icon.pass { background: var(--clr-success-bg); color: var(--clr-success); }
+.checklist-icon.fail { background: var(--clr-error-bg); color: var(--clr-error); }
+.checklist-icon.warn { background: var(--clr-warning-bg); color: var(--clr-warning); }
+.checklist-icon.info { background: var(--clr-info-bg); color: var(--clr-info); }
+
+.checklist-text { flex: 1; }
+.checklist-text strong { font-weight: 700; color: var(--clr-text); }
+.checklist-text p { font-size: var(--size-xs); color: var(--clr-text-secondary); margin-top: 2px; }
+.checklist-detail { margin-top: var(--size-xs); font-size: var(--size-xs); color: var(--clr-text-muted); }
+
+/* ── Forms ── */
+.form-section-title {
+  font-size: var(--size-base);
+  font-weight: 700;
+  color: var(--clr-primary);
+  margin-bottom: var(--size-lg);
+  padding-bottom: var(--size-sm);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--size-lg);
+}
+
+.form-group { display: flex; flex-direction: column; gap: var(--size-sm); }
+.form-group.full { grid-column: 1 / -1; }
+
+.form-label {
+  font-size: var(--size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--size-xs);
+}
+
+.form-input, .form-select, .form-textarea {
+  font-family: var(--font-sans);
+  font-size: var(--size-base);
+  padding: var(--size-sm) var(--size-md);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-base);
+  color: var(--clr-text);
+  background: var(--clr-surface);
+  transition: border-color var(--size-sm), box-shadow var(--size-sm);
+  outline: none;
+  width: 100%;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--clr-border-focus);
+  box-shadow: 0 0 0 3px rgba(45, 125, 187, 0.15);
+}
+
+.form-input.accepted {
+  border-color: var(--clr-success);
+  background: var(--clr-success-bg);
+}
+
+.form-input.rejected {
+  border-color: var(--clr-error);
+  background: var(--clr-error-bg);
+}
+
+.form-hint {
+  font-size: var(--size-xs);
+  color: var(--clr-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--size-xs);
+}
+
+.form-hint.error { color: var(--clr-error); }
+.form-hint.success { color: var(--clr-success); }
+
+.form-textarea { resize: vertical; min-height: calc(var(--size-lg) * 3); }
+
+.field-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-xs);
+  font-size: var(--size-xs);
+  font-weight: 600;
+}
+
+.field-status.pass { color: var(--clr-success); }
+.field-status.fail { color: var(--clr-error); }
+
+/* ── Decision Panel ── */
+.decision-actions {
+  display: flex;
+  gap: var(--size-md);
+  margin-top: var(--size-xl);
+  padding-top: var(--size-xl);
+  border-top: 1px solid var(--clr-border);
+}
+
+.btn {
+  font-family: var(--font-sans);
+  font-size: var(--size-base);
+  font-weight: 700;
+  padding: var(--size-sm) var(--size-xl);
+  border-radius: var(--radius-base);
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-sm);
+  transition: all var(--size-sm);
+}
+
+.btn-primary {
+  background: var(--clr-primary);
+  color: var(--clr-text-inverse);
+  border-color: var(--clr-primary);
+}
+.btn-primary:hover { background: var(--clr-primary-light); }
+
+.btn-danger {
+  background: var(--clr-surface);
+  color: var(--clr-error);
+  border-color: var(--clr-error);
+}
+.btn-danger:hover { background: var(--clr-error-bg); }
+
+.btn-outline {
+  background: var(--clr-surface);
+  color: var(--clr-text-secondary);
+  border-color: var(--clr-border);
+}
+.btn-outline:hover { background: var(--clr-surface-alt); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--clr-text-secondary);
+  border: none;
+  padding: var(--size-sm);
+}
+.btn-ghost:hover { color: var(--clr-text); background: rgba(0,0,0,0.04); }
+
+/* ── Table ── */
+.data-table-wrap {
+  overflow-x: auto;
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--size-xs);
+}
+
+table.data-table th {
+  text-align: left;
+  padding: var(--size-sm) var(--size-md);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-text-secondary);
+  background: var(--clr-surface-alt);
+  border-bottom: 2px solid var(--clr-border);
+  white-space: nowrap;
+}
+
+table.data-table td {
+  padding: var(--size-sm) var(--size-md);
+  border-bottom: 1px solid var(--clr-border);
+  color: var(--clr-text);
+  vertical-align: middle;
+}
+
+table.data-table tbody tr:hover { background: var(--clr-surface-alt); }
+table.data-table tbody tr.highlighted { background: var(--clr-highlight); }
+
+.mono { font-family: var(--font-mono); }
+
+/* ── Navigation / Queue Walk ── */
+.queue-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-md);
+  background: var(--clr-surface-alt);
+  border-radius: var(--radius-lg);
+  padding: var(--size-md) var(--size-xl);
+  border: 1px solid var(--clr-border);
+}
+
+.queue-nav-label {
+  font-size: var(--size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-text-muted);
+}
+
+.queue-counter {
+  font-family: var(--font-mono);
+  font-size: var(--size-base);
+  font-weight: 700;
+  color: var(--clr-primary);
+}
+
+.queue-controls { display: flex; gap: var(--size-sm); }
+
+/* ── Progress bar ── */
+.progress-track {
+  height: var(--size-sm);
+  background: var(--clr-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  margin-top: var(--size-sm);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-xl);
+  transition: width 0.4s ease;
+}
+
+.progress-fill.green  { background: var(--clr-success); }
+.progress-fill.amber  { background: var(--clr-warning); }
+.progress-fill.red    { background: var(--clr-error); }
+
+/* ── Help / Info panels ── */
+.help-banner {
+  background: var(--clr-info-bg);
+  border: 1px solid rgba(45, 125, 187, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--size-lg) var(--size-xl);
+  display: flex;
+  gap: var(--size-md);
+  align-items: flex-start;
+}
+
+.help-banner p {
+  font-size: var(--size-xs);
+  color: var(--clr-info);
+  line-height: var(--leading-normal);
+}
+
+.guidance-box {
+  background: var(--clr-surface-alt);
+  border-left: 3px solid var(--clr-accent);
+  border-radius: 0 var(--radius-base) var(--radius-base) 0;
+  padding: var(--size-md) var(--size-lg);
+  font-size: var(--size-xs);
+  color: var(--clr-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.guidance-box strong { color: var(--clr-text); }
+
+/* ── Timeline ── */
+.timeline { display: flex; flex-direction: column; gap: 0; position: relative; padding-left: var(--size-xl); }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--clr-border);
+}
+
+.timeline-entry {
+  position: relative;
+  padding: var(--size-sm) 0 var(--size-lg);
+  font-size: var(--size-xs);
+}
+
+.timeline-entry::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--size-xl) + 3px);
+  top: 6px;
+  width: var(--size-sm);
+  height: var(--size-sm);
+  border-radius: 50%;
+  background: var(--clr-border);
+  border: 1px solid var(--clr-border);
+}
+
+.timeline-entry:first-child::before { background: var(--clr-primary); border-color: var(--clr-primary); }
+.timeline-time { color: var(--clr-text-muted); font-family: var(--font-mono); }
+.timeline-action { font-weight: 600; color: var(--clr-text); }
+
+/* ── Tooltip icon ── */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-xs);
+  height: var(--size-xs);
+  border-radius: 50%;
+  background: var(--clr-border);
+  color: var(--clr-text-muted);
+  font-size: 8px;
+  font-weight: 800;
+  cursor: help;
+  position: relative;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+/* ── Override Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal-dialog {
+  background: var(--clr-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 520px;
+  max-width: calc(100vw - var(--size-4xl));
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-dialog .card-header {
+  background: var(--clr-error-bg);
+  border-bottom-color: rgba(192, 57, 43, 0.15);
+}
+
+.modal-body { padding: var(--size-xl); }
+
+.modal-footer {
+  padding: var(--size-lg) var(--size-xl);
+  border-top: 1px solid var(--clr-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-md);
+}
+
+/* SVG helpers */
+svg.icon { display: inline-block; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ═══════ HEADER BAR ═══════ -->
+  <header class="header-bar" role="banner">
+    <h1>
+      <svg class="icon" style="width:20px;height:20px;margin-right:var(--size-sm)" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 7h8M6 10h5"/></svg>
+      Platform Compliance Review
+    </h1>
+    <div class="header-meta">
+      <span class="status-chip"><span class="dot"></span> Active Session</span>
+      <span>BATCH&nbsp;PB-2024-0847</span>
+      <div class="operator-info">
+        <div class="operator-avatar">MR</div>
+        <span>M. Rodriguez &middot; 14:32 EST</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════ SUMMARY STRIP ═══════ -->
+  <section class="summary-strip" aria-label="Queue summary">
+    <div class="stat-card">
+      <span class="stat-label">In Queue</span>
+      <span class="stat-value">23</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Passed</span>
+      <span class="stat-value success">11</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Flagged</span>
+      <span class="stat-value warning">9</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Rejected</span>
+      <span class="stat-value error">2</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Your Turn</span>
+      <span class="stat-value" id="current-position">#7 of 23</span>
+    </div>
+  </section>
+
+  <!-- ═══════ PROGRESS ═══════ -->
+  <div style="display:flex;flex-direction:column;gap:var(--size-xs)">
+    <div style="display:flex;justify-content:space-between;font-size:var(--size-xs);color:var(--clr-text-secondary)">
+      <strong>Batch Completion</strong>
+      <span>30 % complete &mdash; 7 of 23 items reviewed</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill green" style="width:30%"></div>
+    </div>
+  </div>
+
+  <!-- ═══════ MAIN GRID ═══════ -->
+  <div class="main-grid">
+
+    <!-- ──── LEFT COLUMN ──── -->
+    <div class="col-main">
+
+      <!-- Section 1: Product Detail -->
+      <article class="card">
+        <div class="card-header">
+          <h2>
+            <svg class="icon" style="width:18px;height:18px;color:var(--clr-primary)" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a3.5 3.5 0 013.5 3.5v.5H8.5v-.5A3.5 3.5 0 0110 2zm-4 4.5a1 1 0 112 0 1 1 0 01-2 0zM12 6.5a1 1 0 112 0 1 1 0 01-2 0zM5 11a1 1 0 112 0 1 1 0 01-2 0zm10 1a1 1 0 112 0 1 1 0 01-2 0zM4 16a2 2 0 012-2h8a2 2 0 012 2v2H4v-2z"/></svg>
+            Current Item
+          </h2>
+          <span class="badge badge-pending">Pending Review</span>
+        </div>
+        <div class="card-body">
+          <div class="product-row">
+            <div class="product-image">
+              <svg style="width:48px;height:48px;color:var(--clr-text-muted)" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="8" y="12" width="32" height="24" rx="3"/><circle cx="24" cy="24" r="6"/><path d="M18 36l6-6 6 6"/></svg>
+            </div>
+            <div class="product-info">
+              <div style="display:flex;align-items:center;gap:var(--size-sm);margin-bottom:var(--size-xs)">
+                <span class="product-name">NordicSilk™ Merino Wool Blanket — 240×280 cm</span>
+                <span class="badge badge-cat">Home Textiles</span>
+              </div>
+              <div class="product-sku">SKU: NS-MWB-2428-WHT &nbsp;&middot;&nbsp; Supplier ID: SUP-NO-10847 &nbsp;&middot;&nbsp; Added 2024-11-18</div>
+              <div class="product-meta-grid">
+                <div class="meta-item">
+                  <label>Category</label>
+                  <span>Bedding > Blankets > Premium</span>
+                </div>
+                <div class="meta-item">
+                  <label>Price Tier</label>
+                  <span>$189.00 USD (MSRP)</span>
+                </div>
+                <div class="meta-item">
+                  <label>MOQ</label>
+                  <span>50 units per order</span>
+                </div>
+                <div class="meta-item">
+                  <label>Hazmat Class</label>
+                  <span>Not regulated</span>
+                </div>
+                <div class="meta-item">
+                  <label>Certifications</label>
+                  <span>Oeko-Tex Standard 100</span>
+                </div>
+                <div class="meta-item">
+                  <label>Country of Origin</label>
+                  <span>Norway (NO)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div role="tablist" aria-label="Product detail panels" class="tabs-list" style="border:none;padding:0;background:transparent;margin-bottom:var(--size-lg)">
+            <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-details" id="tab-details">Specifications</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-images" id="tab-images">Media &amp; Assets</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-compliance" id="tab-compliance">Compliance Docs</button>
+          </div>
+
+          <div class="tab-panel active" role="tabpanel" id="panel-details" aria-labelledby="tab-details">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--size-md);font-size:var(--size-xs)">
+              <div><strong style="color:var(--clr-text-muted)">Material Composition</strong><br>100% Merino Wool, Grade A, 19.5 micron</div>
+              <div><strong style="color:var(--clr-text-muted)">Weight</strong><br>2.8 kg ± 0.15 kg</div>
+              <div><strong style="color:var(--clr-text-muted)">Colorfastness Rating</strong><br>ISO 105-B02: Grade 4–5</div>
+              <div><strong style="color:var(--clr-text-muted)">Shrinkage Tolerance</strong><br>≤ 3% after first wash cycle</div>
+              <div><strong style="color:var(--clr-text-muted)">Care Instructions</strong><br>Machine wash cold, tumble dry low</div>
+              <div><strong style="color:var(--clr-text-muted)">Packaging Type</strong><br>Recycled kraft box, shrink-wrapped</div>
+            </div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-images" aria-labelledby="tab-images" style="padding:var(--size-xl)">
+            <p style="font-size:var(--size-xs);color:var(--clr-text-secondary);margin-bottom:var(--size-md)">Three images submitted by supplier. Primary image passes resolution check.</p>
+            <div style="display:flex;gap:var(--size-md)">
+              <div style="width:var(--size-3xl);height:var(--size-3xl);border-radius:var(--radius-base);background:var(--clr-surface-alt);border:2px solid var(--clr-success);display:flex;align-items:center;justify-content:center">
+                <span style="font-size:var(--size-xs);color:var(--clr-success);font-weight:700">OK</span>
+              </div>
+              <div style="width:var(--size-3xl);height:var(--size-3xl);border-radius:var(--radius-base);background:var(--clr-surface-alt);border:2px solid var(--clr-success);display:flex;align-items:center;justify-content:center">
+                <span style="font-size:var(--size-xs);color:var(--clr-success);font-weight:700">OK</span>
+              </div>
+              <div style="width:var(--size-3xl);height:var(--size-3xl);border-radius:var(--radius-base);background:var(--clr-surface-alt);border:2px solid var(--clr-error);display:flex;align-items:center;justify-content:center;position:relative">
+                <span style="font-size:var(--size-xs);color:var(--clr-error);font-weight:700">FAIL</span>
+              </div>
+            </div>
+            <p style="font-size:var(--size-xs);color:var(--clr-error);margin-top:var(--size-sm)">Image 3 (detail shot): Resolution 640&times;480 — below required 1200&times;1200 minimum.</p>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-compliance" aria-labelledby="tab-compliance" style="padding:var(--size-xl)">
+            <div style="display:flex;flex-direction:column;gap:var(--size-md)">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--size-sm) var(--size-md);background:var(--clr-success-bg);border-radius:var(--radius-base);font-size:var(--size-xs)">
+                <span>Oeko-Tex Certificate #OTX-2024-0418</span>
+                <span style="font-weight:700;color:var(--clr-success)">✓ Verified</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--size-sm) var(--size-md);background:var(--clr-success-bg);border-radius:var(--radius-base);font-size:var(--size-xs)">
+                <span>Fiber Content Declaration Sheet</span>
+                <span style="font-weight:700;color:var(--clr-success)">✓ Verified</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--size-sm) var(--size-md);background:var(--clr-warning-bg);border-radius:var(--radius-base);font-size:var(--size-xs)">
+                <span>CE Marking Documentation</span>
+                <span style="font-weight:700;color:var(--clr-warning)">⚠ Pending Reissue</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Section 2: Validation Checklist -->
+      <section class="card">
+        <div class="card-header">
+          <h2>
+            <svg class="icon" style="width:18px;height:18px;color:var(--clr-primary)" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            Validation Checklist
+          </h2>
+          <span style="font-size:var(--size-xs);color:var(--clr-text-muted)">7 of 12 passed</span>
+        </div>
+        <div class="card-body">
+          <ul class="checklist" aria-label="Validation results">
+            <li class="checklist-item">
+              <div class="checklist-icon pass">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l3.5 3.5L13 5"/></svg>
+              </div>
+              <div class="checklist-text">
+                <strong>Product Name Completeness</strong>
+                <p>Brand prefix, material, dimensions, and colour all present</p>
+              </div>
+              <span class="field-status pass">Pass</span>
+            </li>
+            <li class="checklist-item">
+              <div class="checklist-icon pass">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l3.5 3.5L13 5"/></svg>
+              </div>
+              <div class="checklist-text">
+                <strong>SKU Format Compliance</strong>
+                <p>Pattern matches HomeTextiles standard (3-part + size suffix)</p>
+              </div>
+              <span class="field-status pass">Pass</span>
+            </li>
+            <li class="checklist-item">
+              <div class="checklist-icon pass">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l3.5 3.5L13 5"/></svg>
+              </div>
+              <div class="checklist-text">
+                <strong>HS Code Assignment</strong>
+                <p>Code 6301.40.00 verified against CNED 2024 schedule</p>
+              </div>
+              <span class="field-status pass">Pass</span>
+            </li>
+            <li class="checklist-item">
+              <div class="checklist-icon fail">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+              </div>
+              <div class="checklist-text">
+                <strong>Minimum Order Quantity Within Threshold</strong>
+                <p>Policy maximum for Home Textiles is 100 units. Submitted MOQ exceeds limit.</p>
+                <div class="checklist-detail">Submitted MOQ: <strong style="color:var(--clr-error)">200 units</strong> &nbsp;|&nbsp; Policy ceiling: 100</div>
+              </div>
+              <span class="field-status fail">Fail</span>
+            </li>
+            <li class="checklist-item">
+              <div class="checklist-icon pass">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l3.5 3.5L13 5"/></svg>
+              </div>
+              <div class="checklist-text">
+                <strong>Safety Data Sheet on File</strong>
+                <p>No hazardous components declared; SDS not applicable</p>
+              </div>
+              <span class="field-status pass">Pass</span>
+            </li>
+            <li class="checklist-item">
+              <div class="checklist-icon pass">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l3.5 3.5L13 5"/></svg>
+              </div>
+              <div class="checklist-text">
+                <strong>Pricing Within Approved Range</strong>
+                <p>$189 falls within $150–$275 band for Premium wool blankets</p>
+              </div>
+              <span class="field-status pass">Pass</span>
+            </li>
+            <li class="checklist-item">
+              <div class="checklist-icon warn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4v4.5M8 10.5v.5"/></svg>
+              </div>
+              <div class="checklist-text">
+                <strong>Supplier History Check</strong>
+                <p>SUP-NO-10847 has 2 prior open disputes (resolved)</p>
+              </div>
+              <span class="field-status" style="color:var(--clr-warning)">Warning</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Section 3: Review & Validation Form -->
+      <section class="card">
+        <div class="card-header">
+          <h2>
+            <svg class="icon" style="width:18px;height:18px;color:var(--clr-primary)" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+            Operator Validation
+          </h2>
+          <span class="badge badge-flagged">Needs Attention</span>
+        </div>
+        <div class="card-body">
+          <div class="help-banner" style="margin-bottom:var(--size-xl)">
+            <svg style="width:20px;height:20px;color:var(--clr-info);flex-shrink:0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+            <p>You are reviewing item <strong>#7</strong> in batch PB-2024-0847. Two fields have been auto-validated. One field failed policy check and requires your override decision.</p>
+          </div>
+
+          <h3 class="form-section-title">Validated Fields</h3>
+          <div class="form-grid" style="margin-bottom:var(--size-xl)">
+            <div class="form-group">
+              <label class="form-label">
+                Brand Descriptor
+                <span class="info-icon" title="Brand prefix extracted from product title">?</span>
+              </label>
+              <input type="text" class="form-input accepted" value="NordicSilk™" readonly aria-label="Brand descriptor — auto-validated" tabindex="-1">
+              <span class="form-hint success">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3L10 3"/></svg>
+                Auto-accepted &middot; Matches registered trademark database
+              </span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit Price ($) &nbsp;</label>
+              <input type="text" class="form-input accepted" value="189.00" readonly aria-label="Unit price — auto-validated" tabindex="-1">
+              <span class="form-hint success">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3L10 3"/></svg>
+                Verified against purchase order PO-NO-99231
+              </span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category Tag</label>
+              <select class="form-select accepted" disabled aria-label="Category tag — auto-validated" tabindex="-1">
+                <option selected>Home Textiles → Blankets → Premium</option>
+              </select>
+              <span class="form-hint success">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3L10 3"/></svg>
+                ML classifier confidence: 96.4 %
+              </span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country Code</label>
+              <input type="text" class="form-input accepted" value="NO" readonly tabindex="-1" aria-label="Country code — validated" style="background:var(--clr-success-bg);border-color:var(--clr-success)">
+              <span class="form-hint success">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3L10 3"/></svg>
+                ISO 3166-1 alpha-2 confirmed
+              </span>
+            </div>
+          </div>
+
+          <h3 class="form-section-title">Manual Override Required</h3>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label" for="override-reason">
+                MOQ Override Justification
+                <span class="info-icon" title="Required if you accept an MOQ above the policy ceiling">?</span>
+              </label>
+              <textarea class="form-textarea" id="override-reason" placeholder="Explain why a higher MOQ than the 100-unit policy ceiling should be approved for this item…" rows="3"></textarea>
+              <span class="form-hint error">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><path d="M6 4v2.5M6 8.5v.5"/></svg>
+                An explanation is mandatory when accepting an MOQ over the policy limit of 100 units.
+              </span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="override-moq">Adjusted MOQ (units)</label>
+              <input type="text" class="form-input rejected" id="override-moq" value="200" aria-describedby="moq-help">
+              <span class="form-hint" id="moq-help">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="5"/><path d="M6 4v2.5M6 8.5v.5"/></svg>
+                Exceeds policy maximum of 100 units &mdash; override pending justification.
+              </span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="override-risk">Risk Classification</label>
+              <select class="form-select" id="override-risk">
+                <option value="">— Select risk level —</option>
+                <option value="low">Low — Volume manageable in standard warehouse</option>
+                <option value="medium" selected>Medium — Requires additional storage allocation</option>
+                <option value="high">High — May require dedicated fulfilment channel</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Audit Log -->
+      <section class="card">
+        <div class="card-header">
+          <h2>
+            <svg class="icon" style="width:18px;height:18px;color:var(--clr-primary)" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 011 1v3a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            Audit Trail
+          </h2>
+        </div>
+        <div class="card-body" style="padding-bottom:var(--size-lg)">
+          <div class="timeline">
+            <div class="timeline-entry">
+              <div class="timeline-time">Nov 18, 2024 — 09:14 UTC</div>
+              <div class="timeline-action">Item submitted by supplier NordicSilk AS</div>
+              <div class="timeline-detail">Auto-ingested into batch PB-2024-0847 via EDI 850 feed.</div>
+            </div>
+            <div class="timeline-entry">
+              <div class="timeline-time">Nov 18, 2024 — 09:14 UTC</div>
+              <div class="timeline-action">Automated checks completed</div>
+              <div class="timeline-detail">9 of 12 rules passed. MOQ threshold failure detected. Flagged for operator review.</div>
+            </div>
+            <div class="timeline-entry">
+              <div class="timeline-time">Nov 20, 2024 — 11:02 UTC</div>
+              <div class="timeline-action">Assigned to Queue Position #7</div>
+              <div class="timeline-detail">Routing based on category expertise tag (Home Textiles).</div>
+            </div>
+            <div class="timeline-entry">
+              <div class="timeline-time">Today — 14:32 UTC</div>
+              <div class="timeline-action">Session started by M. Rodriguez</div>
+              <div class="timeline-detail">Operator opened item for first-time review.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Related Items Table -->
+      <section class="card">
+        <div class="card-header">
+          <h2>
+            <svg class="icon" style="width:18px;height:18px;color:var(--clr-primary)" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            Recently Reviewed — Same Supplier
+          </h2>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="data-table-wrap">
+            <table class="data-table" aria-label="Items from same supplier">
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">SKU</th>
+                  <th scope="col">Reviewed</th>
+                  <th scope="col">By</th>
+                  <th scope="col">Outcome</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Merino Throw Pillow — 50×50 cm</td>
+                  <td class="mono">NS-MTP-050-WHT</td>
+                  <td>Nov 17</td>
+                  <td>K. Tanaka</td>
+                  <td><span class="badge badge-approved">Approved</span></td>
+                </tr>
+                <tr>
+                  <td>EcoFleece Blanket — 150×200 cm</td>
+                  <td class="mono">NS-EFB-152-BLU</td>
+                  <td>Nov 16</td>
+                  <td>M. Rodriguez</td>
+                  <td><span class="badge badge-approved">Approved</span></td>
+                </tr>
+                <tr class="highlighted">
+                  <td><strong>NordicSilk™ Merino Wool Blanket — 240×280 cm</strong></td>
+                  <td class="mono">NS-MWB-2428-WHT</td>
+                  <td>In progress</td>
+                  <td>You</td>
+                  <td><span class="badge badge-pending">Reviewing</span></td>
+                </tr>
+                <tr>
+                  <td>Wool Blend Curtains — 140×260 cm</td>
+                  <td class="mono">NS-WBC-142-CRM</td>
+                  <td>—</td>
+                  <td>Unassigned</td>
+                  <td><span class="badge badge-new">New</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /col-main -->
+
+    <!-- ──── RIGHT COLUMN ──── -->
+    <div class="col-side">
+
+      <!-- Section 6: Decision Panel -->
+      <section class="card">
+        <div class="card-header" style="background:var(--clr-warning-bg);border-bottom-color:rgba(196,122,26,0.15)">
+          <h2 style="color:var(--clr-warning)">
+            <svg class="icon" style="width:18px;height:18px;color:var(--clr-warning)" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            Decision Required
+          </h2>
+        </div>
+        <div class="card-body">
+          <div class="guidance-box" style="margin-bottom:var(--size-xl)">
+            <strong>Guidance:</strong> This item's MOQ of 200 units exceeds the Home Textiles policy maximum of 100 units. You may either reject and return the submission, or provide justification and proceed with an override. If overriding, document the business reason clearly.
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--size-base)">
+            <div class="form-group">
+              <label class="form-label" for="decision-note">Final Decision Notes</label>
+              <textarea class="form-textarea" id="decision-note" placeholder="Summarise your decision and rationale here…" rows="4"></textarea>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:var(--size-sm);margin-top:var(--size-md)">
+              <label class="form-label">Disposition</label>
+              <div style="display:flex;flex-direction:column;gap:var(--size-sm)">
+                <label style="display:flex;align-items:center;gap:var(--size-sm);font-size:var(--size-base);cursor:pointer">
+                  <input type="radio" name="disposition" value="approve" style="accent-color:var(--clr-success)">
+                  <span>Approve with Override</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:var(--size-sm);font-size:var(--size-base);cursor:pointer">
+                  <input type="radio" name="disposition" value="reject" style="accent-color:var(--clr-error)">
+                  <span>Reject — Return to Supplier</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:var(--size-sm);font-size:var(--size-base);cursor-pointer">
+                  <input type="radio" name="disposition" value="escalate" style="accent-color:var(--clr-warning)">
+                  <span>Escalate to Category Manager</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="decision-actions">
+              <button class="btn btn-primary" onclick="alert('Decision submitted.')">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 7l3.5 3.5L12 3.5"/></svg>
+                Submit Decision
+              </button>
+              <button class="btn btn-outline">Save Draft</button>
+            </div>
+            <div class="decision-actions" style="border:none;padding:0;margin-top:var(--size-sm)">
+              <button class="btn btn-danger" onclick="document.getElementById('override-modal').classList.add('open')">
+                Request Override Approval
+              </button>
+              <button class="btn btn-ghost">Send Back for Revision</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 7: Quick Reference / Policy -->
+      <section class="card">
+        <div class="card-header">
+          <h2>
+            <svg class="icon" style="width:18px;height:18px;color:var(--clr-primary)" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+            Policy Quick Reference
+          </h2>
+        </div>
+        <div class="card-body" style="padding:var(--size-lg) var(--size-xl)">
+          <div style="display:flex;flex-direction:column;gap:var(--size-base)">
+            <div style="padding:var(--size-sm) 0;border-bottom:1px solid var(--clr-border)">
+              <div style="font-size:var(--size-xs);font-weight:700;color:var(--clr-primary)">MOQ Policy — Home Textiles</div>
+              <div style="font-size:var(--size-xs);color:var(--clr-text-secondary);margin-top:2px">Maximum: 100 units. Override requires written justification and Category Manager co-signature for volumes above 150 units.</div>
+            </div>
+            <div style="padding:var(--size-sm) 0;border-bottom:1px solid var(--clr-border)">
+              <div style="font-size:var(--size-xs);font-weight:700;color:var(--clr-primary)">Image Standards</div>
+              <div style="font-size:var(--size-xs);color:var(--clr-text-secondary);margin-top:2px">Primary: ≥ 1200×1200 px. Secondary/detail: ≥ 800×800 px. Max file size 5 MB each.</div>
+            </div>
+            <div style="padding:var(--size-sm) 0;border-bottom:1px solid var(--clr-border)">
+              <div style="font-size:var(--size-xs);font-weight:700;color:var(--clr-primary)">Timelines</div>
+              <div style="font-size:var(--size-xs);color:var(--clr-text-secondary);margin-top:2px">Standard review SLA: 48 hours from batch assignment. Escalations receive priority within 24 hours.</div>
+            </div>
+            <div style="padding:var(--size-sm) 0">
+              <div style="font-size:var(--size-xs);font-weight:700;color:var(--clr-primary)">Documentation Requirements</div>
+              <div style="font-size:var(--size-xs);color:var(--clr-text-secondary);margin-top:2px">All textile imports require Oeko-Tex or equivalent certification. CE marking optional for EU-origin products.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 8: Queue Navigation -->
+      <section class="queue-nav">
+        <button class="btn btn-outline" style="padding:var(--size-sm)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3L5 7l4 4"/></svg>
+          Previous (#6)
+        </button>
+        <div style="text-align:center">
+          <div class="queue-nav-label">Current Item</div>
+          <div class="queue-counter">#7 of 23</div>
+        </div>
+        <button class="btn btn-outline" style="padding:var(--size-sm)" disabled>
+          Next (#8)
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l4 4-4 4"/></svg>
+        </button>
+      </section>
+
+      <!-- Section 9: Batch Controls -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Batch Actions</h2>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:var(--size-sm)">
+          <button class="btn btn-outline" style="width:100%;justify-content:flex-start">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11V3a1 1 0 011-1h8"/></svg>
+            Export Batch Report (CSV)
+          </button>
+          <button class="btn btn-outline" style="width:100%;justify-content:flex-start">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 3H3v8h8V3zM5 5h4M5 7h4M5 9h2"/></svg>
+            Print Review Summary
+          </button>
+          <button class="btn btn-outline" style="width:100%;justify-content:flex-start">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5.5"/><path d="M7 4.5v3M7 8.5v.5"/></svg>
+            Open Batch Configuration
+          </button>
+        </div>
+      </section>
+
+    </div><!-- /col-side -->
+
+  </div><!-- /main-grid -->
+
+</div><!-- /app-shell -->
+
+<!-- ═══════ OVERRIDE MODAL ═══════ -->
+<div class="modal-overlay" id="override-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-dialog">
+    <div class="card-header">
+      <h2 style="color:var(--clr-error)">Request Override Approval</h2>
+      <button class="btn btn-ghost" onclick="document.getElementById('override-modal').classList.remove('open')" aria-label="Close dialog">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l10 10M14 4L4 14"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:var(--size-base);margin-bottom:var(--size-lg);color:var(--clr-text)">
+        You are requesting an override for the MOQ exceeding the Home Textiles policy maximum. This will notify the Category Manager for co-signature.
+      </p>
+      <div class="form-grid" style="margin-bottom:var(--size-lg)">
+        <div class="form-group full">
+          <label class="form-label" for="modal-reason">Override Reason</label>
+          <textarea class="form-textarea" id="modal-reason" rows="3" placeholder="Provide business justification…"></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label" for="modal-urgency">Urgency</label>
+          <select class="form-select" id="modal-urgency">
+            <option>Routine</option>
+            <option selected>Standard</option>
+            <option>Urgent — Production delay risk</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-contact">Contact Email</label>
+          <input type="email" class="form-input" id="modal-contact" value="m.rodriguez@acmewholesale.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-expiry">Approval Deadline</label>
+          <input type="date" class="form-input" id="modal-expiry" value="2024-11-25">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('override-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="document.getElementById('override-modal').classList.remove('open'); alert('Override request sent to Category Manager. Expected response within 24h.')">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Tab switching
+  const tablist = document.querySelector('[role="tablist"]');
+  if (!tablist) return;
+  
+  tablist.addEventListener('click', function(e) {
+    const btn = e.target.closest('[role="tab"]');
+    if (!btn || btn.getAttribute('aria-disabled') === 'true') return;
+    
+    // Deactivate all tabs in this list
+    tablist.querySelectorAll('[role="tab"]').forEach(function(t) {
+      t.setAttribute('aria-selected', 'false');
+    });
+    tablist.querySelectorAll('.tab-panel').forEach(function(p) {
+      p.classList.remove('active');
+    });
+    
+    // Activate clicked
+    btn.setAttribute('aria-selected', 'true');
+    var panelId = btn.getAttribute('aria-controls');
+    document.getElementById(panelId).classList.add('active');
+  });
+
+  // Keyboard nav for tabs
+  tablist.addEventListener('keydown', function(e) {
+    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    const current = tabs.indexOf(document.activeElement);
+    if (current === -1) return;
+    
+    let next = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      next = (current + 1) % tabs.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      next = (current - 1 + tabs.length) % tabs.length;
+    } else if (e.key === 'Home') {
+      next = 0;
+    } else if (e.key === 'End') {
+      next = tabs.length - 1;
+    }
+    
+    if (next !== -1) {
+      e.preventDefault();
+      tabs[next].focus();
+      tabs[next].click();
+    }
+  });
+
+  // Escape closes modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.getElementById('override-modal').classList.remove('open');
+    }
+  });
+
+  // Click overlay to close
+  document.getElementById('override-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+})();
+</script>
+</body>
+</html>

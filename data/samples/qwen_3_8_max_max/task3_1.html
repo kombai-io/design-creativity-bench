@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudLayer — Invite developers to Production</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5 21.5 8 12 13.5 2.5 8Z' fill='%237B93FF'/%3E%3Cpath d='M21.5 12 12 17.5 2.5 12l2.7-1.6L12 14.3l6.8-3.9Z' fill='%234A66E8'/%3E%3Cpath d='M21.5 16 12 21.5 2.5 16l2.7-1.6 6.8 3.9 6.8-3.9Z' fill='%232E4BC4'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#0C1220; --ink-2:#121B30; --ink-3:#18233F;
+  --paper:#F4F2EC; --card:#FFFFFF; --line:#E4E0D4; --line-soft:#EEEAE0;
+  --text:#1B2333; --muted:#6B7280; --faint:#9AA1AE;
+  --accent:#2E5BFF; --accent-deep:#1F47E0; --accent-soft:#EAEFFF; --accent-line:#C9D6FF;
+  --prod:#D43A44; --prod-soft:#FBE9EA;
+  --amber:#B0730A; --amber-soft:#FBF1DC;
+  --green:#128A5F; --green-soft:#E2F4EC;
+  --teal:#0F8A6C; --teal-soft:#DFF5F0;
+  --plum:#7A3FBF; --plum-soft:#F3E8FA;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+  --shadow:0 1px 2px rgba(18,22,40,.05),0 16px 40px -24px rgba(18,22,40,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);font-size:15px;line-height:1.55;color:var(--text);
+  background:var(--paper);
+  background-image:radial-gradient(rgba(18,22,40,.055) 1px,transparent 1px);
+  background-size:22px 22px;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent);color:#fff}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+.app{display:flex;min-height:100vh}
+
+/* ---------- SIDEBAR ---------- */
+.sidebar{
+  width:252px;flex:none;background:var(--ink);color:#98A2B8;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  overflow-y:auto;z-index:60;
+}
+.sidebar::after{
+  content:"";position:fixed;inset:0;width:252px;pointer-events:none;opacity:.06;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;color:#fff;text-decoration:none;position:relative;z-index:1}
+.brand-name{font-weight:800;letter-spacing:-.02em;font-size:17px}
+.brand-name em{font-style:normal;color:#7B93FF}
+.brand-env{margin-left:auto;font:600 10px/1 var(--mono);letter-spacing:.12em;color:#F5B8BC;background:rgba(212,58,68,.18);border:1px solid rgba(212,58,68,.4);padding:4px 7px;border-radius:5px}
+.nav-sec{font:600 10px/1 var(--mono);letter-spacing:.2em;color:#4E5B76;padding:16px 20px 8px;position:relative;z-index:1}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:8px 14px;margin:1px 10px;border-radius:9px;
+  color:#98A2B8;text-decoration:none;font-size:13.5px;font-weight:500;position:relative;
+  transition:background .18s,color .18s,transform .18s;
+}
+.nav-item svg{width:17px;height:17px;flex:none;opacity:.85}
+.nav-item:hover{color:#E7ECF7;background:rgba(255,255,255,.05);transform:translateX(2px)}
+.nav-item.active{color:#fff;background:var(--ink-3)}
+.nav-item.active::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
+.nav-badge{margin-left:auto;font:600 10.5px/1 var(--mono);color:#8FA5FF;background:rgba(83,116,255,.16);padding:3px 7px;border-radius:999px}
+.side-foot{margin-top:auto;padding:14px;position:relative;z-index:1}
+.status-card{background:var(--ink-2);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px 12px;margin-bottom:10px}
+.status-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#C8D1E3}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:#2FDD8D;position:relative;flex:none}
+.pulse-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid #2FDD8D;opacity:.7;animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.4);opacity:.8}100%{transform:scale(1.4);opacity:0}}
+.status-up{font:500 11px/1.4 var(--mono);color:#5F6C88;margin-top:6px}
+.user-row{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;transition:background .18s;cursor:pointer}
+.user-row:hover{background:rgba(255,255,255,.05)}
+.user-row .meta{line-height:1.25}
+.user-row .meta b{display:block;font-size:13px;color:#E7ECF7;font-weight:600}
+.user-row .meta span{font:500 10.5px var(--mono);color:#5F6C88}
+.user-row svg{margin-left:auto;width:15px;height:15px;color:#5F6C88}
+
+/* ---------- AVATARS ---------- */
+.avatar{width:32px;height:32px;flex:none;border-radius:9px;display:grid;place-items:center;font:700 11.5px var(--mono);letter-spacing:.02em}
+.av-sm{width:28px;height:28px;font-size:10.5px;border-radius:8px}
+.a-cobalt{background:#E7ECFF;color:#2E5BFF}
+.a-teal{background:var(--teal-soft);color:var(--teal)}
+.a-amber{background:var(--amber-soft);color:var(--amber)}
+.a-plum{background:var(--plum-soft);color:var(--plum)}
+.a-rose{background:var(--prod-soft);color:var(--prod)}
+.a-ink{background:#20304F;color:#AFC0FF}
+
+/* ---------- MAIN ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;
+  padding:0 28px;height:60px;border-bottom:1px solid var(--line);
+  background:rgba(244,242,236,.86);backdrop-filter:blur(10px);
+}
+.menu-btn{display:none;background:none;border:1px solid var(--line);border-radius:8px;width:34px;height:34px;place-items:center;color:var(--text)}
+.crumb{font:500 12.5px var(--mono);color:var(--muted);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.crumb b{color:var(--text);font-weight:600}
+.crumb .sep{color:#C6C1B3}
+.crumb .proj{display:flex;align-items:center;gap:5px;color:var(--text);font-weight:600}
+.crumb svg{width:13px;height:13px;color:var(--faint)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.search-box{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:6px 10px;width:220px;transition:border-color .18s,box-shadow .18s}
+.search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search-box svg{width:14px;height:14px;color:var(--faint);flex:none}
+.search-box input{border:0;outline:0;background:none;font-size:13px;width:100%;color:var(--text)}
+.search-box kbd{font:600 10px var(--mono);color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:2px 5px;background:var(--paper)}
+.clock{font:600 12px var(--mono);color:var(--muted);letter-spacing:.04em;min-width:104px;text-align:right}
+.icon-btn{position:relative;width:36px;height:36px;border:1px solid var(--line);background:#fff;border-radius:9px;display:grid;place-items:center;color:var(--text);transition:border-color .18s,transform .18s}
+.icon-btn:hover{border-color:#CBC5B5;transform:translateY(-1px)}
+.icon-btn svg{width:16px;height:16px}
+.notif-dot{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--prod);border:2px solid #fff}
+
+/* ---------- CONTENT ---------- */
+.content{flex:1;padding:30px 28px 64px;max-width:1240px;width:100%;margin:0 auto}
+.page-head{position:relative;margin-bottom:24px;padding:4px 2px 0}
+.page-head .xmark{position:absolute;font:400 15px var(--mono);color:#C9C3B2;user-select:none}
+.x1{top:-6px;left:-4px}.x2{top:-6px;right:0}
+.kicker{display:flex;align-items:center;gap:10px;font:600 11px var(--mono);letter-spacing:.22em;color:var(--accent-deep);margin-bottom:12px}
+.kicker::after{content:"";height:1px;width:72px;background:linear-gradient(90deg,var(--accent-line),transparent)}
+h1{font-size:clamp(26px,3.4vw,36px);font-weight:800;letter-spacing:-.03em;line-height:1.08;color:var(--ink)}
+h1 .env-word{color:var(--accent-deep)}
+.mask{display:inline-block;overflow:hidden;vertical-align:bottom}
+.mask > span{display:inline-block;transform:translateY(115%);animation:lineUp .8s cubic-bezier(.2,.7,.2,1) forwards}
+.mask.m2 > span{animation-delay:.12s}
+@keyframes lineUp{to{transform:translateY(0)}}
+.sub{color:var(--muted);max-width:620px;margin-top:10px;font-size:14.5px}
+.head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.env-switch{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;box-shadow:0 1px 2px rgba(18,22,40,.04)}
+.env-btn{display:flex;align-items:center;gap:7px;border:0;background:none;border-radius:8px;padding:6px 12px;font:600 12px var(--mono);letter-spacing:.04em;color:var(--muted);transition:background .18s,color .18s}
+.env-btn:hover{color:var(--text)}
+.env-btn[aria-pressed="true"]{background:var(--ink);color:#fff}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.d-prod{background:var(--prod)} .d-staging{background:#E8A020} .d-dev{background:#2FBB6E}
+
+.banner{
+  display:flex;gap:12px;align-items:flex-start;margin-top:18px;padding:13px 16px;border-radius:12px;
+  border:1px solid;font-size:13.5px;animation:rise .6s .25s cubic-bezier(.2,.7,.2,1) both;
+}
+.banner svg{width:18px;height:18px;flex:none;margin-top:1px}
+.banner b{font-weight:700}
+.banner.prod{background:var(--prod-soft);border-color:#F2CBD0;color:#8E2831}
+.banner.staging{background:var(--amber-soft);border-color:#EFDCB4;color:#7C5308}
+.banner.dev{background:var(--green-soft);border-color:#BFE5D2;color:#0D6245}
+
+/* ---------- LAYOUT ---------- */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 356px;gap:24px;align-items:start;margin-top:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+
+/* form card */
+.form-card{padding:26px 28px 24px;animation:rise .6s .3s cubic-bezier(.2,.7,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.step{display:flex;align-items:center;gap:10px;margin:26px 0 14px}
+.step:first-child{margin-top:0}
+.step-num{font:600 10.5px var(--mono);letter-spacing:.1em;color:var(--accent-deep);border:1px solid var(--accent-line);background:var(--accent-soft);border-radius:6px;padding:3px 7px}
+.step-title{font:700 11.5px var(--mono);letter-spacing:.18em;color:var(--ink)}
+.step::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+.hint{font-size:12.5px;color:var(--faint);margin-bottom:10px}
+.hint b{color:var(--muted);font-weight:600}
+
+/* chip input */
+.chip-field{
+  display:flex;flex-wrap:wrap;gap:7px;padding:9px;background:#fff;border:1px solid var(--line);
+  border-radius:11px;min-height:50px;cursor:text;transition:border-color .18s,box-shadow .18s;
+}
+.chip-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.chip-field.err{border-color:var(--prod);box-shadow:0 0 0 3px var(--prod-soft);animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--mono);color:var(--ink);
+  background:#EEF1F6;border:1px solid #DCE1EC;border-radius:999px;padding:5px 6px 5px 11px;
+  animation:chipIn .28s cubic-bezier(.2,.9,.3,1.3);
+}
+@keyframes chipIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.chip button{border:0;background:#D8DEEA;width:17px;height:17px;border-radius:50%;display:grid;place-items:center;color:#5A6478;transition:background .15s,color .15s}
+.chip button:hover{background:var(--prod);color:#fff}
+.chip button svg{width:9px;height:9px}
+.chip-input{border:0;outline:0;font-size:13.5px;flex:1;min-width:170px;padding:5px 4px;background:none;color:var(--text)}
+.chip-input::placeholder{color:var(--faint)}
+.field-err{display:none;font-size:12px;color:var(--prod);margin-top:7px;font-weight:600}
+.field-err.show{display:block}
+
+/* role cards */
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.role{position:relative;display:block;border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;background:#fff;transition:border-color .18s,transform .18s,box-shadow .18s}
+.role:hover{border-color:#CBC5B5;transform:translateY(-2px)}
+.role input{position:absolute;opacity:0;pointer-events:none}
+.role .tick{position:absolute;top:11px;right:11px;width:18px;height:18px;border-radius:50%;border:1.5px solid #D3CFC2;display:grid;place-items:center;color:#fff;transition:all .18s}
+.role .tick svg{width:10px;height:10px;opacity:0;transform:scale(.4);transition:all .18s}
+.role.sel{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px rgba(46,91,255,.08)}
+.role.sel .tick{background:var(--accent);border-color:var(--accent)}
+.role.sel .tick svg{opacity:1;transform:scale(1)}
+.role-head{display:flex;align-items:center;gap:8px;margin-bottom:5px;padding-right:24px}
+.role-name{font-weight:700;font-size:14px;color:var(--ink)}
+.role-tag{font:600 9.5px var(--mono);letter-spacing:.08em;padding:3px 6px;border-radius:5px}
+.rt-read{background:#EEF0F4;color:var(--muted)}
+.rt-write{background:var(--teal-soft);color:var(--teal)}
+.rt-elev{background:var(--amber-soft);color:var(--amber)}
+.rt-full{background:var(--prod-soft);color:var(--prod)}
+.role p{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+/* permissions */
+.perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}
+.perm{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px dashed var(--line-soft)}
+.perm-label{font-size:13.5px;color:var(--text)}
+.perm-label small{display:block;font-size:11px;color:var(--faint)}
+.switch{position:relative;flex:none;width:36px;height:21px}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.track{position:absolute;inset:0;background:#DAD6CA;border-radius:999px;transition:background .2s}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s cubic-bezier(.2,.8,.3,1.2)}
+.switch input:checked + .track{background:var(--accent)}
+.switch input:checked + .track::after{transform:translateX(15px)}
+.switch input:focus-visible + .track{outline:2px solid var(--accent);outline-offset:2px}
+
+/* message + expiry */
+.msg-area{width:100%;min-height:84px;resize:vertical;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:13.5px;color:var(--text);background:#fff;transition:border-color .18s,box-shadow .18s}
+.msg-area:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.msg-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:12px;flex-wrap:wrap}
+.counter{font:500 11px var(--mono);color:var(--faint)}
+.seg{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:none;border-radius:7px;padding:5px 11px;font:600 11.5px var(--mono);letter-spacing:.03em;color:var(--muted);transition:all .18s}
+.seg button:hover{color:var(--text)}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(18,22,40,.12)}
+.seg-label{font:600 10px var(--mono);letter-spacing:.16em;color:var(--faint);margin-right:8px}
+.expiry-row{display:flex;align-items:center;margin-top:14px}
+
+/* actions */
+.actions{display:flex;align-items:center;gap:12px;margin-top:26px;padding-top:20px;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+.summary{font-size:12.5px;color:var(--muted);font-family:var(--mono)}
+.summary b{color:var(--accent-deep)}
+.actions .spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;font-weight:700;font-size:14px;padding:11px 20px;border:1px solid transparent;transition:all .18s}
+.btn svg{width:15px;height:15px}
+.btn-ghost{background:none;border-color:var(--line);color:var(--muted)}
+.btn-ghost:hover{border-color:#CBC5B5;color:var(--text)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 8px 20px -10px rgba(46,91,255,.6)}
+.btn-primary:hover{background:var(--accent-deep);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-primary:disabled{opacity:.7;cursor:wait;transform:none}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;display:none}
+.btn-primary.loading .spin{display:block}
+.btn-primary.loading .send-ic{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- RAIL ---------- */
+.rail{position:sticky;top:84px;display:flex;flex-direction:column;gap:18px}
+.rail .card{padding:20px;transition:transform .25s,box-shadow .25s}
+.rail .card:hover{transform:translateY(-2px)}
+.rail.r1{animation:rise .6s .4s cubic-bezier(.2,.7,.2,1) both}
+.rail.r2{animation:rise .6s .5s cubic-bezier(.2,.7,.2,1) both}
+.rail-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.rail-title{font:700 11px var(--mono);letter-spacing:.2em;color:var(--ink)}
+.rail-head::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+.env-tag{font:700 10.5px var(--mono);letter-spacing:.14em;padding:4px 8px;border-radius:6px;border:1px solid;display:inline-flex;align-items:center;gap:6px}
+.et-prod{color:var(--prod);border-color:#F2CBD0;background:var(--prod-soft)}
+.et-staging{color:var(--amber);border-color:#EFDCB4;background:var(--amber-soft)}
+.et-dev{color:var(--green);border-color:#BFE5D2;background:var(--green-soft)}
+.region{margin-left:auto;font:500 11px var(--mono);color:var(--faint)}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line-soft);font-size:13px}
+.kv:last-of-type{border-bottom:0}
+.kv .k{color:var(--muted);display:flex;align-items:center;gap:7px}
+.kv .k svg{width:13px;height:13px;color:var(--faint)}
+.kv .v{font:600 12px var(--mono);color:var(--ink);display:flex;align-items:center;gap:6px}
+.copy-btn{border:1px solid var(--line);background:#fff;border-radius:6px;width:22px;height:22px;display:grid;place-items:center;color:var(--muted);transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.copy-btn svg{width:11px;height:11px}
+.pipe{margin-top:14px;background:#F0EEE6;border-radius:8px;padding:11px 12px}
+.pipe-top{display:flex;align-items:center;gap:7px;font:600 11px var(--mono);color:var(--muted);margin-bottom:9px}
+.pipe-top .live{margin-left:auto;color:var(--green);display:flex;align-items:center;gap:5px}
+.pipe-top .live i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+.stages{display:flex;align-items:center;gap:0}
+.stage{display:flex;align-items:center;gap:6px;font:600 10px var(--mono);letter-spacing:.08em;color:var(--faint);flex:none}
+.stage i{width:8px;height:8px;border-radius:50%;background:#D9D4C6;animation:stageGo 4.5s infinite}
+.stage:nth-child(1) i{animation-delay:0s}
+.stage:nth-child(3) i{animation-delay:1.5s}
+.stage:nth-child(5) i{animation-delay:3s}
+@keyframes stageGo{0%,10%{background:#D9D4C6}20%,60%{background:var(--green)}80%,100%{background:#D9D4C6}}
+.wire{flex:1;height:1px;background:#D9D4C6;margin:0 8px;min-width:14px}
+.pipe-note{margin-top:9px;font:500 11px var(--mono);color:var(--faint)}
+.pipe-note b{color:var(--text)}
+.stats{display:flex;gap:10px;margin-top:12px}
+.stat{flex:1;background:var(--paper);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px}
+.stat b{display:block;font:700 15px var(--mono);color:var(--ink)}
+.stat span{font-size:10.5px;color:var(--faint);letter-spacing:.04em}
+
+/* people */
+.group-lbl{font:600 9.5px var(--mono);letter-spacing:.2em;color:var(--faint);margin:14px 0 6px}
+.group-lbl:first-of-type{margin-top:0}
+.person{display:flex;align-items:center;gap:10px;padding:8px 0}
+.person + .person{border-top:1px dashed var(--line-soft)}
+.person .who{min-width:0;flex:1}
+.person .who b{display:block;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.person .who span{font:500 10.5px var(--mono);color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.role-pill{font:700 9.5px var(--mono);letter-spacing:.08em;padding:4px 7px;border-radius:5px;flex:none}
+.rp-owner{background:#20304F;color:#AFC0FF}
+.rp-maintainer{background:var(--teal-soft);color:var(--teal)}
+.rp-developer{background:#E7ECFF;color:#2E5BFF}
+.rp-viewer{background:#EEF0F4;color:var(--muted)}
+.pend-meta{font:500 10px var(--mono);color:var(--faint);flex:none;text-align:right;line-height:1.5}
+.revoke{border:1px solid var(--line);background:#fff;color:var(--muted);font:600 10px var(--mono);letter-spacing:.06em;border-radius:6px;padding:4px 8px;flex:none;transition:all .15s}
+.revoke:hover{border-color:var(--prod);color:var(--prod);background:var(--prod-soft)}
+.person.leaving{opacity:0;transform:translateX(12px);transition:all .3s}
+
+/* toast */
+.toast-region{position:fixed;bottom:22px;right:22px;z-index:100;display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.toast{
+  display:flex;align-items:center;gap:10px;background:var(--ink);color:#E7ECF7;font-size:13px;
+  padding:12px 16px;border-radius:11px;box-shadow:0 16px 40px -12px rgba(12,18,32,.5);
+  opacity:0;transform:translateY(14px);transition:all .35s cubic-bezier(.2,.8,.3,1.1);max-width:360px;
+}
+.toast.show{opacity:1;transform:none}
+.toast .tico{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;flex:none}
+.toast .tico svg{width:11px;height:11px}
+.toast.ok .tico{background:rgba(47,221,141,.18);color:#2FDD8D}
+.toast.warn .tico{background:rgba(212,58,68,.2);color:#FF8A92}
+.toast.info .tico{background:rgba(123,147,255,.2);color:#8FA5FF}
+
+.backdrop{position:fixed;inset:0;background:rgba(12,18,32,.5);z-index:55;opacity:0;pointer-events:none;transition:opacity .25s}
+.backdrop.show{opacity:1;pointer-events:auto}
+
+.foot-note{margin-top:26px;font:500 11px var(--mono);color:var(--faint);display:flex;gap:14px;flex-wrap:wrap}
+.foot-note span{display:flex;align-items:center;gap:6px}
+
+/* responsive */
+@media (max-width:1150px){
+  .layout{grid-template-columns:1fr}
+  .rail{position:static;flex-direction:row;flex-wrap:wrap}
+  .rail .card{flex:1;min-width:300px}
+}
+@media (max-width:900px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-105%);transition:transform .3s cubic-bezier(.2,.8,.3,1);box-shadow:24px 0 60px rgba(12,18,32,.35)}
+  .sidebar.open{transform:none}
+  .menu-btn{display:grid}
+  .clock{display:none}
+  .search-box{width:150px}
+  .perm-grid,.role-grid{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .topbar{padding:0 16px}
+  .content{padding:22px 16px 56px}
+  .form-card{padding:20px 18px}
+  .crumb .hide-s{display:none}
+  .search-box{display:none}
+  .head-row{align-items:flex-start;flex-direction:column}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
+  .mask > span{transform:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 21 8.3l-9 5.1-9-5.1z"/><path d="m4.3 12.2 7.7 4.4 7.7-4.4M4.3 16.1 12 20.5l7.7-4.4"/></symbol>
+    <symbol id="i-deploy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 16V8.3M8.6 11.4 12 8l3.4 3.4"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.7 2.4 2.7 14.6 0 17M12 3.5c-2.7 2.4-2.7 14.6 0 17"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15.2" r="3.6"/><path d="M10.7 12.5 19.6 3.6M16.3 6.9l2.5 2.5M13.4 9.8l1.9 1.9"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="m7 9.5 3 3-3 3M12.5 15.5H17"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M7 16.5V11M12 16.5V6.5M17 16.5v-3.5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.4" r="3.2"/><path d="M3.4 19.2c.6-3.3 2.8-5.1 5.6-5.1s5 1.8 5.6 5.1"/><circle cx="17" cy="9.2" r="2.5"/><path d="M16.7 14.4c2.3.4 3.6 1.9 4 4.3"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 9.8h18M6.5 14.5h4.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"/><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m15.9 15.9 5 5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.8 2.3H4.2Z"/><path d="M10 21a2.2 2.2 0 0 0 4 0"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.8v5.3c0 4.6-3 7.7-7 9.4-4-1.7-7-4.8-7-9.4V5.8Z"/><path d="m9 12 2 2 4-4.2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.8 5 5L19.5 6.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5 11 13M21.5 2.5 14.5 21.2l-3.7-8.2-8.3-3.7Z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11.5" height="11.5" rx="2"/><path d="M6 15H4.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-branch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.3"/><circle cx="6" cy="18" r="2.3"/><circle cx="18" cy="7" r="2.3"/><path d="M6 8.3v7.4M18 9.3c0 3.2-2.6 4.6-5.8 4.9H8.6"/></symbol>
+    <symbol id="i-commit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v5.8M12 15.2V21"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.4 2"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+    <a class="brand" href="#">
+      <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2.5 21.5 8 12 13.5 2.5 8Z" fill="#7B93FF"/>
+        <path d="M21.5 12 12 17.5 2.5 12l2.7-1.6L12 14.3l6.8-3.9Z" fill="#4A66E8"/>
+        <path d="M21.5 16 12 21.5 2.5 16l2.7-1.6 6.8 3.9 6.8-3.9Z" fill="#2E4BC4"/>
+      </svg>
+      <span class="brand-name">Cloud<em>Layer</em></span>
+      <span class="brand-env">PROD</span>
+    </a>
+
+    <div class="nav-sec">WORKSPACE</div>
+    <nav>
+      <a class="nav-item" href="#"><svg><use href="#i-grid"/></svg>Overview</a>
+      <a class="nav-item" href="#"><svg><use href="#i-deploy"/></svg>Deployments<span class="nav-badge">12</span></a>
+      <a class="nav-item" href="#"><svg><use href="#i-layers"/></svg>Environments<span class="nav-badge">3</span></a>
+      <a class="nav-item" href="#"><svg><use href="#i-globe"/></svg>Domains</a>
+      <a class="nav-item" href="#"><svg><use href="#i-key"/></svg>Secrets</a>
+      <a class="nav-item" href="#"><svg><use href="#i-terminal"/></svg>Logs</a>
+      <a class="nav-item" href="#"><svg><use href="#i-chart"/></svg>Observability</a>
+    </nav>
+
+    <div class="nav-sec">MANAGE</div>
+    <nav>
+      <a class="nav-item active" href="#" aria-current="page"><svg><use href="#i-users"/></svg>Team &amp; Access<span class="nav-badge" id="navCount">5</span></a>
+      <a class="nav-item" href="#"><svg><use href="#i-card"/></svg>Billing</a>
+      <a class="nav-item" href="#"><svg><use href="#i-gear"/></svg>Settings</a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="status-card">
+        <div class="status-row"><span class="pulse-dot"></span>All systems operational</div>
+        <div class="status-up">uptime 99.98% · api.cloudlayer.io</div>
+      </div>
+      <div class="user-row" tabindex="0">
+        <span class="avatar a-cobalt">MO</span>
+        <div class="meta"><b>Maya Okafor</b><span>OWNER · ACME-API</span></div>
+        <svg><use href="#i-chevron"/></svg>
+      </div>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button>
+      <div class="crumb">
+        <span class="proj">acme-api <svg><use href="#i-chevron"/></svg></span>
+        <span class="sep hide-s">/</span><span class="hide-s">environments</span>
+        <span class="sep">/</span><b id="crumbEnv" data-scramble>production</b>
+      </div>
+      <div class="top-right">
+        <div class="search-box">
+          <svg><use href="#i-search"/></svg>
+          <input id="searchInput" type="text" placeholder="Search resources…" aria-label="Search resources">
+          <kbd>/</kbd>
+        </div>
+        <span class="clock" id="clock">--:--:-- UTC</span>
+        <button class="icon-btn" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span class="notif-dot"></span></button>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="page-head">
+        <span class="xmark x1">+</span><span class="xmark x2">+</span>
+        <div class="kicker"><span id="kicker" data-scramble>ACCESS CONTROL — ENV/PROD</span></div>
+        <div class="head-row">
+          <h1>
+            <span class="mask"><span>Invite developers</span></span><br>
+            <span class="mask m2"><span>to <span class="env-word" id="envWord">Production</span></span></span>
+          </h1>
+          <div class="env-switch" role="group" aria-label="Switch environment">
+            <button class="env-btn" data-env="prod" aria-pressed="true"><span class="dot d-prod"></span>prod</button>
+            <button class="env-btn" data-env="staging" aria-pressed="false"><span class="dot d-staging"></span>staging</button>
+            <button class="env-btn" data-env="dev" aria-pressed="false"><span class="dot d-dev"></span>dev</button>
+          </div>
+        </div>
+        <p class="sub">Grant teammates access to deploy, observe and roll back this environment. Invitations are emailed with a single-use link and can be revoked at any time.</p>
+        <div class="banner prod" id="guardBanner" role="note">
+          <svg><use href="#i-lock"/></svg>
+          <div><b>Protected environment.</b> Invited developers must have two-factor authentication enabled, and every deploy to <b>prod</b> requires two-reviewer approval.</div>
+        </div>
+      </div>
+
+      <div class="layout">
+
+        <!-- ===== FORM ===== -->
+        <form class="card form-card" id="inviteForm" novalidate>
+
+          <div class="step"><span class="step-num">01</span><span class="step-title">RECIPIENTS</span></div>
+          <p class="hint">Send to one or more addresses. Separate with <b>Enter</b> or <b>comma</b>.</p>
+          <div class="chip-field" id="chipField" aria-label="Email recipients">
+            <input class="chip-input" id="chipInput" type="text" placeholder="teammate@company.dev" autocomplete="off" spellcheck="false">
+          </div>
+          <p class="field-err" id="emailErr">Please add at least one valid email address.</p>
+
+          <div class="step"><span class="step-num">02</span><span class="step-title">ROLE</span></div>
+          <div class="role-grid" id="roleGrid">
+            <label class="role" data-role="Viewer">
+              <input type="radio" name="role" value="Viewer">
+              <span class="tick"><svg><use href="#i-check"/></svg></span>
+              <div class="role-head"><span class="role-name">Viewer</span><span class="role-tag rt-read">READ</span></div>
+              <p>Inspect logs, metrics and deploy history. Cannot trigger changes.</p>
+            </label>
+            <label class="role sel" data-role="Developer">
+              <input type="radio" name="role" value="Developer" checked>
+              <span class="tick"><svg><use href="#i-check"/></svg></span>
+              <div class="role-head"><span class="role-name">Developer</span><span class="role-tag rt-write">WRITE</span></div>
+              <p>Trigger deploys, read masked secrets, stream live logs.</p>
+            </label>
+            <label class="role" data-role="Maintainer">
+              <input type="radio" name="role" value="Maintainer">
+              <span class="tick"><svg><use href="#i-check"/></svg></span>
+              <div class="role-head"><span class="role-name">Maintainer</span><span class="role-tag rt-elev">ELEVATED</span></div>
+              <p>Everything in Developer, plus rollbacks, env vars and approvals.</p>
+            </label>
+            <label class="role" data-role="Admin">
+              <input type="radio" name="role" value="Admin">
+              <span class="tick"><svg><use href="#i-check"/></svg></span>
+              <div class="role-head"><span class="role-name">Admin</span><span class="role-tag rt-full">FULL</span></div>
+              <p>Full control, including environment config and member access.</p>
+            </label>
+          </div>
+
+          <div class="step"><span class="step-num">03</span><span class="step-title">GRANULAR PERMISSIONS</span></div>
+          <p class="hint">Prefilled by role — adjust individually to craft a custom scope.</p>
+          <div class="perm-grid" id="permGrid">
+            <div class="perm"><span class="perm-label">View logs &amp; metrics<small>Live tail, traces, dashboards</small></span><span class="switch"><input type="checkbox" id="p-logs" checked><label class="track" for="p-logs" aria-hidden="true"></label></span></div>
+            <div class="perm"><span class="perm-label">Trigger deploys<small>Push builds to this environment</small></span><span class="switch"><input type="checkbox" id="p-deploy" checked><label class="track" for="p-deploy" aria-hidden="true"></label></span></div>
+            <div class="perm"><span class="perm-label">Read secrets<small>Masked values, audit-logged</small></span><span class="switch"><input type="checkbox" id="p-secrets" checked><label class="track" for="p-secrets" aria-hidden="true"></label></span></div>
+            <div class="perm"><span class="perm-label">Rollback releases<small>Instant revert to any build</small></span><span class="switch"><input type="checkbox" id="p-rollback"><label class="track" for="p-rollback" aria-hidden="true"></label></span></div>
+            <div class="perm"><span class="perm-label">Manage env variables<small>Create, edit, rotate values</small></span><span class="switch"><input type="checkbox" id="p-vars"><label class="track" for="p-vars" aria-hidden="true"></label></span></div>
+            <div class="perm"><span class="perm-label">Approve deploys<small>Act as a required reviewer</small></span><span class="switch"><input type="checkbox" id="p-approve"><label class="track" for="p-approve" aria-hidden="true"></label></span></div>
+            <div class="perm"><span class="perm-label">Manage access<small>Invite or remove members</small></span><span class="switch"><input type="checkbox" id="p-access"><label class="track" for="p-access" aria-hidden="true"></label></span></div>
+          </div>
+
+          <div class="step"><span class="step-num">04</span><span class="step-title">MESSAGE &amp; EXPIRY</span></div>
+          <textarea class="msg-area" id="msgArea" maxlength="280" placeholder="Optional note included in the invitation email — e.g. “We're prepping the v2.15 release and need you on prod rotation.”"></textarea>
+          <div class="msg-foot">
+            <div>
+              <span class="seg-label">INVITE EXPIRES</span>
+              <div class="seg" role="group" aria-label="Invitation expiry">
+                <button type="button" data-exp="24 hours" aria-pressed="false">24h</button>
+                <button type="button" data-exp="7 days" aria-pressed="true">7 days</button>
+                <button type="button" data-exp="30 days" aria-pressed="false">30 days</button>
+                <button type="button" data-exp="never" aria-pressed="false">never</button>
+              </div>
+            </div>
+            <span class="counter" id="counter">0 / 280</span>
+          </div>
+
+          <div class="actions">
+            <span class="summary" id="summary">Sending as <b>Developer</b> · 3 permissions · expires in 7 days</span>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <span class="spin"></span>
+              <svg class="send-ic"><use href="#i-send"/></svg>
+              <span id="submitLabel">Send invitation</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- ===== RAIL ===== -->
+        <div class="rail" style="display:contents">
+          <section class="card rail r1" aria-label="Environment details">
+            <div class="rail-head"><span class="rail-title">ENVIRONMENT</span></div>
+            <div style="display:flex;align-items:center;margin-bottom:6px">
+              <span class="env-tag et-prod" id="envTag"><span class="dot d-prod" id="envTagDot"></span><span id="envTagText" data-scramble>PROD</span></span>
+              <span class="region" id="envRegion">us-east-1</span>
+            </div>
+            <div class="kv"><span class="k"><svg><use href="#i-branch"/></svg>Branch</span><span class="v" id="envBranch">main</span></div>
+            <div class="kv"><span class="k"><svg><use href="#i-commit"/></svg>Version</span><span class="v"><span id="envVersion">v2.14.3</span> · <span id="envHash">a41f9c2</span><button type="button" class="copy-btn" id="copyHash" aria-label="Copy commit hash"><svg><use href="#i-copy"/></svg></button></span></div>
+            <div class="kv"><span class="k"><svg><use href="#i-shield"/></svg>Deploy guard</span><span class="v" id="envGuard">2 reviewers</span></div>
+            <div class="kv"><span class="k"><svg><use href="#i-clock"/></svg>Last deploy</span><span class="v">4 min ago</span></div>
+            <div class="pipe">
+              <div class="pipe-top"><span>BUILD #4128</span><span class="live"><i></i>STREAMING</span></div>
+              <div class="stages">
+                <span class="stage"><i></i>BUILD</span><span class="wire"></span>
+                <span class="stage"><i></i>TEST</span><span class="wire"></span>
+                <span class="stage"><i></i>DEPLOY</span>
+              </div>
+              <div class="pipe-note">by <b>Maya Okafor</b> · exit 0 · 2m 41s</div>
+            </div>
+            <div class="stats">
+              <div class="stat"><b id="statUp">99.98%</b><span>UPTIME · 30D</span></div>
+              <div class="stat"><b id="statP95">42 ms</b><span>P95 LATENCY</span></div>
+              <div class="stat"><b id="statRepl">6</b><span>REPLICAS</span></div>
+            </div>
+          </section>
+
+          <section class="card rail r2" aria-label="People with access">
+            <div class="rail-head"><span class="rail-title">PEOPLE WITH ACCESS</span></div>
+            <div class="group-lbl">MEMBERS — 4</div>
+            <div class="person"><span class="avatar av-sm a-cobalt">MO</span><div class="who"><b>Maya Okafor</b><span>maya@acme.dev</span></div><span class="role-pill rp-owner">OWNER</span></div>
+            <div class="person"><span class="avatar av-sm a-teal">JW</span><div class="who"><b>Jonas Weber</b><span>jonas@acme.dev</span></div><span class="role-pill rp-maintainer">MAINTAINER</span></div>
+            <div class="person"><span class="avatar av-sm a-amber">PN</span><div class="who"><b>Priya Natarajan</b><span>priya@acme.dev</span></div><span class="role-pill rp-developer">DEVELOPER</span></div>
+            <div class="person"><span class="avatar av-sm a-plum">SI</span><div class="who"><b>Sam Idris</b><span>sam@acme.dev</span></div><span class="role-pill rp-developer">DEVELOPER</span></div>
+            <div class="group-lbl" id="pendingLbl">PENDING — 1</div>
+            <div id="pendingList">
+              <div class="person"><span class="avatar av-sm a-rose">LF</span><div class="who"><b>lena@fischer.dev</b><span>invited by Maya</span></div><span class="pend-meta">VIEWER<br>3 days left</span><button type="button" class="revoke" data-email="lena@fischer.dev">REVOKE</button></div>
+            </div>
+          </section>
+        </div>
+        <style>.rail{display:flex !important;flex-direction:column}@media(max-width:1150px){.rail{flex-direction:row;flex-wrap:wrap}}</style>
+      </div>
+
+      <div class="foot-note">
+        <span><svg width="12" height="12"><use href="#i-shield"/></svg> SOC2 · invitations are audit-logged</span>
+        <span><svg width="12" height="12"><use href="#i-lock"/></svg> single-use magic links, SSO enforced</span>
+        <span><svg width="12" height="12"><use href="#i-clock"/></svg> CloudLayer v4.2.0</span>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="toast-region" id="toastRegion" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+  var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- scramble decode ---------- */
+  var GLYPHS = '#/<>[]{}=+*^_\\';
+  function scramble(el, text){
+    if(!el) return;
+    if(REDUCED){ el.textContent = text; return; }
+    var frame = 0, total = Math.max(16, Math.round(text.length * 2.1));
+    function tick(){
+      frame++;
+      var out = '', reveal = (frame / total) * text.length * 1.35, i;
+      for(i = 0; i < text.length; i++){
+        out += (i < reveal || text[i] === ' ') ? text[i] : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      }
+      el.textContent = out;
+      if(frame < total){ requestAnimationFrame(tick); } else { el.textContent = text; }
+    }
+    tick();
+  }
+  document.querySelectorAll('[data-scramble]').forEach(function(el){
+    scramble(el, el.textContent);
+  });
+
+  /* ---------- clock ---------- */
+  var clock = document.getElementById('clock');
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function tickClock(){
+    var d = new Date();
+    clock.textContent = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + ' UTC';
+  }
+  tickClock(); setInterval(tickClock, 1000);
+
+  /* ---------- mobile sidebar ---------- */
+  var sidebar = document.getElementById('sidebar'), backdrop = document.getElementById('backdrop');
+  document.getElementById('menuBtn').addEventListener('click', function(){
+    sidebar.classList.add('open'); backdrop.classList.add('show');
+  });
+  function closeSide(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  backdrop.addEventListener('click', closeSide);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSide(); });
+
+  /* ---------- search shortcut ---------- */
+  var searchInput = document.getElementById('searchInput');
+  document.addEventListener('keydown', function(e){
+    if(e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){
+      e.preventDefault(); searchInput.focus();
+    }
+  });
+
+  /* ---------- toasts ---------- */
+  var toastRegion = document.getElementById('toastRegion');
+  function toast(msg, tone){
+    var t = document.createElement('div');
+    t.className = 'toast ' + (tone || 'ok');
+    var ic = tone === 'warn' ? 'i-x' : (tone === 'info' ? 'i-bell' : 'i-check');
+    t.innerHTML = '<span class="tico"><svg><use href="#' + ic + '"/></svg></span><span>' + msg + '</span>';
+    toastRegion.appendChild(t);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ t.classList.add('show'); }); });
+    setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ t.remove(); }, 400); }, 4200);
+  }
+
+  /* ---------- environment switcher ---------- */
+  var ENVS = {
+    prod:    { label:'Production',  tag:'PROD',    tagCls:'et-prod',    dotCls:'d-prod',    region:'us-east-1',    branch:'main',            version:'v2.14.3',       hash:'a41f9c2', guard:'2 reviewers', up:'99.98%', p95:'42 ms', repl:'6' },
+    staging: { label:'Staging',     tag:'STAGING', tagCls:'et-staging', dotCls:'d-staging', region:'us-east-1',    branch:'release/2.15',    version:'v2.15.0-rc.1',  hash:'7c03b1e', guard:'1 reviewer',  up:'99.71%', p95:'51 ms', repl:'3' },
+    dev:     { label:'Development', tag:'DEV',     tagCls:'et-dev',     dotCls:'d-dev',     region:'eu-central-1', branch:'develop',         version:'v2.15.0-alpha', hash:'e88d10a', guard:'none',        up:'98.94%', p95:'63 ms', repl:'2' }
+  };
+  var currentEnv = 'prod';
+  var envWord = document.getElementById('envWord'), crumbEnv = document.getElementById('crumbEnv'),
+      kicker = document.getElementById('kicker'), banner = document.getElementById('guardBanner'),
+      envTag = document.getElementById('envTag'), envTagText = document.getElementById('envTagText'),
+      envTagDot = document.getElementById('envTagDot');
+
+  document.querySelectorAll('.env-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.env-btn').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+      btn.setAttribute('aria-pressed','true');
+      var key = btn.getAttribute('data-env'), e = ENVS[key];
+      currentEnv = key;
+      envWord.textContent = e.label;
+      scramble(crumbEnv, key);
+      scramble(kicker, 'ACCESS CONTROL — ENV/' + key.toUpperCase());
+      scramble(envTagText, e.tag);
+      envTag.className = 'env-tag ' + e.tagCls;
+      envTagDot.className = 'dot ' + e.dotCls;
+      document.getElementById('envRegion').textContent = e.region;
+      document.getElementById('envBranch').textContent = e.branch;
+      document.getElementById('envVersion').textContent = e.version;
+      document.getElementById('envHash').textContent = e.hash;
+      document.getElementById('envGuard').textContent = e.guard;
+      document.getElementById('statUp').textContent = e.up;
+      document.getElementById('statP95').textContent = e.p95;
+      document.getElementById('statRepl').textContent = e.repl;
+      if(key === 'prod'){
+        banner.className = 'banner prod';
+        banner.innerHTML = '<svg><use href="#i-lock"/></svg><div><b>Protected environment.</b> Invited developers must have two-factor authentication enabled, and every deploy to <b>prod</b> requires two-reviewer approval.</div>';
+      } else if(key === 'staging'){
+        banner.className = 'banner staging';
+        banner.innerHTML = '<svg><use href="#i-shield"/></svg><div><b>Staging environment.</b> Mirrors release branches before production. Deploys require one-reviewer approval.</div>';
+      } else {
+        banner.className = 'banner dev';
+        banner.innerHTML = '<svg><use href="#i-terminal"/></svg><div><b>Development environment.</b> Members can deploy preview builds freely — no approvals required.</div>';
+      }
+      updateSummary();
+    });
+  });
+
+  /* ---------- copy hash ---------- */
+  document.getElementById('copyHash').addEventListener('click', function(){
+    var h = document.getElementById('envHash').textContent;
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(h); }
+    toast('Commit hash ' + h + ' copied to clipboard', 'info');
+  });
+
+  /* ---------- chips ---------- */
+  var chipField = document.getElementById('chipField'), chipInput = document.getElementById('chipInput'),
+      emailErr = document.getElementById('emailErr'), submitLabel = document.getElementById('submitLabel');
+  var emails = [];
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function renderChips(){
+    chipField.querySelectorAll('.chip').forEach(function(c){ c.remove(); });
+    emails.forEach(function(em){
+      var c = document.createElement('span');
+      c.className = 'chip';
+      c.innerHTML = em + '<button type="button" aria-label="Remove ' + em + '"><svg><use href="#i-x"/></svg></button>';
+      c.querySelector('button').addEventListener('click', function(){
+        emails = emails.filter(function(x){ return x !== em; });
+        renderChips(); updateSubmitLabel();
+      });
+      chipField.insertBefore(c, chipInput);
+    });
+    chipInput.placeholder = emails.length ? 'Add another…' : 'teammate@company.dev';
+    emailErr.classList.remove('show');
+  }
+  function addEmail(raw){
+    var v = raw.trim().replace(/,+$/,'');
+    if(!v) return;
+    if(!EMAIL_RE.test(v)){
+      chipField.classList.remove('err'); void chipField.offsetWidth; chipField.classList.add('err');
+      emailErr.textContent = '“' + v + '” doesn\u2019t look like a valid email address.';
+      emailErr.classList.add('show');
+      return;
+    }
+    if(emails.indexOf(v) !== -1){ toast(v + ' is already on the list', 'warn'); return; }
+    if(emails.length >= 10){ toast('You can invite up to 10 people at once', 'warn'); return; }
+    emails.push(v); renderChips(); updateSubmitLabel();
+  }
+  chipInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ','){ e.preventDefault(); addEmail(chipInput.value); chipInput.value = ''; }
+    else if(e.key === 'Backspace' && !chipInput.value && emails.length){ emails.pop(); renderChips(); updateSubmitLabel(); }
+  });
+  chipInput.addEventListener('blur', function(){ if(chipInput.value){ addEmail(chipInput.value); chipInput.value = ''; } });
+  chipField.addEventListener('click', function(e){ if(e.target === chipField) chipInput.focus(); });
+
+  /* ---------- roles & permissions ---------- */
+  var PERMS = ['p-logs','p-deploy','p-secrets','p-rollback','p-vars','p-approve','p-access'];
+  var ROLE_PERMS = {
+    Viewer:    ['p-logs'],
+    Developer: ['p-logs','p-deploy','p-secrets'],
+    Maintainer:['p-logs','p-deploy','p-secrets','p-rollback','p-vars','p-approve'],
+    Admin:     PERMS.slice()
+  };
+  var currentRole = 'Developer', expiry = '7 days';
+
+  function setPerms(list){
+    PERMS.forEach(function(id){ document.getElementById(id).checked = list.indexOf(id) !== -1; });
+  }
+  function activePerms(){
+    return PERMS.filter(function(id){ return document.getElementById(id).checked; });
+  }
+  function roleLabels(){
+    return document.querySelectorAll('#roleGrid .role');
+  }
+  roleLabels().forEach(function(card){
+    card.querySelector('input').addEventListener('change', function(){
+      roleLabels().forEach(function(c){ c.classList.remove('sel'); });
+      card.classList.add('sel');
+      currentRole = card.getAttribute('data-role');
+      setPerms(ROLE_PERMS[currentRole]);
+      updateSummary();
+    });
+  });
+  document.getElementById('permGrid').addEventListener('change', function(){
+    var act = activePerms(), matched = null;
+    Object.keys(ROLE_PERMS).forEach(function(r){
+      var set = ROLE_PERMS[r];
+      if(set.length === act.length && set.every(function(p){ return act.indexOf(p) !== -1; })) matched = r;
+    });
+    roleLabels().forEach(function(c){
+      var is = c.getAttribute('data-role') === matched;
+      c.classList.toggle('sel', is);
+      c.querySelector('input').checked = is;
+    });
+    currentRole = matched;
+    updateSummary();
+  });
+
+  /* ---------- expiry ---------- */
+  document.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.seg button').forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+      b.setAttribute('aria-pressed','true');
+      expiry = b.getAttribute('data-exp');
+      updateSummary();
+    });
+  });
+
+  /* ---------- counter ---------- */
+  var msgArea = document.getElementById('msgArea'), counter = document.getElementById('counter');
+  msgArea.addEventListener('input', function(){ counter.textContent = msgArea.value.length + ' / 280'; });
+
+  /* ---------- summary ---------- */
+  var summary = document.getElementById('summary');
+  function updateSummary(){
+    var n = activePerms().length;
+    var roleTxt = currentRole ? '<b>' + currentRole + '</b>' : '<b>Custom</b> scope';
+    var expTxt = expiry === 'never' ? 'never expires' : 'expires in ' + expiry;
+    summary.innerHTML = 'Sending as ' + roleTxt + ' · ' + n + ' permission' + (n === 1 ? '' : 's') + ' · ' + expTxt + ' · env/' + currentEnv;
+  }
+  function updateSubmitLabel(){
+    submitLabel.textContent = emails.length > 1 ? 'Send ' + emails.length + ' invitations' : 'Send invitation';
+  }
+  updateSummary();
+
+  /* ---------- pending list ---------- */
+  var pendingList = document.getElementById('pendingList'), pendingLbl = document.getElementById('pendingLbl'),
+      navCount = document.getElementById('navCount');
+  var pendingCount = 1;
+  var HUES = ['a-cobalt','a-teal','a-amber','a-plum','a-rose'];
+  function refreshPending(){
+    pendingLbl.textContent = 'PENDING — ' + pendingCount;
+    navCount.textContent = 4 + pendingCount;
+  }
+  function initialsOf(email){
+    var base = email.split('@')[0].split(/[._-]/);
+    return ((base[0][0] || '') + (base[1] ? base[1][0] : base[0][1] || '')).toUpperCase();
+  }
+  function bindRevoke(btn){
+    btn.addEventListener('click', function(){
+      var row = btn.closest('.person'), em = btn.getAttribute('data-email');
+      row.classList.add('leaving');
+      setTimeout(function(){ row.remove(); pendingCount = Math.max(0, pendingCount - 1); refreshPending(); toast('Invitation to ' + em + ' revoked', 'warn'); }, 320);
+    });
+  }
+  bindRevoke(pendingList.querySelector('.revoke'));
+
+  /* ---------- submit ---------- */
+  var form = document.getElementById('inviteForm'), submitBtn = document.getElementById('submitBtn');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(chipInput.value.trim()) addEmail(chipInput.value);
+    chipInput.value = '';
+    if(!emails.length){
+      chipField.classList.remove('err'); void chipField.offsetWidth; chipField.classList.add('err');
+      emailErr.textContent = 'Please add at least one valid email address.';
+      emailErr.classList.add('show');
+      chipInput.focus();
+      return;
+    }
+    var roleTxt = currentRole || 'Custom';
+    var sent = emails.slice(), expTxt = expiry === 'never' ? 'no expiration' : 'expires in ' + expiry;
+    submitBtn.disabled = true; submitBtn.classList.add('loading');
+    submitLabel.textContent = 'Sending…';
+    setTimeout(function(){
+      sent.forEach(function(em, i){
+        var row = document.createElement('div');
+        row.className = 'person';
+        row.innerHTML = '<span class="avatar av-sm ' + HUES[(i + pendingCount) % HUES.length] + '">' + initialsOf(em) + '</span>' +
+          '<div class="who"><b>' + em + '</b><span>invited by Maya · env/' + currentEnv + '</span></div>' +
+          '<span class="pend-meta">' + roleTxt.toUpperCase() + '<br>' + (expiry === 'never' ? 'no expiry' : expiry + ' left') + '</span>' +
+          '<button type="button" class="revoke" data-email="' + em + '">REVOKE</button>';
+        pendingList.appendChild(row);
+        bindRevoke(row.querySelector('.revoke'));
+        pendingCount++;
+      });
+      refreshPending();
+      emails = []; renderChips();
+      msgArea.value = ''; counter.textContent = '0 / 280';
+      submitBtn.disabled = false; submitBtn.classList.remove('loading');
+      updateSubmitLabel();
+      toast(sent.length + ' invitation' + (sent.length > 1 ? 's' : '') + ' sent as ' + roleTxt + ' — ' + expTxt, 'ok');
+    }, 950);
+  });
+
+  document.getElementById('cancelBtn').addEventListener('click', function(){
+    emails = []; renderChips(); msgArea.value = ''; counter.textContent = '0 / 280';
+    updateSubmitLabel(); updateSummary();
+    toast('Draft cleared', 'info');
+  });
+
+  refreshPending();
+})();
+</script>
+</body>
+</html>

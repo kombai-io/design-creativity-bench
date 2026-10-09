@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="See how Branchglass turns every pull request into a temporary, production-like preview environment.">
+  <title>How Branchglass works</title>
+  <style>
+    :root {
+      --page: #f3f5ef;
+      --paper: #fbfcf8;
+      --ink: #122019;
+      --muted: #637067;
+      --line: #d9ded6;
+      --night: #101914;
+      --night-2: #16231c;
+      --night-3: #1d2c23;
+      --night-line: rgba(226, 255, 232, 0.12);
+      --lime: #b9f970;
+      --lime-strong: #9ce84f;
+      --mint: #84e4c2;
+      --white: #f7fbf7;
+      --shadow: 0 32px 90px rgba(20, 34, 25, 0.14), 0 3px 12px rgba(20, 34, 25, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 2%, rgba(185, 249, 112, 0.18), transparent 24rem),
+        radial-gradient(circle at 94% 18%, rgba(132, 228, 194, 0.15), transparent 23rem),
+        var(--page);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .how-it-works {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      padding: 88px 24px 96px;
+    }
+
+    .how-it-works::before,
+    .how-it-works::after {
+      position: absolute;
+      z-index: -1;
+      border: 1px solid rgba(18, 32, 25, 0.07);
+      border-radius: 999px;
+      content: "";
+      pointer-events: none;
+    }
+
+    .how-it-works::before {
+      width: 420px;
+      height: 420px;
+      top: -265px;
+      right: 6%;
+    }
+
+    .how-it-works::after {
+      width: 260px;
+      height: 260px;
+      left: -145px;
+      bottom: 18%;
+    }
+
+    .shell {
+      width: min(1240px, 100%);
+      margin-inline: auto;
+    }
+
+    .intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
+      gap: clamp(40px, 8vw, 112px);
+      align-items: end;
+      margin-bottom: 46px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 22px;
+      color: #3f4d44;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow-mark {
+      position: relative;
+      display: inline-grid;
+      width: 22px;
+      height: 22px;
+      place-items: center;
+      border: 1px solid rgba(18, 32, 25, 0.18);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .eyebrow-mark::before,
+    .eyebrow-mark::after {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--ink);
+      content: "";
+    }
+
+    .eyebrow-mark::before {
+      transform: translate(-4px, 3px);
+    }
+
+    .eyebrow-mark::after {
+      transform: translate(4px, -3px);
+      box-shadow: -8px -3px 0 var(--ink);
+    }
+
+    h1 {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(44px, 5.4vw, 76px);
+      font-weight: 590;
+      letter-spacing: -0.055em;
+      line-height: 0.99;
+    }
+
+    h1 span {
+      position: relative;
+      display: inline-block;
+      color: #496052;
+    }
+
+    h1 span::after {
+      position: absolute;
+      right: 2px;
+      bottom: -7px;
+      left: 2px;
+      height: 7px;
+      border-radius: 100%;
+      background: var(--lime-strong);
+      content: "";
+      opacity: 0.72;
+      transform: rotate(-0.7deg) scaleX(0.98);
+    }
+
+    .intro-copy {
+      padding-bottom: 4px;
+    }
+
+    .lede {
+      margin: 0 0 25px;
+      color: #536158;
+      font-size: clamp(17px, 1.5vw, 20px);
+      letter-spacing: -0.015em;
+      line-height: 1.58;
+    }
+
+    .setup-note {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin: 0;
+      color: #35443a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .setup-note::before {
+      width: 7px;
+      height: 7px;
+      border: 4px solid rgba(156, 232, 79, 0.23);
+      border-radius: 50%;
+      background: #73bf2f;
+      content: "";
+    }
+
+    .workflow {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(11, 22, 15, 0.18);
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 84% 40%, rgba(91, 190, 143, 0.12), transparent 29rem),
+        radial-gradient(circle at 45% 105%, rgba(185, 249, 112, 0.07), transparent 24rem),
+        var(--night);
+      box-shadow: var(--shadow);
+      color: var(--white);
+    }
+
+    .workflow::before {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.026) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
+      background-size: 36px 36px;
+      content: "";
+      opacity: 0.55;
+      pointer-events: none;
+      -webkit-mask-image: linear-gradient(to right, transparent 30%, black 65%);
+      mask-image: linear-gradient(to right, transparent 30%, black 65%);
+    }
+
+    .workflow-topbar {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      min-height: 68px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--night-line);
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .panel-brand,
+    .automation-state,
+    .provider {
+      display: flex;
+      align-items: center;
+    }
+
+    .panel-brand {
+      gap: 11px;
+      font-size: 14px;
+      font-weight: 680;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-symbol {
+      display: grid;
+      width: 31px;
+      height: 31px;
+      place-items: center;
+      border: 1px solid rgba(185, 249, 112, 0.28);
+      border-radius: 10px;
+      background: rgba(185, 249, 112, 0.09);
+      color: var(--lime);
+    }
+
+    .brand-symbol svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .topbar-divider {
+      width: 1px;
+      height: 17px;
+      background: var(--night-line);
+    }
+
+    .workflow-label {
+      color: #86958b;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .automation-state {
+      flex: 0 0 auto;
+      gap: 9px;
+      color: #c9d4cc;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .automation-state i {
+      position: relative;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 0 4px rgba(185, 249, 112, 0.09), 0 0 14px rgba(185, 249, 112, 0.55);
+    }
+
+    .workflow-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(360px, 0.82fr) minmax(540px, 1.48fr);
+      min-height: 570px;
+    }
+
+    .steps-panel {
+      padding: 35px 35px 33px;
+      border-right: 1px solid var(--night-line);
+    }
+
+    .small-label {
+      margin: 0 0 27px;
+      color: #829188;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .steps {
+      position: relative;
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps::before {
+      position: absolute;
+      top: 17px;
+      bottom: 20px;
+      left: 16px;
+      width: 1px;
+      background: linear-gradient(var(--lime), rgba(185, 249, 112, 0.12));
+      content: "";
+    }
+
+    .step {
+      position: relative;
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 17px;
+      padding: 0 0 27px;
+    }
+
+    .step:last-child {
+      padding-bottom: 0;
+    }
+
+    .step-number {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid #36463c;
+      border-radius: 50%;
+      background: #142018;
+      color: #a9b7ae;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 9px;
+      font-weight: 700;
+      transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
+    }
+
+    .step:hover .step-number,
+    .step:first-child .step-number {
+      border-color: var(--lime);
+      background: var(--lime);
+      color: #172015;
+      transform: scale(1.04);
+    }
+
+    .step-copy {
+      padding-top: 3px;
+    }
+
+    .step h2 {
+      margin: 0 0 7px;
+      font-size: 17px;
+      font-weight: 620;
+      letter-spacing: -0.022em;
+    }
+
+    .step p {
+      max-width: 310px;
+      margin: 0;
+      color: #98a59d;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .step strong {
+      color: #cbd6ce;
+      font-weight: 570;
+    }
+
+    .providers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .provider {
+      gap: 7px;
+      padding: 6px 9px;
+      border: 1px solid rgba(238, 255, 241, 0.1);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.025);
+      color: #aab7af;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .provider svg {
+      width: 12px;
+      height: 12px;
+      color: var(--mint);
+    }
+
+    .demo-panel {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      padding: 30px 32px 31px;
+    }
+
+    .trigger-card {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 13px;
+      align-items: center;
+      min-height: 67px;
+      padding: 11px 15px;
+      border: 1px solid var(--night-line);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.045);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+    }
+
+    .trigger-icon {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid rgba(132, 228, 194, 0.2);
+      border-radius: 10px;
+      background: rgba(132, 228, 194, 0.09);
+      color: var(--mint);
+    }
+
+    .trigger-icon svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .trigger-copy {
+      min-width: 0;
+    }
+
+    .trigger-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 0 0 4px;
+      font-size: 13px;
+      font-weight: 620;
+    }
+
+    .trigger-title span {
+      color: #829188;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .branch-name {
+      overflow: hidden;
+      margin: 0;
+      color: #95a39a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .trigger-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 9px;
+      border: 1px solid rgba(185, 249, 112, 0.17);
+      border-radius: 999px;
+      background: rgba(185, 249, 112, 0.07);
+      color: var(--lime);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .trigger-state::before {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+      content: "";
+    }
+
+    .flow-connector {
+      position: relative;
+      height: 31px;
+      margin-left: 33px;
+      border-left: 1px dashed rgba(185, 249, 112, 0.42);
+    }
+
+    .flow-connector::before {
+      position: absolute;
+      top: 8px;
+      left: -3px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 8px rgba(185, 249, 112, 0.8);
+      content: "";
+      animation: travel 2.2s ease-in-out infinite;
+    }
+
+    .flow-connector span {
+      position: absolute;
+      top: 10px;
+      left: 13px;
+      color: #708078;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @keyframes travel {
+      0%, 15% { transform: translateY(-5px); opacity: 0; }
+      35% { opacity: 1; }
+      80% { transform: translateY(16px); opacity: 1; }
+      100% { transform: translateY(21px); opacity: 0; }
+    }
+
+    .browser {
+      overflow: hidden;
+      border: 1px solid rgba(236, 255, 239, 0.18);
+      border-radius: 15px;
+      background: #e9eee8;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.27);
+    }
+
+    .browser-bar {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr) 31px;
+      gap: 10px;
+      align-items: center;
+      height: 43px;
+      padding: 0 10px 0 13px;
+      border-bottom: 1px solid #d4dbd3;
+      background: #f3f5f1;
+    }
+
+    .browser-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .browser-dots i {
+      width: 7px;
+      height: 7px;
+      border: 1px solid #b9c2ba;
+      border-radius: 50%;
+      background: #dfe4de;
+    }
+
+    .address {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      height: 26px;
+      padding-inline: 12px;
+      border: 1px solid #d5dbd5;
+      border-radius: 7px;
+      background: white;
+      color: #4c5a51;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 9px;
+      box-shadow: inset 0 1px 2px rgba(19, 31, 23, 0.04);
+    }
+
+    .address svg {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 auto;
+      color: #4fa968;
+    }
+
+    .address span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .copy-url {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      padding: 0;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      color: #5d6961;
+      background: transparent;
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+
+    .copy-url:hover,
+    .copy-url:focus-visible {
+      border-color: #ced6cf;
+      background: white;
+      color: #18271e;
+      outline: none;
+    }
+
+    .copy-url svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .preview-canvas {
+      position: relative;
+      height: 235px;
+      overflow: hidden;
+      color: #17231c;
+      background: #fafbf8;
+    }
+
+    .fake-nav {
+      display: flex;
+      height: 43px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 21px;
+      border-bottom: 1px solid #e4e8e2;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .fake-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+    }
+
+    .fake-logo i {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      border: 4px solid #17231c;
+      border-radius: 50% 50% 50% 4px;
+      transform: rotate(-10deg);
+    }
+
+    .fake-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: #69746d;
+      font-size: 7px;
+      font-weight: 680;
+      text-transform: uppercase;
+    }
+
+    .fake-avatar {
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: #17231c;
+    }
+
+    .fake-main {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      height: calc(100% - 43px);
+    }
+
+    .fake-hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 22px 16px 22px 27px;
+    }
+
+    .fake-kicker {
+      margin: 0 0 9px;
+      color: #5d6a61;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7px;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .fake-hero h3 {
+      max-width: 250px;
+      margin: 0 0 10px;
+      font-size: clamp(19px, 2vw, 29px);
+      font-weight: 600;
+      letter-spacing: -0.05em;
+      line-height: 0.98;
+    }
+
+    .fake-lines {
+      width: 75%;
+      margin-bottom: 15px;
+    }
+
+    .fake-lines i {
+      display: block;
+      height: 5px;
+      margin-top: 5px;
+      border-radius: 4px;
+      background: #e1e6df;
+    }
+
+    .fake-lines i:last-child {
+      width: 72%;
+    }
+
+    .fake-button {
+      display: grid;
+      width: 80px;
+      height: 25px;
+      place-items: center;
+      border-radius: 999px;
+      color: #f7fbf7;
+      background: #17231c;
+      font-size: 7px;
+      font-weight: 750;
+    }
+
+    .fake-product {
+      position: relative;
+      margin: 17px 18px 17px 0;
+      overflow: hidden;
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 63% 38%, #e2ffb8 0 9%, transparent 9.5%),
+        radial-gradient(circle at 46% 48%, #b6f16e 0 25%, transparent 25.5%),
+        linear-gradient(145deg, #dff8e8, #a8decf);
+    }
+
+    .fake-product::before,
+    .fake-product::after {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      content: "";
+    }
+
+    .fake-product::before {
+      width: 90px;
+      height: 90px;
+      top: -30px;
+      right: -17px;
+    }
+
+    .fake-product::after {
+      width: 48px;
+      height: 48px;
+      left: 17px;
+      bottom: -17px;
+    }
+
+    .product-card {
+      position: absolute;
+      right: 14px;
+      bottom: 13px;
+      left: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 8px 18px rgba(30, 70, 54, 0.08);
+      backdrop-filter: blur(7px);
+      font-size: 7px;
+      font-weight: 750;
+    }
+
+    .environment-card {
+      position: absolute;
+      right: 17px;
+      top: 55px;
+      width: min(205px, 41%);
+      padding: 12px;
+      border: 1px solid rgba(23, 35, 28, 0.12);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 13px 30px rgba(33, 55, 42, 0.17);
+      backdrop-filter: blur(10px);
+    }
+
+    .environment-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 0 10px;
+      font-size: 9px;
+      font-weight: 750;
+    }
+
+    .environment-title::before {
+      width: 6px;
+      height: 6px;
+      border: 3px solid rgba(89, 176, 52, 0.18);
+      border-radius: 50%;
+      background: #64ba36;
+      content: "";
+    }
+
+    .env-tags {
+      display: grid;
+      gap: 6px;
+    }
+
+    .env-tag {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: #68746c;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7px;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+
+    .env-tag b {
+      color: #223128;
+      font-weight: 750;
+    }
+
+    .env-tag svg {
+      width: 10px;
+      height: 10px;
+      color: #5ba73a;
+    }
+
+    .preview-banner {
+      position: absolute;
+      bottom: 9px;
+      left: 50%;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 9px;
+      border: 1px solid rgba(21, 34, 26, 0.13);
+      border-radius: 999px;
+      color: #435148;
+      background: rgba(251, 252, 248, 0.92);
+      box-shadow: 0 5px 14px rgba(18, 31, 23, 0.1);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7px;
+      font-weight: 750;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    .preview-banner::before {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #69bc3d;
+      content: "";
+    }
+
+    .lifecycle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    .life-event {
+      display: grid;
+      grid-template-columns: 31px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      min-width: 0;
+      padding: 9px 10px;
+      border: 1px solid var(--night-line);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .life-icon {
+      display: grid;
+      width: 31px;
+      height: 31px;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--mint);
+      background: rgba(132, 228, 194, 0.07);
+    }
+
+    .life-event:last-child .life-icon {
+      color: #a5b2aa;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .life-icon svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .life-copy {
+      min-width: 0;
+    }
+
+    .life-copy b {
+      display: block;
+      overflow: hidden;
+      margin-bottom: 3px;
+      color: #c8d3cb;
+      font-size: 9px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .life-copy span {
+      display: block;
+      overflow: hidden;
+      color: #718078;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7px;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .event-result {
+      color: var(--lime);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7px;
+      font-weight: 750;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .life-event:last-child .event-result {
+      color: #a5b2aa;
+    }
+
+    .section-footnote {
+      display: flex;
+      justify-content: center;
+      gap: 9px;
+      align-items: center;
+      margin: 23px 0 0;
+      color: #66736b;
+      font-size: 12px;
+    }
+
+    .section-footnote svg {
+      width: 14px;
+      height: 14px;
+      color: #47704f;
+    }
+
+    @media (max-width: 1000px) {
+      .intro {
+        grid-template-columns: 1fr;
+        gap: 27px;
+      }
+
+      .intro-copy {
+        max-width: 680px;
+      }
+
+      .lede {
+        margin-bottom: 18px;
+      }
+
+      .workflow-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .steps-panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--night-line);
+      }
+
+      .steps {
+        grid-template-columns: 1fr 1fr;
+        gap: 24px 30px;
+      }
+
+      .steps::before {
+        display: none;
+      }
+
+      .step {
+        padding: 0;
+      }
+
+      .step p {
+        max-width: none;
+      }
+
+      .demo-panel {
+        padding-top: 28px;
+      }
+    }
+
+    @media (max-width: 660px) {
+      .how-it-works {
+        padding: 60px 14px 66px;
+      }
+
+      .intro {
+        margin-bottom: 32px;
+      }
+
+      .eyebrow {
+        margin-bottom: 16px;
+      }
+
+      h1 {
+        font-size: clamp(40px, 13vw, 56px);
+      }
+
+      h1 span::after {
+        bottom: -4px;
+        height: 5px;
+      }
+
+      .workflow {
+        border-radius: 21px;
+      }
+
+      .workflow-topbar {
+        min-height: 60px;
+        padding: 0 17px;
+      }
+
+      .topbar-divider,
+      .workflow-label {
+        display: none;
+      }
+
+      .automation-state {
+        font-size: 8px;
+      }
+
+      .steps-panel {
+        padding: 27px 20px 29px;
+      }
+
+      .small-label {
+        margin-bottom: 22px;
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+        gap: 23px;
+      }
+
+      .steps::before {
+        display: block;
+      }
+
+      .step {
+        padding: 0;
+      }
+
+      .demo-panel {
+        padding: 22px 13px 19px;
+      }
+
+      .trigger-card {
+        grid-template-columns: 36px minmax(0, 1fr);
+        padding: 10px;
+      }
+
+      .trigger-state {
+        display: none;
+      }
+
+      .flow-connector {
+        margin-left: 30px;
+      }
+
+      .browser-bar {
+        grid-template-columns: 48px minmax(0, 1fr) 28px;
+        gap: 6px;
+      }
+
+      .address {
+        justify-content: flex-start;
+      }
+
+      .preview-canvas {
+        height: 222px;
+      }
+
+      .fake-nav {
+        padding: 0 13px;
+      }
+
+      .fake-links span {
+        display: none;
+      }
+
+      .fake-main {
+        grid-template-columns: 1.25fr 0.75fr;
+      }
+
+      .fake-hero {
+        padding: 18px 8px 18px 17px;
+      }
+
+      .fake-hero h3 {
+        font-size: 21px;
+      }
+
+      .fake-product {
+        margin-right: 10px;
+      }
+
+      .environment-card {
+        top: 54px;
+        right: 9px;
+        width: 46%;
+        padding: 9px;
+      }
+
+      .env-tag {
+        font-size: 6px;
+      }
+
+      .env-tag span {
+        display: none;
+      }
+
+      .lifecycle {
+        grid-template-columns: 1fr;
+      }
+
+      .section-footnote {
+        padding-inline: 18px;
+        text-align: center;
+        line-height: 1.5;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="how-it-works" aria-labelledby="how-title">
+      <div class="shell">
+        <header class="intro">
+          <div>
+            <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span> How it works</p>
+            <h1 id="how-title">From pull request to a place <span>everyone can see.</span></h1>
+          </div>
+          <div class="intro-copy">
+            <p class="lede">Branchglass turns every open pull request into an isolated, production-like environment—then keeps it in sync until the work is done.</p>
+            <p class="setup-note">Set up once. Automatic after that.</p>
+          </div>
+        </header>
+
+        <div class="workflow">
+          <div class="workflow-topbar">
+            <div class="panel-brand">
+              <span class="brand-symbol" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M7 5v9.2c0 2.1 1.7 3.8 3.8 3.8H17M7 10h5.2C14.3 10 16 8.3 16 6.2V5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="7" cy="4" r="2" fill="currentColor"/>
+                  <circle cx="16" cy="4" r="2" fill="currentColor"/>
+                  <circle cx="18" cy="18" r="2" fill="currentColor"/>
+                </svg>
+              </span>
+              <span>Branchglass</span>
+              <i class="topbar-divider" aria-hidden="true"></i>
+              <span class="workflow-label">Pull request workflow</span>
+            </div>
+            <div class="automation-state"><i aria-hidden="true"></i> Automation active</div>
+          </div>
+
+          <div class="workflow-grid">
+            <div class="steps-panel">
+              <p class="small-label">A branch's lifecycle · 01—04</p>
+              <ol class="steps">
+                <li class="step">
+                  <span class="step-number">01</span>
+                  <div class="step-copy">
+                    <h2>Connect your stack</h2>
+                    <p>Authorize your <strong>code repository</strong> and <strong>cloud account</strong>. Branchglass works with the stack your team already owns.</p>
+                    <div class="providers" aria-label="Connected resources">
+                      <span class="provider">
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 2.5v7.2a3.8 3.8 0 0 0 3.8 3.8H13M3 6.5h4.1A3.4 3.4 0 0 0 10.5 3V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="3" cy="2.5" r="1.5" fill="currentColor"/><circle cx="10.5" cy="2.5" r="1.5" fill="currentColor"/><circle cx="13" cy="13.5" r="1.5" fill="currentColor"/></svg>
+                        Repository
+                      </span>
+                      <span class="provider">
+                        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 12.5h7a2.5 2.5 0 0 0 .4-5A4.6 4.6 0 0 0 3.5 6 3.3 3.3 0 0 0 5 12.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                        Cloud account
+                      </span>
+                    </div>
+                  </div>
+                </li>
+
+                <li class="step">
+                  <span class="step-number">02</span>
+                  <div class="step-copy">
+                    <h2>Open a pull request</h2>
+                    <p>The PR event creates a fresh, <strong>isolated environment</strong> using production-like configuration and safe test data.</p>
+                  </div>
+                </li>
+
+                <li class="step">
+                  <span class="step-number">03</span>
+                  <div class="step-copy">
+                    <h2>Review at a real URL</h2>
+                    <p>Developers, designers, and reviewers test together. Every new commit updates the <strong>same shareable preview</strong>.</p>
+                  </div>
+                </li>
+
+                <li class="step">
+                  <span class="step-number">04</span>
+                  <div class="step-copy">
+                    <h2>Merge, then disappear</h2>
+                    <p>When the pull request is merged or closed, Branchglass automatically removes its environment and resources.</p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <div class="demo-panel" aria-label="Example Branchglass preview workflow">
+              <div class="trigger-card">
+                <span class="trigger-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M7 4v10a4 4 0 0 0 4 4h7M7 10h5a4 4 0 0 0 4-4V4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <circle cx="7" cy="4" r="2" fill="currentColor"/><circle cx="16" cy="4" r="2" fill="currentColor"/><circle cx="19" cy="18" r="2" fill="currentColor"/>
+                  </svg>
+                </span>
+                <div class="trigger-copy">
+                  <p class="trigger-title">Pull request #184 <span>opened just now</span></p>
+                  <p class="branch-name">feat/faster-checkout&nbsp;&nbsp;→&nbsp;&nbsp;main</p>
+                </div>
+                <span class="trigger-state">Event received</span>
+              </div>
+
+              <div class="flow-connector" aria-hidden="true"><span>isolated stack created</span></div>
+
+              <div class="browser">
+                <div class="browser-bar">
+                  <span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <div class="address" title="https://checkout-pr-184.branchglass.dev">
+                    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="9" height="7" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                    <span>checkout-pr-184.branchglass.dev</span>
+                  </div>
+                  <button class="copy-url" type="button" aria-label="Copy preview URL" title="Copy preview URL">
+                    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="6.5" y="6.5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M13 6.5v-2A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h2" stroke="currentColor" stroke-width="1.4"/></svg>
+                  </button>
+                </div>
+
+                <div class="preview-canvas">
+                  <div class="fake-nav">
+                    <div class="fake-logo"><i aria-hidden="true"></i> NORTHSTAR</div>
+                    <div class="fake-links"><span>Shop</span><span>Stories</span><span>About</span><i class="fake-avatar" aria-hidden="true"></i></div>
+                  </div>
+                  <div class="fake-main" aria-hidden="true">
+                    <div class="fake-hero">
+                      <p class="fake-kicker">New checkout experience</p>
+                      <h3>A smoother way to get there.</h3>
+                      <div class="fake-lines"><i></i><i></i></div>
+                      <span class="fake-button">EXPLORE</span>
+                    </div>
+                    <div class="fake-product"><div class="product-card"><span>Trail series 02</span><b>$128</b></div></div>
+                  </div>
+
+                  <aside class="environment-card" aria-label="Environment status">
+                    <p class="environment-title">Environment ready</p>
+                    <div class="env-tags">
+                      <div class="env-tag"><span>Configuration</span><b>Production-like</b><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3 8.2 3 3L13 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                      <div class="env-tag"><span>Test data</span><b>Safe &amp; seeded</b><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3 8.2 3 3L13 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                    </div>
+                  </aside>
+                  <div class="preview-banner">Live preview · PR #184</div>
+                </div>
+              </div>
+
+              <div class="lifecycle">
+                <div class="life-event">
+                  <span class="life-icon" aria-hidden="true">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M15.3 7.4A6 6 0 1 0 16 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12.2 7.4h3.4V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="life-copy"><b>New commit pushed</b><span>8c12fe · same URL</span></span>
+                  <span class="event-result">Updates</span>
+                </div>
+                <div class="life-event">
+                  <span class="life-icon" aria-hidden="true">
+                    <svg viewBox="0 0 20 20" fill="none"><path d="M4 6h12M7 6V4h6v2m-7 0 .7 10h6.6L14 6M8.5 9v4M11.5 9v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="life-copy"><b>PR merged or closed</b><span>environment + resources</span></span>
+                  <span class="event-result">Removed</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="section-footnote">
+          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 2.5 14.5 5v3.8c0 3.1-2.2 5.6-5.5 6.7-3.3-1.1-5.5-3.6-5.5-6.7V5L9 2.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m6.5 9 1.6 1.6 3.4-3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Your cloud, your controls—without forgotten preview stacks.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const button = document.querySelector('.copy-url');
+      const url = 'https://checkout-pr-184.branchglass.dev';
+      if (!button) return;
+
+      button.addEventListener('click', async function () {
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(url);
+          } else {
+            const helper = document.createElement('textarea');
+            helper.value = url;
+            helper.style.position = 'fixed';
+            helper.style.opacity = '0';
+            document.body.appendChild(helper);
+            helper.select();
+            document.execCommand('copy');
+            helper.remove();
+          }
+          button.setAttribute('aria-label', 'Preview URL copied');
+          button.setAttribute('title', 'Copied!');
+          button.style.color = '#3e8e47';
+          button.innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4 10.2 3.6 3.6L16 5.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          window.setTimeout(function () {
+            button.setAttribute('aria-label', 'Copy preview URL');
+            button.setAttribute('title', 'Copy preview URL');
+            button.style.color = '';
+            button.innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="6.5" y="6.5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M13 6.5v-2A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h2" stroke="currentColor" stroke-width="1.4"/></svg>';
+          }, 1800);
+        } catch (error) {
+          button.setAttribute('title', url);
+        }
+      });
+    }());
+  </script>
+</body>
+</html>

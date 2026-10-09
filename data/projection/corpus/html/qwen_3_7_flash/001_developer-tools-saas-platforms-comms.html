@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CommsCollide — Work Collision Scheduler &amp; Planner</title>
+<style>
+:root {
+  /* Color Palette */
+  --clr-bg-primary: hsl(220, 12%, 11%);
+  --clr-bg-secondary: hsl(220, 10%, 16%);
+  --clr-bg-tertiary: hsl(220, 8%, 21%);
+  --clr-bg-card: hsl(220, 10%, 14%);
+  --clr-bg-overlay: hsla(220, 12%, 11%, 0.92);
+  --clr-text-primary: hsl(210, 10%, 92%);
+  --clr-text-secondary: hsl(220, 8%, 68%);
+  --clr-text-muted: hsl(220, 6%, 48%);
+  --clr-accent-primary: hsl(28, 85%, 58%);
+  --clr-accent-hover: hsl(28, 85%, 65%);
+  --clr-accent-subtle: hsl(28, 40%, 18%);
+  --clr-border-primary: hsl(220, 8%, 26%);
+  --clr-border-light: hsl(220, 6%, 22%);
+  --clr-success: hsl(145, 55%, 42%);
+  --clr-danger: hsl(0, 60%, 55%);
+  --clr-warning: hsl(42, 85%, 52%);
+  --clr-info: hsl(200, 65%, 52%);
+  --clr-lock-icon: hsl(220, 20%, 60%);
+  --clr-gradient-start: hsl(220, 10%, 16%);
+  --clr-gradient-end: hsl(220, 10%, 11%);
+
+  /* Typography */
+  --fs-xs: 0.7rem;
+  --fs-sm: 0.8rem;
+  --fs-base: 0.9rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.15rem;
+  --fs-xl: 1.4rem;
+  --fs-2xl: 1.7rem;
+  --fs-hero: 2rem;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --lh-tight: 1.25;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.7;
+
+  /* Spacing */
+  --sp-xxs: 0.15rem;
+  --sp-xs: 0.3rem;
+  --sp-sm: 0.5rem;
+  --sp-md: 0.85rem;
+  --sp-lg: 1.15rem;
+  --sp-xl: 1.6rem;
+  --sp-2xl: 2.2rem;
+  --sp-3xl: 3rem;
+  --sp-4xl: 4rem;
+
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px hsla(220, 50%, 0%, 0.3);
+  --shadow-md: 0 4px 12px hsla(220, 50%, 0%, 0.35);
+  --shadow-lg: 0 8px 30px hsla(220, 60%, 0%, 0.45);
+  --shadow-xl: 0 12px 48px hsla(220, 60%, 0%, 0.55);
+  --shadow-glow: 0 0 20px hsla(28, 85%, 50%, 0.15);
+
+  /* Layout */
+  --page-max: 1280px;
+  --header-height: 56px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--fs-base);
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  color: var(--clr-text-primary);
+  background: var(--clr-bg-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: var(--sp-md); }
+::-webkit-scrollbar-track { background: var(--clr-bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--clr-border-primary); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--clr-text-muted); }
+
+/* ── Header ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 var(--sp-xl);
+  background: var(--clr-bg-secondary);
+  border-bottom: 1px solid var(--clr-border-primary);
+  backdrop-filter: blur(var(--sp-lg));
+}
+
+.header__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  text-decoration: none;
+  color: var(--clr-text-primary);
+}
+
+.header__logo {
+  width: var(--sp-2xl);
+  height: var(--sp-2xl);
+}
+
+.header__title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+}
+
+.header__title span {
+  color: var(--clr-accent-primary);
+}
+
+.header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xl);
+}
+
+.header__link {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-secondary);
+  text-decoration: none;
+  font-weight: var(--fw-medium);
+  transition: color var(--sp-xs);
+}
+
+.header__link:hover { color: var(--clr-text-primary); }
+
+.header__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xs) var(--sp-md);
+  background: var(--clr-accent-subtle);
+  color: var(--clr-accent-primary);
+  border: 1px solid hsla(28, 85%, 50%, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: all var(--sp-xs);
+}
+
+.header__cta:hover {
+  background: var(--clr-accent-primary);
+  color: var(--clr-bg-primary);
+}
+
+/* ── Progress Stepper ── */
+.stepper {
+  display: flex;
+  align-items: stretch;
+  padding: var(--sp-lg) var(--sp-xl);
+  background: var(--clr-bg-secondary);
+  border-bottom: 1px solid var(--clr-border-primary);
+  gap: var(--sp-xs);
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+
+.stepper__stage {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex: 1;
+  position: relative;
+}
+
+.stepper__stage:last-child .stepper__connector { display: none; }
+
+.stepper__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sp-2xl);
+  height: var(--sp-2xl);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  flex-shrink: 0;
+  border: 2px solid var(--clr-border-primary);
+  color: var(--clr-text-muted);
+  background: transparent;
+}
+
+.stepper__stage--completed .stepper__number {
+  border-color: var(--clr-success);
+  background: var(--clr-success);
+  color: white;
+}
+
+.stepper__stage--active .stepper__number {
+  border-color: var(--clr-accent-primary);
+  background: var(--clr-accent-primary);
+  color: var(--clr-bg-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.stepper__stage--locked .stepper__number {
+  border-color: var(--clr-border-light);
+  background: var(--clr-bg-tertiary);
+  color: var(--clr-text-muted);
+  opacity: 0.5;
+}
+
+.stepper__connector {
+  flex: 1;
+  height: 2px;
+  background: var(--clr-border-primary);
+  margin: 0 var(--sp-sm);
+  margin-bottom: var(--sp-md);
+}
+
+.stepper__stage--completed .stepper__connector {
+  background: var(--clr-success);
+}
+
+.stepper__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xxs);
+}
+
+.stepper__label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--clr-text-primary);
+  line-height: var(--lh-tight);
+}
+
+.stepper__stage--active .stepper__label {
+  color: var(--clr-accent-primary);
+}
+
+.stepper__stage--locked .stepper__label {
+  color: var(--clr-text-muted);
+}
+
+.stepper__desc {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-secondary);
+  line-height: var(--lh-tight);
+}
+
+.stepper__stage--locked .stepper__desc {
+  color: var(--clr-text-muted);
+  font-style: italic;
+}
+
+/* ── Main Content ── */
+.main {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-xl);
+}
+
+/* ── Executive Snapshot Banner ── */
+.snapshot {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-3xl);
+}
+
+.snapshot__card {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.snapshot__card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.snapshot__card--primary::before { background: var(--clr-accent-primary); }
+.snapshot__card--success::before { background: var(--clr-success); }
+.snapshot__card--danger::before { background: var(--clr-danger); }
+
+.snapshot__metric {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+  line-height: var(--lh-tight);
+}
+
+.snapshot__card--primary .snapshot__metric { color: var(--clr-accent-primary); }
+.snapshot__card--success .snapshot__metric { color: var(--clr-success); }
+.snapshot__card--danger .snapshot__metric { color: var(--clr-danger); }
+
+.snapshot__label {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-secondary);
+  margin-top: var(--sp-xs);
+}
+
+.snapshot__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xxs);
+  margin-top: var(--sp-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  padding: var(--sp-xxs) var(--sp-sm);
+  border-radius: var(--radius-sm);
+}
+
+.snapshot__delta--up { color: var(--clr-danger); background: hsla(0, 60%, 55%, 0.12); }
+.snapshot__delta--down { color: var(--clr-success); background: hsla(145, 55%, 42%, 0.12); }
+.snapshot__delta--warn { color: var(--clr-warning); background: hsla(42, 85%, 52%, 0.12); }
+
+/* ── Section Base ── */
+.section {
+  margin-bottom: var(--sp-3xl);
+}
+
+.section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-lg);
+  padding-bottom: var(--sp-md);
+  border-bottom: 1px solid var(--clr-border-light);
+}
+
+.section__title {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+}
+
+.section__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-xxs) var(--sp-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.section__badge--locked {
+  color: var(--clr-text-muted);
+  background: var(--clr-bg-tertiary);
+  border: 1px solid var(--clr-border-light);
+}
+
+.section__badge--live {
+  color: var(--clr-accent-primary);
+  background: var(--clr-accent-subtle);
+  border: 1px solid hsla(28, 85%, 50%, 0.2);
+}
+
+.section__badge--draft {
+  color: var(--clr-info);
+  background: hsla(200, 65%, 52%, 0.12);
+  border: 1px solid hsla(200, 65%, 52%, 0.2);
+}
+
+/* ── Video / Media Placeholder ── */
+.media-block {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--sp-lg);
+}
+
+.media-block__player {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--clr-bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.media-block__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-sm);
+  color: var(--clr-text-muted);
+}
+
+.media-block__lock-icon {
+  width: var(--sp-2xl);
+  height: var(--sp-2xl);
+  color: var(--clr-lock-icon);
+  opacity: 0.6;
+}
+
+.media-block__caption {
+  padding: var(--sp-md) var(--sp-lg);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-md);
+}
+
+.media-block__thumb {
+  width: var(--sp-2xl);
+  height: var(--sp-2xl);
+  border-radius: var(--radius-sm);
+  background: var(--clr-bg-tertiary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-block__text {
+  flex: 1;
+}
+
+.media-block__heading {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--sp-xxs);
+  line-height: var(--lh-tight);
+}
+
+.media-block__meta {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-secondary);
+  margin-bottom: var(--sp-xs);
+}
+
+.media-block__description {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-secondary);
+  line-height: var(--lh-relaxed);
+}
+
+.media-block__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xxs);
+  margin-top: var(--sp-xs);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+}
+
+.media-block__status--locked {
+  color: var(--clr-warning);
+}
+
+.media-block__status--partial {
+  color: var(--clr-info);
+}
+
+.media-block__svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Table Section ── */
+.table-wrap {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.table-wrap__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-md) var(--sp-lg);
+  border-bottom: 1px solid var(--clr-border-primary);
+}
+
+.table-wrap__title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--clr-text-secondary);
+}
+
+.table-wrap__count {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead th {
+  padding: var(--sp-sm) var(--sp-lg);
+  text-align: left;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--clr-border-primary);
+  background: var(--clr-bg-tertiary);
+}
+
+.data-table tbody td {
+  padding: var(--sp-sm) var(--sp-lg);
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--clr-border-light);
+  color: var(--clr-text-secondary);
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table tbody tr:hover { background: var(--clr-bg-tertiary); }
+
+.data-table .cell-name {
+  color: var(--clr-text-primary);
+  font-weight: var(--fw-medium);
+}
+
+.data-table .cell-collision {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xxs);
+  font-weight: var(--fw-semibold);
+}
+
+.data-table .cell-collision--high { color: var(--clr-danger); }
+.data-table .cell-collision--med { color: var(--clr-warning); }
+.data-table .cell-collision--low { color: var(--clr-success); }
+
+.data-table .cell-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xxs);
+  padding: var(--sp-xxs) var(--sp-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+}
+
+.data-table .cell-status--blocked {
+  background: hsla(0, 60%, 55%, 0.12);
+  color: var(--clr-danger);
+}
+
+.data-table .cell-status--partial {
+  background: hsla(42, 85%, 52%, 0.12);
+  color: var(--clr-warning);
+}
+
+.data-table .cell-status--available {
+  background: hsla(145, 55%, 42%, 0.12);
+  color: var(--clr-success);
+}
+
+.data-table .cell-channel-tag {
+  display: inline-block;
+  padding: var(--sp-xxs) var(--sp-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  background: var(--clr-bg-tertiary);
+  border: 1px solid var(--clr-border-light);
+  color: var(--clr-text-secondary);
+}
+
+/* ── Heatmap Grid ── */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: var(--sp-xxs);
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  position: relative;
+}
+
+.heatmap-cell--none { background: var(--clr-bg-tertiary); }
+.heatmap-cell--low { background: hsla(145, 55%, 42%, 0.25); }
+.heatmap-cell--med { background: hsla(42, 85%, 52%, 0.35); }
+.heatmap-cell--high { background: hsla(0, 60%, 55%, 0.45); }
+.heatmap-cell--critical { background: hsla(0, 80%, 50%, 0.6); }
+
+.heatmap-labels {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: var(--sp-xxs);
+  margin-bottom: var(--sp-xs);
+}
+
+.heatmap-labels span {
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+}
+
+/* ── Timeline ── */
+.timeline {
+  position: relative;
+  padding-left: var(--sp-xl);
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: var(--sp-md);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--clr-border-primary);
+}
+
+.timeline__item {
+  position: relative;
+  padding: 0 var(--sp-lg) var(--sp-xl) 0;
+  border-bottom: 1px solid var(--clr-border-light);
+}
+
+.timeline__item:last-child { border-bottom: none; }
+
+.timeline__dot {
+  position: absolute;
+  left: calc(-1 * var(--sp-xl) + var(--sp-sm));
+  top: var(--sp-xs);
+  width: var(--sp-md);
+  height: var(--sp-md);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--clr-accent-primary);
+  background: var(--clr-bg-primary);
+}
+
+.timeline__time {
+  font-size: var(--fs-xs);
+  color: var(--clr-text-muted);
+  margin-bottom: var(--sp-xxs);
+  font-family: var(--font-mono);
+}
+
+.timeline__title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--clr-text-primary);
+  margin-bottom: var(--sp-xxs);
+}
+
+.timeline__desc {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-secondary);
+  line-height: var(--lh-relaxed);
+}
+
+/* ── Locked Overlay ── */
+.lock-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 8px,
+    hsla(220, 10%, 16%, 0.4) 8px,
+    hsla(220, 10%, 16%, 0.4) 9px
+  ),
+  var(--clr-bg-card);
+  border: 2px dashed var(--clr-border-primary);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  padding: var(--sp-2xl);
+}
+
+.lock-overlay__icon {
+  width: var(--sp-3xl);
+  height: var(--sp-3xl);
+  color: var(--clr-lock-icon);
+  margin-bottom: var(--sp-md);
+}
+
+.lock-overlay__heading {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--clr-text-primary);
+  margin-bottom: var(--sp-xs);
+}
+
+.lock-overlay__text {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-secondary);
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+/* ── Modal ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--clr-bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn var(--sp-sm) ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(var(--sp-lg)) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal {
+  background: var(--clr-bg-secondary);
+  border: 1px solid var(--clr-border-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 520px;
+  width: 90%;
+  animation: slideUp var(--sp-sm) ease-out;
+  overflow: hidden;
+}
+
+.modal__inner {
+  padding: var(--sp-2xl);
+}
+
+.modal__icon-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--sp-lg);
+}
+
+.modal__lock-icon {
+  width: var(--sp-3xl);
+  height: var(--sp-3xl);
+  color: var(--clr-accent-primary);
+}
+
+.modal__title {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  text-align: center;
+  margin-bottom: var(--sp-sm);
+  color: var(--clr-text-primary);
+}
+
+.modal__subtitle {
+  font-size: var(--fs-sm);
+  color: var(--clr-text-secondary);
+  text-align: center;
+  line-height: var(--lh-relaxed);
+  margin-bottom: var(--sp-xl);
+}
+
+.modal__plan-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-xl);
+}
+
+.modal__plan-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  background: var(--clr-bg-tertiary);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  color: var(--clr-text-secondary);
+  border: 1px solid var(--clr-border-light);
+}
+
+.modal__check {
+  width: var(--sp-md);
+  height: var(--sp-md);
+  color: var(--clr-success);
+  flex-shrink: 0;
+}
+
+.modal__actions {
+  display: flex;
+  gap: var(--sp-sm);
+}
+
+.modal__btn {
+  flex: 1;
+  padding: var(--sp-sm) var(--sp-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  border: 1px solid var(--clr-border-primary);
+  background: var(--clr-bg-tertiary);
+  color: var(--clr-text-secondary);
+  transition: all var(--sp-xs);
+  text-align: center;
+}
+
+.modal__btn:hover {
+  border-color: var(--clr-text-muted);
+  color: var(--clr-text-primary);
+}
+
+.modal__btn--primary {
+  background: var(--clr-accent-primary);
+  color: var(--clr-bg-primary);
+  border-color: var(--clr-accent-primary);
+}
+
+.modal__btn--primary:hover {
+  background: var(--clr-accent-hover);
+}
+
+/* ── Tab Widget ── */
+.tabs {
+  margin-bottom: var(--sp-lg);
+}
+
+.tabs__list {
+  display: flex;
+  gap: var(--sp-xs);
+  border-bottom: 2px solid var(--clr-border-primary);
+  padding-bottom: 0;
+  margin-bottom: var(--sp-lg);
+}
+
+.tabs__tab {
+  padding: var(--sp-sm) var(--sp-lg);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--clr-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: all var(--sp-xs);
+  position: relative;
+}
+
+.tabs__tab:hover { color: var(--clr-text-secondary); }
+
+.tabs__tab[aria-selected="true"] {
+  color: var(--clr-accent-primary);
+  border-bottom-color: var(--clr-accent-primary);
+  font-weight: var(--fw-semibold);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel[aria-hidden="false"] {
+  display: block;
+}
+
+/* ── Two Column Layout ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-lg);
+}
+
+/* ── Three Column Grid ── */
+.three-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-lg);
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  padding: var(--sp-2xl) var(--sp-xl);
+  border-top: 1px solid var(--clr-border-primary);
+  color: var(--clr-text-muted);
+  font-size: var(--fs-xs);
+  margin-top: var(--sp-3xl);
+}
+
+/* ── Utility ── */
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gap-sm { gap: var(--sp-sm); }
+.mt-md { margin-top: var(--sp-md); }
+.mb-lg { margin-bottom: var(--sp-lg); }
+.text-center { text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<header class="header">
+  <a href="#" class="header__brand">
+    <svg class="header__logo" viewBox="0 0 32 32" fill="none">
+      <rect x="2" y="2" width="28" height="28" rx="8" fill="hsl(28, 85%, 58%)" opacity="0.15"/>
+      <path d="M8 20 L16 8 L24 20 Z" stroke="hsl(28, 85%, 58%)" stroke-width="2" fill="none"/>
+      <circle cx="16" cy="18" r="3" fill="hsl(28, 85%, 58%)"/>
+      <path d="M10 14 L16 10 M22 14 L16 10" stroke="hsl(220, 8%, 68%)" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <span class="header__title">Comms<span>Collide</span></span>
+  </a>
+  <nav class="header__nav">
+    <a href="#" class="header__link">Schedule</a>
+    <a href="#" class="header__link">Teams</a>
+    <a href="#" class="header__link">Channels</a>
+    <a href="#" class="header__link">Reports</a>
+    <button class="header__cta" id="openModalBtn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Request Upgrade
+    </button>
+  </nav>
+</header>
+
+<!-- ════════ STEPPER ════════ -->
+<nav class="stepper" aria-label="Planning progress">
+  <div class="stepper__stage stepper__stage--completed">
+    <span class="stepper__number">1</span>
+    <div class="stepper__connector"></div>
+    <div class="stepper__info">
+      <span class="stepper__label">Workload Audit</span>
+      <span class="stepper__desc">Review current capacity</span>
+    </div>
+  </div>
+  <div class="stepper__stage stepper__stage--active">
+    <span class="stepper__number">2</span>
+    <div class="stepper__connector"></div>
+    <div class="stepper__info">
+      <span class="stepper__label">Collision Map</span>
+      <span class="stepper__desc">Cross-channel overlap analysis</span>
+    </div>
+  </div>
+  <div class="stepper__stage stepper__stage--locked">
+    <span class="stepper__number"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5V3.5C4 2.67 4.67 2 5.5 2H6.5C7.33 2 8 2.67 8 3.5V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+    <div class="stepper__connector"></div>
+    <div class="stepper__info">
+      <span class="stepper__label">Optimization Engine</span>
+      <span class="stepper__desc">AI-rescheduled assignments</span>
+    </div>
+  </div>
+  <div class="stepper__stage stepper__stage--locked">
+    <span class="stepper__number"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5V3.5C4 2.67 4.67 2 5.5 2H6.5C7.33 2 8 2.67 8 3.5V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+    <div class="stepper__connector"></div>
+    <div class="stepper__info">
+      <span class="stepper__label">Deployment Plan</span>
+      <span class="stepper__desc">Publish and roll out changes</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ════════ MAIN ════════ -->
+<main class="main">
+
+  <!-- Executive Snapshot -->
+  <section class="snapshot" aria-label="Executive summary metrics">
+    <article class="snapshot__card snapshot__card--primary">
+      <div class="snapshot__metric">47%</div>
+      <div class="snapshot__label">Total Communication Collision Rate</div>
+      <div class="snapshot__delta snapshot__delta--up">▲ 12% vs Q3</div>
+    </article>
+    <article class="snapshot__card snapshot__card--success">
+      <div class="snapshot__metric">14</div>
+      <div class="snapshot__label">Team Members at Risk</div>
+      <div class="snapshot__delta snapshot__delta--down">▼ 3 from last week</div>
+    </article>
+    <article class="snapshot__card snapshot__card--danger">
+      <div class="snapshot__metric">6.2 hrs</div>
+      <div class="snapshot__label">Avg Weekly Time Wasted per Person</div>
+      <div class="snapshot__delta snapshot__delta--warn">● Critical threshold</div>
+    </article>
+  </section>
+
+  <!-- Section 1: Communication Overlap Matrix -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Communication Overlap Matrix</h2>
+      <span class="section__badge section__badge--live">Live Data</span>
+    </header>
+
+    <div class="media-block">
+      <div class="media-block__player">
+        <svg class="media-block__svg" viewBox="0 0 640 360" fill="none">
+          <rect width="640" height="360" fill="hsl(220, 8%, 21%)"/>
+          <text x="320" y="160" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="14" font-weight="600">COMMUNICATION OVERLAP HEATMAP — Full Resolution</text>
+          <text x="320" y="185" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="12">Channel-to-Channel Frequency Correlation Analysis</text>
+          <rect x="180" y="210" width="280" height="80" rx="4" fill="hsl(220, 10%, 14%)" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <rect x="195" y="225" width="50" height="50" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="255" y="225" width="50" height="50" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="315" y="225" width="50" height="50" rx="2" fill="hsla(28, 85%, 50%, 0.4)"/>
+          <rect x="375" y="225" width="50" height="50" rx="2" fill="hsla(145, 55%, 42%, 0.25)"/>
+          <text x="220" y="298" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="9">Slack ↔ Teams</text>
+          <text x="280" y="298" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="9">Email ↔ Slack</text>
+          <text x="340" y="298" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="9">Jira ↔ Slack</text>
+          <text x="400" y="298" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="9">Zoom ↔ Email</text>
+        </svg>
+      </div>
+      <div class="media-block__caption">
+        <div class="media-block__thumb">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><path d="M8 18h20M18 8v20" stroke="hsl(220, 8%, 48%)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="media-block__text">
+          <div class="media-block__heading">Q4 Communication Overlap Across Enterprise Channels</div>
+          <div class="media-block__meta">Data source: CommsCollide Analytics · Updated Dec 12, 2024 at 14:32 UTC · Covering 247 employee profiles</div>
+          <div class="media-block__description">This visualization maps the intensity of simultaneous channel usage across the engineering org. Darker cells indicate higher collision density — instances where employees are pulled into multiple concurrent communications during the same hour-long windows. The Slack–Teams axis shows a notable cluster indicating persistent duplication.</div>
+          <div class="media-block__status media-block__status--locked">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5V3.5C4 2.67 4.67 2 5.5 2H6.5C7.33 2 8 2.67 8 3.5V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Full-resolution heatmap requires Analyst Plus tier
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Scheduled Meetings Collisions -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Scheduled Meetings Collision Report</h2>
+      <span class="section__badge section__badge--draft">Draft Preview</span>
+    </header>
+
+    <div class="table-wrap">
+      <div class="table-wrap__header">
+        <span class="table-wrap__title">Top collision pairs — next 14 days</span>
+        <span class="table-wrap__count">Showing 6 of 23 conflicts</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Employee</th>
+            <th scope="col">Meeting A</th>
+            <th scope="col">Meeting B</th>
+            <th scope="col">Overlap</th>
+            <th scope="col">Collision Severity</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="cell-name">Maya Okonkwo</td>
+            <td>Platform Sync — 10:00 AM</td>
+            <td>Sprint Retro — 10:15 AM</td>
+            <td>45 min</td>
+            <td><span class="cell-collision cell-collision--high">● High</span></td>
+            <td><span class="cell-status cell-status--blocked">Blocked</span></td>
+          </tr>
+          <tr>
+            <td class="cell-name">Dev Patel</td>
+            <td>Stakeholder Demo — 2:00 PM</td>
+            <td>Coding Review — 2:00 PM</td>
+            <td>Full overlap</td>
+            <td><span class="cell-collision cell-collision--high">● High</span></td>
+            <td><span class="cell-status cell-status--blocked">Blocked</span></td>
+          </tr>
+          <tr>
+            <td class="cell-name">Aisha Nakamura</td>
+            <td>Customer Call — 3:30 PM</td>
+            <td>Design Critique — 3:45 PM</td>
+            <td>30 min</td>
+            <td><span class="cell-collision cell-collision--med">● Medium</span></td>
+            <td><span class="cell-status cell-status--partial">Partial</span></td>
+          </tr>
+          <tr>
+            <td class="cell-name">Leo Fischer</td>
+            <td>Onboarding Panel — 9:00 AM</td>
+            <td>Incident War Room — 9:00 AM</td>
+            <td>Full overlap</td>
+            <td><span class="cell-collision cell-collision--high">● High</span></td>
+            <td><span class="cell-status cell-status--blocked">Blocked</span></td>
+          </tr>
+          <tr>
+            <td class="cell-name">Priya Sharma</td>
+            <td>All-Hands Prep — 11:30 AM</td>
+            <td>Architecture Review — 11:45 AM</td>
+            <td>25 min</td>
+            <td><span class="cell-collision cell-collision--med">● Medium</span></td>
+            <td><span class="cell-status cell-status--partial">Partial</span></td>
+          </tr>
+          <tr>
+            <td class="cell-name">Carlos Mendoza</td>
+            <td>Security Audit Debrief — 4:00 PM</td>
+            <td>Release Planning — 4:00 PM</td>
+            <td>Full overlap</td>
+            <td><span class="cell-collision cell-collision--high">● High</span></td>
+            <td><span class="cell-status cell-status--blocked">Blocked</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 3: Team Availability Heatmap -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Team Availability Heatmap</h2>
+      <span class="section__badge section__badge--live">Live Data</span>
+    </header>
+
+    <div class="media-block">
+      <div class="media-block__player">
+        <svg class="media-block__svg" viewBox="0 0 640 360" fill="none">
+          <rect width="640" height="360" fill="hsl(220, 8%, 21%)"/>
+          <text x="320" y="25" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="12" font-weight="600">AVAILABILITY GRID — Engineering Team (Dec 9–15)</text>
+          <!-- Hours X-axis labels -->
+          <text x="52" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">08</text>
+          <text x="102" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">09</text>
+          <text x="152" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">10</text>
+          <text x="202" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">11</text>
+          <text x="252" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">12</text>
+          <text x="302" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">13</text>
+          <text x="352" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">14</text>
+          <text x="402" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">15</text>
+          <text x="452" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">16</text>
+          <text x="502" y="48" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">17</text>
+          <!-- Day rows -->
+          <text x="25" y="72" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Mon</text>
+          <rect x="35" y="62" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="65" y="62" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="95" y="62" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.5)"/>
+          <rect x="125" y="62" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="155" y="62" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="185" y="62" width="30" height="20" rx="2" fill="hsla(145, 55%, 42%, 0.25)"/>
+          <rect x="215" y="62" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="245" y="62" width="30" height="20" rx="2" fill="hsla(28, 85%, 50%, 0.4)"/>
+          <rect x="275" y="62" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="305" y="62" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.5)"/>
+          <text x="25" y="105" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Tue</text>
+          <rect x="35" y="95" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="65" y="95" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.5)"/>
+          <rect x="95" y="95" width="30" height="20" rx="2" fill="hsla(0, 80%, 50%, 0.6)"/>
+          <rect x="125" y="95" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="155" y="95" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="185" y="95" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="215" y="95" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.5)"/>
+          <rect x="245" y="95" width="30" height="20" rx="2" fill="hsla(0, 80%, 50%, 0.6)"/>
+          <rect x="275" y="95" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="305" y="95" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <text x="25" y="138" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Wed</text>
+          <rect x="35" y="128" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="65" y="128" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.5)"/>
+          <rect x="95" y="128" width="30" height="20" rx="2" fill="hsla(0, 80%, 50%, 0.6)"/>
+          <rect x="125" y="128" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="155" y="128" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="185" y="128" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="215" y="128" width="30" height="20" rx="2" fill="hsla(0, 80%, 50%, 0.6)"/>
+          <rect x="245" y="128" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.5)"/>
+          <rect x="275" y="128" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="305" y="128" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <text x="25" y="171" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Thu</text>
+          <rect x="35" y="161" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="65" y="161" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="95" y="161" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="125" y="161" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.5)"/>
+          <rect x="155" y="161" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="185" y="161" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="215" y="161" width="30" height="20" rx="2" fill="hsla(0, 80%, 50%, 0.6)"/>
+          <rect x="245" y="161" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="275" y="161" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="305" y="161" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <text x="25" y="204" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Fri</text>
+          <rect x="35" y="194" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="65" y="194" width="30" height="20" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <rect x="95" y="194" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="125" y="194" width="30" height="20" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <rect x="155" y="194" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="185" y="194" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="215" y="194" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="245" y="194" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="275" y="194" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <rect x="305" y="194" width="30" height="20" rx="2" fill="hsl(220, 8%, 21%)"/>
+          <!-- Legend -->
+          <rect x="102" y="235" width="12" height="12" rx="2" fill="hsl(220, 8%, 21%)" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <text x="120" y="245" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Free</text>
+          <rect x="162" y="235" width="12" height="12" rx="2" fill="hsla(145, 55%, 42%, 0.25)"/>
+          <text x="180" y="245" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Low Collision</text>
+          <rect x="252" y="235" width="12" height="12" rx="2" fill="hsla(42, 85%, 52%, 0.35)"/>
+          <text x="270" y="245" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Medium</text>
+          <rect x="332" y="235" width="12" height="12" rx="2" fill="hsla(0, 60%, 55%, 0.45)"/>
+          <text x="350" y="245" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">High</text>
+          <rect x="412" y="235" width="12" height="12" rx="2" fill="hsla(0, 80%, 50%, 0.6)"/>
+          <text x="430" y="245" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Critical</text>
+          <!-- Lock badge -->
+          <rect x="470" y="280" width="150" height="30" rx="15" fill="hsl(220, 10%, 14%)" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <text x="545" y="300" text-anchor="middle" fill="hsl(220, 8%, 60%)" font-family="sans-serif" font-size="10" font-weight="500">🔒 Requires Analyst+</text>
+        </svg>
+      </div>
+      <div class="media-block__caption">
+        <div class="media-block__thumb">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="6" y="6" width="24" height="24" rx="2" stroke="hsl(220, 8%, 48%)" stroke-width="1.5"/><path d="M6 14h24M6 22h24M14 6v24M22 6v24" stroke="hsl(220, 8%, 48%)" stroke-width="1" opacity="0.5"/></svg>
+        </div>
+        <div class="media-block__text">
+          <div class="media-block__heading">Weekly Collision Heatmap — Monday through Friday</div>
+          <div class="media-block__meta">Engineering Division · Week of December 9–13, 2024 · 124 active profiles mapped</div>
+          <div class="media-block__description">Each row represents a weekday; columns represent hourly slots from 8 AM to 5 PM EST. Cells coloured red indicate high collision windows where two or more scheduled meetings overlap for team members. Wednesday and Tuesday afternoons show critical concentration zones.</div>
+          <div class="media-block__status media-block__status--locked">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5V3.5C4 2.67 4.67 2 5.5 2H6.5C7.33 2 8 2.67 8 3.5V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Per-team detail requires elevated clearance
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Cross-Channel Meeting Log -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Cross-Channel Meeting Log</h2>
+      <span class="section__badge section__badge--draft">Draft Preview</span>
+    </header>
+
+    <div class="media-block">
+      <div class="media-block__player">
+        <svg class="media-block__svg" viewBox="0 0 640 360" fill="none">
+          <rect width="640" height="360" fill="hsl(220, 8%, 21%)"/>
+          <text x="320" y="40" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="13" font-weight="600">CROSS-CHANNEL MEETING TIMELINE — Past 7 Days</text>
+          <line x1="60" y1="60" x2="600" y2="60" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <!-- Channel bars -->
+          <rect x="60" y="80" width="80" height="12" rx="6" fill="hsla(28, 85%, 50%, 0.5)" opacity="0.9"/>
+          <rect x="160" y="80" width="60" height="12" rx="6" fill="hsla(28, 85%, 50%, 0.5)" opacity="0.9"/>
+          <rect x="240" y="80" width="100" height="12" rx="6" fill="hsla(28, 85%, 50%, 0.5)" opacity="0.9"/>
+          <rect x="360" y="80" width="50" height="12" rx="6" fill="hsla(28, 85%, 50%, 0.5)" opacity="0.9"/>
+          <rect x="430" y="80" width="90" height="12" rx="6" fill="hsla(28, 85%, 50%, 0.5)" opacity="0.9"/>
+          <rect x="540" y="80" width="60" height="12" rx="6" fill="hsla(28, 85%, 50%, 0.5)" opacity="0.9"/>
+          <text x="55" y="91" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Slack Threads</text>
+          <rect x="60" y="110" width="120" height="12" rx="6" fill="hsla(200, 65%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="200" y="110" width="70" height="12" rx="6" fill="hsla(200, 65%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="290" y="110" width="55" height="12" rx="6" fill="hsla(200, 65%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="360" y="110" width="110" height="12" rx="6" fill="hsla(200, 65%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="490" y="110" width="80" height="12" rx="6" fill="hsla(200, 65%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="590" y="110" width="20" height="12" rx="6" fill="hsla(200, 65%, 52%, 0.4)" opacity="0.85"/>
+          <text x="55" y="121" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Zoom Calls</text>
+          <rect x="60" y="140" width="95" height="12" rx="6" fill="hsla(145, 55%, 42%, 0.35)" opacity="0.85"/>
+          <rect x="175" y="140" width="80" height="12" rx="6" fill="hsla(145, 55%, 42%, 0.35)" opacity="0.85"/>
+          <rect x="275" y="140" width="40" height="12" rx="6" fill="hsla(145, 55%, 42%, 0.35)" opacity="0.85"/>
+          <rect x="335" y="140" width="130" height="12" rx="6" fill="hsla(145, 55%, 42%, 0.35)" opacity="0.85"/>
+          <rect x="485" y="140" width="55" height="12" rx="6" fill="hsla(145, 55%, 42%, 0.35)" opacity="0.85"/>
+          <text x="55" y="151" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Google Meet</text>
+          <rect x="60" y="170" width="60" height="12" rx="6" fill="hsla(42, 85%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="140" y="170" width="110" height="12" rx="6" fill="hsla(42, 85%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="270" y="170" width="60" height="12" rx="6" fill="hsla(42, 85%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="350" y="170" width="90" height="12" rx="6" fill="hsla(42, 85%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="460" y="170" width="70" height="12" rx="6" fill="hsla(42, 85%, 52%, 0.4)" opacity="0.85"/>
+          <rect x="550" y="170" width="50" height="12" rx="6" fill="hsla(42, 85%, 52%, 0.4)" opacity="0.85"/>
+          <text x="55" y="181" text-anchor="end" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Microsoft Teams</text>
+          <!-- Labels under bars -->
+          <text x="100" y="210" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">Mon</text>
+          <text x="200" y="210" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">Tue</text>
+          <text x="300" y="210" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">Wed</text>
+          <text x="400" y="210" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">Thu</text>
+          <text x="500" y="210" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">Fri</text>
+          <text x="600" y="210" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="8">Sat</text>
+          <!-- Annotation -->
+          <rect x="100" y="240" width="440" height="40" rx="4" fill="hsl(220, 10%, 14%)" stroke="hsl(28, 85%, 50%, 0.3)" stroke-width="1"/>
+          <text x="320" y="256" text-anchor="middle" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">Wednesday 2–4 PM: Peak collision window — 89 simultaneous cross-channel events across the org</text>
+          <text x="320" y="272" text-anchor="middle" fill="hsl(28, 85%, 58%)" font-family="sans-serif" font-size="9" font-weight="600">⚠ 47% of these involve the same participants in ≥2 channels</text>
+        </svg>
+      </div>
+      <div class="media-block__caption">
+        <div class="media-block__thumb">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><path d="M4 28 L12 16 L20 22 L32 8" stroke="hsl(220, 8%, 48%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="24,8 32,8 32,16" stroke="hsl(220, 8%, 48%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="media-block__text">
+          <div class="media-block__heading">Gantt-Style Cross-Channel Event Timeline</div>
+          <div class="media-block__meta">Period: Dec 6–12, 2024 · Total events tracked: 1,847 across 4 channels · Sources: Slack API, Zoom Events, Google Workspace, O365 Graph</div>
+          <div class="media-block__description">Horizontal bars represent continuous blocks of synchronous communication activity for each channel. The timeline reveals significant clustering on Wednesdays, particularly in the 2–4 PM EST window where 89 simultaneous events were logged. An estimated 47% of these involve the same participants split across two or more channels.</div>
+          <div class="media-block__status media-block__status--locked">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 5V3.5C4 2.67 4.67 2 5.5 2H6.5C7.33 2 8 2.67 8 3.5V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Interactive export requires Analyst+ access
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Tabbed Detail View -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Detailed Collision Breakdown</h2>
+      <span class="section__badge section__badge--live">Live Data</span>
+    </header>
+
+    <div role="tablist" class="tabs" aria-label="Breakdown categories">
+      <button class="tabs__tab" role="tab" aria-selected="true" aria-controls="panel-collisions" id="tab-collisions">Collisions by Channel</button>
+      <button class="tabs__tab" role="tab" aria-selected="false" aria-controls="panel-teams" id="tab-teams">By Team</button>
+      <button class="tabs__tab" role="tab" aria-selected="false" aria-controls="panel-patterns" id="tab-patterns">Patterns &amp; Trends</button>
+      <button class="tabs__tab" role="tab" aria-selected="false" aria-controls="panel-individuals" id="tab-individuals">Individual Hotspots</button>
+    </div>
+
+    <div class="tab-panel" role="tabpanel" id="panel-collisions" aria-labelledby="tab-collisions" aria-hidden="false">
+      <div class="three-col">
+        <div class="media-block">
+          <div class="media-block__player" style="aspect-ratio: 1/1;">
+            <svg class="media-block__svg" viewBox="0 0 280 280" fill="none">
+              <circle cx="140" cy="140" r="100" stroke="hsl(220, 8%, 26%)" stroke-width="1" fill="none"/>
+              <circle cx="140" cy="140" r="70" stroke="hsl(220, 8%, 26%)" stroke-width="1" fill="none"/>
+              <circle cx="140" cy="140" r="40" stroke="hsl(220, 8%, 26%)" stroke-width="1" fill="none"/>
+              <text x="140" y="145" text-anchor="middle" fill="hsl(28, 85%, 58%)" font-family="sans-serif" font-size="28" font-weight="bold">47%</text>
+              <text x="140" y="165" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="10">collision rate</text>
+              <text x="140" y="255" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">Overall weekly average</text>
+            </svg>
+          </div>
+          <div class="media-block__caption" style="padding: var(--sp-sm) var(--sp-md);">
+            <div class="media-block__text">
+              <div class="media-block__heading" style="font-size: var(--fs-sm);">Aggregate Collision Rate</div>
+              <div class="media-block__description" style="font-size: var(--fs-xs);">47% of time slots contain overlapping commitments</div>
+            </div>
+          </div>
+        </div>
+        <div class="media-block">
+          <div class="media-block__player" style="aspect-ratio: 1/1;">
+            <svg class="media-block__svg" viewBox="0 0 280 280" fill="none">
+              <text x="140" y="40" text-anchor="middle" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="11" font-weight="600">BY CHANNEL PAIR</text>
+              <rect x="50" y="65" width="180" height="16" rx="4" fill="hsla(0, 60%, 55%, 0.45)"/>
+              <text x="50" y="58" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">Slack ↔ Teams</text>
+              <text x="235" y="58" fill="hsl(0, 60%, 55%)" font-family="monospace" font-size="10">38%</text>
+              <rect x="50" y="105" width="150" height="16" rx="4" fill="hsla(42, 85%, 52%, 0.35)"/>
+              <text x="50" y="98" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">Email ↔ Slack</text>
+              <text x="235" y="98" fill="hsl(42, 85%, 52%)" font-family="monospace" font-size="10">28%</text>
+              <rect x="50" y="145" width="120" height="16" rx="4" fill="hsla(28, 85%, 50%, 0.4)"/>
+              <text x="50" y="138" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">Jira ↔ Slack</text>
+              <text x="235" y="138" fill="hsl(28, 85%, 58%)" font-family="monospace" font-size="10">22%</text>
+              <rect x="50" y="185" width="90" height="16" rx="4" fill="hsla(145, 55%, 42%, 0.25)"/>
+              <text x="50" y="178" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">Zoom ↔ Email</text>
+              <text x="235" y="178" fill="hsl(145, 55%, 42%)" font-family="monospace" font-size="10">16%</text>
+              <rect x="50" y="225" width="60" height="16" rx="4" fill="hsl(220, 8%, 21%)"/>
+              <text x="50" y="218" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">Other</text>
+              <text x="235" y="218" fill="hsl(220, 6%, 48%)" font-family="monospace" font-size="10">11%</text>
+            </svg>
+          </div>
+          <div class="media-block__caption" style="padding: var(--sp-sm) var(--sp-md);">
+            <div class="media-block__text">
+              <div class="media-block__heading" style="font-size: var(--fs-sm);">Channel Pair Distribution</div>
+              <div class="media-block__description" style="font-size: var(--fs-xs);">Slack–Teams dominates collision volume</div>
+            </div>
+          </div>
+        </div>
+        <div class="media-block">
+          <div class="media-block__player" style="aspect-ratio: 1/1;">
+            <svg class="media-block__svg" viewBox="0 0 280 280" fill="none">
+              <text x="140" y="40" text-anchor="middle" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="11" font-weight="600">COLLISION TYPES</text>
+              <circle cx="140" cy="150" r="70" fill="none" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+              <path d="M140 80 A70 70 0 0 1 210 150 L140 150 Z" fill="hsla(0, 60%, 55%, 0.45)"/>
+              <path d="M210 150 A70 70 0 0 1 175 212 L140 150 Z" fill="hsla(42, 85%, 52%, 0.35)"/>
+              <path d="M175 212 A70 70 0 0 1 105 212 L140 150 Z" fill="hsla(28, 85%, 50%, 0.4)"/>
+              <path d="M105 212 A70 70 0 0 1 70 150 L140 150 Z" fill="hsl(220, 8%, 21%)" stroke="hsl(220, 8%, 26%)" stroke-width="0.5"/>
+              <path d="M70 150 A70 70 0 0 1 140 80 L140 150 Z" fill="hsla(145, 55%, 42%, 0.25)"/>
+              <text x="140" y="155" text-anchor="middle" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="11" font-weight="600">1,847</text>
+              <text x="140" y="170" text-anchor="middle" fill="hsl(220, 6%, 48%)" font-family="sans-serif" font-size="9">total events</text>
+            </svg>
+          </div>
+          <div class="media-block__caption" style="padding: var(--sp-sm) var(--sp-md);">
+            <div class="media-block__text">
+              <div class="media-block__heading" style="font-size: var(--fs-sm);">Event Type Segmentation</div>
+              <div class="media-block__description" style="font-size: var(--fs-xs);">Scheduled meetings, async huddles, standups &amp; ad-hoc syncs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" role="tabpanel" id="panel-teams" aria-labelledby="tab-teams" aria-hidden="true">
+      <div class="lock-overlay">
+        <svg class="lock-overlay__icon" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="22" width="32" height="22" rx="4" stroke="currentColor" stroke-width="2"/>
+          <path d="M16 22V14C16 10.69 18.69 8 22 8H26C29.31 8 32 10.69 32 14V22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="24" cy="34" r="3" fill="currentColor"/>
+          <path d="M24 37V40" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h3 class="lock-overlay__heading">Team-Level Analysis Locked</h3>
+        <p class="lock-overlay__text">Per-team collision breakdown, including Sprint Teams, Feature Squads, and Platform Groups, requires <strong>Analyst Plus</strong> clearance. Contact your Org Admin to request access.</p>
+      </div>
+    </div>
+
+    <div class="tab-panel" role="tabpanel" id="panel-patterns" aria-labelledby="tab-patterns" aria-hidden="true">
+      <div class="lock-overlay">
+        <svg class="lock-overlay__icon" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="22" width="32" height="22" rx="4" stroke="currentColor" stroke-width="2"/>
+          <path d="M16 22V14C16 10.69 18.69 8 22 8H26C29.31 8 32 10.69 32 14V22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="24" cy="34" r="3" fill="currentColor"/>
+          <path d="M24 37V40" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h3 class="lock-overlay__heading">Pattern Mining Locked</h3>
+        <p class="lock-overlay__text">Longitudinal trend analysis, day-of-week pattern detection, and seasonal collision forecasting require <strong>Analyst Plus</strong> tier activation.</p>
+      </div>
+    </div>
+
+    <div class="tab-panel" role="tabpanel" id="panel-individuals" aria-labelledby="tab-individuals" aria-hidden="true">
+      <div class="lock-overlay">
+        <svg class="lock-overlay__icon" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="22" width="32" height="22" rx="4" stroke="currentColor" stroke-width="2"/>
+          <path d="M16 22V14C16 10.69 18.69 8 22 8H26C29.31 8 32 10.69 32 14V22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="24" cy="34" r="3" fill="currentColor"/>
+          <path d="M24 37V40" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h3 class="lock-overlay__heading">Individual Profiles Locked</h3>
+        <p class="lock-overlay__text">Granular individual workload hotspots, personal collision histories, and recommended rescheduling actions require <strong>Analyst Plus</strong> tier activation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Impact Assessment Timeline -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Impact Assessment &amp; Escalation Log</h2>
+      <span class="section__badge section__badge--draft">Draft Preview</span>
+    </header>
+
+    <div class="two-col">
+      <div class="media-block">
+        <div class="media-block__caption">
+          <div class="media-block__thumb">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="12" stroke="hsl(220, 8%, 48%)" stroke-width="1.5"/><path d="M18 10v8l5 3" stroke="hsl(220, 8%, 48%)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="media-block__text">
+            <div class="media-block__heading">Escalation Timeline — Last 72 Hours</div>
+            <div class="media-block__meta">Severity-based chronology of collision escalations</div>
+            <div class="timeline mt-md mb-lg" aria-label="Escalation event timeline">
+              <div class="timeline__item">
+                <div class="timeline__dot" style="border-color: var(--clr-danger);"></div>
+                <div class="timeline__time">Dec 12, 14:32 EST</div>
+                <div class="timeline__title">P1 Escalation — Deployment Pipeline Blocked</div>
+                <div class="timeline__desc">Two senior engineers duplicated across incident response call and product demo. Release delayed 45 min.</div>
+              </div>
+              <div class="timeline__item">
+                <div class="timeline__dot" style="border-color: var(--clr-warning);"></div>
+                <div class="timeline__time">Dec 12, 10:15 EST</div>
+                <div class="timeline__title">P2 Warning — Customer-facing Delay</div>
+                <div class="timeline__desc">Pre-sales engineer missed client follow-up slot due to internal sprint planning collision.</div>
+              </div>
+              <div class="timeline__item">
+                <div class="timeline__dot"></div>
+                <div class="timeline__time">Dec 11, 16:48 EST</div>
+                <div class="timeline__title">Automated Alert — Recurring Pattern Detected</div>
+                <div class="timeline__desc">System flagged Wednesday 2–4 PM as chronic collision zone for Platform team (8 consecutive weeks).</div>
+              </div>
+              <div class="timeline__item">
+                <div class="timeline__dot"></div>
+                <div class="timeline__time">Dec 10, 09:00 EST</div>
+                <div class="timeline__title">Auto-Mitigation Attempt — Partial Success</div>
+                <div class="timeline__desc">Scheduling engine auto-moved 3 low-priority reviews. 2 P1 events still collided.</div>
+              </div>
+              <div class="timeline__item">
+                <div class="timeline__dot"></div>
+                <div class="timeline__time">Dec 9, 11:30 EST</div>
+                <div class="timeline__title">Policy Reminder Sent</div>
+                <div class="timeline__desc">Org-wide notice distributed about async-first guidelines during peak collision hours.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="media-block">
+        <div class="media-block__caption">
+          <div class="media-block__thumb">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><path d="M18 4v28M4 18h28" stroke="hsl(220, 8%, 48%)" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="18" r="6" stroke="hsl(220, 8%, 48%)" stroke-width="1.5"/></svg>
+          </div>
+          <div class="media-block__text">
+            <div class="media-block__heading">Estimated Revenue &amp; Productivity Impact</div>
+            <div class="media-block__meta">Projected cost of communication collisions this quarter</div>
+
+            <div style="margin-top: var(--sp-lg);">
+              <div class="flex-between mb-lg" style="gap: var(--sp-lg);">
+                <span style="font-size: var(--fs-sm); color: var(--clr-text-secondary);">Productive hours lost/week</span>
+                <span style="font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--clr-danger);">864 hrs</span>
+              </div>
+              <div class="flex-between mb-lg" style="gap: var(--sp-lg);">
+                <span style="font-size: var(--fs-sm); color: var(--clr-text-secondary);">Est. quarterly revenue impact</span>
+                <span style="font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--clr-danger);">$340K – $480K</span>
+              </div>
+              <div class="flex-between mb-lg" style="gap: var(--sp-lg);">
+                <span style="font-size: var(--fs-sm); color: var(--clr-text-secondary);">Avg meeting rework cycles</span>
+                <span style="font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--clr-warning);">1.8 per collision</span>
+              </div>
+              <div class="flex-between mb-lg" style="gap: var(--sp-lg);">
+                <span style="font-size: var(--fs-sm); color: var(--clr-text-secondary);">Employee NPS hit (est.)</span>
+                <span style="font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--clr-warning);">−12 pts</span>
+              </div>
+              <div class="flex-between mb-lg" style="gap: var(--sp-lg);">
+                <span style="font-size: var(--fs-sm); color: var(--clr-text-secondary);">Optimization ROI (projected)</span>
+                <span style="font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--clr-success);">14.2×</span>
+              </div>
+              <div style="margin-top: var(--sp-lg); padding: var(--sp-md); background: var(--clr-bg-tertiary); border-radius: var(--radius-md); border-left: 3px solid var(--clr-accent-primary);">
+                <div style="font-size: var(--fs-xs); color: var(--clr-text-muted); margin-bottom: var(--sp-xxs);">BOTTOM LINE FOR EXECUTIVES</div>
+                <div style="font-size: var(--fs-sm); color: var(--clr-text-primary); font-weight: var(--fw-semibold);">Reducing collision rate from 47% to 30% would recover ~$180K/quarter and free approximately 432 productive engineering hours per week organization-wide.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Channel Configuration Status -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Channel Configuration Status</h2>
+      <span class="section__badge section__badge--live">Live Data</span>
+    </header>
+
+    <div class="media-block">
+      <div class="media-block__player">
+        <svg class="media-block__svg" viewBox="0 0 640 360" fill="none">
+          <rect width="640" height="360" fill="hsl(220, 8%, 21%)"/>
+          <text x="320" y="35" text-anchor="middle" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="13" font-weight="600">INTEGRATED COMMUNICATION CHANNELS</text>
+          <!-- Card rows -->
+          <rect x="40" y="55" width="270" height="60" rx="8" fill="hsl(220, 10%, 14%)" stroke="hsl(28, 85%, 50%, 0.4)" stroke-width="1.5"/>
+          <rect x="55" y="68" width="8" height="34" rx="4" fill="hsl(28, 85%, 58%)"/>
+          <text x="75" y="82" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="13" font-weight="bold">Slack Enterprise</text>
+          <text x="75" y="98" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">1,247 users · API v2 · Connected</text>
+          <rect x="265" y="70" width="30" height="20" rx="10" fill="hsla(145, 55%, 42%, 0.2)"/>
+          <text x="280" y="84" text-anchor="middle" fill="hsl(145, 55%, 42%)" font-family="sans-serif" font-size="9" font-weight="600">OK</text>
+          
+          <rect x="330" y="55" width="270" height="60" rx="8" fill="hsl(220, 10%, 14%)" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <rect x="345" y="68" width="8" height="34" rx="4" fill="hsl(200, 65%, 52%)"/>
+          <text x="365" y="82" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="13" font-weight="bold">Microsoft Teams</text>
+          <text x="365" y="98" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">1,890 users · Graph API · Connected</text>
+          <rect x="555" y="70" width="30" height="20" rx="10" fill="hsla(145, 55%, 42%, 0.2)"/>
+          <text x="570" y="84" text-anchor="middle" fill="hsl(145, 55%, 42%)" font-family="sans-serif" font-size="9" font-weight="600">OK</text>
+
+          <rect x="40" y="125" width="270" height="60" rx="8" fill="hsl(220, 10%, 14%)" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <rect x="55" y="138" width="8" height="34" rx="4" fill="hsl(145, 55%, 42%)"/>
+          <text x="75" y="152" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="13" font-weight="bold">Zoom Events</text>
+          <text x="75" y="168" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">2,104 users · REST API · Connected</text>
+          <rect x="265" y="140" width="30" height="20" rx="10" fill="hsla(145, 55%, 42%, 0.2)"/>
+          <text x="280" y="154" text-anchor="middle" fill="hsl(145, 55%, 42%)" font-family="sans-serif" font-size="9" font-weight="600">OK</text>
+
+          <rect x="330" y="125" width="270" height="60" rx="8" fill="hsl(220, 10%, 14%)" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <rect x="345" y="138" width="8" height="34" rx="4" fill="hsl(220, 6%, 48%)"/>
+          <text x="365" y="152" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="13" font-weight="bold">Google Calendar</text>
+          <text x="365" y="168" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">1,950 users · OAuth · Connected</text>
+          <rect x="555" y="140" width="30" height="20" rx="10" fill="hsla(42, 85%, 52%, 0.2)"/>
+          <text x="570" y="154" text-anchor="middle" fill="hsl(42, 85%, 52%)" font-family="sans-serif" font-size="9" font-weight="600">SYNC</text>
+
+          <rect x="40" y="195" width="270" height="60" rx="8" fill="hsl(220, 10%, 14%)" stroke="hsl(200, 65%, 52%, 0.4)" stroke-width="1.5"/>
+          <rect x="55" y="208" width="8" height="34" rx="4" fill="hsl(200, 65%, 52%)"/>
+          <text x="75" y="222" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="13" font-weight="bold">Intercom Support</text>
+          <text x="75" y="238" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">342 users · Read-only mode · Limited</text>
+          <rect x="265" y="210" width="30" height="20" rx="10" fill="hsla(200, 65%, 52%, 0.2)"/>
+          <text x="280" y="224" text-anchor="middle" fill="hsl(200, 65%, 52%)" font-family="sans-serif" font-size="9" font-weight="600">READ</text>
+
+          <rect x="330" y="195" width="270" height="60" rx="8" fill="hsl(220, 10%, 14%)" stroke="hsl(200, 65%, 52%, 0.3)" stroke-width="1"/>
+          <rect x="345" y="208" width="8" height="34" rx="4" fill="hsl(200, 65%, 52%)"/>
+          <text x="365" y="222" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="13" font-weight="bold">Jira Service Desk</text>
+          <text x="365" y="238" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="10">580 users · Webhook · Connected</text>
+          <rect x="555" y="210" width="30" height="20" rx="10" fill="hsla(42, 85%, 52%, 0.2)"/>
+          <text x="570" y="224" text-anchor="middle" fill="hsl(42, 85%, 52%)" font-family="sans-serif" font-size="9" font-weight="600">PING</text>
+
+          <!-- Summary bar -->
+          <rect x="40" y="275" width="560" height="45" rx="8" fill="hsl(220, 10%, 14%)" stroke="hsl(220, 8%, 26%)" stroke-width="1"/>
+          <text x="60" y="293" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="11">Channels Connected:</text>
+          <text x="60" y="310" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="11" font-weight="600">6 / 6 integrated</text>
+          <text x="300" y="293" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="11">Total Profiles Indexed:</text>
+          <text x="300" y="310" fill="hsl(220, 6%, 92%)" font-family="sans-serif" font-size="11" font-weight="600">7,063 employees</text>
+          <text x="540" y="301" text-anchor="end" fill="hsl(220, 6%, 68%)" font-family="sans-serif" font-size="11">Coverage:</text>
+          <text x="540" y="318" text-anchor="end" fill="hsl(145, 55%, 42%)" font-family="sans-serif" font-size="11" font-weight="600">94.2%</text>
+        </svg>
+      </div>
+      <div class="media-block__caption">
+        <div class="media-block__thumb">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="4" y="4" width="28" height="28" rx="4" stroke="hsl(220, 8%, 48%)" stroke-width="1.5"/><path d="M4 12h28M4 20h28M12 4v28M20 4v28" stroke="hsl(220, 8%, 48%)" stroke-width="1" opacity="0.5"/></svg>
+        </div>
+        <div class="media-block__text">
+          <div class="media-block__heading">Enterprise Integration Inventory</div>
+          <div class="media-block__meta">Last synced: December 12, 2024 at 14:30 UTC · Refresh interval: every 15 minutes</div>
+          <div class="media-block__description">All six communication channels feeding into the collision analysis pipeline are operational. Intercom Support and Jira Service Desk run in read-only mode, limiting some scheduling visibility. Coverage stands at 94.2% of total employee headcount (7,063 indexed). Two additional channels (Confluence Calendar and Asana Boards) are pending API credential renewal.</div>
+          <div class="media-block__status media-block__status--partial">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M6 3v3l2 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Intercom read-only limitation noted
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Optimization Readiness (Locked) -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Optimization Engine — Auto-Reschedule Readiness</h2>
+      <span class="section__badge section__badge--locked">Locked</span>
+    </header>
+
+    <div class="lock-overlay" style="min-height: 300px;">
+      <svg class="lock-overlay__icon" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4L28 12H36L30 18L32 26L24 22L16 26L18 18L12 12H20L24 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <h3 class="lock-overlay__heading">Optimization Engine Not Available</h3>
+      <p class="lock-overlay__text">Auto-rescheduling recommendations, AI-powered conflict resolution, and predictive collision avoidance are features of our <strong>Analyst Plus</strong> and <strong>Enterprise</strong> tiers. This step in the wizard remains locked until upgraded.</p>
+    </div>
+  </section>
+
+  <!-- Section 9: Export & Share Options (Locked) -->
+  <section class="section">
+    <header class="section__header">
+      <h2 class="section__title">Report Export &amp; Stakeholder Sharing</h2>
+      <span class="section__badge section__badge--locked">Locked</span>
+    </header>
+
+    <div class="two-col">
+      <div class="lock-overlay" style="min-height: 180px;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: var(--sp-sm);">
+          <svg class="lock-overlay__icon" style="width: var(--sp-2xl); height: var(--sp-2xl);" viewBox="0 0 48 48" fill="none">
+            <rect x="10" y="6" width="28" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M18 38h12M24 34v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M18 6V4M24 6V4M30 6V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <div style="font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--clr-text-primary);">PDF Executive Brief</div>
+          <div style="font-size: var(--fs-xs); color: var(--clr-text-secondary); max-width: 20rem; text-align: center;">Formatted PDF report with charts, metrics, and executive summary ready for board distribution</div>
+        </div>
+      </div>
+      <div class="lock-overlay" style="min-height: 180px;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: var(--sp-sm);">
+          <svg class="lock-overlay__icon" style="width: var(--sp-2xl); height: var(--sp-2xl);" viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="10" width="32" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 18h32M16 10v28" stroke="currentColor" stroke-width="2"/>
+            <circle cx="24" cy="28" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M24 25v6M21 28h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <div style="font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--clr-text-primary);">Slide Deck Template</div>
+          <div style="font-size: var(--fs-xs); color: var(--clr-text-secondary); max-width: 20rem; text-align: center;">PowerPoint-compatible deck with pre-built slides for stakeholder presentations</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ════════ FOOTER ════════ -->
+<footer class="footer">
+  <div style="display: flex; align-items: center; justify-content: center; gap: var(--sp-sm); margin-bottom: var(--sp-sm);">
+    <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+      <rect x="2" y="2" width="28" height="28" rx="8" fill="hsl(28, 85%, 58%)" opacity="0.15"/>
+      <path d="M8 20 L16 8 L24 20 Z" stroke="hsl(28, 85%, 58%)" stroke-width="1.5" fill="none"/>
+      <circle cx="16" cy="18" r="3" fill="hsl(28, 85%, 58%)"/>
+    </svg>
+    <span style="color: var(--clr-text-secondary); font-weight: var(--fw-medium);">CommsCollide</span>
+  </div>
+  <p>© 2024 CommsCollide, Inc. · Built for engineering organizations that hate wasted time.</p>
+  <p style="margin-top: var(--sp-xs);">v3.8.1 · Build 2024121214 · Privacy Policy · Terms of Service</p>
+</footer>
+
+<!-- ════════ MODAL DIALOG ════════ -->
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc" id="accessModal">
+  <div class="modal">
+    <div class="modal__inner">
+      <div class="modal__icon-row">
+        <svg class="modal__lock-icon" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="24" width="32" height="22" rx="5" stroke="currentColor" stroke-width="2.5"/>
+          <path d="M16 24V17C16 12.03 20.03 8 25 8H23C27.97 8 32 12.03 32 17V24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="24" cy="36" r="3.5" fill="currentColor"/>
+          <path d="M24 39.5V42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 class="modal__title" id="modal-title">Upgrade Required</h2>
+      <p class="modal__subtitle" id="modal-desc">You're viewing the <strong>Collision Map</strong> workspace in preview mode. Full access to collision analysis, optimization recommendations, and report exports requires an <strong>Analyst Plus</strong> subscription or above.</p>
+
+      <ul class="modal__plan-list" aria-label="Included in Analyst Plus tier">
+        <li class="modal__plan-item">
+          <svg class="modal__check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Real-time collision detection across all 6 channels
+        </li>
+        <li class="modal__plan-item">
+          <svg class="modal__check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          AI-powered auto-rescheduling with priority scoring
+        </li>
+        <li class="modal__plan-item">
+          <svg class="modal__check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Predictive collision forecasts and trend reports
+        </li>
+        <li class="modal__plan-item">
+          <svg class="modal__check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          PDF briefs, slide decks, and CSV data exports
+        </li>
+        <li class="modal__plan-item">
+          <svg class="modal__check" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Per-team and individual hotspot granular views
+        </li>
+      </ul>
+
+      <div class="modal__actions">
+        <button class="modal__btn" id="closeModalBtn">Maybe Later</button>
+        <button class="modal__btn modal__btn--primary" onclick="alert('Redirecting to checkout...')">Upgrade Now — $49/user/mo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Tab widget logic
+  const tabs = document.querySelectorAll('.tabs__tab');
+  const panels = document.querySelectorAll('.tab-panel');
+
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      // Deselect all
+      tabs.forEach(function(t) {
+        t.setAttribute('aria-selected', 'false');
+      });
+      panels.forEach(function(p) {
+        p.setAttribute('aria-hidden', 'true');
+      });
+
+      // Select clicked
+      tab.setAttribute('aria-selected', 'true');
+      var panelId = tab.getAttribute('aria-controls');
+      var panel = document.getElementById(panelId);
+      if (panel) {
+        panel.setAttribute('aria-hidden', 'false');
+      }
+
+      // Focus management
+      tab.focus();
+    });
+
+    // Keyboard navigation
+    tab.addEventListener('keydown', function(e) {
+      var tabArray = Array.from(tabs);
+      var currentIndex = tabArray.indexOf(tab);
+      var newIndex;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        newIndex = (currentIndex + 1) % tabArray.length;
+        tabArray[newIndex].focus();
+        tabArray[newIndex].click();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        newIndex = (currentIndex - 1 + tabArray.length) % tabArray.length;
+        tabArray[newIndex].focus();
+        tabArray[newIndex].click();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        tabArray[0].focus();
+        tabArray[0].click();
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        tabArray[tabArray.length - 1].focus();
+        tabArray[tabArray.length - 1].click();
+      }
+    });
+  });
+
+  // Modal close button
+  var closeBtn = document.getElementById('closeModalBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      var modal = document.getElementById('accessModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+
+  // Open modal from header CTA
+  var openBtn = document.getElementById('openModalBtn');
+  if (openBtn) {
+    openBtn.addEventListener('click', function() {
+      var modal = document.getElementById('accessModal');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+    });
+  }
+
+  // Close modal on backdrop click
+  var backdrop = document.querySelector('.modal-backdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === backdrop) {
+        backdrop.style.display = 'none';
+      }
+    });
+  }
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('accessModal');
+      if (modal && modal.style.display !== 'none') {
+        modal.style.display = 'none';
+      }
+    }
+  });
+
+  // Trap focus inside modal
+  var modalEl = document.querySelector('.modal');
+  if (modalEl) {
+    modalEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        var focusable = modalEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        var firstFocusable = focusable[0];
+        var lastFocusable = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstFocusable) {
+            e.preventDefault();
+            lastFocusable.focus();
+          }
+        } else {
+          if (document.activeElement === lastFocusable) {
+            e.preventDefault();
+            firstFocusable.focus();
+          }
+        }
+      }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

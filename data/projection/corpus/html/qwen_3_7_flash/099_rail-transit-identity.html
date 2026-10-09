@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TransitIdentity — Smart Card Registry</title>
+<style>
+:root {
+  --clr-bg-primary: #0d0d0f;
+  --clr-bg-secondary: #16161a;
+  --clr-bg-tertiary: #1e1e24;
+  --clr-bg-card: #222229;
+  --clr-bg-hover: #2a2a32;
+  --clr-bg-selected: #1a3a5c;
+  --clr-bg-accent: #0f5132;
+  --clr-surface-overlay: #000000cc;
+  --clr-text-primary: #e8e8ec;
+  --clr-text-secondary: #9b9ba8;
+  --clr-text-muted: #6b6b7a;
+  --clr-text-inverse: #ffffff;
+  --clr-accent-cyan: #4fc3f7;
+  --clr-accent-teal: #26a69a;
+  --clr-accent-blue: #5c6bc0;
+  --clr-accent-orange: #ff8a65;
+  --clr-accent-red: #ef5350;
+  --clr-accent-green: #66bb6a;
+  --clr-accent-yellow: #ffd54f;
+  --clr-border-subtle: #2e2e3a;
+  --clr-border-medium: #3e3e4e;
+  --clr-border-strong: #555568;
+  --clr-chart-1: #4fc3f7;
+  --clr-chart-2: #26a69a;
+  --clr-chart-3: #5c6bc0;
+  --clr-chart-4: #ff8a65;
+  --clr-chart-5: #66bb6a;
+  --clr-chart-6: #ab47bc;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 17px;
+  --font-size-lg: 21px;
+  --font-size-xl: 28px;
+  --font-size-2xl: 36px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 18px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 42px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  --shadow-elevation-1: 0 1px 3px #00000066, 0 1px 2px #00000044;
+  --shadow-elevation-2: 0 4px 12px #00000066, 0 2px 4px #00000044;
+  --shadow-elevation-3: 0 8px 24px #00000088, 0 4px 8px #00000044;
+  --shadow-glow-cyan: 0 0 12px #4fc3f744;
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --rail-width: 56px;
+  --topbar-height: 48px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: var(--font-size-base); }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--clr-bg-primary);
+  color: var(--clr-text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ── LAYOUT SHELL ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--rail-width) 1fr;
+  grid-template-rows: var(--topbar-height) 1fr;
+  grid-template-areas:
+    "rail topbar"
+    "rail main";
+  min-height: 100vh;
+}
+
+.rail-nav {
+  grid-area: rail;
+  background: var(--clr-bg-secondary);
+  border-right: 1px solid var(--clr-border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--space-md);
+  z-index: 10;
+}
+
+.topbar {
+  grid-area: topbar;
+  background: var(--clr-bg-secondary);
+  border-bottom: 1px solid var(--clr-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-xl);
+  z-index: 5;
+}
+
+.main-content {
+  grid-area: main;
+  overflow-y: auto;
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+}
+
+/* ── RAIL NAV ITEMS ── */
+.rail-logo {
+  width: var(--space-2xl);
+  height: var(--space-2xl);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rail-logo svg { width: 28px; height: 28px; }
+
+.rail-links { display: flex; flex-direction: column; gap: var(--space-xs); flex: 1; }
+
+.rail-link {
+  width: var(--space-2xl);
+  height: var(--space-2xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--clr-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.rail-link:hover, .rail-link.active {
+  background: var(--clr-bg-hover);
+  color: var(--clr-text-primary);
+}
+
+.rail-link.active::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--clr-accent-cyan);
+  border-radius: var(--radius-full);
+}
+
+.rail-link svg { width: 20px; height: 20px; }
+
+.rail-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--clr-accent-red);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--clr-bg-secondary);
+}
+
+.rail-spacer { flex: 1; }
+
+.rail-user {
+  width: var(--space-2xl);
+  height: var(--space-2xl);
+  border-radius: var(--radius-full);
+  background: var(--clr-bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--clr-accent-cyan);
+  cursor: pointer;
+}
+
+/* ── TOPBAR ── */
+.topbar-left { display: flex; align-items: center; gap: var(--space-lg); }
+
+.topbar-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.topbar-breadcrumb {
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.topbar-breadcrumb span { color: var(--clr-text-secondary); }
+
+.topbar-right { display: flex; align-items: center; gap: var(--space-md); }
+
+.topbar-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--clr-accent-green);
+  background: var(--clr-bg-accent);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
+}
+
+.topbar-status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--clr-accent-green);
+  border-radius: var(--radius-full);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.topbar-time {
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+}
+
+/* ── ANNOUNCEMENT BANNER ── */
+.announcement-banner {
+  background: linear-gradient(135deg, #1a2744 0%, #0f1d33 100%);
+  border: 1px solid var(--clr-border-medium);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl) var(--space-2xl);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.announcement-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--clr-accent-cyan);
+}
+
+.announcement-icon {
+  width: var(--space-2xl);
+  height: var(--space-2xl);
+  background: var(--clr-accent-cyan);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.announcement-icon svg { width: 20px; height: 20px; color: var(--clr-bg-primary); }
+
+.announcement-body { flex: 1; }
+
+.announcement-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--clr-accent-cyan);
+  margin-bottom: var(--space-xs);
+}
+
+.announcement-heading {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-sm);
+  line-height: 1.3;
+}
+
+.announcement-text {
+  font-size: var(--font-size-sm);
+  color: var(--clr-text-secondary);
+  line-height: 1.6;
+  max-width: 680px;
+}
+
+.announcement-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  margin-top: var(--space-md);
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+}
+
+.announcement-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.announcement-ref {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+}
+
+.btn {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--clr-accent-cyan);
+  color: var(--clr-bg-primary);
+}
+
+.btn-primary:hover { background: #6dd0f9; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--clr-text-secondary);
+  border: 1px solid var(--clr-border-medium);
+}
+
+.btn-outline:hover { color: var(--clr-text-primary); border-color: var(--clr-border-strong); }
+
+.btn-danger {
+  background: var(--clr-accent-red);
+  color: var(--clr-text-inverse);
+}
+
+.btn-danger:hover { background: #f47472; }
+
+.btn-sm { font-size: var(--font-size-xs); padding: var(--space-xs) var(--space-md); }
+
+/* ── STAT CARDS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+
+.stat-card {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full);
+  opacity: 0.06;
+}
+
+.stat-card:nth-child(1)::after { background: var(--clr-chart-1); }
+.stat-card:nth-child(2)::after { background: var(--clr-chart-2); }
+.stat-card:nth-child(3)::after { background: var(--clr-chart-4); }
+.stat-card:nth-child(4)::after { background: var(--clr-chart-5); }
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.stat-value.cyan { color: var(--clr-accent-cyan); }
+.stat-value.teal { color: var(--clr-accent-teal); }
+.stat-value.orange { color: var(--clr-accent-orange); }
+.stat-value.green { color: var(--clr-accent-green); }
+
+.stat-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  margin-top: var(--space-sm);
+}
+
+.stat-delta.up { color: var(--clr-accent-green); }
+.stat-delta.down { color: var(--clr-accent-red); }
+
+.stat-trend-line {
+  margin-top: var(--space-md);
+  height: 32px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.trend-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  opacity: 0.5;
+  min-height: 4px;
+}
+
+/* ── SECTION HEADERS ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--clr-border-subtle);
+}
+
+.section-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.section-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.search-input {
+  background: var(--clr-bg-tertiary);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--clr-text-primary);
+  font-family: var(--font-sans);
+  width: 200px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.search-input:focus { border-color: var(--clr-accent-cyan); }
+.search-input::placeholder { color: var(--clr-text-muted); }
+
+/* ── BATCH ACTION BAR ── */
+.batch-bar {
+  background: var(--clr-accent-blue);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-elevation-2);
+  animation: slideDown var(--transition-normal) ease-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.batch-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.batch-count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--clr-text-inverse);
+}
+
+.batch-select-all {
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-secondary);
+  background: var(--clr-bg-primary)33;
+  border: none;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.batch-select-all:hover { color: var(--clr-text-primary); }
+
+.batch-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.batch-bar .btn { font-size: var(--font-size-xs); }
+
+/* ── TABLE ── */
+.data-table-wrapper {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.data-table thead { background: var(--clr-bg-tertiary); }
+
+.data-table th {
+  padding: var(--space-md) var(--space-lg);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--clr-border-subtle);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--clr-border-subtle);
+  vertical-align: middle;
+}
+
+.data-table tbody tr {
+  transition: background var(--transition-fast);
+}
+
+.data-table tbody tr:hover { background: var(--clr-bg-hover); }
+.data-table tbody tr.selected { background: var(--clr-bg-selected); }
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--clr-accent-cyan);
+  cursor: pointer;
+}
+
+.col-id {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-secondary);
+}
+
+.col-name { font-weight: var(--font-weight-medium); }
+
+.col-number {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.status-pill--active { background: #1a3a2a; color: var(--clr-accent-green); }
+.status-pill--pending { background: #3a2a1a; color: var(--clr-accent-yellow); }
+.status-pill--flagged { background: #3a1a1a; color: var(--clr-accent-red); }
+.status-pill--expired { background: #2a2a3a; color: var(--clr-text-muted); }
+.status-pill--new { background: #1a2a3a; color: var(--clr-accent-cyan); }
+
+.status-pill-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.priority-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+
+.priority-dot--high { background: var(--clr-accent-red); box-shadow: 0 0 6px #ef535066; }
+.priority-dot--medium { background: var(--clr-accent-orange); }
+.priority-dot--low { background: var(--clr-accent-green); }
+
+.amount {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.progress-bar-track {
+  width: 80px;
+  height: 6px;
+  background: var(--clr-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: var(--space-sm);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal);
+}
+
+/* ── BOTTOM SECTION GRID ── */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+}
+
+.chart-panel {
+  background: var(--clr-bg-card);
+  border: 1px solid var(--clr-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+}
+
+.panel-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.panel-tablist {
+  display: flex;
+  gap: 2px;
+  background: var(--clr-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.panel-tab {
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--clr-text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-fast);
+}
+
+.panel-tab.active {
+  background: var(--clr-bg-hover);
+  color: var(--clr-text-primary);
+}
+
+.panel-tab:hover:not(.active) { color: var(--clr-text-secondary); }
+
+/* Bar Chart */
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-md);
+  height: 160px;
+  padding-top: var(--space-sm);
+}
+
+.bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bar-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  max-width: 32px;
+}
+
+.bar-segment {
+  width: 100%;
+  border-radius: 2px;
+  transition: height var(--transition-normal);
+}
+
+.bar-label {
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* Donut Chart */
+.donut-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xl);
+}
+
+.donut-svg { flex-shrink: 0; }
+
+.donut-legend { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-xs);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.legend-label { color: var(--clr-text-secondary); flex: 1; }
+.legend-value { font-family: var(--font-mono); font-weight: var(--font-weight-medium); color: var(--clr-text-primary); }
+
+/* Enrollment Tracker */
+.enrollment-tracker {
+  margin-top: var(--space-md);
+}
+
+.track-phase {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+}
+
+.track-phase:last-child { margin-bottom: 0; }
+
+.track-phase-num {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.track-phase-num.done { background: var(--clr-accent-green); color: var(--clr-bg-primary); }
+.track-phase-num.current { background: var(--clr-accent-cyan); color: var(--clr-bg-primary); }
+.track-phase-num.upcoming { background: var(--clr-bg-tertiary); color: var(--clr-text-muted); }
+
+.track-phase-info { flex: 1; }
+
+.track-phase-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.track-phase-detail {
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+}
+
+.track-phase-bar {
+  width: 120px;
+  height: 4px;
+  background: var(--clr-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.track-phase-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+/* Alert feed */
+.alert-feed { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--clr-bg-tertiary);
+  border-radius: var(--radius-md);
+  border-left: 3px solid;
+}
+
+.alert-item--warning { border-color: var(--clr-accent-yellow); }
+.alert-item--error { border-color: var(--clr-accent-red); }
+.alert-item--info { border-color: var(--clr-accent-cyan); }
+
+.alert-time {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--clr-text-muted);
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.alert-msg {
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-secondary);
+  line-height: 1.4;
+}
+
+/* ── TABLE FOOTER / PAGINATION ── */
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  font-size: var(--font-size-xs);
+  color: var(--clr-text-muted);
+  border-top: 1px solid var(--clr-border-subtle);
+}
+
+.pagination {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.page-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--clr-border-subtle);
+  background: transparent;
+  color: var(--clr-text-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+}
+
+.page-btn:hover { color: var(--clr-text-primary); border-color: var(--clr-border-medium); }
+.page-btn.active { background: var(--clr-accent-cyan); color: var(--clr-bg-primary); border-color: var(--clr-accent-cyan); }
+
+/* Tab panels */
+.tab-panel { display: none; }
+.tab-panel[aria-hidden="false"] { display: block; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--clr-border-subtle); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--clr-border-medium); }
+
+/* Tooltip-style tag */
+.tag {
+  display: inline-block;
+  padding: 1px var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-mono);
+}
+
+.tag--tier-platinum { background: #2a2a3a; color: var(--clr-accent-cyan); border: 1px solid #3a3a5a; }
+.tag--tier-standard { background: #1a2a1a; color: var(--clr-accent-teal); border: 1px solid #2a3a2a; }
+.tag--tier-premium { background: #2a1a2a; color: var(--clr-accent-orange); border: 1px solid #3a2a3a; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ═══ LEFT RAIL NAV ═══ -->
+  <nav class="rail-nav" aria-label="Primary navigation">
+    <div class="rail-logo">
+      <svg viewBox="0 0 28 28" fill="none">
+        <rect x="2" y="6" width="24" height="16" rx="3" stroke="#4fc3f7" stroke-width="1.5"/>
+        <circle cx="9" cy="22" r="2.5" stroke="#4fc3f7" stroke-width="1.5"/>
+        <circle cx="19" cy="22" r="2.5" stroke="#4fc3f7" stroke-width="1.5"/>
+        <line x1="14" y1="2" x2="14" y2="6" stroke="#4fc3f7" stroke-width="1.5"/>
+        <line x1="10" y1="2" x2="18" y2="2" stroke="#4fc3f7" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="rail-links">
+      <div class="rail-link active" title="Registry">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="2"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="14" x2="10" y2="14"/></svg>
+      </div>
+      <div class="rail-link" title="Verification">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><polyline points="7,10 9,13 13,7"/></svg>
+      </div>
+      <div class="rail-link" title="Fraud">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 8v5l7 4 7-4V8z"/><line x1="10" y1="8" x2="10" y2="12"/></svg>
+        <span class="rail-badge"></span>
+      </div>
+      <div class="rail-link" title="Analytics">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="10" width="3" height="7" rx="0.5"/><rect x="8.5" y="6" width="3" height="11" rx="0.5"/><rect x="15" y="3" width="3" height="14" rx="0.5"/></svg>
+      </div>
+      <div class="rail-link" title="Configurations">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1"/></svg>
+      </div>
+    </div>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-user" title="S. Whitfield">SW</div>
+  </nav>
+
+  <!-- ═══ TOP BAR ═══ -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="topbar-title">TransitIdentity Management Platform</div>
+        <div class="topbar-breadcrumb">
+          <span>Rail Systems UK</span> &rsaquo; <span>Smart Card Registry</span> &rsaquo; Batch Operations
+        </div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-status">
+        <span class="topbar-status-dot"></span>
+        System Online — v4.12.1
+      </div>
+      <div class="topbar-time">2025-06-18 14:37:02 BST</div>
+    </div>
+  </header>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-content">
+
+    <!-- ── ANNOUNCEMENT ── -->
+    <section class="announcement-banner" aria-label="System announcement">
+      <div class="announcement-icon">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M10 2L2 7v6l8 5 8-5V7z"/>
+          <line x1="10" y1="8" x2="10" y2="12"/>
+          <circle cx="10" cy="14.5" r="0.5" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="announcement-body">
+        <div class="announcement-label">⚡ Mandatory Acknowledgment Required</div>
+        <h1 class="announcement-heading">Phase 4 Migration: NFC Token Standardisation Across Southeast Corridor Network</h1>
+        <p class="announcement-text">
+          Effective <strong>1 July 2025</strong>, all Level 3 and Level 4 smart card credentials issued on the legacy Mifare DESFire EV1 platform must be migrated to EMVCo-compliant NFC tokens (type 4 compliant). Operators are required to acknowledge this directive within 14 business days and begin processing the identity transfer queue by <strong>15 July 2025</strong>. Affected batches comprise approximately <strong>47,820 registrations</strong> spanning the Chatham Main Line, Great Eastern Regional routes, and the Thames Gateway electrified corridor. Non-compliance will trigger an automatic freeze on new card provisioning per TfRM Section 7.4(a).
+        </p>
+        <div class="announcement-meta">
+          <span>Issued: 12 June 2025 — Transport Authority Central Office</span>
+          <span>Ref: TAU-2025-MIG-00847</span>
+          <span>Classification: Operational Priority Alpha</span>
+        </div>
+      </div>
+      <div class="announcement-actions">
+        <span class="announcement-ref">ACK-REQ-91042</span>
+        <button class="btn btn-primary" onclick="this.textContent='Acknowledged ✓'; this.style.background='#1a3a2a'; this.style.color='#66bb6a'">Acknowledge &amp; Proceed</button>
+        <button class="btn btn-outline" style="margin-top:4px">View Migration Guide</button>
+      </div>
+    </section>
+
+    <!-- ── STAT CARDS ── -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Registered IDs</div>
+        <div class="stat-value cyan">1,247,893</div>
+        <div class="stat-delta up">▲ 2,341 this week</div>
+        <div class="stat-trend-line">
+          <div class="trend-bar" style="height:40%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:55%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:45%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:70%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:60%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:80%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:75%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:90%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:85%;background:var(--clr-chart-1)"></div>
+          <div class="trend-bar" style="height:95%;background:var(--clr-chart-1)"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending Verification</div>
+        <div class="stat-value teal">8,412</div>
+        <div class="stat-delta down">▼ 12% vs last cycle</div>
+        <div class="stat-trend-line">
+          <div class="trend-bar" style="height:90%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:80%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:75%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:70%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:65%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:55%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:50%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:45%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:40%;background:var(--clr-chart-2)"></div>
+          <div class="trend-bar" style="height:38%;background:var(--clr-chart-2)"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Flagged Accounts</div>
+        <div class="stat-value orange">317</div>
+        <div class="stat-delta up">▲ 23 escalated today</div>
+        <div class="stat-trend-line">
+          <div class="trend-bar" style="height:30%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:35%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:45%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:40%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:60%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:55%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:70%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:80%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:85%;background:var(--clr-chart-4)"></div>
+          <div class="trend-bar" style="height:90%;background:var(--clr-chart-4)"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Migration Queue</div>
+        <div class="stat-value green">47,820</div>
+        <div class="stat-delta up">Target: 15 Jul close</div>
+        <div class="stat-trend-line">
+          <div class="trend-bar" style="height:20%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:30%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:45%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:50%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:60%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:65%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:75%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:80%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:88%;background:var(--clr-chart-5)"></div>
+          <div class="trend-bar" style="height:95%;background:var(--clr-chart-5)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 1: IDENTITY REGISTRY TABLE ── -->
+    <section>
+      <div class="section-header">
+        <h2 class="section-title">Registered Identity Records</h2>
+        <div class="section-controls">
+          <input type="search" class="search-input" placeholder="Search registry…" aria-label="Search registry">
+        </div>
+      </div>
+
+      <!-- Batch Action Bar (visible because multiple rows selected) -->
+      <div class="batch-bar" role="toolbar" aria-label="Batch actions">
+        <div class="batch-info">
+          <span class="batch-count">6 of 120 records selected</span>
+          <button class="batch-select-all">Select All Matching</button>
+        </div>
+        <div class="batch-actions">
+          <button class="btn btn-sm btn-outline" style="color:#fff;border-color:#ffffff44">Export Selected</button>
+          <button class="btn btn-sm btn-outline" style="color:#fff;border-color:#ffffff44">Lock Credentials</button>
+          <button class="btn btn-sm btn-outline" style="color:#fff;border-color:#ffffff44">Initiate Audit</button>
+          <button class="btn btn-sm btn-danger" onclick="document.querySelector('.batch-bar').style.display='none'">Deselect All</button>
+        </div>
+      </div>
+
+      <div class="data-table-wrapper" style="margin-top:var(--space-md)">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:40px"><input type="checkbox" class="table-checkbox" aria-label="Select all rows"></th>
+              <th>Record ID</th>
+              <th>Cardholder Name</th>
+              <th>Tier</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Issuer Region</th>
+              <th>Last Verified</th>
+              <th style="text-align:right">Token Value</th>
+              <th>Completeness</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="selected">
+              <td><input type="checkbox" class="table-checkbox" checked></td>
+              <td class="col-id">TIR-0084721</td>
+              <td class="col-name">Marjorie E. Thornton</td>
+              <td><span class="tag tag--tier-platinum">Platinum</span></td>
+              <td><span class="status-pill status-pill--active"><span class="status-pill-dot"></span>Active</span></td>
+              <td><span class="priority-dot priority-dot--high" title="High"></span></td>
+              <td>Hertfordshire &amp; Home Counties</td>
+              <td class="col-number">2025-06-10</td>
+              <td class="amount">£247.50</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:98%;background:var(--clr-accent-green)"></div></div>98%</td>
+            </tr>
+            <tr class="selected">
+              <td><input type="checkbox" class="table-checkbox" checked></td>
+              <td class="col-id">TIR-0084738</td>
+              <td class="col-name">Harold J. Pemberton</td>
+              <td><span class="tag tag--tier-premium">Premium</span></td>
+              <td><span class="status-pill status-pill--pending"><span class="status-pill-dot"></span>Pending</span></td>
+              <td><span class="priority-dot priority-dot--medium" title="Medium"></span></td>
+              <td>Thames Gateway Zone 3</td>
+              <td class="col-number">2025-06-08</td>
+              <td class="amount">£182.30</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:72%;background:var(--clr-accent-orange)"></div></div>72%</td>
+            </tr>
+            <tr class="selected">
+              <td><input type="checkbox" class="table-checkbox" checked></td>
+              <td class="col-id">TIR-0084751</td>
+              <td class="col-name">Yukiko Saitō-Warren</td>
+              <td><span class="tag tag--tier-platinum">Platinum</span></td>
+              <td><span class="status-pill status-pill--flagged"><span class="status-pill-dot"></span>Flagged</span></td>
+              <td><span class="priority-dot priority-dot--high" title="High"></span></td>
+              <td>Chatham Main Line Sector</td>
+              <td class="col-number">2025-05-29</td>
+              <td class="amount">£310.00</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:45%;background:var(--clr-accent-red)"></div></div>45%</td>
+            </tr>
+            <tr class="selected">
+              <td><input type="checkbox" class="table-checkbox" checked></td>
+              <td class="col-id">TIR-0084769</td>
+              <td class="col-name">Diane L. Ashworth-Bentley</td>
+              <td><span class="tag tag--tier-standard">Standard</span></td>
+              <td><span class="status-pill status-pill--active"><span class="status-pill-dot"></span>Active</span></td>
+              <td><span class="priority-dot priority-dot--low" title="Low"></span></td>
+              <td>Great Eastern Regional</td>
+              <td class="col-number">2025-06-15</td>
+              <td class="amount">£96.80</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:100%;background:var(--clr-accent-green)"></div></div>100%</td>
+            </tr>
+            <tr class="selected">
+              <td><input type="checkbox" class="table-checkbox" checked></td>
+              <td class="col-id">TIR-0084782</td>
+              <td class="col-name">Nigel C. Farthing III</td>
+              <td><span class="tag tag--tier-premium">Premium</span></td>
+              <td><span class="status-pill status-pill--new"><span class="status-pill-dot"></span>New</span></td>
+              <td><span class="priority-dot priority-dot--medium" title="Medium"></span></td>
+              <td>Southend Victoria Subnet</td>
+              <td class="col-number">2025-06-17</td>
+              <td class="amount">£0.00</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:30%;background:var(--clr-accent-orange)"></div></div>30%</td>
+            </tr>
+            <tr class="selected">
+              <td><input type="checkbox" class="table-checkbox" checked></td>
+              <td class="col-id">TIR-0084790</td>
+              <td class="col-name">Patricia A. McCullough-Rose</td>
+              <td><span class="tag tag--tier-platinum">Platinum</span></td>
+              <td><span class="status-pill status-pill--active"><span class="status-pill-dot"></span>Active</span></td>
+              <td><span class="priority-dot priority-dot--low" title="Low"></span></td>
+              <td>Chelmsford Junction District</td>
+              <td class="col-number">2025-06-12</td>
+              <td class="amount">£204.75</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:95%;background:var(--clr-accent-green)"></div></div>95%</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="table-checkbox"></td>
+              <td class="col-id">TIR-0084803</td>
+              <td class="col-name">Arthur V. Hemsworth-Jones</td>
+              <td><span class="tag tag--tier-standard">Standard</span></td>
+              <td><span class="status-pill status-pill--expired"><span class="status-pill-dot"></span>Expired</span></td>
+              <td><span class="priority-dot priority-dot--low" title="Low"></span></td>
+              <td>Colchester Outer Ring</td>
+              <td class="col-number">2024-11-22</td>
+              <td class="amount">£52.40</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:60%;background:var(--clr-text-muted)"></div></div>60%</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="table-checkbox"></td>
+              <td class="col-id">TIR-0084811</td>
+              <td class="col-name">Eleanor K. Radcliffe-Pryce</td>
+              <td><span class="tag tag--tier-premium">Premium</span></td>
+              <td><span class="status-pill status-pill--active"><span class="status-pill-dot"></span>Active</span></td>
+              <td><span class="priority-dot priority-dot--medium" title="Medium"></span></td>
+              <td>Lewisham Cross-boundary</td>
+              <td class="col-number">2025-06-14</td>
+              <td class="amount">£178.90</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:88%;background:var(--clr-accent-green)"></div></div>88%</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="table-checkbox"></td>
+              <td class="col-id">TIR-0084827</td>
+              <td class="col-name">Thomas G. Blackwell-Smith</td>
+              <td><span class="tag tag--tier-standard">Standard</span></td>
+              <td><span class="status-pill status-pill--pending"><span class="status-pill-dot"></span>Pending</span></td>
+              <td><span class="priority-dot priority-dot--medium" title="Medium"></span></td>
+              <td>Barking Riverside Extension</td>
+              <td class="col-number">2025-06-09</td>
+              <td class="amount">£67.25</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:55%;background:var(--clr-accent-orange)"></div></div>55%</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="table-checkbox"></td>
+              <td class="col-id">TIR-0084839</td>
+              <td class="col-name">Beatrice N. Oakley-Wilkinson</td>
+              <td><span class="tag tag--tier-platinum">Platinum</span></td>
+              <td><span class="status-pill status-pill--flagged"><span class="status-pill-dot"></span>Flagged</span></td>
+              <td><span class="priority-dot priority-dot--high" title="High"></span></td>
+              <td>Epping Forest Corridor</td>
+              <td class="col-number">2025-05-18</td>
+              <td class="amount">£289.10</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:38%;background:var(--clr-accent-red)"></div></div>38%</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="table-checkbox"></td>
+              <td class="col-id">TIR-0084855</td>
+              <td class="col-name">Frederick P. Dumont-Cartwright</td>
+              <td><span class="tag tag--tier-premium">Premium</span></td>
+              <td><span class="status-pill status-pill--active"><span class="status-pill-dot"></span>Active</span></td>
+              <td><span class="priority-dot priority-dot--low" title="Low"></span></td>
+              <td>Stratford International Hub</td>
+              <td class="col-number">2025-06-16</td>
+              <td class="amount">£221.60</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:92%;background:var(--clr-accent-green)"></div></div>92%</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="table-checkbox"></td>
+              <td class="col-id">TIR-0084862</td>
+              <td class="col-name">Imogen R. Calloway-Hughes</td>
+              <td><span class="tag tag--tier-standard">Standard</span></td>
+              <td><span class="status-pill status-pill--new"><span class="status-pill-dot"></span>New</span></td>
+              <td><span class="priority-dot priority-dot--low" title="Low"></span></td>
+              <td>Dagenham Dock Terminal</td>
+              <td class="col-number">2025-06-18</td>
+              <td class="amount">£0.00</td>
+              <td><div class="progress-bar-track"><div class="progress-bar-fill" style="width:15%;background:var(--clr-accent-orange)"></div></div>15%</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="table-footer">
+          <span>Showing 1–12 of 1,247,893 records</span>
+          <div class="pagination" role="navigation" aria-label="Table pagination">
+            <button class="page-btn" aria-label="Previous page">‹</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">…</button>
+            <button class="page-btn">103,991</button>
+            <button class="page-btn" aria-label="Next page">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECTION 2: ANALYTICS PANELS ── -->
+    <section>
+      <div class="section-header">
+        <h2 class="section-title">Operational Analytics</h2>
+      </div>
+
+      <div class="bottom-grid">
+
+        <!-- Weekly Issuance Chart -->
+        <div class="chart-panel">
+          <div class="panel-header">
+            <span class="panel-title">Weekly Credential Issuance</span>
+            <div role="tablist" class="panel-tablist">
+              <button role="tab" class="panel-tab active" aria-selected="true" aria-controls="tab-weekly" id="tab-wk">This Week</button>
+              <button role="tab" class="panel-tab" aria-selected="false" aria-controls="tab-monthly" id="tab-mo">Monthly</button>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-weekly" role="tabpanel" aria-labelledby="tab-wk">
+            <div class="bar-chart">
+              <div class="bar-group">
+                <div class="bar-stack">
+                  <div class="bar-segment" style="height:24px;background:var(--clr-chart-1)"></div>
+                  <div class="bar-segment" style="height:16px;background:var(--clr-chart-3)"></div>
+                  <div class="bar-segment" style="height:8px;background:var(--clr-chart-6)"></div>
+                </div>
+                <span class="bar-label">Mon</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar-stack">
+                  <div class="bar-segment" style="height:40px;background:var(--clr-chart-1)"></div>
+                  <div class="bar-segment" style="height:24px;background:var(--clr-chart-3)"></div>
+                  <div class="bar-segment" style="height:12px;background:var(--clr-chart-6)"></div>
+                </div>
+                <span class="bar-label">Tue</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar-stack">
+                  <div class="bar-segment" style="height:56px;background:var(--clr-chart-1)"></div>
+                  <div class="bar-segment" style="height:32px;background:var(--clr-chart-3)"></div>
+                  <div class="bar-segment" style="height:16px;background:var(--clr-chart-6)"></div>
+                </div>
+                <span class="bar-label">Wed</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar-stack">
+                  <div class="bar-segment" style="height:48px;background:var(--clr-chart-1)"></div>
+                  <div class="bar-segment" style="height:28px;background:var(--clr-chart-3)"></div>
+                  <div class="bar-segment" style="height:14px;background:var(--clr-chart-6)"></div>
+                </div>
+                <span class="bar-label">Thu</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar-stack">
+                  <div class="bar-segment" style="height:64px;background:var(--clr-chart-1)"></div>
+                  <div class="bar-segment" style="height:40px;background:var(--clr-chart-3)"></div>
+                  <div class="bar-segment" style="height:20px;background:var(--clr-chart-6)"></div>
+                </div>
+                <span class="bar-label">Fri</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar-stack">
+                  <div class="bar-segment" style="height:28px;background:var(--clr-chart-1)"></div>
+                  <div class="bar-segment" style="height:12px;background:var(--clr-chart-3)"></div>
+                  <div class="bar-segment" style="height:6px;background:var(--clr-chart-6)"></div>
+                </div>
+                <span class="bar-label">Sat</span>
+              </div>
+              <div class="bar-group">
+                <div class="bar-stack">
+                  <div class="bar-segment" style="height:16px;background:var(--clr-chart-1)"></div>
+                  <div class="bar-segment" style="height:8px;background:var(--clr-chart-3)"></div>
+                  <div class="bar-segment" style="height:4px;background:var(--clr-chart-6)"></div>
+                </div>
+                <span class="bar-label">Sun</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:var(--space-xl);margin-top:var(--space-lg);justify-content:center;font-size:var(--font-size-xs);color:var(--clr-text-muted)">
+              <span><span style="display:inline-block;width:8px;height:8px;background:var(--clr-chart-1);border-radius:2px;margin-right:4px;vertical-align:middle"></span>New Issuances</span>
+              <span><span style="display:inline-block;width:8px;height:8px;background:var(--clr-chart-3);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Migrations</span>
+              <span><span style="display:inline-block;width:8px;height:8px;background:var(--clr-chart-6);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Replacements</span>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-monthly" role="tabpanel" aria-labelledby="tab-mo" aria-hidden="true">
+            <div class="bar-chart" style="overflow-x:auto">
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:40px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:20px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W1</span></div>
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:56px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:28px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W2</span></div>
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:48px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:32px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W3</span></div>
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:72px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:40px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W4</span></div>
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:64px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:36px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W5</span></div>
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:80px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:44px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W6</span></div>
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:76px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:48px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W7</span></div>
+              <div class="bar-group"><div class="bar-stack"><div class="bar-segment" style="height:88px;background:var(--clr-chart-1)"></div><div class="bar-segment" style="height:52px;background:var(--clr-chart-3)"></div></div><span class="bar-label">W8</span></div>
+            </div>
+            <div style="display:flex;gap:var(--space-xl);margin-top:var(--space-lg);justify-content:center;font-size:var(--font-size-xs);color:var(--clr-text-muted)">
+              <span><span style="display:inline-block;width:8px;height:8px;background:var(--clr-chart-1);border-radius:2px;margin-right:4px;vertical-align:middle"></span>New Issuances</span>
+              <span><span style="display:inline-block;width:8px;height:8px;background:var(--clr-chart-3);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Migrations</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Distribution Donut -->
+        <div class="chart-panel">
+          <div class="panel-header">
+            <span class="panel-title">Account Status Distribution</span>
+            <div class="panel-tablist" role="tablist">
+              <button role="tab" class="panel-tab active" aria-selected="true" aria-controls="tab-dist-live" id="tab-dl">Live</button>
+              <button role="tab" class="panel-tab" aria-selected="false" aria-controls="tab-dist-archive" id="tab-da">Archive</button>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-dist-live" role="tabpanel" aria-labelledby="tab-dl">
+            <div class="donut-container">
+              <svg class="donut-svg" width="140" height="140" viewBox="0 0 140 140">
+                <!-- Background circle -->
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--clr-bg-tertiary)" stroke-width="16"/>
+                <!-- Active: 62% = 211px circumference out of 339 -->
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--clr-accent-green)" stroke-width="16"
+                  stroke-dasharray="210.2 128.8" stroke-dashoffset="84.8" stroke-linecap="round"
+                  transform="rotate(-90 70 70)"/>
+                <!-- Pending: 14% = 47.5px -->
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--clr-accent-yellow)" stroke-width="16"
+                  stroke-dasharray="47.5 291.5" stroke-dashoffset="-125.4" stroke-linecap="round"
+                  transform="rotate(-90 70 70)"/>
+                <!-- Flagged: 4% = 13.6px -->
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--clr-accent-red)" stroke-width="16"
+                  stroke-dasharray="13.6 325.4" stroke-dashoffset="-172.9" stroke-linecap="round"
+                  transform="rotate(-90 70 70)"/>
+                <!-- New: 12% = 40.7px -->
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--clr-accent-cyan)" stroke-width="16"
+                  stroke-dasharray="40.7 298.3" stroke-dashoffset="-186.5" stroke-linecap="round"
+                  transform="rotate(-90 70 70)"/>
+                <!-- Expired: 8% = 27.1px -->
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--clr-text-muted)" stroke-width="16"
+                  stroke-dasharray="27.1 311.9" stroke-dashoffset="-227.2" stroke-linecap="round"
+                  transform="rotate(-90 70 70)"/>
+                <!-- Center text -->
+                <text x="70" y="66" text-anchor="middle" fill="var(--clr-text-primary)" font-size="18" font-weight="bold" font-family="var(--font-mono)">1.25M</text>
+                <text x="70" y="82" text-anchor="middle" fill="var(--clr-text-muted)" font-size="9" font-family="var(--font-sans)">total records</text>
+              </svg>
+              <div class="donut-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:var(--clr-accent-green)"></span><span class="legend-label">Active</span><span class="legend-value">773,523</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--clr-accent-yellow)"></span><span class="legend-label">Pending Verification</span><span class="legend-value">174,685</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--clr-accent-cyan)"></span><span class="legend-label">New Registrations</span><span class="legend-value">149,747</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--clr-accent-red)"></span><span class="legend-label">Flagged</span><span class="legend-value="49,915">49,915</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--clr-text-muted)"></span><span class="legend-label">Expired</span><span class="legend-value">99,931</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-dist-archive" role="tabpanel" aria-labelledby="tab-da" aria-hidden="true">
+            <p style="font-size:var(--font-size-sm);color:var(--clr-text-secondary);padding:var(--space-2xl) 0;text-align:center">Archive view contains 23,410 dormant records beyond active reporting horizon.</p>
+          </div>
+        </div>
+
+        <!-- Migration Progress Timeline -->
+        <div class="chart-panel">
+          <div class="panel-header">
+            <span class="panel-title">EMV Co-Migration Pipeline</span>
+          </div>
+          <div class="enrollment-tracker">
+            <div class="track-phase">
+              <div class="track-phase-num done">✓</div>
+              <div class="track-phase-info">
+                <div class="track-phase-title">Inventorisation Complete</div>
+                <div class="track-phase-detail">All legacy cards catalogued — 47,820 entries confirmed</div>
+              </div>
+              <div class="track-phase-bar"><div class="track-phase-fill" style="width:100%;background:var(--clr-accent-green)"></div></div>
+              <span style="font-size:var(--font-size-xs);font-family:var(--font-mono);color:var(--clr-accent-green)">100%</span>
+            </div>
+            <div class="track-phase">
+              <div class="track-phase-num done">✓</div>
+              <div class="track-phase-info">
+                <div class="track-phase-title">Operator Notification Dispatch</div>
+                <div class="track-phase-detail">Advisory emails sent to 14 rail franchise operators</div>
+              </div>
+              <div class="track-phase-bar"><div class="track-phase-fill" style="width:100%;background:var(--clr-accent-green)"></div></div>
+              <span style="font-size:var(--font-size-xs);font-family:var(--font-mono);color:var(--clr-accent-green)">100%</span>
+            </div>
+            <div class="track-phase">
+              <div class="track-phase-num done">✓</div>
+              <div class="track-phase-info">
+                <div class="track-phase-title">Acknowledgement Window Open</div>
+                <div class="track-phase-detail">14-day response period — 312,400 acknowledgements received so far</div>
+              </div>
+              <div class="track-phase-bar"><div class="track-phase-fill" style="width:68%;background:var(--clr-accent-cyan)"></div></div>
+              <span style="font-size:var(--font-size-xs);font-family:var(--font-mono);color:var(--clr-accent-cyan)">68%</span>
+            </div>
+            <div class="track-phase">
+              <div class="track-phase-num current">4</div>
+              <div class="track-phase-info">
+                <div class="track-phase-title">Identity Record Reformatting</div>
+                <div class="track-phase-detail">Converting Mifare DESFire EV1 UID schemas to EMVCo contactless profiles</div>
+              </div>
+              <div class="track-phase-bar"><div class="track-phase-fill" style="width:32%;background:var(--clr-accent-cyan)"></div></div>
+              <span style="font-size:var(--font-size-xs);font-family:var(--font-mono);color:var(--clr-accent-cyan)">32%</span>
+            </div>
+            <div class="track-phase">
+              <div class="track-phase-num upcoming">5</div>
+              <div class="track-phase-info">
+                <div class="track-phase-title">Bulk Reissue Processing</div>
+                <div class="track-phase-detail">Physical token replacement runs via National Fulfilment Centre</div>
+              </div>
+              <div class="track-phase-bar"><div class="track-phase-fill" style="width:0%;background:var(--clr-bg-tertiary)"></div></div>
+              <span style="font-size:var(--font-size-xs);font-family:var(--font-mono);color:var(--clr-text-muted)">Queued</span>
+            </div>
+            <div class="track-phase">
+              <div class="track-phase-num upcoming">6</div>
+              <div class="track-phase-info">
+                <div class="track-phase-title">Legacy System Decommission</div>
+                <div class="track-phase-detail">Mifare cluster retired — 31 August 2025 deadline</div>
+              </div>
+              <div class="track-phase-bar"><div class="track-phase-fill" style="width:0%;background:var(--clr-bg-tertiary)"></div></div>
+              <span style="font-size:var(--font-size-xs);font-family:var(--font-mono);color:var(--clr-text-muted)">Scheduled</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Alert Feed -->
+        <div class="chart-panel">
+          <div class="panel-header">
+            <span class="panel-title">Live Operations Log</span>
+          </div>
+          <div class="alert-feed">
+            <div class="alert-item alert-item--error">
+              <span class="alert-time">14:32</span>
+              <span class="alert-msg"><strong>Fraud Detection:</strong> Duplicate SIM binding detected on TIR-0085011 (user: Gwendoline Marsh) — account suspended pending review.</span>
+            </div>
+            <div class="alert-item alert-item--warning">
+              <span class="alert-time">14:28</span>
+              <span class="alert-msg"><strong>Milestone Reached:</strong> 15,000 EMV co-migrations completed for Sector 7 (Chatham line). Throughput averaging 187/hr.</span>
+            </div>
+            <div class="alert-item alert-item--info">
+              <span class="alert-time">14:15</span>
+              <span class="alert-msg"><strong>System Update:</strong> Tier pricing schedule refreshed — Platinum annual pass adjusted to £2,450 effective 1 July.</span>
+            </div>
+            <div class="alert-item alert-item--warning">
+              <span class="alert-time">14:01</span>
+              <span class="alert-msg"><strong>Credential Expiry:</strong> 1,203 Level 3 cards approaching 30-day threshold. Automated renewal invitations dispatched.</span>
+            </div>
+            <div class="alert-item alert-item--info">
+              <span class="alert-time">13:47</span>
+              <span class="alert-msg"><strong>Audit Trail:</strong> Bulk lock operation #BLK-4412 processed 89 flagged records. No exceptions reported.</span>
+            </div>
+            <div class="alert-item alert-item--error">
+              <span class="alert-time">13:33</span>
+              <span class="alert-msg"><strong>Integrity Check:</strong> CRC mismatch on batch import file IN-2025-0618-A from Barking Riverside feeder — rejected and quarantined.</span>
+            </div>
+            <div class="alert-item alert-item--info">
+              <span class="alert-time">13:18</span>
+              <span class="alert-msg"><strong>Capacity:</strong> NFC terminal fleet utilisation at 73% across all zones. No congestion events recorded in past 24 hours.</span>
+            </div>
+            <div class="alert-item alert-item--warning">
+              <span class="alert-time">12:55</span>
+              <span class="alert-msg"><strong>Policy Reminder:</strong> Three operators have not yet acknowledged Directive TAU-2025-MIG-00847. Escalation due in 6 days.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// Tab switching functionality
+document.querySelectorAll('[role="tablist"]').forEach(tablist => {
+  const tabs = tablist.querySelectorAll('[role="tab"]');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      // Deactivate all tabs in this group
+      tabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      // Hide all panels in this group
+      const panelId = tab.getAttribute('aria-controls');
+      document.querySelectorAll(`[id^="${panelId.split('-')[0]}-"]`).forEach(p => {
+        if (p.id !== panelId && p.hasAttribute('role')) {
+          // keep other panels visible
+        }
+      });
+      // Hide sibling panels
+      tablist.closest('.chart-panel')?.querySelectorAll('[role="tabpanel"]').forEach(panel => {
+        panel.setAttribute('aria-hidden', 'true');
+      });
+      // Activate clicked tab
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      const targetPanel = document.getElementById(panelId);
+      if (targetPanel) {
+        targetPanel.setAttribute('aria-hidden', 'false');
+      }
+    });
+  });
+});
+</script>
+
+</body>
+</html>

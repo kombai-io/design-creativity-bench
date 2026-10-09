@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERRA-LOGIC | Precision Agronomy Data Suite</title>
+    <style>
+        :root {
+            /* Colors - Industrial Muted Palette */
+            --color-bg-deep: #0a0c0d;
+            --color-bg-surface: #14181a;
+            --color-bg-elevated: #1c2124;
+            --color-border-dim: #2a3135;
+            --color-border-bright: #3f494e;
+            --color-text-primary: #e1e4e6;
+            --color-text-secondary: #9aa5ad;
+            --color-text-muted: #5c6870;
+            --color-accent-ag: #769e4a;
+            --color-accent-ag-dim: #3d5226;
+            --color-accent-warning: #d9a74a;
+            --color-accent-error: #cc4f4f;
+            --color-accent-info: #4a90d9;
+            --color-data-node: #32a8a2;
+            
+            /* Spacing */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 12px;
+            --space-lg: 16px;
+            --space-xl: 24px;
+            
+            /* Font Sizes */
+            --font-size-xs: 10px;
+            --font-size-sm: 11px;
+            --font-size-base: 12px;
+            --font-size-lg: 14px;
+            --font-size-header: 18px;
+            
+            /* UI Geometry */
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --border-width: 1px;
+            
+            /* Shadows */
+            --shadow-soft: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--color-bg-deep);
+            color: var(--color-text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: var(--font-size-base);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            line-height: 1.4;
+        }
+
+        /* Layout */
+        header {
+            height: 48px;
+            background-color: var(--color-bg-surface);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--space-lg);
+            justify-content: space-between;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar Stylings */
+        aside {
+            background-color: var(--color-bg-surface);
+            border-right: var(--border-width) solid var(--color-border-dim);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        aside.right-panel {
+            border-right: none;
+            border-left: var(--border-width) solid var(--color-border-dim);
+        }
+
+        .panel-header {
+            padding: var(--space-md);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+            background-color: var(--color-bg-elevated);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: var(--font-size-xs);
+            letter-spacing: 0.05em;
+            color: var(--color-text-secondary);
+        }
+
+        /* Media Viewer */
+        .viewer-container {
+            position: relative;
+            background-color: var(--color-bg-deep);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewport {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-image: radial-gradient(circle at center, #1a1f22 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewport-controls {
+            position: absolute;
+            bottom: var(--space-lg);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: var(--space-sm);
+            background: var(--color-bg-elevated);
+            padding: var(--space-sm);
+            border-radius: var(--radius-md);
+            border: var(--border-width) solid var(--color-border-bright);
+            box-shadow: var(--shadow-soft);
+            z-index: 10;
+        }
+
+        /* Lists & Tables */
+        .data-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .list-item {
+            padding: var(--space-sm) var(--space-md);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            cursor: pointer;
+            transition: background 0.1s ease;
+        }
+
+        .list-item:hover {
+            background-color: var(--color-bg-elevated);
+        }
+
+        .list-item.active {
+            background-color: var(--color-accent-ag-dim);
+            border-left: 2px solid var(--color-accent-ag);
+        }
+
+        .file-icon {
+            color: var(--color-text-muted);
+            flex-shrink: 0;
+        }
+
+        .file-meta {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .file-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        .file-details {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-muted);
+            display: flex;
+            gap: var(--space-md);
+        }
+
+        /* Filter Chips */
+        .active-facets {
+            padding: var(--space-md);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+            background-color: var(--color-bg-elevated);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+        }
+
+        .facet-chip {
+            background: var(--color-bg-surface);
+            border: var(--border-width) solid var(--color-border-bright);
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: var(--font-size-xs);
+        }
+
+        .facet-remove {
+            cursor: pointer;
+            color: var(--color-accent-error);
+            font-weight: bold;
+        }
+
+        /* Buttons & Inputs */
+        button {
+            background: var(--color-bg-elevated);
+            border: var(--border-width) solid var(--color-border-bright);
+            color: var(--color-text-primary);
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--font-size-xs);
+        }
+
+        button:hover {
+            border-color: var(--color-text-secondary);
+        }
+
+        .badge {
+            font-size: var(--font-size-xs);
+            padding: 1px var(--space-xs);
+            border-radius: var(--radius-sm);
+            text-transform: uppercase;
+        }
+
+        .badge-sync { background-color: var(--color-accent-ag-dim); color: var(--color-accent-ag); }
+        .badge-remote { background-color: #3b3b3b; color: #aaa; }
+
+        /* Welcome Overlay (Tutorial for Expert) */
+        .overlay {
+            position: absolute;
+            top: var(--space-xl);
+            right: var(--space-xl);
+            width: 300px;
+            background: var(--color-bg-elevated);
+            border: var(--border-width) solid var(--color-accent-ag);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-soft);
+            z-index: 100;
+        }
+
+        .overlay-header {
+            font-weight: 700;
+            color: var(--color-accent-ag);
+            margin-bottom: var(--space-sm);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Table inside Sidebar */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-xs);
+        }
+
+        th {
+            text-align: left;
+            color: var(--color-text-muted);
+            padding: var(--space-sm);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+            font-weight: 400;
+        }
+
+        td {
+            padding: var(--space-sm);
+            border-bottom: var(--border-width) solid var(--color-border-dim);
+        }
+
+        /* GIS Media Visual Mockup */
+        .map-canvas {
+            width: 80%;
+            height: 70%;
+            border: var(--border-width) solid var(--color-border-bright);
+            position: relative;
+            background: #111;
+            overflow: hidden;
+        }
+
+        .contour-line {
+            position: absolute;
+            border: 1px solid rgba(118, 158, 74, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .sensor-point {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--color-accent-warning);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .sensor-point:hover {
+            box-shadow: 0 0 10px var(--color-accent-warning);
+            cursor: crosshair;
+        }
+
+        .status-bar {
+            height: 24px;
+            background-color: var(--color-bg-surface);
+            border-top: var(--border-width) solid var(--color-border-dim);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--space-md);
+            font-size: var(--font-size-xs);
+            color: var(--color-text-muted);
+            justify-content: space-between;
+        }
+
+        .scrolling-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header role="banner">
+        <div style="display: flex; align-items: center; gap: var(--space-md);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="var(--color-accent-ag)"/>
+            </svg>
+            <span style="font-weight: 800; letter-spacing: 1px;">TERRA-LOGIC <span style="font-weight: 400; color: var(--color-text-muted);">| AG-PRECISION v4.2</span></span>
+        </div>
+        <div style="display: flex; gap: var(--space-lg); font-size: var(--font-size-xs); color: var(--color-text-secondary);">
+            <span>PRO_OPERATOR: J_HARRISON</span>
+            <span>Uptime: 06:42:11</span>
+            <button style="border-color: var(--color-accent-ag); color: var(--color-accent-ag);">EXPORT SESSION</button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Section 1: Ingestion & Source Files -->
+        <aside role="region" aria-label="Data Source Browser">
+            <div class="panel-header">
+                <span class="panel-title">Source Catalog</span>
+                <button aria-label="Refresh Data">REFRESH</button>
+            </div>
+            <div class="scrolling-container">
+                <ul class="data-list" role="list">
+                    <li class="list-item active" role="listitem">
+                        <span class="file-icon">📁</span>
+                        <div class="file-meta">
+                            <span class="file-name">SCAN_771_ORTHO_2023.tif</span>
+                            <div class="file-details">
+                                <span>2.4 GB</span>
+                                <span class="badge badge-sync">SYNCED</span>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-item" role="listitem">
+                        <span class="file-icon">📁</span>
+                        <div class="file-meta">
+                            <span class="file-name">LIDAR_POINTCLOUD_771_FULL.las</span>
+                            <div class="file-details">
+                                <span>18.1 GB</span>
+                                <span class="badge badge-remote">REMOTE</span>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-item" role="listitem">
+                        <span class="file-icon">📄</span>
+                        <div class="file-meta">
+                            <span class="file-name">SOIL_NITROGEN_SENSORS.csv</span>
+                            <div class="file-details">
+                                <span>42 KB</span>
+                                <span class="badge badge-sync">SYNCED</span>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-item" role="listitem">
+                        <span class="file-icon">📄</span>
+                        <div class="file-meta">
+                            <span class="file-name">MOISTURE_LEVELS_H1.json</span>
+                            <div class="file-details">
+                                <span>156 KB</span>
+                                <span class="badge badge-sync">SYNCED</span>
+                            </div>
+                        </div>
+                    </li>
+                    <!-- High density filling -->
+                    <li class="list-item" role="listitem">
+                        <span class="file-icon">📁</span>
+                        <div class="file-meta">
+                            <span class="file-name">IR_REFLECT_BATCH_09.tif</span>
+                            <div class="file-details"><span>1.1 GB</span></div>
+                        </div>
+                    </li>
+                    <li class="list-item" role="listitem">
+                        <span class="file-icon">📁</span>
+                        <div class="file-meta">
+                            <span class="file-name">VEG_INDEX_NDVI_FINAL.tif</span>
+                            <div class="file-details"><span>890 MB</span></div>
+                        </div>
+                    </li>
+                    <li class="list-item" role="listitem">
+                        <span class="file-icon">📄</span>
+                        <div class="file-meta">
+                            <span class="file-name">TOPOGRAPHY_MESH.obj</span>
+                            <div class="file-details"><span>442 MB</span></div>
+                        </div>
+                    </li>
+                    <li class="list-item" role="listitem">
+                        <span class="file-icon">📁</span>
+                        <div class="file-meta">
+                            <span class="file-name">HIST_YIELD_2022.dbf</span>
+                            <div class="file-details"><span>12 MB</span></div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Section 2: Media Center (The Workspace) -->
+        <section class="viewer-container" role="main" aria-label="Visual Data Workbench">
+            <div class="active-facets" role="group" aria-label="Applied Filters">
+                <div class="facet-chip" role="status">
+                    <span>Slope > 12°</span>
+                    <span class="facet-remove" role="button" tabindex="0">×</span>
+                </div>
+                <div class="facet-chip" role="status">
+                    <span>Moisture < 15%</span>
+                    <span class="facet-remove" role="button" tabindex="0">×</span>
+                </div>
+                <div class="facet-chip" role="status">
+                    <span>Crop: Maize</span>
+                    <span class="facet-remove" role="button" tabindex="0">×</span>
+                </div>
+                <div class="facet-chip" role="status">
+                    <span>Year: 2023</span>
+                    <span class="facet-remove" role="button" tabindex="0">×</span>
+                </div>
+            </div>
+
+            <div class="viewport">
+                <!-- Welcome Overlay for the "Newcomer" but expert oriented -->
+                <div class="overlay" role="dialog" aria-labelledby="guide-title">
+                    <div class="overlay-header">
+                        <span id="guide-title">QUICK-START: OPS-LEVEL 1</span>
+                        <span class="facet-remove" onclick="this.parentElement.parentElement.style.display='none'">×</span>
+                    </div>
+                    <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+                        Welcome to Terra-Logic. You are viewing Sector 771-Alpha.
+                    </p>
+                    <ul style="padding-left: var(--space-lg); margin: 0; font-size: var(--font-size-xs); color: var(--color-text-secondary); display: flex; flex-direction: column; gap: var(--space-xs);">
+                        <li><strong>ALT + Click</strong> to drop sensor marker</li>
+                        <li><strong>SHIFT + Drag</strong> for slope analysis</li>
+                        <li><strong>CTRL + S</strong> to commit metadata layer</li>
+                    </ul>
+                </div>
+
+                <div class="map-canvas">
+                    <!-- Stylized SVG Topo Map Representation -->
+                    <svg width="100%" height="100%" preserveAspectRatio="none">
+                        <path d="M 0 400 Q 150 350 300 400 T 600 380 T 900 420" fill="none" stroke="#769e4a33" stroke-width="2"/>
+                        <path d="M 0 350 Q 150 300 300 350 T 600 330 T 900 370" fill="none" stroke="#769e4a33" stroke-width="2"/>
+                        <path d="M 0 300 Q 150 250 300 300 T 600 280 T 900 320" fill="none" stroke="#769e4a44" stroke-width="2"/>
+                        <rect x="200" y="150" width="400" height="300" fill="none" stroke="var(--color-accent-ag)" stroke-dasharray="4 4" />
+                    </svg>
+                    <div class="sensor-point" style="top: 30%; left: 40%;" title="Sensor ID: S-882"></div>
+                    <div class="sensor-point" style="top: 55%; left: 62%;" title="Sensor ID: S-885"></div>
+                    <div class="sensor-point" style="top: 22%; left: 15%;" title="Sensor ID: S-889"></div>
+                    <div class="sensor-point" style="top: 70%; left: 33%;" title="Sensor ID: S-891"></div>
+                </div>
+
+                <div class="viewport-controls" role="toolbar" aria-label="Map Manipulation">
+                    <button>ZOOM IN</button>
+                    <button>ZOOM OUT</button>
+                    <button>RESET VIEW</button>
+                    <div style="width: 1px; background: var(--color-border-bright); margin: 0 var(--space-xs);"></div>
+                    <button>3D VIEW</button>
+                    <button>HEATMAP</button>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <div>LAT: 41.8781° N | LONG: 87.6298° W</div>
+                <div>CRS: EPSG:3857 (Web Mercator)</div>
+                <div style="color: var(--color-accent-ag);">● SYSTEM HEALTH: NOMINAL</div>
+            </div>
+        </section>
+
+        <!-- Section 3: Metadata & Facet Controls -->
+        <aside class="right-panel" role="region" aria-label="Feature Extraction Controls">
+            <div class="panel-header">
+                <span class="panel-title">Layer Intelligence</span>
+            </div>
+            
+            <div style="padding: var(--space-md); border-bottom: var(--border-width) solid var(--color-border-dim);">
+                <div class="panel-title" style="margin-bottom: var(--space-sm);">Metric Distribution</div>
+                <div style="height: 40px; background: #111; border: 1px solid var(--color-border-dim); display: flex; align-items: flex-end; gap: 2px; padding: 2px;">
+                    <div style="flex: 1; height: 30%; background: var(--color-accent-ag);"></div>
+                    <div style="flex: 1; height: 55%; background: var(--color-accent-ag);"></div>
+                    <div style="flex: 1; height: 85%; background: var(--color-accent-ag);"></div>
+                    <div style="flex: 1; height: 40%; background: var(--color-accent-ag);"></div>
+                    <div style="flex: 1; height: 20%; background: var(--color-accent-ag);"></div>
+                    <div style="flex: 1; height: 10%; background: var(--color-accent-ag);"></div>
+                </div>
+            </div>
+
+            <div class="scrolling-container">
+                <table role="grid">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Value</th>
+                            <th>Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Mean NDVI</td>
+                            <td>0.74</td>
+                            <td style="color: var(--color-accent-ag);">+0.04</td>
+                        </tr>
+                        <tr>
+                            <td>Clay Content</td>
+                            <td>22.4%</td>
+                            <td style="color: var(--color-text-muted);">0.00</td>
+                        </tr>
+                        <tr>
+                            <td>Nitrogen Sat.</td>
+                            <td>48 mg/kg</td>
+                            <td style="color: var(--color-accent-error);">-12.1</td>
+                        </tr>
+                        <tr>
+                            <td>Water Retention</td>
+                            <td>0.14 m³/m³</td>
+                            <td style="color: var(--color-accent-ag);">+0.02</td>
+                        </tr>
+                        <tr>
+                            <td>pH Level</td>
+                            <td>6.4</td>
+                            <td style="color: var(--color-text-muted);">--</td>
+                        </tr>
+                        <tr>
+                            <td>Bulk Density</td>
+                            <td>1.32 g/cm³</td>
+                            <td style="color: var(--color-accent-error);">+0.05</td>
+                        </tr>
+                        <tr>
+                            <td>Organic Carbon</td>
+                            <td>1.8%</td>
+                            <td style="color: var(--color-accent-ag);">+0.1</td>
+                        </tr>
+                        <tr>
+                            <td>P_Index</td>
+                            <td>14.2</td>
+                            <td style="color: var(--color-text-muted);">--</td>
+                        </tr>
+                        <tr>
+                            <td>K_Index</td>
+                            <td>156.0</td>
+                            <td style="color: var(--color-accent-ag);">+4.2</td>
+                        </tr>
+                        <tr>
+                            <td>Conductivity</td>
+                            <td>88 mS/m</td>
+                            <td style="color: var(--color-accent-error);">-5.0</td>
+                        </tr>
+                        <tr>
+                            <td>Root Depth Est.</td>
+                            <td>42 cm</td>
+                            <td style="color: var(--color-text-muted);">--</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="padding: var(--space-md);">
+                    <div class="panel-title" style="margin-bottom: var(--space-sm);">Threshold Facets</div>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+                        <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                            <label style="font-size: var(--font-size-xs); display: flex; justify-content: space-between;">
+                                <span>Reflectance Range (NIR)</span>
+                                <span>0.4 - 0.85</span>
+                            </label>
+                            <div style="height: 4px; background: var(--color-border-bright); border-radius: 2px; position: relative;">
+                                <div style="position: absolute; left: 20%; right: 10%; height: 100%; background: var(--color-accent-ag);"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                            <label style="font-size: var(--font-size-xs); display: flex; justify-content: space-between;">
+                                <span>Elevation Filter (m)</span>
+                                <span>240 - 285</span>
+                            </label>
+                            <div style="height: 4px; background: var(--color-border-bright); border-radius: 2px; position: relative;">
+                                <div style="position: absolute; left: 40%; right: 5%; height: 100%; background: var(--color-accent-ag);"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: var(--space-sm);">
+                            <button style="flex: 1;">ISO-CONTOUR</button>
+                            <button style="flex: 1;">CLUSTER</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // Interactive facet removal simulation
+        document.querySelectorAll('.facet-remove').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const chip = e.target.closest('.facet-chip');
+                if (chip) chip.remove();
+            });
+        });
+
+        // Simulating item selection
+        document.querySelectorAll('.list-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.list-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Quick shortcut logging
+        document.addEventListener('keydown', function(e) {
+            if(e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                console.log("Committed metadata layer at " + new Date().toISOString());
+                alert("Session metadata saved to local ledger.");
+            }
+        });
+    </script>
+</body>
+</html>

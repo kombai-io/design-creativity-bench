@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Retail Revenue Reconciliation | Diagnosis Mode</title>
+    <style>
+        :root {
+            --bg-kaolin: #f5f4f0;
+            --bg-lucent: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-muted: #595959;
+            --plum-deep: #4a2c40;
+            --plum-accent: #6b3e5a;
+            --border-color: #d9d9d9;
+            --error-red: #cf1322;
+            --error-bg: #fff1f0;
+            --success-green: #389e0d;
+            --success-bg: #f6ffed;
+            --highlight-gold: #b37d00;
+            --shadow-sm: 0 2px 0 rgba(0,0,0,0.02);
+            --font-size-xs: 11px;
+            --font-size-sm: 12px;
+            --font-size-md: 13px;
+            --font-size-lg: 16px;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+            --radius-none: 0px;
+            --radius-sm: 2px;
+            --header-height: 48px;
+            --sidebar-width: 280px;
+            --border-width: 1px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-kaolin);
+            color: var(--text-primary);
+            font-size: var(--font-size-md);
+            line-height: 1.4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Layout Containers */
+        .workspace-shell {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - var(--header-height));
+        }
+
+        header {
+            height: var(--header-height);
+            background-color: var(--plum-deep);
+            color: var(--bg-lucent);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--spacing-lg);
+            border-bottom: var(--border-width) solid var(--plum-accent);
+        }
+
+        .brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-right: var(--spacing-lg);
+            text-transform: uppercase;
+            font-size: var(--font-size-sm);
+        }
+
+        /* Tab System */
+        [role="tablist"] {
+            display: flex;
+            gap: var(--spacing-xs);
+            height: 100%;
+            align-items: flex-end;
+        }
+
+        [role="tab"] {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--bg-lucent);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            height: 36px;
+            display: flex;
+            align-items: center;
+        }
+
+        [role="tab"][aria-selected="true"] {
+            background-color: var(--bg-kaolin);
+            color: var(--plum-deep);
+            font-weight: 600;
+        }
+
+        /* Sidebar Info */
+        aside {
+            width: var(--sidebar-width);
+            background-color: var(--bg-lucent);
+            border-right: var(--border-width) solid var(--border-color);
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        /* Main Content Area */
+        main {
+            flex: 1;
+            padding: var(--spacing-md);
+            overflow-y: auto;
+            max-width: 1280px;
+        }
+
+        /* Component: Section Title */
+        .section-header {
+            font-size: var(--font-size-xs);
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: var(--spacing-sm);
+            border-bottom: var(--border-width) solid var(--border-color);
+            padding-bottom: var(--spacing-xs);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Component: Dense List */
+        .dense-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .dense-list-item {
+            padding: var(--spacing-xs) 0;
+            border-bottom: var(--border-width) solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: var(--font-size-xs);
+        }
+
+        .dense-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .value {
+            font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
+            font-weight: 600;
+        }
+
+        /* Form Mid-Validation */
+        .form-container {
+            background: var(--bg-lucent);
+            border: var(--border-width) solid var(--border-color);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        label {
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        input {
+            border: var(--border-width) solid var(--border-color);
+            padding: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            border-radius: var(--radius-sm);
+            background: #fafafa;
+        }
+
+        /* Validation States */
+        .field-accepted input {
+            border-color: var(--success-green);
+            background-color: var(--success-bg);
+        }
+
+        .field-error input {
+            border-color: var(--error-red);
+            background-color: var(--error-bg);
+        }
+
+        .validation-msg {
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .msg-error { color: var(--error-red); font-weight: 600; }
+        .msg-success { color: var(--success-green); font-weight: 600; }
+
+        /* Status Panels */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        .panel {
+            background: var(--bg-lucent);
+            border: var(--border-width) solid var(--border-color);
+            padding: var(--spacing-md);
+        }
+
+        /* Data Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-sm);
+        }
+
+        th {
+            text-align: left;
+            background: #f0f0f0;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border: var(--border-width) solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        td {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border: var(--border-width) solid var(--border-color);
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-fail { background: var(--error-bg); color: var(--error-red); }
+        .status-ok { background: var(--success-bg); color: var(--success-green); }
+
+        /* Utility */
+        .alert-banner {
+            background: var(--error-bg);
+            border: var(--border-width) solid var(--error-red);
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            color: var(--error-red);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .icon-box {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        button.primary-btn {
+            background: var(--plum-deep);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        button.secondary-btn {
+            background: white;
+            color: var(--text-primary);
+            border: var(--border-width) solid var(--border-color);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            margin-top: var(--spacing-md);
+            margin-right: var(--spacing-sm);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">Apex Recon v4.2</div>
+        <nav role="tablist" aria-label="Revenue Operations">
+            <button role="tab" aria-selected="false" aria-controls="dashboard-panel">Overview</button>
+            <button role="tab" aria-selected="true" aria-controls="recon-panel">Settlement Recon</button>
+            <button role="tab" aria-selected="false" aria-controls="audit-panel">Audit Logs</button>
+            <button role="tab" aria-selected="false" aria-controls="config-panel">Parameters</button>
+        </nav>
+    </header>
+
+    <div class="workspace-shell">
+        <aside>
+            <div>
+                <div class="section-header">Active Coordinator</div>
+                <div class="dense-list">
+                    <div class="dense-list-item"><span class="label">User:</span><span class="value">Elena Vance</span></div>
+                    <div class="dense-list-item"><span class="label">Role:</span><span class="value">Regional Lead (SE)</span></div>
+                    <div class="dense-list-item"><span class="label">Session:</span><span class="value">04:12:08 remaining</span></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="section-header">Regional Context</div>
+                <div class="dense-list">
+                    <div class="dense-list-item"><span class="label">Entity:</span><span class="value">RET-SOUTHEAST-04</span></div>
+                    <div class="dense-list-item"><span class="label">Stores:</span><span class="value">142 Active</span></div>
+                    <div class="dense-list-item"><span class="label">Currency:</span><span class="value">USD (Native)</span></div>
+                    <div class="dense-list-item"><span class="label">Threshold:</span><span class="value">+/- 0.05%</span></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="section-header">Recent Incidents</div>
+                <div class="dense-list">
+                    <div class="dense-list-item" style="color: var(--error-red)">
+                        <span>INC-99283</span>
+                        <span class="value">CRITICAL</span>
+                    </div>
+                    <div class="dense-list-item">
+                        <span>INC-99270</span>
+                        <span class="value">RESOLVED</span>
+                    </div>
+                    <div class="dense-list-item">
+                        <span>INC-99268</span>
+                        <span class="value">RESOLVED</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main id="recon-panel" role="tabpanel">
+            <div class="alert-banner" role="alert">
+                <svg class="icon-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                Revenue mismatch detected in Settlement Batch #99283-X. Action required to prevent GL lock.
+            </div>
+
+            <div class="form-container">
+                <div class="section-header">Correction & Validation Entry</div>
+                <form class="form-grid">
+                    <div class="field-group field-accepted">
+                        <label for="store-id">Target Store ID</label>
+                        <input type="text" id="store-id" value="4492-ATL" readonly aria-invalid="false">
+                        <div class="validation-msg msg-success">
+                            <svg class="icon-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Store ID verified against Master Directory.
+                        </div>
+                    </div>
+                    <div class="field-group field-error">
+                        <label for="recon-date">Transaction Settlement Date</label>
+                        <input type="text" id="recon-date" value="2023-10-24" aria-invalid="true" aria-describedby="date-error">
+                        <div id="date-error" class="validation-msg msg-error">
+                            <svg class="icon-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="15" y1="9" x2="9" y2="15"></line>
+                                <line x1="9" y1="9" x2="15" y2="15"></line>
+                            </svg>
+                            Sequence Conflict: Batch for 2023-10-24 already committed in GL-882.
+                        </div>
+                    </div>
+                </form>
+                <div>
+                    <button class="secondary-btn">Export Diagnostic Trace</button>
+                    <button class="primary-btn">Force Override (Requires Admin)</button>
+                </div>
+            </div>
+
+            <div class="grid-layout">
+                <div class="panel">
+                    <div class="section-header">Node Execution Trace (Last 50 Events)</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Component</th>
+                                <th>Operation</th>
+                                <th>Status</th>
+                                <th>Trace ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>08:42:11.002</td>
+                                <td>API_GATEWAY</td>
+                                <td>RECON_POST</td>
+                                <td><span class="status-pill status-fail">ERR_409</span></td>
+                                <td>TXN-992-AA-1</td>
+                            </tr>
+                            <tr>
+                                <td>08:42:10.988</td>
+                                <td>VAL_ENGINE</td>
+                                <td>SEQ_CHECK</td>
+                                <td><span class="status-pill status-fail">DUP_SEQ</span></td>
+                                <td>TXN-992-AA-1</td>
+                            </tr>
+                            <tr>
+                                <td>08:42:10.450</td>
+                                <td>AUTH_SERVICE</td>
+                                <td>OAUTH_VERIFY</td>
+                                <td><span class="status-pill status-ok">SUCCESS</span></td>
+                                <td>TXN-992-AA-0</td>
+                            </tr>
+                            <tr>
+                                <td>08:41:59.120</td>
+                                <td>DB_CONNECTOR</td>
+                                <td>READ_META</td>
+                                <td><span class="status-pill status-ok">SUCCESS</span></td>
+                                <td>META-771-BC</td>
+                            </tr>
+                            <tr>
+                                <td>08:41:58.882</td>
+                                <td>POS_INGEST</td>
+                                <td>S3_POLL</td>
+                                <td><span class="status-pill status-ok">200 OK</span></td>
+                                <td>INGEST-SKU-4</td>
+                            </tr>
+                            <tr>
+                                <td>08:40:02.001</td>
+                                <td>CRON_SCHED</td>
+                                <td>BATCH_INIT</td>
+                                <td><span class="status-pill status-ok">START</span></td>
+                                <td>SYS-INIT-09</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="panel">
+                    <div class="section-header">Diagnostic Breakdown</div>
+                    <div class="dense-list" style="margin-bottom: var(--spacing-lg);">
+                        <div class="dense-list-item">
+                            <span class="label">Reported Net Revenue:</span>
+                            <span class="value" style="color: var(--error-red)">$142,901.44</span>
+                        </div>
+                        <div class="dense-list-item">
+                            <span class="label">Calculated Net Revenue:</span>
+                            <span class="value">$142,888.10</span>
+                        </div>
+                        <div class="dense-list-item">
+                            <span class="label">Variance:</span>
+                            <span class="value" style="color: var(--error-red)">+$13.34</span>
+                        </div>
+                        <div class="dense-list-item">
+                            <span class="label">Source Code:</span>
+                            <span class="value">STRIPE_CONNECT_V2</span>
+                        </div>
+                    </div>
+
+                    <div class="section-header">Escalation Contacts</div>
+                    <div class="dense-list">
+                        <div class="dense-list-item">
+                            <span>S. Chen (DB Admin)</span>
+                            <span class="value">Ext 441</span>
+                        </div>
+                        <div class="dense-list-item">
+                            <span>M. Rossi (GL Specialist)</span>
+                            <span class="value">Ext 802</span>
+                        </div>
+                        <div class="dense-list-item">
+                            <span>K. Gupta (Systems Eng)</span>
+                            <span class="value">PAGER-91</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Simple tab switching logic
+        const tabs = document.querySelectorAll('[role="tab"]');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.setAttribute('aria-selected', 'false'));
+                tab.setAttribute('aria-selected', 'true');
+            });
+        });
+
+        // Mimic input behavior for "mid-validation" feel
+        const reconInput = document.getElementById('recon-date');
+        reconInput.addEventListener('input', (e) => {
+            // Keep it in error state for the prompt requirements
+            console.log("Validating: " + e.target.value);
+        });
+    </script>
+</body>
+</html>
+

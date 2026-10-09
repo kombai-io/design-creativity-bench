@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fieldline Repair — Dispatch Board</title>
+<style>
+  :root{
+    --indigo:#4f46e5; --indigo-d:#4338ca;
+    --ink:#0f172a; --sub:#64748b; --faint:#94a3b8;
+    --line:#e2e8f0; --line-soft:#eef2f7; --bg:#f6f7f9;
+    --red:#dc2626; --red-bg:#fef2f2; --amber:#d97706; --amber-bg:#fffbeb; --green:#16a34a; --green-bg:#f0fdf4;
+    --laneH:96px; --gutW:230px; --px:3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);background:var(--bg);display:grid;grid-template-rows:56px 46px minmax(0,1fr);height:100vh;overflow:hidden;
+    font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer}
+  ::-webkit-scrollbar{height:10px;width:10px}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px;border:2px solid #fff}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ============ TOP BAR ============ */
+  #topbar{display:flex;align-items:center;gap:16px;padding:0 16px;background:#fff;border-bottom:1px solid var(--line);z-index:50}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:-.01em}
+  .brand small{font-weight:600;color:var(--sub);font-size:11px;border-left:1px solid var(--line);padding-left:9px;margin-left:2px}
+  .datenav{display:flex;align-items:center;gap:6px;margin-left:8px}
+  .datenav .navb{width:26px;height:26px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--faint)}
+  .datepill{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:5px 12px;font-size:12.5px;font-weight:600;background:#fff}
+  .datepill .tom{font-size:10px;font-weight:700;color:var(--indigo);background:#eef2ff;border-radius:20px;padding:2px 8px;text-transform:uppercase;letter-spacing:.04em}
+  .stats{display:flex;gap:8px;margin-left:auto;align-items:center}
+  .stat{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);border:1px solid var(--line-soft);background:#fbfcfe;border-radius:8px;padding:5px 10px}
+  .stat b{color:var(--ink);font-size:12.5px}
+  .stat.bad{border-color:#fecaca;background:var(--red-bg);color:#b91c1c}.stat.bad b{color:var(--red)}
+  .stat.warn{border-color:#fde68a;background:var(--amber-bg);color:#92400e}.stat.warn b{color:var(--amber)}
+  .bell{position:relative;width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--sub)}
+  .bell .bdg{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;border-radius:10px;padding:1px 5px}
+  .userchip{display:flex;align-items:center;gap:8px;padding-left:12px;border-left:1px solid var(--line)}
+  .userchip .av{width:30px;height:30px;border-radius:50%;background:var(--indigo);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .userchip .nm{font-size:12px;font-weight:600;line-height:1.1}
+  .userchip .rl{font-size:10px;color:var(--faint)}
+
+  /* ============ CONTROLS ============ */
+  #controls{display:flex;align-items:center;gap:10px;padding:0 16px;background:#fff;border-bottom:1px solid var(--line);font-size:12px}
+  #controls .vlab{font-weight:700;font-size:12.5px}
+  #controls .sep{width:1px;height:20px;background:var(--line)}
+  .sel{border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px;background:#fff;color:var(--ink)}
+  .search{border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px;width:210px;background:#fbfcfe}
+  .chk{display:flex;align-items:center;gap:6px;color:var(--sub);user-select:none;cursor:pointer}
+  .crewnote{margin-left:auto;color:var(--sub);font-size:11.5px;display:flex;align-items:center;gap:6px}
+  .crewnote .dot{width:7px;height:7px;border-radius:50%;background:var(--amber)}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#f8fafc}
+  .btn-pri{background:var(--indigo);border-color:var(--indigo);color:#fff}
+  .btn-pri:hover{background:var(--indigo-d)}
+  .btn-xs{padding:3px 9px;font-size:11px;border-radius:7px}
+  .btn-warn-ghost{border-color:#fcd34d;background:#fffbeb;color:#92400e}
+  .btn-red-ghost{border-color:#fca5a5;background:#fef2f2;color:#b91c1c}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  /* ============ MAIN GRID ============ */
+  main{display:grid;grid-template-columns:minmax(0,1fr) 372px;min-height:0}
+  #board{display:flex;flex-direction:column;min-width:0;background:#fff}
+  #boardScroll{flex:1;overflow:auto;position:relative}
+  #boardInner{min-width:calc(var(--gutW) + 1980px)}
+
+  /* ruler */
+  #rulerRow{display:flex;position:sticky;top:0;z-index:30;height:34px;background:#fff;border-bottom:1px solid var(--line)}
+  #rulerCorner{position:sticky;left:0;z-index:42;width:var(--gutW);flex:none;background:#fff;border-right:1px solid var(--line);
+    display:flex;align-items:center;padding:0 14px;font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+  #ruler{position:relative;width:1980px;flex:none}
+  .rh{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);padding:4px 0 0 6px;font-size:10.5px;font-weight:600;color:var(--sub)}
+
+  /* lanes */
+  .laneRow{display:flex;border-bottom:1px solid var(--line-soft);height:var(--laneH)}
+  .laneHead{position:sticky;left:0;z-index:20;width:var(--gutW);flex:none;background:#fff;border-right:1px solid var(--line);padding:9px 12px;cursor:pointer}
+  .laneHead:hover{background:#f8fafc}
+  .laneHead.selTech{background:#eef2ff;box-shadow:inset 3px 0 0 var(--indigo)}
+  .lh-top{display:flex;align-items:center;gap:8px}
+  .lh-av{width:28px;height:28px;border-radius:8px;color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;flex:none}
+  .lh-name{font-size:12.5px;font-weight:700;line-height:1.15}
+  .lh-sub{font-size:10px;color:var(--sub)}
+  .lh-load{display:flex;align-items:center;gap:7px;margin-top:7px}
+  .lh-bar{flex:1;height:4px;border-radius:4px;background:#eef2f7;overflow:hidden}
+  .lh-bar i{display:block;height:100%;border-radius:4px}
+  .lh-load span{font-size:9.5px;color:var(--faint);white-space:nowrap}
+  .lh-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+  .chip{font-size:9px;font-weight:700;padding:1.5px 6px;border-radius:20px;background:#f1f5f9;color:#475569;letter-spacing:.02em}
+  .chip.cert{background:#eef2ff;color:#4338ca}
+  .laneTrack{width:1980px;flex:none;position:relative;height:var(--laneH);
+    background:
+      repeating-linear-gradient(90deg,#f4f6fa 0 1px,transparent 1px 45px),
+      repeating-linear-gradient(90deg,#e7ecf3 0 1px,transparent 1px 180px)}
+  .laneRow.drop-hover .laneTrack{background-color:#f5f7ff}
+  .offshift{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(-45deg,#f8fafc 0 6px,#f1f5f9 6px 12px);opacity:.85;pointer-events:none}
+  .shiftedge{position:absolute;top:0;bottom:0;width:2px;background:#cbd5e1;pointer-events:none}
+
+  /* appointment blocks */
+  .appt{position:absolute;top:12px;height:56px;border-radius:8px;padding:5px 8px 4px 10px;cursor:grab;user-select:none;
+    border:1px solid;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.06);z-index:2;overflow:visible;transition:box-shadow .12s}
+  .appt:hover{box-shadow:0 2px 8px rgba(15,23,42,.14);z-index:6}
+  .appt:active{cursor:grabbing}
+  .appt .stripe{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:8px 0 0 8px}
+  .a-top{display:flex;justify-content:space-between;gap:6px;font-size:9.5px;color:var(--sub);font-weight:600;white-space:nowrap}
+  .a-id{color:var(--faint);font-weight:700}
+  .a-title{font-size:11.5px;font-weight:650;line-height:1.2;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .a-flags{display:flex;gap:5px;font-size:9.5px;margin-top:2px;color:var(--sub);align-items:center;white-space:nowrap;overflow:hidden}
+  .a-flags .f-warn{color:var(--amber)} .a-flags .f-ok{color:var(--green)} .a-flags .f-bad{color:var(--red)}
+  .sevb{position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:9.5px;font-weight:800;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .sevb.warn{background:var(--amber)} .sevb.critical{background:var(--red)}
+  .overhang{position:absolute;left:100%;top:0;height:100%;border-radius:0 8px 8px 0;border:1px dashed var(--amber);border-left:none;
+    background:repeating-linear-gradient(-45deg,#fffbeb 0 6px,#fde68a 6px 8px,#fffbeb 8px 14px);
+    color:#92400e;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .appt.sel{box-shadow:0 0 0 2px var(--indigo),0 2px 8px rgba(79,70,229,.25);z-index:7}
+  .appt.dim{opacity:.18}
+  .appt.task{cursor:default;border-style:dashed;background:#f8fafc;color:var(--sub);font-style:italic}
+  .appt.flash{animation:flash 1.2s ease}
+  @keyframes flash{0%,60%{box-shadow:0 0 0 3px var(--indigo)}100%{box-shadow:0 0 0 0 transparent}}
+
+  /* travel connectors */
+  .conn{position:absolute;bottom:7px;height:15px;border-radius:8px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:2px;padding:0 5px;z-index:1;white-space:nowrap}
+  .conn.ok{background:#f1f5f9;color:#94a3b8}
+  .conn.tight{background:#fef3c7;color:#92400e}
+  .conn.bad{background:#fee2e2;color:#b91c1c}
+  #boardInner.hideTravel .conn{display:none}
+
+  /* legend */
+  #legend{display:flex;align-items:center;gap:16px;padding:5px 16px;border-top:1px solid var(--line);background:#fbfcfe;font-size:10.5px;color:var(--sub)}
+  .lg{display:flex;align-items:center;gap:5px}
+  .sw{width:14px;height:9px;border-radius:3px;display:inline-block}
+  .sw.urg{background:var(--red)} .sw.hi{background:#ea580c} .sw.no{background:#94a3b8}
+  .sw.ovh{background:repeating-linear-gradient(-45deg,#fffbeb 0 3px,#fde68a 3px 4px,#fffbeb 4px 7px);border:1px dashed var(--amber)}
+  .sw.off{background:repeating-linear-gradient(-45deg,#f8fafc 0 3px,#e8edf3 3px 6px)}
+  .sw.cnnB{background:#fee2e2;border:1px solid #fca5a5}
+  #legend .hint{margin-left:auto;color:var(--faint)}
+
+  /* ============ SIDE PANEL ============ */
+  #side{border-left:1px solid var(--line);background:#fff;display:flex;flex-direction:column;min-height:0}
+  #tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+  .tab{flex:1;padding:11px 0;text-align:center;font-size:12px;font-weight:700;color:var(--sub);background:#fbfcfe;border:none;border-bottom:2px solid transparent}
+  .tab.on{color:var(--indigo);background:#fff;border-bottom-color:var(--indigo)}
+  .tab .cnt{display:inline-block;min-width:17px;background:var(--red);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;margin-left:5px}
+  #sideContent{flex:1;overflow-y:auto;padding:14px}
+
+  .unass-card{border:1.5px dashed #fca5a5;background:#fff7f7;border-radius:12px;padding:12px;margin-bottom:14px;cursor:grab;user-select:none}
+  .unass-card:active{cursor:grabbing}
+  .unass-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .pill{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:20px;padding:2.5px 8px}
+  .pill.urgent{background:var(--red);color:#fff}
+  .pill.high{background:#ffedd5;color:#c2410c}
+  .pill.normal{background:#f1f5f9;color:#475569}
+  .pill.status{background:#e0e7ff;color:#3730a3}
+  .pill.unassigned{background:#fee2e2;color:#b91c1c}
+  .unass-title{font-size:13px;font-weight:700}
+  .unass-meta{font-size:11px;color:var(--sub);margin-top:3px;line-height:1.5}
+  .draghint{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#b91c1c;font-weight:600;margin-top:8px}
+  .unass-actions{display:flex;gap:6px;margin-top:10px}
+
+  .alert{border:1px solid var(--line);border-left-width:3px;border-radius:10px;padding:10px 12px;margin-bottom:9px;background:#fff}
+  .alert.critical{border-left-color:var(--red);background:linear-gradient(90deg,#fff7f7,#fff 40%)}
+  .alert.warn{border-left-color:var(--amber)}
+  .al-head{display:flex;gap:8px;align-items:flex-start}
+  .al-ic{width:22px;height:22px;border-radius:7px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;margin-top:1px}
+  .alert.critical .al-ic{background:var(--red)} .alert.warn .al-ic{background:var(--amber)}
+  .al-title{font-size:12px;font-weight:700;line-height:1.3}
+  .al-desc{font-size:11px;color:var(--sub);margin-top:3px;line-height:1.45}
+  .al-foot{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .al-link{font-size:11px;font-weight:700;color:var(--indigo);background:none;border:none;padding:0}
+  .al-dismiss{margin-left:auto;background:none;border:none;color:var(--faint);font-size:13px;line-height:1;padding:2px}
+  .al-dismiss:hover{color:var(--ink)}
+  .secTitle{font-size:10.5px;font-weight:800;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 8px}
+  .okbox{border:1px solid #bbf7d0;background:var(--green-bg);border-radius:10px;padding:10px 12px;font-size:11.5px;color:#166534;display:flex;gap:8px;align-items:center}
+
+  /* details */
+  .d-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+  .d-id{font-size:15px;font-weight:800}
+  .d-pills{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
+  .d-jump{margin-left:auto}
+  .d-sec{border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fff}
+  .d-sec h4{font-size:10px;font-weight:800;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+  .kv{display:flex;font-size:11.5px;padding:2.5px 0;gap:8px}
+  .kv .k{width:86px;flex:none;color:var(--sub)}
+  .kv .v{font-weight:600}
+  .zonechip{font-size:9.5px;font-weight:700;background:#ecfeff;color:#0e7490;border-radius:12px;padding:1px 7px;margin-left:6px}
+  .winchip{font-size:10px;font-weight:700;border-radius:12px;padding:1.5px 8px;margin-left:6px}
+  .winchip.ok{background:var(--green-bg);color:#166534}
+  .winchip.bad{background:#fee2e2;color:#b91c1c}
+  .reqrow{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:3px 0}
+  .reqrow .ic{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:9.5px;font-weight:800;color:#fff;flex:none}
+  .reqrow .ic.ok{background:var(--green)} .reqrow .ic.no{background:var(--red)}
+  .partrow{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:3.5px 0}
+  .pstat{font-size:9.5px;font-weight:700;border-radius:12px;padding:1.5px 8px;margin-left:auto;white-space:nowrap}
+  .pstat.truck,.pstat.van{background:var(--green-bg);color:#166534}
+  .pstat.warehouse{background:#fef3c7;color:#92400e}
+  .pstat.order{background:#fee2e2;color:#b91c1c}
+  .notebox{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:11px;color:#92400e;line-height:1.5;margin-bottom:10px}
+  .changebox{background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:9px 11px;font-size:11.5px;color:#9a3412;margin-bottom:10px}
+  .changebox b{display:block;margin-bottom:5px}
+  .techsel{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;font-weight:600;background:#fff}
+  .nudges{display:flex;gap:6px;align-items:center;margin-top:8px}
+  .nudges .lab{font-size:10.5px;color:var(--sub);margin-right:2px}
+  .travline{font-size:10.5px;color:var(--sub);margin-top:8px;display:flex;gap:5px;align-items:center}
+  .travline.bad{color:#b91c1c;font-weight:700}
+  .travline.tight{color:#92400e;font-weight:700}
+  .notifyrow{display:flex;gap:6px}
+  .loglist{margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
+  .logitem{font-size:10.5px;color:var(--sub);padding:2.5px 0;line-height:1.45}
+  .logitem b{color:#475569}
+  .sug{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .sug.best{border-color:#c7d2fe;background:#f5f7ff}
+  .sug.off{opacity:.6;background:#f8fafc}
+  .sug-top{display:flex;align-items:center;gap:8px}
+  .sug-tname{font-size:12.5px;font-weight:700}
+  .sug-time{font-size:11px;color:var(--sub);margin-left:auto;font-weight:600}
+  .sug-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+  .bdg2{font-size:9.5px;font-weight:700;border-radius:12px;padding:2px 8px}
+  .bdg2.ok{background:var(--green-bg);color:#166534}
+  .bdg2.warn{background:#fef3c7;color:#92400e}
+  .bdg2.bad{background:#fee2e2;color:#b91c1c}
+  .sug-act{display:flex;align-items:center;gap:8px;margin-top:9px}
+  .sug-act label{font-size:10.5px;color:var(--sub);display:flex;gap:5px;align-items:center;cursor:pointer}
+  .besttag{font-size:9px;font-weight:800;color:var(--indigo);background:#e0e7ff;border-radius:10px;padding:1.5px 7px;text-transform:uppercase;letter-spacing:.05em}
+  .tprofile{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .tprofile .lh-av{width:40px;height:40px;border-radius:10px;font-size:13px}
+  .bigbar{height:8px;border-radius:6px;background:#eef2f7;overflow:hidden;margin:6px 0 3px}
+  .bigbar i{display:block;height:100%}
+  .stoprow{display:flex;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px dashed var(--line-soft)}
+  .stoprow:last-child{border-bottom:none}
+  .stoprow .t{width:104px;flex:none;font-weight:700;color:var(--sub)}
+  .stoprow .w{margin-left:auto;color:var(--faint);font-weight:600}
+
+  /* toasts */
+  #toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{background:#0f172a;color:#fff;font-size:12px;font-weight:600;border-radius:10px;padding:9px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);
+    display:flex;gap:8px;align-items:center;animation:tin .25s ease;max-width:560px}
+  .toast.ok{background:#14532d}.toast.warn{background:#92400e}.toast.err{background:#991b1b}
+  @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+
+  /* drag */
+  #ghost{position:fixed;z-index:150;pointer-events:none;display:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;
+    background:#fff;border:2px dashed var(--faint);box-shadow:0 8px 24px rgba(15,23,42,.25);opacity:.95}
+  #ghost.good{border-color:var(--green);background:var(--green-bg);color:#14532d}
+  #ghost.bad{border-color:var(--red);background:var(--red-bg);color:#991b1b}
+  body.dragging,body.dragging *{cursor:grabbing!important;user-select:none!important}
+  #unassignDrop{position:absolute;bottom:42px;left:246px;z-index:80;display:none;background:#fff;border:2px dashed var(--faint);border-radius:10px;
+    padding:10px 18px;font-size:12px;font-weight:700;color:var(--sub);box-shadow:0 6px 20px rgba(15,23,42,.15)}
+  #unassignDrop.hot{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+  body.draggingAssigned #unassignDrop{display:block}
+</style>
+</head>
+<body>
+
+<!-- ================= TOP BAR ================= -->
+<header id="topbar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26"><rect width="26" height="26" rx="6" fill="#4f46e5"/><path d="M5 15.5h4l2-6.5 3.2 10 2.3-6h4.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Fieldline Repair <small>Dispatch Console</small>
+  </div>
+  <div class="datenav">
+    <button class="navb" title="Previous day (demo: single day)">‹</button>
+    <div class="datepill">Wed, March 12 <span class="tom">Tomorrow</span></div>
+    <button class="navb" title="Next day (demo: single day)">›</button>
+  </div>
+  <div class="stats" id="dayStats"></div>
+  <button class="bell" title="Open issues">🔔<span class="bdg" id="bellBdg">0</span></button>
+  <div class="userchip">
+    <div class="av">RD</div>
+    <div><div class="nm">Rita Diaz</div><div class="rl">Lead Dispatcher</div></div>
+  </div>
+</header>
+
+<!-- ================= CONTROLS ================= -->
+<div id="controls">
+  <span class="vlab">Day · Timeline</span>
+  <div class="sep"></div>
+  <input class="search" id="q" placeholder="Search ID, customer, address, appliance…">
+  <select class="sel" id="fPr">
+    <option value="all">All priorities</option>
+    <option value="urgent">Urgent only</option>
+    <option value="high+">High + Urgent</option>
+  </select>
+  <select class="sel" id="fZone">
+    <option value="all">All zones</option>
+    <option>North</option><option>Central</option><option>South</option><option>East</option><option>West</option>
+  </select>
+  <label class="chk"><input type="checkbox" id="fTravel" checked> Travel times</label>
+  <div class="crewnote"><span class="dot"></span> S. Park on PTO — crew at 5 of 6 techs</div>
+  <div class="sep"></div>
+  <button class="btn btn-pri" id="btnOptimize">⚡ Optimize day</button>
+</div>
+
+<!-- ================= MAIN ================= -->
+<main>
+  <section id="board">
+    <div id="boardScroll">
+      <div id="boardInner">
+        <div id="rulerRow">
+          <div id="rulerCorner">Technician · Shift · Load</div>
+          <div id="ruler"></div>
+        </div>
+        <div id="lanes"></div>
+      </div>
+    </div>
+    <div id="unassignDrop">↩ Drop here to unassign</div>
+    <div id="legend">
+      <span class="lg"><span class="sw urg"></span> Urgent</span>
+      <span class="lg"><span class="sw hi"></span> High</span>
+      <span class="lg"><span class="sw no"></span> Normal</span>
+      <span class="lg"><span class="sw ovh"></span> Running over</span>
+      <span class="lg"><span class="sw cnnB"></span> Insufficient travel gap</span>
+      <span class="lg"><span class="sw off"></span> Off shift</span>
+      <span class="hint">Drag a block to re-time or reassign · Click a block for details</span>
+    </div>
+  </section>
+
+  <aside id="side">
+    <div id="tabs">
+      <button class="tab on" data-tab="issues" id="tabIssues">Issues <span class="cnt" id="issueCnt">0</span></button>
+      <button class="tab" data-tab="details" id="tabDetails">Details</button>
+    </div>
+    <div id="sideContent"></div>
+  </aside>
+</main>
+
+<div id="toasts"></div>
+<div id="ghost"></div>
+
+<script>
+/* ==================================================================
+   Fieldline Repair — Dispatch Board (single-file demo)
+   Times are minutes after midnight. Board window 7:00–18:00, 3 px/min.
+================================================================== */
+const MIN0=420, MIN1=1080, PX=3, SNAP=15, WAREHOUSE_ZONE='North';
+
+const DRIVE={
+  North:  {North:12, Central:22, East:26, South:38, West:24},
+  Central:{North:22, Central:10, East:20, South:18, West:22},
+  East:   {North:26, Central:20, East:10, South:24, West:30},
+  South:  {North:38, Central:18, East:24, South:12, West:28},
+  West:   {North:24, Central:22, East:30, South:28, West:10}
+};
+
+const TECHS=[
+ {id:'mw',name:'Marcus Webb',ini:'MW',role:'Senior Technician',start:420,end:930, zones:['North','Central'],
+  skills:['refrigeration','laundry','cooking'],certs:['EPA-608'],brands:['Whirlpool','GE','Maytag','KitchenAid'],
+  van:'Van 04',color:'#2563eb',phone:'(555) 014-2201'},
+ {id:'do',name:'Dana Okafor',ini:'DO',role:'Technician',start:480,end:990, zones:['Central','South'],
+  skills:['laundry','dishwasher'],certs:[],brands:['Samsung','LG','GE'],
+  van:'Van 02',color:'#7c3aed',phone:'(555) 014-2202'},
+ {id:'lf',name:'Luis Ferreira',ini:'LF',role:'Senior Technician',start:480,end:1020, zones:['South','East'],
+  skills:['refrigeration','cooking'],certs:['EPA-608','Gas'],brands:['LG','Samsung','Frigidaire','GE'],
+  van:'Van 07',color:'#0e7490',phone:'(555) 014-2203'},
+ {id:'pn',name:'Priya Nair',ini:'PN',role:'Technician',start:540,end:1020, zones:['North','East'],
+  skills:['dishwasher','cooking'],certs:['Electrical'],brands:['Bosch','Miele','KitchenAid'],
+  van:'Van 05',color:'#b45309',phone:'(555) 014-2204'},
+ {id:'td',name:'Tom Delgado',ini:'TD',role:'Apprentice Technician',start:450,end:960, zones:['West','Central'],
+  skills:['laundry'],certs:[],brands:['Whirlpool','Maytag','Amana'],
+  van:'Van 09',color:'#15803d',phone:'(555) 014-2205',note:'Apprentice — gas work requires certified supervision.'}
+];
+
+let APPTS=[
+ {id:'FL-2041',tech:'mw',cust:'H. Alvarez',phone:'(555) 013-8827',addr:'12 Birchwood Ln',zone:'North',win:[450,570],start:450,dur:75,
+  ap:'Refrigerator',brand:'KitchenAid',prob:'Ice maker not producing. Fill valve replaced in Nov — likely the module.',pr:'normal',
+  req:{skills:['refrigeration'],certs:[]},parts:[{n:'Ice maker module',s:'truck'}],eq:[]},
+ {id:'FL-2038',tech:'mw',cust:'J. & M. Osei',phone:'(555) 013-5541',addr:'88 Harbor View Dr',zone:'North',win:[540,660],start:555,dur:75,
+  ap:'Washer',brand:'Whirlpool',prob:'Won\u2019t drain; standing water. Tenant home after 9:00.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Drain pump (WP)',s:'truck'}],eq:[]},
+ {id:'FL-2033',tech:'mw',cust:'R. Whitfield',phone:'(555) 013-2210',addr:'4 Cedar Ct',zone:'Central',win:[660,780],start:660,dur:90,
+  ap:'Dryer',brand:'Maytag',prob:'Tumbles, no heat. Second visit this year.',pr:'high',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Heating element',s:'truck'},{n:'Drum roller kit',s:'van'}],eq:[],
+  overrun:45,report:'10:47 AM — Marcus: drum rollers seized; fitting roller kit from van stock. Running ~45 min over.'},
+ {id:'FL-2029',tech:'mw',cust:'G. Ramos',phone:'(555) 013-7784',addr:'19 Maple St',zone:'Central',win:[720,840],start:810,dur:60,
+  ap:'Range (electric)',brand:'GE',prob:'Bake element burned out; breaker trips when preheating.',pr:'normal',
+  req:{skills:['cooking'],certs:[]},parts:[{n:'Bake element',s:'truck'}],eq:[]},
+
+ {id:'FL-2044',tech:'do',cust:'T. Nguyen',phone:'(555) 016-3309',addr:'55 Lakeview Ave',zone:'Central',win:[480,600],start:495,dur:60,
+  ap:'Washer',brand:'Samsung',prob:'Walks across the floor on spin cycle.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Suspension rods',s:'truck'}],eq:[]},
+ {id:'FL-2040',tech:'do',cust:'A. Fitzgerald',phone:'(555) 016-1180',addr:'201 Elm St, Apt 3B',zone:'South',win:[540,660],start:585,dur:75,
+  ap:'Dishwasher',brand:'LG',prob:'Leaking from bottom of door; gasket visibly warped.',pr:'normal',
+  req:{skills:['dishwasher'],certs:[]},parts:[{n:'Door gasket',s:'truck'}],eq:[]},
+ {id:'FL-2052',tech:'do',cust:'The Bergers',phone:'(555) 016-9902',addr:'77 Garden St',zone:'South',win:[660,780],start:690,dur:60,
+  ap:'Dryer vent service',brand:null,prob:'Annual vent cleaning + lint buildup inspection (camera).',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[],eq:[{n:'Vent camera — Van 02',s:'truck'}]},
+ {id:'FL-2047',tech:'do',cust:'S. Mensah',phone:'(555) 016-4471',addr:'9 River Rd',zone:'South',win:[780,900],start:780,dur:90,
+  ap:'Dryer',brand:'Samsung',prob:'Runs cold; heating element suspected.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Heating element (Samsung)',s:'truck'}],eq:[]},
+ {id:'FL-2055',tech:'do',cust:'K. O\u2019Brien',phone:'(555) 016-8834',addr:'140 Sunset Blvd',zone:'South',win:[900,1020],start:900,dur:60,
+  ap:'Washer',brand:'LG',prob:'OE drain error; filter cleaned by customer, no change.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Drain pump (LG)',s:'truck'}],eq:[]},
+
+ {id:'FL-2036',tech:'lf',cust:'L. Moreau',phone:'(555) 018-2290',addr:'302 Pine St',zone:'South',win:[480,600],start:480,dur:90,
+  ap:'Gas range',brand:'Frigidaire',prob:'Two burners won\u2019t light; igniters keep clicking.',pr:'normal',
+  req:{skills:['cooking'],certs:['Gas']},parts:[{n:'Burner igniters ×2',s:'truck'}],eq:[{n:'Combustion analyzer — Van 07',s:'truck'}]},
+ {id:'FL-2042',tech:'lf',cust:'D. Kim',phone:'(555) 018-7716',addr:'17 Ocean Dr',zone:'East',win:[600,720],start:600,dur:75,
+  ap:'Refrigerator',brand:'LG',prob:'Fridge warm (48°F), freezer OK; compressor hot. Food-loss risk.',pr:'high',
+  req:{skills:['refrigeration'],certs:['EPA-608']},parts:[{n:'Start relay',s:'truck'},{n:'R-134a refrigerant',s:'van'}],
+  eq:[{n:'Recovery machine — Van 07',s:'truck'},{n:'Manifold gauge set',s:'truck'}]},
+ {id:'FL-2050',tech:'lf',cust:'P. Anand',phone:'(555) 018-0931',addr:'66 Bay St',zone:'East',win:[660,780],start:705,dur:60,
+  ap:'Oven',brand:'Samsung',prob:'Door won\u2019t close flush; hinge bent.',pr:'normal',
+  req:{skills:['cooking'],certs:[]},parts:[{n:'Door hinge',s:'truck'}],eq:[]},
+ {id:'FL-2031',tech:'lf',cust:'C. Doyle',phone:'(555) 018-5568',addr:'250 Hillcrest Ave',zone:'East',win:[840,960],start:840,dur:90,
+  ap:'Freezer',brand:'Frigidaire',prob:'Frosting over; defrost cycle suspected.',pr:'normal',
+  req:{skills:['refrigeration'],certs:[]},parts:[{n:'Defrost timer',s:'truck'}],eq:[]},
+
+ {id:'FL-2045',tech:'pn',cust:'V. Roth',phone:'(555) 017-3345',addr:'12 Walnut Ave',zone:'North',win:[540,660],start:540,dur:75,
+  ap:'Dishwasher',brand:'Bosch',prob:'Won\u2019t drain; standing water after cycle.',pr:'normal',
+  req:{skills:['dishwasher'],certs:[]},parts:[{n:'Drain pump (Bosch)',s:'truck'}],eq:[]},
+ {id:'FL-2039',tech:'pn',cust:'N. Haddad',phone:'(555) 017-6620',addr:'5 Summit Rd',zone:'North',win:[600,750],start:645,dur:75,
+  ap:'Wall oven',brand:'Miele',prob:'Error F34; control board scorched (photo on file).',pr:'high',
+  req:{skills:['cooking'],certs:[]},parts:[{n:'Control board (Miele)',s:'warehouse'}],eq:[]},
+ {id:'FL-2051',tech:'pn',cust:'E. Kovac',phone:'(555) 017-9013',addr:'33 Birch St',zone:'East',win:[780,900],start:780,dur:75,
+  ap:'Dishwasher',brand:'KitchenAid',prob:'Dishes come out gritty; spray arms clear per customer.',pr:'normal',
+  req:{skills:['dishwasher'],certs:[]},parts:[],eq:[]},
+ {id:'FL-2048',tech:'pn',cust:'W. Barton',phone:'(555) 017-4177',addr:'90 Hilltop Ter',zone:'East',win:[900,1020],start:900,dur:90,
+  ap:'Wall oven',brand:'Bosch',prob:'Won\u2019t reach temp; preheat stalls at 260°F.',pr:'normal',
+  req:{skills:['cooking'],certs:[]},parts:[{n:'Bake element (Bosch)',s:'truck'}],eq:[]},
+
+ {id:'FL-2043',tech:'td',cust:'F. Greer',phone:'(555) 019-1288',addr:'410 Oak St',zone:'West',win:[450,570],start:465,dur:75,
+  ap:'Washer',brand:'Amana',prob:'Agitator spins free; dogs worn.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Agitator dog kit',s:'truck'}],eq:[]},
+ {id:'FL-2049',tech:'td',cust:'I. Sorren',phone:'(555) 019-8452',addr:'310 Fulton St',zone:'Central',win:[540,660],start:555,dur:60,
+  ap:'Dryer',brand:'Maytag',prob:'Loud squeal at startup; idler pulley likely.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Idler pulley',s:'truck'}],eq:[]},
+ {id:'FL-2054',tech:'td',cust:'D. & L. Pace',phone:'(555) 019-5517',addr:'8 Glen Ave',zone:'Central',win:[660,780],start:660,dur:60,
+  ap:'Washer',brand:'Whirlpool',prob:'Water drips into tub while off; inlet valve.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Inlet valve',s:'truck'}],eq:[]},
+ {id:'FL-2037',tech:'td',cust:'M. Castillo',phone:'(555) 019-3369',addr:'150 Park Pl',zone:'Central',win:[780,900],start:795,dur:60,
+  ap:'Gas dryer',brand:'Amana',prob:'No heat; igniter glows but gas won\u2019t ignite. Coils/valve likely.',pr:'normal',
+  req:{skills:['laundry'],certs:['Gas']},parts:[{n:'Gas valve coils',s:'truck'}],eq:[]},
+ {id:'FL-2046',tech:'td',cust:'B. Novak',phone:'(555) 019-7743',addr:'220 Cedar St',zone:'Central',win:[840,990],start:885,dur:90,
+  ap:'Washer',brand:'Whirlpool',prob:'Won\u2019t spin; gearcase oil leak spotted underneath.',pr:'normal',
+  req:{skills:['laundry'],certs:[]},parts:[{n:'Gearcase',s:'truck'}],eq:[]},
+
+ {id:'FL-2057',tech:null,cust:'Y. Tanaka',phone:'(555) 012-6090',addr:'72 Harborview Ter',zone:'North',win:[720,960],start:null,dur:90,
+  ap:'Refrigerator',brand:'GE',prob:'Stopped cooling overnight; ~$400 of food at risk. Sealed system likely.',pr:'urgent',
+  req:{skills:['refrigeration'],certs:['EPA-608']},parts:[{n:'Start relay (universal)',s:'truck'},{n:'R-134a refrigerant',s:'van'}],
+  eq:[{n:'Recovery machine — shared (on Van 07)',s:'warehouse'},{n:'Leak detector',s:'truck'}],
+  note:'Called 6:40 AM — asked for earliest possible visit.'}
+];
+
+/* ---------------- state ---------------- */
+const state={tab:'issues', sel:'FL-2057', selTech:null, showTravel:true, fPr:'all', fZone:'all', q:'',
+  dismissed:new Set(), sugOk:{}};
+APPTS.forEach(a=>{a.log=[];a.custNotified=false;});
+
+/* ---------------- helpers ---------------- */
+const $=s=>document.querySelector(s);
+const byId=id=>APPTS.find(a=>a.id===id);
+const tech=id=>TECHS.find(t=>t.id===techOrId(id));
+function techOrId(id){return id;}
+const techById=id=>TECHS.find(t=>t.id===id);
+const effEnd=a=>a.start==null?null:a.start+a.dur+(a.overrun||0);
+const end=a=>a.start==null?null:a.start+a.dur;
+const snapUp=m=>Math.ceil(m/SNAP)*SNAP;
+function fmt(m){if(m==null)return'—';let h=Math.floor(m/60),mm=m%60,ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(mm).padStart(2,'0')+' '+ap;}
+function fmtT(m){if(m==null)return'—';let h=Math.floor(m/60),mm=m%60,ap=h>=12?'p':'a';h=h%12||12;return h+(mm?':'+String(mm).padStart(2,'0'):'')+ap;}
+const mins=h=>{const H=Math.floor(h/60),M=h%60;return (H?H+'h':'')+(M?(H?' ':'')+M+'m':'');};
+function compat(a,t){const miss=[];a.req.skills.forEach(s=>{if(!t.skills.includes(s))miss.push('skill: '+s)});
+  a.req.certs.forEach(c=>{if(!(a.signoff&&c==='Gas')&&!t.certs.includes(c))miss.push('cert: '+c)});
+  if(a.brand&&!t.brands.includes(a.brand))miss.push('brand: '+a.brand);return miss;}
+function techAppts(tid){return APPTS.filter(a=>a.tech===tid).sort((x,y)=>x.start-y.start);}
+function prevAppt(tid,a){const l=techAppts(tid).filter(x=>x!==a&&effEnd(x)<=a.start);return l[l.length-1]||null;}
+function nextAppt(tid,a){return techAppts(tid).find(x=>x!==a&&x.start>=effEnd(a))||null;}
+function overlaps(tid,a,start,dur){return techAppts(tid).some(x=>x!==a&&start<effEnd(x)&&start+dur>x.start);}
+function hasPickup(id){return APPTS.some(a=>a.task&&a.forId===id);}
+function validate(a,tid,start){ // returns {hard:[],soft:[]}
+  const t=techById(tid),hard=[],soft=[];
+  compat(a,t).forEach(m=>hard.push('Missing '+m));
+  if(overlaps(tid,a,start,a.dur))hard.push('Overlaps another job');
+  if(start<t.start)hard.push('Starts before '+t.name.split(' ')[0]+'’s shift ('+fmt(t.start)+')');
+  if(!hard.length){
+    if(start+a.dur>t.end)soft.push('+'+((start+a.dur)-t.end)+'m past shift end');
+    if(!t.zones.includes(a.zone))soft.push('Outside '+t.name.split(' ')[0]+'’s service area');
+    const l=techAppts(tid).filter(x=>x!==a&&effEnd(x)<=start);const p=l[l.length-1];
+    if(p){const d=DRIVE[p.zone][a.zone];if(start-effEnd(p)<d)soft.push('Travel from '+p.id+' needs '+d+'m, gap is '+(start-effEnd(p))+'m');}
+    const n=techAppts(tid).find(x=>x!==a&&x.start>=start+a.dur);
+    if(n){const d=DRIVE[a.zone][n.zone];if(n.start-(start+a.dur)<d)soft.push('Only '+(n.start-(start+a.dur))+'m to reach '+n.id+' ('+d+'m drive)');}
+    if(start+a.dur>a.win[1])soft.push('Finishes after promised window ('+fmt(a.win[1])+')');
+  }
+  return{hard,soft};
+}
+function earliestSlot(t,a){
+  let cand=Math.max(t.start,a.win[0]);const list=techAppts(t.id);
+  for(let i=0;i<25;i++){cand=snapUp(cand);
+    const prevs=list.filter(x=>effEnd(x)<=cand);const p=prevs[prevs.length-1];
+    if(p){const d=DRIVE[p.zone][a.zone];if(cand-effEnd(p)<d){cand=effEnd(p)+d;continue;}}
+    const hit=list.find(x=>cand<effEnd(x)&&cand+a.dur>x.start);
+    if(hit){cand=effEnd(hit)+DRIVE[hit.zone][a.zone];continue;}
+    if(cand+a.dur>1110)return null;return cand;}
+  return null;
+}
+function suggestions(a){
+  return TECHS.map(t=>{const miss=compat(a,t);let start=null,soft=[];
+    if(!miss.length){start=earliestSlot(t,a);
+      if(start==null)miss.push('no open slot today');
+      else{const e=start+a.dur;
+        if(e>t.end)soft.push('+'+(e-t.end)+'m overtime');
+        if(e>a.win[1])soft.push((e-a.win[1])+'m past window');
+        if(!t.zones.includes(a.zone))soft.push('outside service area');}}
+    const score=miss.length?1e6:soft.reduce((s,w)=>s+(w.includes('window')?60:w.includes('overtime')?25:15),0)+(start||9999)-a.win[0];
+    return{t,miss,start,end:start==null?null:start+a.dur,soft,score};
+  }).sort((x,y)=>x.score-y.score);
+}
+
+/* ---------------- alert engine ---------------- */
+function computeAlerts(){
+  const A=[];
+  APPTS.filter(a=>!a.tech&&!a.task).forEach(a=>A.push({key:'unass-'+a.id,type:'unassigned',sev:'critical',appt:a.id,
+    title:a.id+' unassigned — '+a.pr.toUpperCase()+' · '+(a.brand?a.brand+' ':'')+a.ap,
+    desc:a.cust+' · '+a.addr+' ('+a.zone+') · window '+fmt(a.win[0])+'–'+fmt(a.win[1])+' · est '+mins(a.dur)+'. Needs '+
+      a.req.skills.concat(a.req.certs).join(', ')+'.',acts:[{act:'view',label:'Review & assign'}]}));
+  for(const a of APPTS){if(a.task||!a.tech)continue;const t=techById(a.tech);
+    const miss=compat(a,t);
+    if(miss.length)A.push({key:'cert-'+a.id,type:'compat',sev:'critical',appt:a.id,
+      title:a.id+': '+t.name+' missing '+miss.join(', '),
+      desc:(a.brand?a.brand+' ':'')+a.ap+' at '+a.addr+' requires '+a.req.skills.concat(a.req.certs).join(', ')+'. '+(t.note||''),
+      acts:miss.some(m=>m.startsWith('cert'))?[{act:'signoff',label:'Log supervisor sign-off'},{act:'view',label:'Details'}]:[{act:'view',label:'Details'}]});
+    if(a.start<t.start)A.push({key:'preshift-'+a.id,type:'shift',sev:'critical',appt:a.id,
+      title:a.id+' starts before '+t.name+'’s shift',desc:'Scheduled '+fmt(a.start)+' — shift begins '+fmt(t.start)+'.',acts:[{act:'view',label:'Details'}]});
+    if(end(a)>t.end&&!a.otApproved)A.push({key:'ot-'+a.id,type:'overtime',sev:'warn',appt:a.id,
+      title:a.id+' ends '+fmt(end(a))+' — '+(end(a)-t.end)+'m past '+t.name.split(' ')[0]+'’s shift ('+fmtT(t.end)+')',
+      desc:(a.brand?a.brand+' ':'')+a.ap+' · '+a.cust+', '+a.addr+'. Approve overtime or reassign.',
+      acts:[{act:'ot',label:'Approve overtime'},{act:'view',label:'Reassign'}]});
+    if(end(a)>a.win[1]&&!a.custNotified){const p=prevAppt(a.tech,a);
+      A.push({key:'win-'+a.id,type:'window',sev:'warn',appt:a.id,
+      title:a.id+' may finish after the promised window ('+fmt(a.win[1])+')',
+      desc:'Scheduled '+fmt(a.start)+'–'+fmt(end(a))+(p&&p.overrun?' — preceded by '+p.id+', running +'+p.overrun+'m over.':'.')+' Customer '+a.cust+' should be updated.',
+      acts:[{act:'notify',label:'Notify customer'},{act:'view',label:'Details'}]});}
+    const p=prevAppt(a.tech,a);
+    if(p){const d=DRIVE[p.zone][a.zone],gap=a.start-effEnd(p);
+      if(gap<d)A.push({key:'trav-'+a.id,type:'travel',sev:'warn',appt:a.id,
+        title:'Travel: '+p.id+' → '+a.id+' needs '+d+'m, only '+gap+'m scheduled',
+        desc:p.zone+' → '+a.zone+'. Earliest realistic arrival ≈ '+fmt(effEnd(p)+d)+'.',
+        acts:shiftFixTarget(a)?[{act:'shift',label:'Shift to '+fmt(shiftFixTarget(a))},{act:'view',label:'Details'}]:[{act:'view',label:'Details'}]});}
+    a.parts.filter(pp=>pp.s==='warehouse'&&!hasPickup(a.id)).forEach(pp=>A.push({key:'part-'+a.id+'-'+pp.n,type:'part',sev:'warn',appt:a.id,
+      title:a.id+': '+pp.n+' still at the warehouse',
+      desc:'Required for '+fmt(a.start)+' appointment ('+a.cust+', '+a.zone+'). No pickup is scheduled.',
+      acts:[{act:'pickup',label:'Schedule pickup'},{act:'view',label:'Details'}]}));
+    if(a.overrun){const n=nextAppt(a.tech,a);
+      A.push({key:'over-'+a.id,type:'overrun',sev:'warn',appt:a.id,
+      title:a.id+' is running ~'+a.overrun+'m over plan',
+      desc:(a.report||'Tech reports a delay.')+(n?' Next: '+n.id+' at '+fmt(n.start)+' ('+n.cust+').':''),
+      acts:[{act:'extend',label:'Extend block +'+a.overrun+'m'}].concat(n?[{act:'notifyNext',label:'Notify '+n.id+' customer'}]:[])});}
+  }
+  const order={critical:0,warn:1};
+  return A.filter(x=>!state.dismissed.has(x.key)).sort((x,y)=>order[x.sev]-order[y.sev]);
+}
+function shiftFixTarget(a){const p=prevAppt(a.tech,a);if(!p)return null;
+  const ns=snapUp(effEnd(p)+DRIVE[p.zone][a.zone]+5);const n=nextAppt(a.tech,a);
+  if(n){const d=DRIVE[a.zone][n.zone];if(ns+a.dur+d>n.start)return null;}
+  if(ns+a.dur>a.win[1]+120)return null;return ns;}
+function sevMap(alerts){const m={};alerts.forEach(x=>{if(!x.appt)return;
+  if(!m[x.appt]||(x.sev==='critical'))m[x.appt]=x.sev;});return m;}
+
+/* ---------------- rendering: header/stats ---------------- */
+function renderStats(alerts){
+  const jobs=APPTS.filter(a=>!a.task).length, un=APPTS.filter(a=>!a.tech&&!a.task).length;
+  let booked=0,avail=0;TECHS.forEach(t=>{avail+=t.end-t.start;
+    booked+=techAppts(t.id).reduce((s,a)=>s+a.dur+(a.overrun||0),0);});
+  $('#dayStats').innerHTML=
+    '<span class="stat">Jobs <b>'+jobs+'</b></span>'+
+    '<span class="stat '+(un?'bad':'')+'">Unassigned <b>'+un+'</b></span>'+
+    '<span class="stat '+(alerts.length?'warn':'')+'">Issues <b>'+alerts.length+'</b></span>'+
+    '<span class="stat">Crew load <b>'+Math.round(booked/avail*100)+'%</b></span>';
+  $('#bellBdg').textContent=alerts.length;$('#issueCnt').textContent=alerts.length;
+}
+
+/* ---------------- rendering: board ---------------- */
+function matches(a){ // filters/search
+  if(a.task)return true;
+  if(state.fPr==='urgent'&&a.pr!=='urgent')return false;
+  if(state.fPr==='high+'&&a.pr==='normal')return false;
+  if(state.fZone!=='all'&&a.zone!==state.fZone)return false;
+  if(state.q){const q=state.q;const hay=(a.id+' '+a.cust+' '+a.addr+' '+a.ap+' '+(a.brand||'')).toLowerCase();
+    if(!hay.includes(q))return false;}
+  return true;
+}
+function renderBoard(sevs){
+  let rh='';for(let m=MIN0;m<=MIN1;m+=60)rh+='<div class="rh" style="left:'+((m-MIN0)*PX)+'px">'+fmtT(m)+'</div>';
+  $('#ruler').innerHTML=rh;
+  const html=TECHS.map(t=>{
+    const list=techAppts(t.id);
+    const booked=list.reduce((s,a)=>s+a.dur+(a.overrun||0),0),cap=t.end-t.start,pct=Math.min(100,Math.round(booked/cap*100));
+    const barCol=booked>cap?'#dc2626':(pct>88?'#d97706':t.color);
+    const head='<div class="lh-top"><span class="lh-av" style="background:'+t.color+'">'+t.ini+'</span>'+
+      '<div><div class="lh-name">'+t.name+'</div><div class="lh-sub">'+t.role+' · '+fmtT(t.start)+'–'+fmtT(t.end)+'</div></div></div>'+
+      '<div class="lh-load"><div class="lh-bar"><i style="width:'+pct+'%;background:'+barCol+'"></i></div><span>'+mins(booked)+' / '+mins(cap)+'</span></div>'+
+      '<div class="lh-chips">'+t.zones.map(z=>'<span class="chip">'+z+'</span>').join('')+
+      t.certs.map(c=>'<span class="chip cert">'+c+'</span>').join('')+'</div>';
+    // off-shift shading
+    const offL=(t.start-MIN0)*PX, offR=(t.end-MIN0)*PX;
+    let track='<div class="offshift" style="left:0;width:'+offL+'px"></div>'+
+      '<div class="offshift" style="left:'+offR+'px;width:'+((MIN1-t.end)*PX)+'px"></div>'+
+      '<div class="shiftedge" style="left:'+offL+'px"></div><div class="shiftedge" style="left:'+offR+'px"></div>';
+    // travel connectors
+    for(let i=0;i<list.length-1;i++){const p=list[i],n=list[i+1];const d=DRIVE[p.zone][n.zone],gap=n.start-effEnd(p);
+      const cls=gap<d?'bad':(gap<d+10?'tight':'ok');
+      const gl=(effEnd(p)-MIN0)*PX,gw=gap*PX,w=Math.max(gw,34);
+      track+='<div class="conn '+cls+'" style="left:'+(gl+(gw-w)/2)+'px;width:'+w+'px" title="'+p.id+' → '+n.id+': ~'+d+'m drive · '+gap+'m gap">'+
+        (cls==='bad'?'⚠ ':'')+'→ '+d+'m</div>';}
+    // appointment blocks
+    for(const a of list){const L=(a.start-MIN0)*PX,W=a.dur*PX;const sev=sevs[a.id];
+      const prc=a.pr==='urgent'?'#dc2626':a.pr==='high'?'#ea580c':'#94a3b8';
+      const flags=[];
+      if(a.parts.some(p=>p.s==='warehouse')&&!hasPickup(a.id))flags.push('<span class="f-warn">📦 warehouse</span>');
+      if(a.eq.length)flags.push('<span>🔧 '+a.eq.length+'</span>');
+      if(a.custNotified)flags.push('<span class="f-ok">✉ notified</span>');
+      if(a.signoff)flags.push('<span class="f-ok">✓ sign-off</span>');
+      if(a.otApproved)flags.push('<span class="f-warn">OT approved</span>');
+      const dimCls=matches(a)?'':' dim';
+      if(a.task){track+='<div class="appt task'+dimCls+'" data-id="'+a.id+'" style="left:'+L+'px;width:'+W+'px" title="'+a.label+'">'+
+        '<div class="a-top"><span>'+fmt(a.start)+'–'+fmt(end(a))+'</span></div><div class="a-title">⤴ '+a.label+'</div></div>';continue;}
+      track+='<div class="appt'+(state.sel===a.id?' sel':'')+dimCls+'" data-id="'+a.id+'" style="left:'+L+'px;width:'+W+'px;'+
+        'background:color-mix(in srgb,'+t.color+' 8%,#fff);border-color:color-mix(in srgb,'+t.color+' 38%,#fff)"'+
+        ' title="'+a.id+' · '+(a.brand?a.brand+' ':'')+a.ap+' · '+a.cust+'">'+
+        '<span class="stripe" style="background:'+prc+'"></span>'+
+        (sev?'<span class="sevb '+sev+'">!</span>':'')+
+        '<div class="a-top"><span>'+fmt(a.start)+'–'+fmt(end(a))+'</span><span class="a-id">'+a.id+'</span></div>'+
+        '<div class="a-title">'+(a.brand?a.brand+' ':'')+a.ap+'</div>'+
+        '<div class="a-flags">'+flags.join('')+'</div>'+
+        (a.overrun?'<div class="overhang" style="width:'+(a.overrun*PX)+'px">+'+a.overrun+'m</div>':'')+
+        '</div>';}
+    return '<div class="laneRow" data-tech="'+t.id+'"><div class="laneHead'+(state.selTech===t.id?' selTech':'')+'" data-tech="'+t.id+'">'+head+'</div>'+
+      '<div class="laneTrack" data-tech="'+t.id+'">'+track+'</div></div>';
+  }).join('');
+  $('#lanes').innerHTML=html;
+  $('#boardInner').classList.toggle('hideTravel',!state.showTravel);
+}
+
+/* ---------------- rendering: side panel ---------------- */
+function renderSide(alerts){
+  $('#tabIssues').classList.toggle('on',state.tab==='issues');
+  $('#tabDetails').classList.toggle('on',state.tab==='details');
+  const c=$('#sideContent');
+  if(state.tab==='issues'){c.innerHTML=issuesHtml(alerts);}
+  else{
+    if(state.selTech)c.innerHTML=techHtml(techById(state.selTech));
+    else if(state.sel&&byId(state.sel))c.innerHTML=apptHtml(byId(state.sel));
+    else c.innerHTML='<div class="okbox">Select an appointment or technician to see details.</div>';
+  }
+}
+function issuesHtml(alerts){
+  const un=APPTS.filter(a=>!a.tech&&!a.task);
+  let h='';
+  un.forEach(a=>{h+='<div class="unass-card" data-id="'+a.id+'" title="Drag onto a technician lane">'+
+    '<div class="unass-head"><span class="pill urgent">'+a.pr+'</span><span class="pill unassigned">Unassigned</span>'+
+    '<span style="margin-left:auto;font-size:11px;font-weight:700;color:#94a3b8">'+a.id+'</span></div>'+
+    '<div class="unass-title">'+(a.brand?a.brand+' ':'')+a.ap+' — not cooling</div>'.replace(' — not cooling',a.prob.includes('food')?' — '+shortProb(a):'')+
+    '<div class="unass-meta">'+a.cust+' · '+a.addr+' <span class="zonechip">'+a.zone+'</span><br>'+
+    'Window '+fmt(a.win[0])+'–'+fmt(a.win[1])+' · est '+mins(a.dur)+' · needs '+a.req.skills.concat(a.req.certs).join(', ')+'</div>'+
+    '<div class="draghint">⠿ Drag onto a lane, or use suggestions</div>'+
+    '<div class="unass-actions"><button class="btn btn-xs btn-pri" data-act="view" data-id="'+a.id+'">Review & assign</button></div></div>';});
+  const list=alerts.filter(x=>x.type!=='unassigned');
+  h+='<div class="secTitle">Open issues ('+list.length+')</div>';
+  if(!list.length)h+='<div class="okbox">✓ No open issues — the day is clean.</div>';
+  list.forEach(x=>{h+='<div class="alert '+x.sev+'"><div class="al-head"><span class="al-ic">!</span>'+
+    '<div style="flex:1"><div class="al-title">'+x.title+'</div><div class="al-desc">'+x.desc+'</div></div></div>'+
+    '<div class="al-foot">'+x.acts.map((ac,i)=>'<button class="btn btn-xs '+(i===0?'btn-pri':'')+'" data-act="'+ac.act+'" data-id="'+x.appt+'">'+ac.label+'</button>').join('')+
+    '<button class="al-link" data-act="view" data-id="'+x.appt+'">'+x.appt+' →</button>'+
+    (x.sev==='warn'?'<button class="al-dismiss" data-act="dismiss" data-id="'+x.key+'" title="Dismiss">✕</button>':'')+
+    '</div></div>';});
+  return h;
+}
+function shortProb(a){return a.prob.split(';')[0].split('.')[0];}
+function travLineHtml(a){const p=prevAppt(a.tech,a);if(!p)return'';
+  const d=DRIVE[p.zone][a.zone],gap=a.start-effEnd(p);
+  const cls=gap<d?'bad':(gap<d+10?'tight':'');
+  return '<div class="travline '+cls+'">⇢ from '+p.id+' ('+p.zone+'): '+d+'m drive · '+gap+'m gap '+(gap<d?'⚠ insufficient':gap<d+10?'· tight':'✓')+'</div>';}
+function apptHtml(a){
+  const t=a.tech?techById(a.tech):null;
+  let h='<div class="d-head"><div><div class="d-id">'+a.id+'</div><div class="d-pills">'+
+    '<span class="pill '+a.pr+'">'+a.pr+'</span>'+
+    '<span class="pill '+(a.tech?'status':'unassigned')+'">'+(a.tech?'Confirmed':'Unassigned')+'</span></div></div>'+
+    (a.tech?'<button class="btn btn-xs d-jump" data-act="jump" data-id="'+a.id+'">View on board</button>':'')+'</div>';
+  if(a.changeNote&&!a.custNotified)
+    h+='<div class="changebox"><b>⚠ Customer not yet notified</b>'+a.changeNote+' — send an update below.</div>';
+  if(a.note)h+='<div class="notebox">📞 '+a.note+'</div>';
+  if(a.report&&a.overrun)h+='<div class="notebox">🛠 '+a.report+'</div>';
+  // customer
+  h+='<div class="d-sec"><h4>Customer</h4>'+
+    '<div class="kv"><span class="k">Name</span><span class="v">'+a.cust+'</span></div>'+
+    '<div class="kv"><span class="k">Phone</span><span class="v">'+a.phone+'</span></div>'+
+    '<div class="kv"><span class="k">Address</span><span class="v">'+a.addr+'<span class="zonechip">'+a.zone+'</span></span></div></div>';
+  // schedule
+  const winBad=a.tech&&end(a)>a.win[1];
+  h+='<div class="d-sec"><h4>Schedule</h4>'+
+    '<div class="kv"><span class="k">Window</span><span class="v">'+fmt(a.win[0])+' – '+fmt(a.win[1])+
+    '<span class="winchip '+(winBad?'bad':'ok')+'">'+(winBad?'at risk':'on track')+'</span></span></div>'+
+    '<div class="kv"><span class="k">Scheduled</span><span class="v">'+(a.tech?fmt(a.start)+' – '+fmt(end(a)):'not assigned')+(a.overrun?' <span style="color:var(--amber);font-weight:800">+'+a.overrun+'m over</span>':'')+'</span></div>'+
+    '<div class="kv"><span class="k">Est. duration</span><span class="v">'+mins(a.dur)+'</span></div>'+
+    '<div class="kv"><span class="k">Technician</span></div>'+
+    '<select class="techsel" data-id="'+a.id+'"><option value="">— Unassigned —</option>'+
+    TECHS.map(tt=>{const miss=compat(a,tt);let lbl=tt.name;
+      if(miss.length)lbl+='  ✗ '+miss.join(', ');
+      else if(a.tech&&a.tech!==tt.id&&a.start!=null&&overlaps(tt.id,a,a.start,a.dur))lbl+='  ⚠ overlap';
+      else if(a.tech!==tt.id)lbl+='  ✓';
+      return '<option value="'+tt.id+'" '+(a.tech===tt.id?'selected':'')+'>'+lbl+'</option>';}).join('')+'</select>'+
+    (a.tech?'<div class="nudges"><span class="lab">Nudge</span><button class="btn btn-xs" data-act="nudge" data-id="'+a.id+'" data-d="-15">−15m</button>'+
+      '<button class="btn btn-xs" data-act="nudge" data-id="'+a.id+'" data-d="15">+15m</button>'+
+      '<button class="btn btn-xs btn-red-ghost" style="margin-left:auto" data-act="unassign" data-id="'+a.id+'">Unassign</button></div>'+travLineHtml(a):'')+
+    '</div>';
+  // compatibility
+  if(t){h+='<div class="d-sec"><h4>Compatibility — '+t.name+'</h4>';
+    a.req.skills.forEach(s=>h+=reqRow(t.skills.includes(s),'Skill: '+s));
+    a.req.certs.forEach(cc=>{const ok=t.certs.includes(cc)||(a.signoff&&cc==='Gas');
+      h+=reqRow(ok,'Certification: '+cc+(a.signoff&&cc==='Gas'&&!t.certs.includes(cc)?' (supervisor sign-off)':''))});
+    if(a.brand)h+=reqRow(t.brands.includes(a.brand),'Brand: '+a.brand);
+    h+=reqRow(t.zones.includes(a.zone),'Service area: '+a.zone);
+    h+='</div>';}
+  // appliance
+  h+='<div class="d-sec"><h4>Appliance & problem</h4>'+
+    '<div class="kv"><span class="k">Appliance</span><span class="v">'+(a.brand?a.brand+' ':'')+a.ap+'</span></div>'+
+    '<div class="kv"><span class="k">Reported</span><span class="v" style="font-weight:500">'+a.prob+'</span></div></div>';
+  // parts & equipment
+  h+='<div class="d-sec"><h4>Parts & equipment</h4>';
+  if(!a.parts.length&&!a.eq.length)h+='<div style="font-size:11px;color:var(--faint)">No special parts or equipment.</div>';
+  a.parts.forEach(p=>{h+='<div class="partrow">📦 '+p.n+'<span class="pstat '+p.s+'">'+(p.s==='truck'?'On truck':p.s==='van'?'Van stock':p.s==='warehouse'?'At warehouse':'On order')+'</span></div>';});
+  a.eq.forEach(p=>{h+='<div class="partrow">🔧 '+p.n+'<span class="pstat '+(p.s==='warehouse'?'warehouse':'truck')+'">'+(p.s==='warehouse'?'Coordinate':'Available')+'</span></div>';});
+  h+='</div>';
+  // notify
+  h+='<div class="d-sec"><h4>Customer notification</h4>'+
+    '<div class="notifyrow"><button class="btn btn-xs btn-pri" data-act="sms" data-id="'+a.id+'">Send SMS</button>'+
+    '<button class="btn btn-xs" data-act="email" data-id="'+a.id+'">Send email</button>'+
+    (a.custNotified?'<span class="bdg2 ok" style="align-self:center">✓ customer updated</span>':'')+'</div>'+
+    (a.log.length?'<div class="loglist">'+a.log.map(l=>'<div class="logitem">'+l+'</div>').join('')+'</div>':'')+'</div>';
+  // suggestions for unassigned
+  if(!a.tech){h+='<div class="secTitle">Assignment suggestions</div>';
+    suggestions(a).forEach((s,i)=>{const off=s.miss.length>0;
+      const pastWin=s.end!=null&&s.end>a.win[1];
+      h+='<div class="sug '+(i===0&&!off?'best':'')+(off?' off':'')+'"><div class="sug-top">'+
+        '<span class="lh-av" style="background:'+s.t.color+';width:24px;height:24px;font-size:9px">'+s.t.ini+'</span>'+
+        '<span class="sug-tname">'+s.t.name+'</span>'+(i===0&&!off?'<span class="besttag">Best available</span>':'')+
+        '<span class="sug-time">'+(s.start!=null?fmt(s.start)+'–'+fmt(s.end):'—')+'</span></div>'+
+        '<div class="sug-badges">'+
+        (off?s.miss.map(m=>'<span class="bdg2 bad">✗ '+m+'</span>').join(''):
+          '<span class="bdg2 ok">✓ certified & equipped</span>'+s.soft.map(w=>'<span class="bdg2 warn">⚠ '+w+'</span>').join('')+
+          (s.soft.length===0?'<span class="bdg2 ok">no conflicts</span>':''))+'</div>'+
+        (off?'':'<div class="sug-act">'+
+          (pastWin?'<label><input type="checkbox" data-sug="'+s.t.id+'" '+(state.sugOk[s.t.id]?'checked':'')+'> Customer OK’d late arrival</label>':'')+
+          '<button class="btn btn-xs btn-pri" style="margin-left:auto" data-act="assign" data-id="'+a.id+'" data-tech="'+s.t.id+'" '+
+          ((pastWin&&!state.sugOk[s.t.id])?'disabled':'')+'>Assign</button></div>')+
+        '</div>';});
+  }
+  return h;
+}
+function reqRow(ok,label){return '<div class="reqrow"><span class="ic '+(ok?'ok':'no')+'">'+(ok?'✓':'✕')+'</span>'+label+'</div>';}
+function techHtml(t){
+  const list=techAppts(t.id);const booked=list.reduce((s,a)=>s+a.dur+(a.overrun||0),0),cap=t.end-t.start;
+  const pct=Math.min(100,Math.round(booked/cap*100));
+  let h='<div class="tprofile"><span class="lh-av" style="background:'+t.color+'">'+t.ini+'</span>'+
+    '<div><div style="font-size:15px;font-weight:800">'+t.name+'</div><div style="font-size:11px;color:var(--sub)">'+t.role+' · '+t.van+' · '+t.phone+'</div></div></div>';
+  if(t.note)h+='<div class="notebox">⚠ '+t.note+'</div>';
+  h+='<div class="d-sec"><h4>Capacity</h4><div class="bigbar"><i style="width:'+pct+'%;background:'+(booked>cap?'#dc2626':t.color)+'"></i></div>'+
+    '<div style="font-size:11px;color:var(--sub)">'+mins(booked)+' booked of '+mins(cap)+' shift ('+fmt(t.start)+'–'+fmt(t.end)+')'+(booked>cap?' — <b style="color:var(--red)">over capacity</b>':'')+'</div></div>';
+  h+='<div class="d-sec"><h4>Coverage</h4>'+
+    '<div class="kv"><span class="k">Areas</span><span class="v">'+t.zones.join(', ')+'</span></div>'+
+    '<div class="kv"><span class="k">Skills</span><span class="v">'+t.skills.join(', ')+'</span></div>'+
+    '<div class="kv"><span class="k">Certs</span><span class="v">'+(t.certs.join(', ')||'—')+'</span></div>'+
+    '<div class="kv"><span class="k">Brands</span><span class="v">'+t.brands.join(', ')+'</span></div></div>';
+  h+='<div class="d-sec"><h4>Tomorrow’s stops ('+list.filter(a=>!a.task).length+')</h4>';
+  list.forEach(a=>{h+='<div class="stoprow"><span class="t">'+fmt(a.start)+'–'+fmt(end(a))+'</span><span>'+(a.task?a.label:('<b>'+a.id+'</b> '+(a.brand?a.brand+' ':'')+a.ap))+'</span><span class="w">'+(a.task?'':a.zone)+'</span></div>';});
+  h+='</div>';
+  return h;
+}
+
+/* ---------------- actions ---------------- */
+function toast(msg,kind){const t=document.createElement('div');t.className='toast '+(kind||'');t.textContent=msg;
+  $('#toasts').appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),320);},3600);
+  while($('#toasts').children.length>3)$('#toasts').firstChild.remove();}
+function nowStamp(){const d=new Date();let h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(m).padStart(2,'0')+' '+ap;}
+function select(id){state.sel=id;state.selTech=null;state.tab='details';renderAll();flash(id);}
+function flash(id){requestAnimationFrame(()=>{const el=document.querySelector('.appt[data-id="'+id+'"]');
+  if(el){el.scrollIntoView({block:'nearest',inline:'nearest'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1300);}});}
+function notify(a,channel,msg){a.custNotified=true;
+  a.log.push('<b>'+nowStamp()+'</b> '+channel+' → '+a.phone+': “'+msg+'”');
+  toast('Customer '+a.cust+' notified via '+channel,'ok');}
+function defaultMsg(a){return a.id+' arrival '+fmt(a.start)+'–'+fmt(end(a))+(a.tech?' · Tech: '+techById(a.tech).name:'');}
+
+function doAct(act,id,el){
+  const a=byId(id);
+  switch(act){
+    case 'view': select(id); break;
+    case 'jump': flash(id); break;
+    case 'dismiss': state.dismissed.add(id); renderAll(); break;
+    case 'sms': notify(a,'SMS',defaultMsg(a)); renderAll(); break;
+    case 'email': notify(a,'Email',defaultMsg(a)); renderAll(); break;
+    case 'notify': notify(a,'SMS','Arrival update: now expected '+fmt(a.start)+'–'+fmt(end(a))+'. Sorry for the delay!'); renderAll(); break;
+    case 'notifyNext': {const n=nextAppt(a.tech,a);if(n)notify(n,'SMS','Running a bit behind — new arrival estimate '+fmt(n.start)+'–'+fmt(end(n))+'.');renderAll();break;}
+    case 'extend': a.dur+=a.overrun;a.log.push('<b>'+nowStamp()+'</b> Block extended +'+a.overrun+'m by dispatcher (field report).');a.overrun=0;
+      toast(a.id+' extended — downstream travel re-checked','ok');renderAll();break;
+    case 'shift': {const ns=shiftFixTarget(a);if(ns==null){toast('No clean shift available','err');break;}
+      a.start=ns;a.custNotified=false;a.changeNote='Arrival moved to '+fmt(ns)+' to allow drive time.';
+      a.log.push('<b>'+nowStamp()+'</b> Shifted to '+fmt(ns)+' (travel fix).');
+      toast(a.id+' shifted to '+fmt(ns)+' — consider notifying customer','warn');renderAll();break;}
+    case 'ot': a.otApproved=true;a.log.push('<b>'+nowStamp()+'</b> Overtime approved by dispatcher.');
+      toast('Overtime approved for '+a.id,'ok');renderAll();break;
+    case 'signoff': a.signoff=true;a.log.push('<b>'+nowStamp()+'</b> Remote supervisor sign-off logged (R. Chen) — gas work may proceed with video check-in.');
+      toast('Supervisor sign-off logged for '+a.id,'ok');renderAll();break;
+    case 'pickup': {const t=techById(a.tech);const p=prevAppt(a.tech,a);
+      const base=p?effEnd(p)+DRIVE[p.zone][WAREHOUSE_ZONE]:t.start;
+      const ps=snapUp(base),pe=ps+20;const ns=snapUp(pe+DRIVE[WAREHOUSE_ZONE][a.zone]);
+      const n=nextAppt(a.tech,a);
+      if(n&&ns+a.dur+DRIVE[a.zone][n.zone]>n.start){toast('Pickup would collide with '+n.id+' — adjust manually','err');break;}
+      APPTS.push({id:'PK-'+a.id.slice(3),task:true,forId:a.id,tech:a.tech,label:'Parts pickup — Warehouse',zone:WAREHOUSE_ZONE,start:ps,dur:20,win:[ps,pe],parts:[],eq:[],req:{skills:[],certs:[]},log:[],custNotified:true,pr:'normal',ap:'',cust:'',addr:'Warehouse'});
+      a.start=ns;a.custNotified=false;a.changeNote='Moved to '+fmt(ns)+' — technician must collect '+a.parts.filter(x=>x.s==='warehouse').map(x=>x.n).join(', ')+' from the warehouse first.';
+      a.log.push('<b>'+nowStamp()+'</b> Warehouse pickup '+fmt(ps)+'–'+fmt(pe)+' added; appointment moved to '+fmt(ns)+'.');
+      toast('Pickup '+fmt(ps)+' scheduled; '+a.id+' moved to '+fmt(ns),'ok');renderAll();break;}
+    case 'unassign': a.tech=null;a.start=null;a.log.push('<b>'+nowStamp()+'</b> Moved back to unassigned queue.');
+      toast(a.id+' moved to unassigned','warn');state.tab='issues';renderAll();break;
+    case 'nudge': {const d=parseInt(el.dataset.d,10);const ns=a.start+d;
+      const v=validate(a,a.tech,ns);
+      if(v.hard.length){toast('Can’t move: '+v.hard[0],'err');break;}
+      a.start=ns;a.custNotified=false;a.changeNote='Arrival time updated to '+fmt(ns)+'.';
+      if(v.soft.length)toast('Moved — note: '+v.soft[0],'warn');else toast(a.id+' moved to '+fmt(ns),'ok');
+      renderAll();break;}
+    case 'assign': {const tid=el.dataset.tech;const s=suggestions(a).find(x=>x.t.id===tid);if(!s||s.miss.length)break;
+      a.tech=tid;a.start=s.start;a.overrun=0;
+      const pastWin=s.end>a.win[1];
+      if(pastWin&&state.sugOk[tid]){notify(a,'SMS','We can arrive '+fmt(s.start)+'–'+fmt(s.end)+' tomorrow. Reply C to confirm.');a.changeNote=null;}
+      else{a.custNotified=false;a.changeNote='New assignment — '+techById(tid).name+', '+fmt(s.start)+'–'+fmt(s.end)+'. Please confirm with customer.';}
+      a.log.push('<b>'+nowStamp()+'</b> Assigned to '+techById(tid).name+' at '+fmt(s.start)+' via suggestions.');
+      toast(a.id+' → '+techById(tid).name+' at '+fmt(s.start)+(s.soft.length?' ('+s.soft.join('; ')+')':''),s.soft.length?'warn':'ok');
+      renderAll();flash(a.id);break;}
+  }
+}
+
+/* optimize: apply safe automatic fixes */
+function optimize(){
+  const fixes=[];
+  APPTS.filter(x=>!x.task&&x.tech).forEach(a=>{
+    const p=prevAppt(a.tech,a);if(!p)return;
+    if(a.start-effEnd(p)<DRIVE[p.zone][a.zone]){const ns=shiftFixTarget(a);
+      if(ns!=null){a.start=ns;a.custNotified=false;a.changeNote='Arrival moved to '+fmt(ns)+' to allow drive time.';fixes.push(a.id+' shifted to '+fmt(ns));}}});
+  APPTS.filter(x=>!x.task&&x.tech&&x.parts.some(pp=>pp.s==='warehouse')&&!hasPickup(x.id)).forEach(a=>{
+    const t=techById(a.tech),p=prevAppt(a.tech,a);const base=p?effEnd(p)+DRIVE[p.zone][WAREHOUSE_ZONE]:t.start;
+    const ps=snapUp(base),pe=ps+20,ns=snapUp(pe+DRIVE[WAREHOUSE_ZONE][a.zone]);const n=nextAppt(a.tech,a);
+    if(n&&ns+a.dur+DRIVE[a.zone][n.zone]>n.start)return;
+    APPTS.push({id:'PK-'+a.id.slice(3),task:true,forId:a.id,tech:a.tech,label:'Parts pickup — Warehouse',zone:WAREHOUSE_ZONE,start:ps,dur:20,win:[ps,pe],parts:[],eq:[],req:{skills:[],certs:[]},log:[],custNotified:true,pr:'normal',ap:'',cust:'',addr:'Warehouse'});
+    a.start=ns;a.custNotified=false;a.changeNote='Moved to '+fmt(ns)+' for warehouse pickup.';fixes.push(a.id+' pickup '+fmt(ps)+', moved to '+fmt(ns));});
+  const remaining=computeAlerts().filter(x=>!['travel','part'].includes(x.type)).length;
+  if(fixes.length)toast('Optimizer applied '+fixes.length+' fix'+(fixes.length>1?'es':'')+': '+fixes.join(' · ')+'. '+remaining+' issue(s) still need your review.','ok');
+  else toast('No safe automatic fixes — review issues manually.','warn');
+  state.tab='issues';renderAll();
+}
+
+/* ---------------- drag & drop ---------------- */
+let drag=null;
+const ghost=$('#ghost'),dropZone=$('#unassignDrop');
+function startDrag(e,id,srcEl){
+  const a=byId(id);if(!a||a.task)return;
+  const rect=srcEl.classList.contains('unass-card')?null:srcEl.getBoundingClientRect();
+  drag={id,fromTech:a.tech,dur:a.dur,grabDX:rect?e.clientX-rect.left:(a.dur*PX)/2,
+    x0:e.clientX,y0:e.clientY,active:false,cand:null};
+  window.addEventListener('pointermove',onDragMove);
+  window.addEventListener('pointerup',onDragUp,{once:true});
+}
+function laneAt(y){const rows=[...document.querySelectorAll('.laneRow')];
+  for(const r of rows){const rc=r.getBoundingClientRect();if(y>=rc.top&&y<=rc.bottom)return r.dataset.tech;}return null;}
+function onDragMove(e){
+  if(!drag)return;
+  if(!drag.active&&Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<5)return;
+  if(!drag.active){drag.active=true;document.body.classList.add('dragging');
+    if(drag.fromTech)document.body.classList.add('draggingAssigned');
+    ghost.style.display='block';ghost.style.width=(drag.dur*PX)+'px';
+    const a=byId(drag.id);const blk=document.querySelector('.appt[data-id="'+drag.id+'"]');if(blk)blk.style.opacity='.35';}
+  ghost.style.left=(e.clientX-drag.grabDX)+'px';ghost.style.top=(e.clientY-28)+'px';
+  const track=document.querySelector('.laneTrack');const tr=track.getBoundingClientRect();
+  let startMin=MIN0+Math.round(((e.clientX-tr.left-drag.grabDX)/PX)/SNAP)*SNAP;
+  startMin=Math.max(MIN0,Math.min(MIN1-drag.dur,startMin));
+  const tid=laneAt(e.clientY);
+  document.querySelectorAll('.laneRow').forEach(r=>r.classList.toggle('drop-hover',r.dataset.tech===tid));
+  const a=byId(drag.id);
+  let valid=null;
+  if(tid){valid=validate(a,tid,startMin);drag.cand={tid,start:startMin,valid};}
+  else drag.cand=null;
+  ghost.className=valid?(valid.hard.length?'bad':'good'):'';
+  ghost.innerHTML=(tid?techById(tid).name.split(' ')[0]+' · ':'')+fmt(startMin)+'–'+fmt(startMin+drag.dur)+
+    (valid?(valid.hard.length?'<br>✕ '+valid.hard[0]:(valid.soft.length?'<br>⚠ '+valid.soft[0]:'<br>✓ OK')):'');
+  const dz=dropZone.getBoundingClientRect();
+  dropZone.classList.toggle('hot',drag.fromTech&&e.clientX>=dz.left&&e.clientX<=dz.right&&e.clientY>=dz.top&&e.clientY<=dz.bottom);
+  drag.overDrop=dropZone.classList.contains('hot');
+}
+function onDragUp(e){
+  window.removeEventListener('pointermove',onDragMove);
+  document.querySelectorAll('.laneRow').forEach(r=>r.classList.remove('drop-hover'));
+  const wasActive=drag&&drag.active;const d=drag;drag=null;
+  ghost.style.display='none';document.body.classList.remove('dragging','draggingAssigned');
+  dropZone.classList.remove('hot');
+  if(!d)return;
+  if(!wasActive){ // treat as click
+    if(byId(d.id))select(d.id);return;}
+  const a=byId(d.id);
+  if(d.overDrop&&d.fromTech){a.tech=null;a.start=null;a.log.push('<b>'+nowStamp()+'</b> Unassigned via drag.');
+    toast(a.id+' moved to unassigned','warn');renderAll();return;}
+  if(!d.cand){renderAll();return;}
+  const{tid,start,valid}=d.cand;
+  if(valid.hard.length){toast('Can’t place there: '+valid.hard[0],'err');renderAll();return;}
+  const oldT=a.tech,oldStart=a.start;
+  a.tech=tid;a.start=start;
+  if(oldT&&oldT!==tid){a.changeNote='Technician changed: '+techById(oldT).name+' → '+techById(tid).name+'.';a.custNotified=false;
+    a.log.push('<b>'+nowStamp()+'</b> Reassigned '+techById(oldT).name+' → '+techById(tid).name+', '+fmt(start)+'.');}
+  else if(oldStart!==start){a.changeNote='Arrival time updated to '+fmt(start)+'.';a.custNotified=false;
+    a.log.push('<b>'+nowStamp()+'</b> Re-timed to '+fmt(start)+'.');}
+  else if(!oldT){a.changeNote='New assignment — please confirm with customer.';a.custNotified=false;
+    a.log.push('<b>'+nowStamp()+'</b> Assigned to '+techById(tid).name+' at '+fmt(start)+'.');}
+  if(valid.soft.length)toast('Placed with warning: '+valid.soft.join('; '),'warn');
+  else toast(a.id+' → '+techById(tid).name+' at '+fmt(start),'ok');
+  renderAll();flash(a.id);
+}
+
+/* ---------------- master render ---------------- */
+function renderAll(){
+  const alerts=computeAlerts();
+  renderStats(alerts);
+  renderBoard(sevMap(alerts));
+  renderSide(alerts);
+}
+
+/* ---------------- events ---------------- */
+$('#lanes').addEventListener('pointerdown',e=>{
+  const head=e.target.closest('.laneHead');
+  const blk=e.target.closest('.appt');
+  if(blk){if(blk.classList.contains('task'))return;startDrag(e,blk.dataset.id,blk);return;}
+  if(head){state.selTech=head.dataset.tech;state.sel=null;state.tab='details';renderAll();}
+});
+$('#sideContent').addEventListener('pointerdown',e=>{
+  const card=e.target.closest('.unass-card');
+  if(card&&!e.target.closest('button')){startDrag(e,card.dataset.id,card);}
+});
+$('#sideContent').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;doAct(b.dataset.act,b.dataset.id,b);
+});
+$('#sideContent').addEventListener('change',e=>{
+  const sug=e.target.closest('[data-sug]');
+  if(sug){state.sugOk[sug.dataset.sug]=sug.checked;renderAll();return;}
+  const sel=e.target.closest('.techsel');
+  if(sel){const a=byId(sel.dataset.id);const tid=sel.value;
+    if(!tid){a.tech=null;a.start=null;a.log.push('<b>'+nowStamp()+'</b> Moved to unassigned queue.');
+      toast(a.id+' moved to unassigned','warn');renderAll();return;}
+    const start=a.start!=null?a.start:earliestSlot(techById(tid),a);
+    if(start==null){toast(techById(tid).name+' has no open slot','err');renderAll();return;}
+    const v=validate(a,tid,start);
+    if(v.hard.length){toast('Can’t assign to '+techById(tid).name+': '+v.hard[0],'err');renderAll();return;}
+    const old=a.tech;a.tech=tid;a.start=start;
+    a.custNotified=false;a.changeNote=old&&old!==tid?'Technician changed: '+techById(old).name+' → '+techById(tid).name+'.':'New assignment — please confirm with customer.';
+    a.log.push('<b>'+nowStamp()+'</b> Assigned to '+techById(tid).name+' at '+fmt(start)+'.');
+    if(v.soft.length)toast('Assigned with warning: '+v.soft[0],'warn');else toast(a.id+' → '+techById(tid).name,'ok');
+    renderAll();}
+});
+$('#tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(!t)return;state.tab=t.dataset.tab;renderAll();});
+$('#q').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();renderAll();});
+$('#fPr').addEventListener('change',e=>{state.fPr=e.target.value;renderAll();});
+$('#fZone').addEventListener('change',e=>{state.fZone=e.target.value;renderAll();});
+$('#fTravel').addEventListener('change',e=>{state.showTravel=e.target.checked;renderAll();});
+$('#btnOptimize').addEventListener('click',optimize);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){state.sel=null;state.selTech=null;renderAll();}});
+
+renderAll();
+</script>
+</body>
+</html>

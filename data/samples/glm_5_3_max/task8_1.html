@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MorrowSpec — Mock APIs from your spec, before the backend exists</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --bg-2: #0e1528;
+    --surface: #131c33;
+    --surface-2: #182342;
+    --line: rgba(120, 150, 220, 0.14);
+    --line-strong: rgba(120, 150, 220, 0.28);
+    --text: #e8edf9;
+    --text-dim: #9aa7c4;
+    --text-faint: #6b7796;
+    --accent: #5ef2c0;
+    --accent-dim: rgba(94, 242, 192, 0.12);
+    --accent-2: #7aa2ff;
+    --accent-2-dim: rgba(122, 162, 255, 0.12);
+    --amber: #ffce7a;
+    --rose: #ff8fa8;
+    --mono: "SFMono-Regular", "SF Mono", ui-monospace, "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: rgba(94, 242, 192, 0.25); }
+
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- ambient background ---------- */
+  .ambient {
+    position: fixed; inset: 0; z-index: -2; pointer-events: none;
+    background:
+      radial-gradient(900px 500px at 15% -5%, rgba(122, 162, 255, 0.13), transparent 60%),
+      radial-gradient(800px 500px at 90% 10%, rgba(94, 242, 192, 0.08), transparent 60%),
+      var(--bg);
+  }
+  .grid-lines {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+    background-image:
+      linear-gradient(rgba(122,162,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(122,162,255,0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 20%, transparent 75%);
+  }
+
+  /* ---------- nav ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(11, 16, 32, 0.72);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 66px; }
+  .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--text); }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 700; font-size: 14px; color: #0b1020;
+    box-shadow: 0 0 22px rgba(94, 242, 192, 0.35);
+  }
+  .brand-name { font-weight: 650; letter-spacing: -0.02em; font-size: 17px; }
+  .brand-name span { color: var(--text-dim); font-weight: 400; }
+  .nav-links { display: flex; gap: 28px; align-items: center; }
+  .nav-links a {
+    color: var(--text-dim); text-decoration: none; font-size: 14px; font-weight: 500;
+    transition: color 0.15s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--sans); font-weight: 600; font-size: 14px;
+    border-radius: 10px; cursor: pointer; text-decoration: none;
+    transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s, border-color 0.15s;
+    border: 1px solid transparent;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    background: var(--accent); color: #071018; padding: 10px 20px;
+    box-shadow: 0 4px 20px rgba(94, 242, 192, 0.25);
+  }
+  .btn-primary:hover { box-shadow: 0 6px 28px rgba(94, 242, 192, 0.4); }
+  .btn-ghost {
+    background: transparent; color: var(--text-dim);
+    border-color: var(--line-strong); padding: 10px 20px;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 84px 0 56px; position: relative; }
+  .hero-inner { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; }
+  @media (max-width: 940px) { .hero-inner { grid-template-columns: 1fr; gap: 44px; } }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(94, 242, 192, 0.3);
+    border-radius: 100px; padding: 6px 14px 6px 10px;
+    margin-bottom: 24px;
+  }
+  .pill .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(94, 242, 192, 0.5); }
+    60% { box-shadow: 0 0 0 7px rgba(94, 242, 192, 0); }
+  }
+
+  h1 {
+    font-size: clamp(34px, 5vw, 54px);
+    line-height: 1.08; letter-spacing: -0.035em; font-weight: 720;
+    margin-bottom: 20px;
+  }
+  h1 em {
+    font-style: normal;
+    background: linear-gradient(100deg, var(--accent) 10%, var(--accent-2) 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede {
+    font-size: 18px; color: var(--text-dim); max-width: 480px; margin-bottom: 30px;
+  }
+  .lede code, .inline-code {
+    font-family: var(--mono); font-size: 0.86em; color: var(--accent);
+    background: var(--accent-dim); padding: 2px 7px; border-radius: 6px;
+  }
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 34px; }
+  .btn-lg { padding: 14px 26px; font-size: 15px; border-radius: 12px; }
+
+  .hero-meta { display: flex; gap: 30px; flex-wrap: wrap; }
+  .hero-meta div { font-size: 13px; color: var(--text-faint); display: flex; align-items: center; gap: 8px; }
+  .hero-meta svg { flex: none; }
+
+  /* ---------- spec card / terminal ---------- */
+  .spec-card {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 24px 70px rgba(3, 6, 16, 0.55);
+  }
+  .card-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px; border-bottom: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .card-bar .dots { display: flex; gap: 6px; }
+  .card-bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+  .card-bar .file {
+    font-family: var(--mono); font-size: 12px; color: var(--text-faint); margin-left: 4px;
+  }
+  .card-bar .badge-sync {
+    margin-left: auto; font-family: var(--mono); font-size: 10.5px;
+    color: var(--accent); background: var(--accent-dim);
+    border: 1px solid rgba(94, 242, 192, 0.3);
+    padding: 3px 9px; border-radius: 100px;
+    animation: fadeBlink 3s ease-in-out infinite;
+  }
+  @keyframes fadeBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+  .code {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.75;
+    padding: 18px 20px; color: var(--text-dim);
+    overflow-x: auto; white-space: pre;
+  }
+  .code .k { color: var(--accent-2); }
+  .code .s { color: var(--accent); }
+  .code .n { color: var(--amber); }
+  .code .c { color: var(--text-faint); }
+  .code .p { color: var(--rose); }
+  .resp-block { border-top: 1px solid var(--line); background: rgba(94, 242, 192, 0.025); }
+  .resp-block .code .ok { color: var(--accent); font-weight: 700; }
+  .typed { display: inline-block; overflow: hidden; white-space: nowrap; border-right: 2px solid var(--accent); animation: typing 2.2s steps(16) 1 forwards, caret 0.7s step-end infinite; width: 0; max-width: 15ch; }
+  @keyframes typing { to { width: 15ch; } }
+  @keyframes caret { 50% { border-color: transparent; } }
+
+  /* ---------- section scaffolding ---------- */
+  section { padding: 84px 0; position: relative; }
+  .sec-head { max-width: 620px; margin-bottom: 52px; }
+  .sec-tag {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent-2);
+    margin-bottom: 14px; display: block;
+  }
+  h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.03em; line-height: 1.15; font-weight: 700; margin-bottom: 14px; }
+  .sec-sub { color: var(--text-dim); font-size: 16.5px; }
+
+  /* ---------- steps ---------- */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 900px) { .steps { grid-template-columns: 1fr; } }
+  .step {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 28px 26px;
+    position: relative; transition: border-color 0.2s, transform 0.2s;
+  }
+  .step:hover { border-color: var(--line-strong); transform: translateY(-3px); }
+  .step-num {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); border: 1px solid rgba(94, 242, 192, 0.25);
+    width: 30px; height: 30px; border-radius: 8px;
+    display: grid; place-items: center; margin-bottom: 18px;
+  }
+  .step h3 { font-size: 17.5px; letter-spacing: -0.01em; margin-bottom: 10px; font-weight: 650; }
+  .step p { color: var(--text-dim); font-size: 14.5px; }
+  .step .foot {
+    margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line-strong);
+    font-family: var(--mono); font-size: 11.5px; color: var(--text-faint);
+  }
+  .step .foot b { color: var(--accent-2); font-weight: 500; }
+
+  /* ---------- features ---------- */
+  .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  @media (max-width: 900px) { .features { grid-template-columns: 1fr; } }
+  .feature {
+    display: flex; gap: 18px; padding: 26px;
+    background: linear-gradient(160deg, var(--surface) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    transition: border-color 0.2s;
+  }
+  .feature:hover { border-color: var(--line-strong); }
+  .f-icon {
+    flex: none; width: 42px; height: 42px; border-radius: 11px;
+    display: grid; place-items: center;
+    background: var(--accent-2-dim); border: 1px solid var(--line-strong);
+  }
+  .feature:nth-child(even) .f-icon { background: var(--accent-dim); }
+  .feature h3 { font-size: 16px; font-weight: 650; margin-bottom: 7px; letter-spacing: -0.01em; }
+  .feature p { color: var(--text-dim); font-size: 14px; }
+
+  /* ---------- environment diagram ---------- */
+  .env-band {
+    background: linear-gradient(180deg, transparent, rgba(122, 162, 255, 0.045) 30%, transparent);
+  }
+  .env-grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: center; }
+  @media (max-width: 940px) { .env-grid { grid-template-columns: 1fr; gap: 40px; } }
+  .env-list { list-style: none; display: grid; gap: 16px; margin-top: 26px; }
+  .env-list li { display: flex; gap: 13px; align-items: flex-start; color: var(--text-dim); font-size: 14.5px; }
+  .env-list .tick {
+    flex: none; margin-top: 4px; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--accent-dim); border: 1px solid rgba(94, 242, 192, 0.4);
+    display: grid; place-items: center;
+  }
+  .env-list b { color: var(--text); font-weight: 600; }
+  .hub {
+    position: relative; border-radius: var(--radius);
+    border: 1px solid var(--line-strong);
+    background: radial-gradient(circle at 50% 42%, rgba(94, 242, 192, 0.1), transparent 62%), var(--surface);
+    padding: 64px 40px; text-align: center;
+    overflow: hidden;
+  }
+  .hub-core {
+    position: relative; z-index: 2; display: inline-block;
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #0b1020; padding: 13px 24px; border-radius: 100px;
+    box-shadow: 0 0 34px rgba(94, 242, 192, 0.35);
+  }
+  .hub-ring {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+    width: 300px; height: 300px; border-radius: 50%;
+    border: 1px dashed var(--line-strong);
+    animation: spin 40s linear infinite;
+  }
+  .hub-ring.r2 { width: 430px; height: 430px; animation-duration: 70s; animation-direction: reverse; opacity: 0.7; }
+  @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  .hub-node {
+    position: absolute; z-index: 3;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    background: var(--surface-2); border: 1px solid var(--line-strong);
+    padding: 5px 12px; border-radius: 8px; white-space: nowrap;
+  }
+  .n1 { top: 12%; left: 50%; transform: translateX(-50%); }
+  .n2 { top: 30%; right: 6%; }
+  .n3 { bottom: 26%; right: 14%; }
+  .n4 { bottom: 26%; left: 14%; }
+  .n5 { top: 30%; left: 6%; }
+
+  /* ---------- beta scope ---------- */
+  .scope {
+    border: 1px solid var(--line-strong); border-radius: var(--radius);
+    background: var(--surface); padding: 26px 28px;
+    display: flex; gap: 18px; align-items: flex-start;
+    max-width: 720px; margin: 60px auto 0;
+  }
+  .scope-icon { flex: none; width: 40px; height: 40px; border-radius: 10px; background: rgba(255, 206, 122, 0.1); border: 1px solid rgba(255, 206, 122, 0.3); display: grid; place-items: center; }
+  .scope h3 { font-size: 15.5px; font-weight: 650; margin-bottom: 6px; color: var(--amber); }
+  .scope p { font-size: 14px; color: var(--text-dim); }
+  .scope code { font-family: var(--mono); font-size: 0.88em; color: var(--amber); background: rgba(255, 206, 122, 0.08); padding: 1px 6px; border-radius: 5px; }
+
+  /* ---------- waitlist ---------- */
+  .wl { text-align: center; }
+  .wl .sec-head { margin-left: auto; margin-right: auto; }
+  .wl-card {
+    max-width: 560px; margin: 0 auto;
+    background: linear-gradient(170deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line-strong); border-radius: 18px;
+    padding: 40px 36px;
+    box-shadow: 0 30px 80px rgba(3, 6, 16, 0.5);
+    position: relative; overflow: hidden;
+  }
+  .wl-card::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(94,242,192,0.6), transparent);
+  }
+  .wl-form { display: flex; gap: 10px; }
+  @media (max-width: 560px) { .wl-form { flex-direction: column; } }
+  .wl-form input {
+    flex: 1; min-width: 0;
+    background: var(--bg); border: 1px solid var(--line-strong);
+    border-radius: 11px; padding: 13px 16px;
+    font-family: var(--sans); font-size: 14.5px; color: var(--text);
+    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .wl-form input::placeholder { color: var(--text-faint); }
+  .wl-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(94, 242, 192, 0.14); }
+  .wl-note { margin-top: 16px; font-size: 12.5px; color: var(--text-faint); font-family: var(--mono); }
+  .wl-msg {
+    margin-top: 16px; font-size: 13.5px; border-radius: 10px; padding: 11px 15px;
+    display: none; text-align: left;
+  }
+  .wl-msg.show { display: block; animation: rise 0.3s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .wl-msg.err { color: var(--rose); background: rgba(255, 143, 168, 0.08); border: 1px solid rgba(255, 143, 168, 0.3); }
+  .wl-msg.ok { color: var(--accent); background: var(--accent-dim); border: 1px solid rgba(94, 242, 192, 0.35); }
+
+  /* ---------- footer ---------- */
+  footer { border-top: 1px solid var(--line); padding: 36px 0 44px; }
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .foot p { font-size: 13px; color: var(--text-faint); }
+  .foot-links { display: flex; gap: 22px; }
+  .foot-links a { color: var(--text-faint); font-size: 13px; text-decoration: none; transition: color 0.15s; }
+  .foot-links a:hover { color: var(--text); }
+
+  /* reveal on scroll */
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .hub-ring, .typed, .pill .dot, .badge-sync { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+<div class="grid-lines"></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <span class="brand-mark">M</span>
+      <span class="brand-name">MorrowSpec<span>&nbsp;/ private beta</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#features">Capabilities</a>
+      <a href="#environments">Environments</a>
+      <a class="btn btn-primary" href="#waitlist">Join waitlist</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero" style="padding-bottom:40px;">
+    <div class="wrap hero-inner">
+      <div>
+        <span class="pill"><span class="dot"></span>PRIVATE BETA — NOW FORMING</span>
+        <h1>Your API spec is a<br>running API. <em>Starting today.</em></h1>
+        <p class="lede">
+          MorrowSpec turns an OpenAPI specification into a hosted mock endpoint with realistic
+          responses, errors, and test scenarios — so your team builds and tests against the
+          contract <b>before the backend exists</b>.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" href="#waitlist">Join the private beta</a>
+          <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
+        </div>
+        <div class="hero-meta">
+          <div>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8.5L6 12.5L14 3.5" stroke="#5ef2c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            OpenAPI-based REST, at launch
+          </div>
+          <div>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8.5L6 12.5L14 3.5" stroke="#5ef2c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            No backend required
+          </div>
+          <div>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8.5L6 12.5L14 3.5" stroke="#5ef2c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Spec changes propagate automatically
+          </div>
+        </div>
+      </div>
+
+      <div class="spec-card reveal">
+        <div class="card-bar">
+          <div class="dots"><i></i><i></i><i></i></div>
+          <span class="file">openapi.yaml</span>
+          <span class="badge-sync">⟳ synced from repo</span>
+        </div>
+        <div class="code"><span class="k">paths</span>:
+  <span class="s">/v1/missions</span>:
+    <span class="k">get</span>:
+      <span class="k">summary</span>: <span class="s">List scheduled missions</span>
+      <span class="k">responses</span>:
+        <span class="n">"200"</span>:
+          <span class="k">$ref</span>: <span class="s">'#/components/MissionList'</span>
+        <span class="n">"429"</span>: { <span class="p">rate_limited</span>: <span class="k">true</span> }</span></div>
+        <div class="resp-block">
+          <div class="code"><span class="ok">GET</span> https://api.morrowspec.dev/v1/missions
+
+<span class="c">// generated from spec · scenario: default</span>
+{ <span class="k">"id"</span>: <span class="s">"msn_0142"</span>, <span class="k">"status"</span>: <span class="s">"on_track"</span>,
+  <span class="k">"eta"</span>: <span class="s">"2026-03-14T09:00:00Z"</span> }
+
+<span class="c">// scenario: error-path → 429, realistic payload</span>
+<span class="p">{ "error": "rate_limit", "retry_after": 30 }</span>
+
+<span class="c">$ morrowspec mock --from ./openapi.yaml</span>
+<span class="ok">✓</span> mock live at <span class="typed">msn-dev.morrowspec</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" style="padding-top:60px;">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">// how it works</span>
+        <h2>From spec to running endpoint in three moves</h2>
+        <p class="sec-sub">Point MorrowSpec at your contract. It does the rest — and keeps doing it as the spec evolves.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-num">01</div>
+          <h3>Import or sync your spec</h3>
+          <p>Upload an OpenAPI specification directly, or connect a code repository and let MorrowSpec track the contract alongside your code.</p>
+          <div class="foot">supports <b>OpenAPI 3.x</b> · repo-sync via <b>git</b></div>
+        </div>
+        <div class="step reveal">
+          <div class="step-num">02</div>
+          <h3>Get a hosted mock endpoint</h3>
+          <p>MorrowSpec generates a live mock API with realistic response bodies, faithful error states, and switchable test scenarios — no stub server to write or deploy.</p>
+          <div class="foot">scenarios <b>default · empty · error-path</b></div>
+        </div>
+        <div class="step reveal">
+          <div class="step-num">03</div>
+          <h3>Spec changes? Mock updates</h3>
+          <p>When the underlying specification changes, the mock API updates to match. Frontend, QA, and product always test against the current contract — never a stale stub.</p>
+          <div class="foot">propagation <b>automatic on every spec change</b></div>
+        </div>
+      </div>
+
+      <div class="scope reveal">
+        <div class="scope-icon">
+          <svg width="19" height="19" viewBox="0 0 20 20" fill="none"><path d="M10 2L17.5 5.5V10C17.5 14.5 14.4 17.5 10 19C5.6 17.5 2.5 14.5 2.5 10V5.5L10 2Z" stroke="#ffce7a" stroke-width="1.6" stroke-linejoin="round"/><path d="M7.5 10L9.5 12L13 8" stroke="#ffce7a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <h3>Private-beta scope</h3>
+          <p>The beta will initially support <code>OpenAPI</code>-based <code>REST</code> APIs. Support for additional specification formats is on the roadmap — beta members will see it first and help shape it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" style="padding-top:40px;">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">// capabilities</span>
+        <h2>Mocks that behave like the real thing</h2>
+        <p class="sec-sub">Not a hardcoded JSON file — a working stand-in your whole team can trust.</p>
+      </div>
+      <div class="features">
+        <div class="feature reveal">
+          <div class="f-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5.5C3 4.1 4.1 3 5.5 3H9V17H5.5C4.1 17 3 15.9 3 14.5V5.5Z" stroke="#7aa2ff" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 3H14.5C15.9 3 17 4.1 17 5.5V14.5C17 15.9 15.9 17 14.5 17H9V3Z" stroke="#7aa2ff" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 7.5L13.5 9.5L12 11.5" stroke="#7aa2ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <h3>Import or repo-sync</h3>
+            <p>Bring in an OpenAPI spec as a file, or sync it straight from your repository so the mock always tracks the source of truth.</p>
+          </div>
+        </div>
+        <div class="feature reveal">
+          <div class="f-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="5" rx="1.5" stroke="#5ef2c0" stroke-width="1.5"/><rect x="3" y="11" width="14" height="5" rx="1.5" stroke="#5ef2c0" stroke-width="1.5"/><circle cx="6" cy="6.5" r="0.9" fill="#5ef2c0"/><circle cx="6" cy="13.5" r="0.9" fill="#5ef2c0"/></svg>
+          </div>
+          <div>
+            <h3>Realistic responses &amp; errors</h3>
+            <p>Response bodies, headers, status codes, and edge-case errors generated from your schema — including 4xx/5xx paths, not just the happy path.</p>
+          </div>
+        </div>
+        <div class="feature reveal">
+          <div class="f-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3V8M10 8V13M10 8L15 5.5M10 8L5 5.5M10 13V17M10 13L15 10.5M10 13L5 10.5" stroke="#7aa2ff" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="3" r="1.6" stroke="#7aa2ff" stroke-width="1.3"/><circle cx="15" cy="5.5" r="1.6" stroke="#7aa2ff" stroke-width="1.3"/><circle cx="5" cy="5.5" r="1.6" stroke="#7aa2ff" stroke-width="1.3"/><circle cx="15" cy="10.5" r="1.6" stroke="#7aa2ff" stroke-width="1.3"/><circle cx="5" cy="10.5" r="1.6" stroke="#7aa2ff" stroke-width="1.3"/><circle cx="10" cy="17" r="1.6" stroke="#7aa2ff" stroke-width="1.3"/></svg>
+          </div>
+          <div>
+            <h3>Test scenarios on demand</h3>
+            <p>Flip between realistic, empty, slow, and error scenarios to exercise loading states, retries, and failure handling in your client.</p>
+          </div>
+        </div>
+        <div class="feature reveal">
+          <div class="f-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M17 10A7 7 0 1 1 10 3" stroke="#5ef2c0" stroke-width="1.6" stroke-linecap="round"/><path d="M17 3V7H13" stroke="#5ef2c0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.6 7A7 7 0 0 0 10 3" stroke="#5ef2c0" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <h3>Updates with the spec</h3>
+            <p>Change the specification and the mock changes with it. Endpoints, fields, and error shapes stay in lockstep with the contract — automatically.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENVIRONMENTS -->
+  <section id="environments" class="env-band">
+    <div class="wrap env-grid">
+      <div class="reveal">
+        <span class="sec-tag">// shared environments</span>
+        <h2>One mock. Every seat at the table.</h2>
+        <p class="sec-sub">A shared environment means frontend, backend, QA, and product all test against the same contract — with a single link instead of a wiki page of curl examples.</p>
+        <ul class="env-list">
+          <li><span class="tick"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L4 8L8.5 2" stroke="#5ef2c0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><b>Frontend</b> builds screens against real-shaped data from day one.</span></li>
+          <li><span class="tick"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L4 8L8.5 2" stroke="#5ef2c0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><b>Backend</b> validates implementations against the same contract clients used.</span></li>
+          <li><span class="tick"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L4 8L8.5 2" stroke="#5ef2c0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><b>QA</b> rehearses error paths and edge scenarios before anything ships.</span></li>
+          <li><span class="tick"><svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L4 8L8.5 2" stroke="#5ef2c0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><b>Product</b> explores the API hands-on, straight from the spec.</span></li>
+        </ul>
+      </div>
+
+      <div class="hub reveal" aria-hidden="true">
+        <div class="hub-ring"></div>
+        <div class="hub-ring r2"></div>
+        <span class="hub-core">MorrowSpec environment</span>
+        <span class="hub-node n1">frontend · web</span>
+        <span class="hub-node n2">backend · services</span>
+        <span class="hub-node n3">qa · automation</span>
+        <span class="hub-node n4">product · docs</span>
+        <span class="hub-node n5">mobile · apps</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WAITLIST -->
+  <section id="waitlist" class="wl">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">// join the beta</span>
+        <h2>Build tomorrow's API today</h2>
+        <p class="sec-sub">We're onboarding software teams to the MorrowSpec private beta in small cohorts. Leave your email and we'll reach out with access.</p>
+      </div>
+      <div class="wl-card reveal">
+        <form class="wl-form" id="wlForm" novalidate>
+          <input type="email" id="wlEmail" name="email" placeholder="you@yourteam.dev" aria-label="Work email" autocomplete="email" required>
+          <button class="btn btn-primary" type="submit" id="wlBtn">Request access</button>
+        </form>
+        <div class="wl-msg" id="wlMsg" role="status" aria-live="polite"></div>
+        <p class="wl-note">openapi-based rest · no credit card · we'll never share your email</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a class="brand" href="#top" style="transform:scale(0.9);transform-origin:left;">
+      <span class="brand-mark">M</span>
+      <span class="brand-name">MorrowSpec</span>
+    </a>
+    <p>Pre-launch · private beta · © 2026 MorrowSpec</p>
+    <div class="foot-links">
+      <a href="#how">How it works</a>
+      <a href="#environments">Environments</a>
+      <a href="#waitlist">Waitlist</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // Scroll reveal
+  var els = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(function (el) { io.observe(el); });
+  } else {
+    els.forEach(function (el) { el.classList.add('in'); });
+  }
+
+  // Waitlist form
+  var form = document.getElementById('wlForm');
+  var input = document.getElementById('wlEmail');
+  var msg = document.getElementById('wlMsg');
+  var btn = document.getElementById('wlBtn');
+
+  function show(kind, text) {
+    msg.className = 'wl-msg show ' + kind;
+    msg.textContent = text;
+  }
+
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var v = input.value.trim();
+    var ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+    if (!ok) {
+      show('err', 'Please enter a valid work email address.');
+      input.focus();
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Adding you…';
+    setTimeout(function () {
+      show('ok', '✓ You\u2019re on the list. We\u2019ll be in touch when your cohort opens — keep an OpenAPI spec handy.');
+      form.reset();
+      btn.disabled = false;
+      btn.textContent = 'Request access';
+    }, 700);
+  });
+
+  input.addEventListener('input', function () {
+    if (msg.classList.contains('show')) { msg.className = 'wl-msg'; }
+  });
+})();
+</script>
+
+</body>
+</html>
